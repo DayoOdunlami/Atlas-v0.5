@@ -11,6 +11,93 @@ import corpus_queries
 
 
 # ---------------------------------------------------------------------------
+# Confidence tier helpers (H2)
+# ---------------------------------------------------------------------------
+
+_TIER_ORDER = ["Speculative", "Indicative", "Supported", "Robust"]
+
+
+def _cap_tier(requested: str, ceiling: str) -> str:
+    """Cap requested confidence tier at the evidence-derived ceiling."""
+    try:
+        return _TIER_ORDER[min(_TIER_ORDER.index(requested), _TIER_ORDER.index(ceiling))]
+    except ValueError:
+        return ceiling
+
+
+# ---------------------------------------------------------------------------
+# Citation verifier (H1)
+# ---------------------------------------------------------------------------
+
+def _verify_citation(citation: dict) -> Optional[dict]:
+    """
+    Verify a citation ID exists in the corpus DB.
+    Returns a normalized citation or None if the record isn't found.
+    Prevents fabricated IDs from reaching the artifact block.
+    """
+    source_type = citation.get("source_type", "")
+
+    if source_type == "project":
+        lookup_type = "project"
+        record_id = citation.get("id")
+    elif source_type == "live_call":
+        lookup_type = "live_call"
+        record_id = citation.get("id")
+    elif source_type in ("knowledge_doc", "knowledge_chunk"):
+        lookup_type = "knowledge_chunk"
+        record_id = citation.get("chunk_id") or citation.get("id")
+    elif source_type == "hive_chunk":
+        lookup_type = "hive_chunk"
+        record_id = citation.get("chunk_id") or citation.get("id")
+    elif source_type == "hive_article":
+        lookup_type = "hive_article"
+        record_id = citation.get("article_id") or citation.get("id")
+    else:
+        return None
+
+    if not record_id:
+        return None
+
+    try:
+        record = corpus_queries.get_record_by_id(lookup_type, record_id)
+    except Exception:
+        return None
+
+    if record is None:
+        return None
+
+    verified: dict = {
+        "id": record.get("id", record_id),
+        "source_type": source_type,
+        # Normalise score field so evidence_coverage_summary can read it
+        "similarity": citation.get("similarity") or citation.get("score") or 0.0,
+    }
+
+    if source_type == "project":
+        verified["title"] = record.get("title") or citation.get("title") or ""
+        verified["organisation"] = record.get("lead_org_name") or citation.get("organisation") or ""
+    elif source_type == "live_call":
+        verified["title"] = record.get("title") or citation.get("title") or ""
+        verified["funder"] = record.get("funder") or citation.get("funder") or ""
+        verified["deadline"] = str(record["deadline"]) if record.get("deadline") else None
+    elif source_type in ("knowledge_doc", "knowledge_chunk"):
+        verified["chunk_id"] = record.get("id", "")
+        verified["document_id"] = record.get("document_id", "")
+        verified["title"] = citation.get("title") or ""
+        verified["publisher"] = citation.get("publisher") or ""
+    elif source_type == "hive_chunk":
+        verified["chunk_id"] = record.get("id", "")
+        verified["article_id"] = record.get("article_id") or ""
+        verified["title"] = citation.get("title") or ""
+    elif source_type == "hive_article":
+        verified["title"] = (
+            record.get("project_title") or record.get("measure_title") or citation.get("title") or ""
+        )
+
+    return verified
+
+
+# ---------------------------------------------------------------------------
 # State-mutation tools (return Command to update graph state directly)
 # ---------------------------------------------------------------------------
 
@@ -82,6 +169,7 @@ def set_artifact_block(
     corpus_citations_json: str = "[]",
     npv_value: Optional[float] = None,
     discount_rate: Optional[float] = None,
+    state: Annotated[dict, InjectedState] = None,
     tool_call_id: Annotated[str, InjectedToolCallId] = None,
 ) -> Command:
     """
@@ -92,19 +180,38 @@ def set_artifact_block(
     - corpus_citations_json: JSON array of citation objects from corpus search results.
       Each object must have a real 'id' from the database — never fabricate IDs.
       Format: '[{"id":"<uuid>","title":"...","organisation":"...","score":0.8,"source_type":"project"}]'
+
+    All citations are mechanically verified against the DB before storage.
+    Unverifiable IDs are silently dropped. Evidence coverage is computed and stored
+    automatically — it feeds the confidence ceiling in set_decision_spine.
     """
     sections = json.loads(sections_json) if sections_json else {}
-    citations = json.loads(corpus_citations_json) if corpus_citations_json else []
+    raw_citations = json.loads(corpus_citations_json) if corpus_citations_json else []
+
+    # H1: Verify every citation ID against the DB. Drop any that don't resolve.
+    verified_citations = [v for c in raw_citations if (v := _verify_citation(c)) is not None]
+
+    # H2: Compute coverage from verified citations; stored in state for ceiling enforcement.
+    evidence_coverage = corpus_queries.evidence_coverage_summary(verified_citations)
+
+    dropped = len(raw_citations) - len(verified_citations)
+    msg = (
+        f"Artifact block updated. {len(verified_citations)}/{len(raw_citations)} citations verified"
+        + (f" ({dropped} dropped — IDs not found in corpus)" if dropped else "")
+        + f". Coverage: {evidence_coverage.get('suggested_confidence_tier', 'unknown')}"
+    )
+
     return Command(update={
         "artifact_block": {
             "type": type,
             "confidence_tier": confidence_tier,
             "sections": sections,
-            "corpus_citations": citations,
+            "corpus_citations": verified_citations,
             "npv_value": npv_value,
             "discount_rate": discount_rate,
         },
-        "messages": [ToolMessage(content="Artifact block updated", tool_call_id=tool_call_id)],
+        "evidence_coverage": evidence_coverage,
+        "messages": [ToolMessage(content=msg, tool_call_id=tool_call_id)],
     })
 
 
@@ -118,13 +225,23 @@ def set_decision_spine(
     framework: Optional[str] = None,
     strongest_objection: Optional[str] = None,
     would_change_if: Optional[str] = None,
+    state: Annotated[dict, InjectedState] = None,
     tool_call_id: Annotated[str, InjectedToolCallId] = None,
 ) -> Command:
     """
     Set the Decision Spine — the core Atlas decision object. Call this on every substantive response.
-    confidence_tier must be one of: Speculative | Indicative | Supported | Robust
-    Base confidence_tier on evidence coverage returned by corpus search tools, not intuition.
+    confidence_tier must be one of: Speculative | Indicative | Supported | Robust.
+
+    The tier you pass is automatically capped at the evidence ceiling computed from verified
+    citations in set_artifact_block — you cannot inflate it above what the corpus supports.
+    Base your requested tier on corpus search coverage; the ceiling enforces it mechanically.
     """
+    # H2: Enforce confidence ceiling from evidence coverage stored by set_artifact_block.
+    evidence_coverage = (state or {}).get("evidence_coverage")
+    if evidence_coverage:
+        ceiling = evidence_coverage.get("suggested_confidence_tier", confidence_tier)
+        confidence_tier = _cap_tier(confidence_tier, ceiling)
+
     return Command(update={
         "decision_spine": {
             "decision": decision,
@@ -257,6 +374,21 @@ def get_corpus_record(source_type: str, record_id: str) -> dict:
         return {"result": None, "found": False, "error": str(e)}
 
 
+@tool
+def get_corpus_stats() -> dict:
+    """
+    Get live corpus statistics — real table counts from the database.
+
+    Call this before setting any corpus-related pinned metrics (e.g. 'X projects in corpus').
+    Never hard-code corpus counts — always use the values returned here.
+    """
+    try:
+        stats = corpus_queries.get_corpus_stats()
+        return {"stats": stats}
+    except Exception as e:
+        return {"stats": {}, "error": str(e)}
+
+
 # ---------------------------------------------------------------------------
 # Tool list for agent registration
 # ---------------------------------------------------------------------------
@@ -275,4 +407,5 @@ atlas_tools = [
     search_corpus_evidence,
     search_hive_evidence,
     get_corpus_record,
+    get_corpus_stats,
 ]

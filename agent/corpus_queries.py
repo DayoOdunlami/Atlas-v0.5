@@ -437,6 +437,36 @@ def get_record_by_id(source_type: str, record_id: str) -> Optional[dict[str, Any
 
 
 # ---------------------------------------------------------------------------
+# Corpus statistics (H4 — real table counts, never hard-code these)
+# ---------------------------------------------------------------------------
+
+def get_corpus_stats() -> dict[str, Any]:
+    """
+    Return live row counts for all corpus tables.
+    Called by the agent when displaying corpus metrics — ensures accuracy.
+    """
+    rows = _query(
+        """
+        SELECT
+            (SELECT COUNT(*) FROM atlas.projects)                   AS projects_total,
+            (SELECT COUNT(*) FROM atlas.projects
+             WHERE  embedding IS NOT NULL)                          AS projects_embedded,
+            (SELECT COUNT(*) FROM atlas.live_calls)                 AS live_calls_total,
+            (SELECT COUNT(*) FROM atlas.live_calls
+             WHERE  status = 'open')                                AS live_calls_open,
+            (SELECT COUNT(*) FROM atlas.knowledge_chunks)           AS knowledge_chunks_total,
+            (SELECT COUNT(*) FROM atlas.knowledge_documents
+             WHERE  status = 'approved')                            AS knowledge_docs_approved,
+            (SELECT COUNT(*) FROM hive.document_chunks)             AS hive_chunks_total,
+            (SELECT COUNT(*) FROM hive.articles)                    AS hive_articles_total
+        """
+    )
+    if not rows:
+        return {}
+    return {k: int(v) for k, v in rows[0].items() if v is not None}
+
+
+# ---------------------------------------------------------------------------
 # Evidence coverage summary (local computation — no DB call)
 # ---------------------------------------------------------------------------
 
