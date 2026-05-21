@@ -8,7 +8,7 @@ const SOURCE_BADGE: Record<SourceType, { label: string; style: string }> = {
   live_call:      { label: "Open Call",    style: "bg-green-50 text-green-700 border-green-200"   },
   knowledge_doc:  { label: "Policy",       style: "bg-blue-50 text-blue-700 border-blue-200"      },
   knowledge_chunk:{ label: "Policy",       style: "bg-blue-50 text-blue-700 border-blue-200"      },
-  hive_chunk:     { label: "Case Study",   style: "bg-purple-50 text-purple-700 border-purple-200"},
+  hive_chunk:     { label: "HIVE",          style: "bg-purple-50 text-purple-700 border-purple-200"},
   hive_article:   { label: "HIVE",         style: "bg-purple-50 text-purple-700 border-purple-200"},
 };
 

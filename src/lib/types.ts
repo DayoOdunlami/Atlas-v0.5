@@ -68,8 +68,15 @@ export type HiveCitation = {
   score: number;
 };
 
+export type RecipeType =
+  | "brief_five_case"
+  | "evidence_panel"
+  | "stats_dashboard"
+  | "scenario_stress_test";
+
 export type ArtifactBlock = {
   type: "brief" | "evidence" | "chart" | "scenario";
+  recipe?: RecipeType;
   sections?: Record<string, string>;
   corpus_citations?: CorpusCitation[];
   hive_citations?: HiveCitation[];
@@ -118,6 +125,11 @@ export type AgentState = {
 export type AgentSetState<T extends AgentState> = (
   newState: T | ((prevState: T | undefined) => T),
 ) => void;
+
+// ── Visual validation: swap import to test each recipe ───────────────────────
+// import { MOCK_BRIEF, MOCK_EVIDENCE, MOCK_STATS, MOCK_SCENARIO } from "./test-states";
+// export const initialState: AgentState = { ...defaultInitialState, ...MOCK_BRIEF };
+// ─────────────────────────────────────────────────────────────────────────────
 
 export const initialState: AgentState = {
   title: "Atlas Decision Workbench",

@@ -73,8 +73,17 @@ class SurfaceState(BaseModel):
     timestamp: str = Field(default_factory=lambda: datetime.now().isoformat())
 
 
+RecipeType = Literal[
+    "brief_five_case",
+    "evidence_panel",
+    "stats_dashboard",
+    "scenario_stress_test",
+]
+
+
 class ArtifactBlock(BaseModel):
     type: Literal["brief", "evidence", "chart", "scenario"] = "brief"
+    recipe: Optional[RecipeType] = None
     sections: Optional[Dict[str, str]] = None
     corpus_citations: Optional[List[CorpusCitation]] = None
     hive_citations: Optional[List[HiveCitation]] = None

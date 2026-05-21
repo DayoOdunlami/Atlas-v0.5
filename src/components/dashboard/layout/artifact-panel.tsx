@@ -1,6 +1,6 @@
 "use client";
 
-import { ArtifactBlock } from "@/lib/types";
+import { ArtifactBlock, RecipeType } from "@/lib/types";
 import {
   BriefFiveCaseRecipe,
   EvidencePanelRecipe,
@@ -16,13 +16,13 @@ const FIVE_CASE_SECTIONS = new Set([
   "Management Case",
 ]);
 
-type RecipeType = "brief_five_case" | "evidence_panel" | "stats_dashboard" | "scenario_stress_test";
-
 function detectRecipe(artifact: ArtifactBlock): RecipeType {
+  // Prefer explicit recipe field set by the agent
+  if (artifact.recipe) return artifact.recipe;
+  // Fall back to type + section-name inference
   if (artifact.type === "scenario") return "scenario_stress_test";
   if (artifact.type === "chart") return "stats_dashboard";
   if (artifact.type === "evidence") return "evidence_panel";
-  // For "brief": check section names for Five Case markers
   const keys = Object.keys(artifact.sections ?? {});
   if (keys.some((k) => FIVE_CASE_SECTIONS.has(k))) return "brief_five_case";
   return "brief_five_case";

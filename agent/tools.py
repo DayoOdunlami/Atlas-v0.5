@@ -162,10 +162,21 @@ def set_surface_state(
     })
 
 
+_RECIPE_VALUES = {"brief_five_case", "evidence_panel", "stats_dashboard", "scenario_stress_test"}
+
+_DEFAULT_RECIPE: dict[str, str] = {
+    "brief": "brief_five_case",
+    "evidence": "evidence_panel",
+    "chart": "stats_dashboard",
+    "scenario": "scenario_stress_test",
+}
+
+
 @tool
 def set_artifact_block(
     type: str,
     confidence_tier: str,
+    recipe: Optional[str] = None,
     sections_json: str = "{}",
     corpus_citations_json: str = "[]",
     npv_value: Optional[float] = None,
@@ -175,7 +186,13 @@ def set_artifact_block(
 ) -> Command:
     """
     Set the main artifact block rendered in the Atlas artifact panel.
-    - type: "brief" | "evidence" | "chart"
+    - type: "brief" | "evidence" | "chart" | "scenario"
+    - recipe: explicit render recipe — set this to control the layout surface.
+        "brief_five_case"      — Five Case Model brief (use with type="brief")
+        "evidence_panel"       — Evidence citation grid (use with type="evidence")
+        "stats_dashboard"      — Stats/chart surface (use with type="chart")
+        "scenario_stress_test" — Scenario stress test (use with type="scenario")
+      If omitted, recipe is inferred from type.
     - confidence_tier: "Speculative" | "Indicative" | "Supported" | "Robust"
     - sections_json: JSON string mapping heading to body text, e.g. '{"Strategic Case": "..."}'
     - corpus_citations_json: JSON array of citation objects from corpus search results.
@@ -195,9 +212,13 @@ def set_artifact_block(
     # H2: Compute coverage from verified citations; stored in state for ceiling enforcement.
     evidence_coverage = corpus_queries.evidence_coverage_summary(verified_citations)
 
+    # Explicit recipe field — fall back to type-derived default if not supplied or invalid.
+    resolved_recipe = recipe if recipe in _RECIPE_VALUES else _DEFAULT_RECIPE.get(type, "brief_five_case")
+
     dropped = len(raw_citations) - len(verified_citations)
     msg = (
-        f"Artifact block updated. {len(verified_citations)}/{len(raw_citations)} citations verified"
+        f"Artifact block updated (recipe={resolved_recipe}). "
+        f"{len(verified_citations)}/{len(raw_citations)} citations verified"
         + (f" ({dropped} dropped — IDs not found in corpus)" if dropped else "")
         + f". Coverage: {evidence_coverage.get('suggested_confidence_tier', 'unknown')}"
     )
@@ -205,6 +226,7 @@ def set_artifact_block(
     return Command(update={
         "artifact_block": {
             "type": type,
+            "recipe": resolved_recipe,
             "confidence_tier": confidence_tier,
             "sections": sections,
             "corpus_citations": verified_citations,
