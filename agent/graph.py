@@ -104,13 +104,17 @@ Use `type="scenario"` with exactly these section names:
 
 ## State-update tools
 
-- `set_artifact_block(type, confidence_tier, recipe?, sections_json, corpus_citations_json, npv_value?, discount_rate?)`:
+- `set_artifact_block(type, confidence_tier, recipe?, sections_json, corpus_citations_json, chart_specs_json?, npv_value?, discount_rate?)`:
   type: "brief"|"evidence"|"chart"|"scenario".
   recipe (required — sets the render layout):
     "brief_five_case"      → use with type="brief" for Five Case Model output
     "evidence_panel"       → use with type="evidence" for citation grids
     "stats_dashboard"      → use with type="chart" for stats/NPV surfaces
     "scenario_stress_test" → use with type="scenario" for stress tests
+  chart_specs_json: charts that BELONG to this artefact (travel with it).
+    Format: '[{"type":"bar","title":"...","x":"year","y":"value","data":[...]}]'
+    Rule: only put charts here if they are part of the investment case or analysis being presented.
+    Use add_charts() for temporary workspace/exploratory charts instead.
   Verifies citations and stores evidence_coverage.
 - `set_decision_spine(decision, recommendation, confidence_tier, key_assumption, next_action, ...)`:
   confidence_tier is capped at evidence ceiling. Must be: Speculative | Indicative | Supported | Robust

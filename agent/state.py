@@ -90,7 +90,9 @@ class ArtifactBlock(BaseModel):
     npv_value: Optional[float] = None
     discount_rate: Optional[float] = None
     confidence_tier: ConfidenceTier = "Speculative"
-    chart_spec: Optional[Dict] = None
+    # Charts that belong to THIS artefact (travel with it).
+    # AgentState.charts is for temporary workspace/exploratory charts only.
+    chart_specs: Optional[List[Dict]] = None
 
 
 class DecisionSpine(BaseModel):

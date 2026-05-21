@@ -1,6 +1,7 @@
 "use client";
 
 import { ArtifactBlock } from "@/lib/types";
+import { ChartRenderer } from "@/components/dashboard/charts/chart-renderer";
 
 interface Props {
   artifact: ArtifactBlock;
@@ -59,17 +60,26 @@ export function StatsDashboardRecipe({ artifact }: Props) {
           </div>
         ))}
 
-        {sectionEntries.length === 0 && artifact.npv_value === undefined && (
+        {/* Embedded artefact charts */}
+        {artifact.chart_specs && artifact.chart_specs.length > 0 && (
+          <div className="space-y-4 border-t border-border pt-4">
+            {artifact.chart_specs.map((chart, i) => (
+              <div key={i} className="space-y-1">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {chart.title}
+                </h3>
+                <ChartRenderer spec={chart} data={chart.data} />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {sectionEntries.length === 0 && artifact.npv_value === undefined &&
+         (!artifact.chart_specs || artifact.chart_specs.length === 0) && (
           <p className="text-sm text-muted-foreground italic">
             Ask the agent to run a data analysis or NPV calculation.
           </p>
         )}
-
-        {/* Charts hint */}
-        <div className="flex items-center gap-2 pt-1 text-xs text-muted-foreground border-t border-border">
-          <span className="w-3 h-3 rounded-sm bg-indigo-200 inline-block" />
-          Charts are rendered in the panel below
-        </div>
       </div>
     </div>
   );

@@ -70,6 +70,7 @@ const EVIDENCE_SPINE: DecisionSpine = {
 
 const STATS_ARTIFACT: ArtifactBlock = {
   type: "chart",
+  recipe: "stats_dashboard",
   confidence_tier: "Supported",
   sections: {
     "Summary": "CPC has funded 48 EV charging infrastructure projects since 2019, with an aggregate investment of £127m. Corpus analysis shows strong concentration in urban areas (73%) with underserved rural coverage (8%).",
@@ -80,6 +81,21 @@ const STATS_ARTIFACT: ArtifactBlock = {
     { id: "bbb00002-0000-0000-0000-000000000002", title: "LEVI Fund — Rapid Deployment Round 4", funder: "OZEV", score: 0.82, source_type: "live_call" },
   ],
   npv_value: 127_000_000,
+  chart_specs: [
+    {
+      type: "bar",
+      title: "CPC EV Investment by Year",
+      x: "year",
+      y: "investment_m",
+      data: [
+        { year: "2019", investment_m: 12 },
+        { year: "2020", investment_m: 18 },
+        { year: "2021", investment_m: 24 },
+        { year: "2022", investment_m: 31 },
+        { year: "2023", investment_m: 42 },
+      ],
+    },
+  ],
 };
 
 const STATS_SPINE: DecisionSpine = {

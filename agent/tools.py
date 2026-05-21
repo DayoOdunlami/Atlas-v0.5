@@ -179,6 +179,7 @@ def set_artifact_block(
     recipe: Optional[str] = None,
     sections_json: str = "{}",
     corpus_citations_json: str = "[]",
+    chart_specs_json: str = "[]",
     npv_value: Optional[float] = None,
     discount_rate: Optional[float] = None,
     state: Annotated[dict, InjectedState] = None,
@@ -198,6 +199,10 @@ def set_artifact_block(
     - corpus_citations_json: JSON array of citation objects from corpus search results.
       Each object must have a real 'id' from the database — never fabricate IDs.
       Format: '[{"id":"<uuid>","title":"...","organisation":"...","score":0.8,"source_type":"project"}]'
+    - chart_specs_json: JSON array of chart specs that BELONG TO THIS ARTEFACT.
+      Charts here travel with the artefact and render inside the stats_dashboard or brief.
+      Format: '[{"type":"bar","title":"X by Year","x":"year","y":"value","data":[...]}]'
+      Do NOT put temporary/exploratory workspace charts here — use add_charts() for those.
 
     All citations are mechanically verified against the DB before storage.
     Unverifiable IDs are silently dropped. Evidence coverage is computed and stored
@@ -205,6 +210,7 @@ def set_artifact_block(
     """
     sections = json.loads(sections_json) if sections_json else {}
     raw_citations = json.loads(corpus_citations_json) if corpus_citations_json else []
+    chart_specs = json.loads(chart_specs_json) if chart_specs_json else []
 
     # H1: Verify every citation ID against the DB. Drop any that don't resolve.
     verified_citations = [v for c in raw_citations if (v := _verify_citation(c)) is not None]
@@ -230,6 +236,7 @@ def set_artifact_block(
             "confidence_tier": confidence_tier,
             "sections": sections,
             "corpus_citations": verified_citations,
+            "chart_specs": chart_specs if chart_specs else None,
             "npv_value": npv_value,
             "discount_rate": discount_rate,
         },

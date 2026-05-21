@@ -83,7 +83,12 @@ export type ArtifactBlock = {
   npv_value?: number;
   discount_rate?: number;
   confidence_tier: ConfidenceTier;
-  chart_spec?: object;
+  /**
+   * Charts that belong to THIS artefact and should travel with it.
+   * Distinct from AgentState.charts which holds temporary workspace charts.
+   * Used by stats_dashboard and optionally brief_five_case.
+   */
+  chart_specs?: Chart[];
 };
 
 export type DecisionSpine = {
