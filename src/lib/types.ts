@@ -104,13 +104,6 @@ export const initialState: AgentState = {
       hint: "Across active session citations",
       icon: "conversion",
     },
-    {
-      id: "citations",
-      title: "Citations found",
-      value: "0",
-      hint: "Corpus citations in current brief",
-      icon: "mrr",
-    },
   ],
   surface_state: {
     mode: "artifact",
