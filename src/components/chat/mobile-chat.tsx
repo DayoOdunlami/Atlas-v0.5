@@ -10,24 +10,24 @@ export function MobileChat() {
   return (
     <CopilotSidebar
       labels={{
-        title: "🪁 ADK Dashboard Agent",
-        initial: "👋 Hi! Describe a dashboard and I'll build it.",
+        title: "🧭 ATLAS — CPC Decision Intelligence",
+        initial: "👋 Hi, I'm ATLAS. Ask me to build an investment brief, evaluate an opportunity, or search the CPC corpus.",
       }}
       suggestions={[
         {
-          title: "Pizza sales",
+          title: "Autonomous freight corridors",
           message:
-            "Please update the dashboard to help me keep track of the current trends in the Pizza industry.",
+            "What is the strategic case for CPC to commission a programme on autonomous freight corridors in the UK?",
         },
         {
-          title: "AI growth",
+          title: "EV charging infrastructure",
           message:
-            "Please update the dashbaord to help me keep track of the current trends in the AI industry.",
+            "Build an investment brief for a CPC-led EV charging infrastructure programme targeting underserved regions.",
         },
         {
-          title: "Music trends",
+          title: "Active travel",
           message:
-            "Please update the dashbaord to help me keep track of the current trends in the Music industry.",
+            "What evidence does the CPC corpus have on active travel and urban mobility innovation?",
         },
       ]}
       Input={SidebarInput}

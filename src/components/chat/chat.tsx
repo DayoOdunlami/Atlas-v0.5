@@ -18,23 +18,23 @@ export function Chat({ className }: ChatProps) {
           className="flex-1 min-h-0"
           labels={{
             initial:
-              "👋 Hi! \n\nI'm here to help you build beautiful dashboards with data from Google Search.\n\nTry some of the suggestions below or ask me to build anything!",
+              "👋 Hi, I'm ATLAS.\n\nI help CPC strategists build evidence-backed investment briefs grounded in the CPC corpus — real projects, live funding calls, policy evidence, and HIVE case studies.\n\nTry one of the prompts below, or ask me anything.",
           }}
           suggestions={[
             {
-              title: "Pizza sales",
+              title: "Autonomous freight corridors",
               message:
-                "Please rebuild the dashboard to help me keep track of the current trends in the Pizza industry.",
+                "What is the strategic case for CPC to commission a programme on autonomous freight corridors in the UK?",
             },
             {
-              title: "AI growth",
+              title: "EV charging infrastructure",
               message:
-                "Please rebuild the dashboard to help me keep track of the current trends in the AI industry.",
+                "Build an investment brief for a CPC-led EV charging infrastructure programme targeting underserved regions.",
             },
             {
-              title: "Music trends",
+              title: "Active travel",
               message:
-                "Please rebuild the dashboard to help me keep track of the current trends in the Music industry.",
+                "What evidence does the CPC corpus have on active travel and urban mobility innovation?",
             },
           ]}
           Input={SidebarInput}
