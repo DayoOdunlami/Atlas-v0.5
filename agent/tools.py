@@ -66,11 +66,12 @@ def _verify_citation(citation: dict) -> Optional[dict]:
     if record is None:
         return None
 
+    sim_val = citation.get("similarity") or citation.get("score") or 0.0
     verified: dict = {
         "id": record.get("id", record_id),
         "source_type": source_type,
-        # Normalise score field so evidence_coverage_summary can read it
-        "similarity": citation.get("similarity") or citation.get("score") or 0.0,
+        "similarity": sim_val,  # for evidence_coverage_summary
+        "score": sim_val,       # TypeScript CorpusCitation.score
     }
 
     if source_type == "project":

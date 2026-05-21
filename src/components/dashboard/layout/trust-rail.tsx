@@ -1,14 +1,62 @@
 "use client";
 
-import { ArtifactBlock, ConfidenceTier } from "@/lib/types";
+import { ArtifactBlock, ConfidenceTier, CorpusCitation, SourceType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const tierBar: Record<ConfidenceTier, { width: string; color: string }> = {
-  Speculative: { width: "w-1/4", color: "bg-red-400" },
+const TIER_BAR: Record<ConfidenceTier, { width: string; color: string }> = {
+  Speculative: { width: "w-1/4", color: "bg-red-400"   },
   Indicative:  { width: "w-2/4", color: "bg-amber-400" },
-  Supported:   { width: "w-3/4", color: "bg-blue-400" },
+  Supported:   { width: "w-3/4", color: "bg-blue-400"  },
   Robust:      { width: "w-full", color: "bg-green-400" },
 };
+
+const SOURCE_DOT: Record<SourceType, string> = {
+  project:         "bg-indigo-500",
+  live_call:       "bg-green-500",
+  knowledge_doc:   "bg-blue-500",
+  knowledge_chunk: "bg-blue-500",
+  hive_chunk:      "bg-purple-500",
+  hive_article:    "bg-purple-500",
+};
+
+const SOURCE_LABEL: Record<SourceType, string> = {
+  project:         "R&D",
+  live_call:       "Call",
+  knowledge_doc:   "Policy",
+  knowledge_chunk: "Policy",
+  hive_chunk:      "HIVE",
+  hive_article:    "HIVE",
+};
+
+function CitationRow({ c }: { c: CorpusCitation }) {
+  const pct = Math.round((c.score ?? 0) * 100);
+  const dot = c.source_type ? SOURCE_DOT[c.source_type] : "bg-muted-foreground";
+  const label = c.source_type ? SOURCE_LABEL[c.source_type] : null;
+
+  return (
+    <div className="rounded-lg border border-border p-2.5 space-y-1 bg-muted/20">
+      <p className="text-xs font-medium leading-snug line-clamp-2">{c.title}</p>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1 min-w-0">
+          {label && (
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded shrink-0",
+              )}
+            >
+              <span className={cn("w-1.5 h-1.5 rounded-full", dot)} />
+              <span className="text-muted-foreground">{label}</span>
+            </span>
+          )}
+          <span className="text-xs text-muted-foreground truncate">
+            {c.organisation ?? c.funder ?? c.publisher ?? ""}
+          </span>
+        </div>
+        <span className="text-xs font-mono text-indigo-600 shrink-0">{pct}%</span>
+      </div>
+    </div>
+  );
+}
 
 interface TrustRailProps {
   artifact: ArtifactBlock;
@@ -16,10 +64,10 @@ interface TrustRailProps {
 
 export function TrustRail({ artifact }: TrustRailProps) {
   const tier = artifact.confidence_tier;
-  const bar = tierBar[tier];
+  const bar = TIER_BAR[tier];
   const citations = artifact.corpus_citations ?? [];
   const hiveCitations = artifact.hive_citations ?? [];
-  const totalCitations = citations.length + hiveCitations.length;
+  const total = citations.length + hiveCitations.length;
 
   return (
     <div className="rounded-xl border border-border bg-card p-4 space-y-4">
@@ -40,8 +88,8 @@ export function TrustRail({ artifact }: TrustRailProps) {
 
       {/* Citation count */}
       <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">Corpus citations</span>
-        <span className="font-semibold">{totalCitations}</span>
+        <span className="text-muted-foreground">Verified citations</span>
+        <span className="font-semibold">{total}</span>
       </div>
 
       {/* Corpus citations */}
@@ -49,18 +97,7 @@ export function TrustRail({ artifact }: TrustRailProps) {
         <div className="space-y-2">
           <p className="text-xs font-medium text-muted-foreground">Atlas corpus</p>
           {citations.map((c) => (
-            <div
-              key={c.id}
-              className="rounded-lg border border-border p-2.5 space-y-1 bg-muted/20"
-            >
-              <p className="text-xs font-medium leading-snug line-clamp-2">{c.title}</p>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">{c.organisation}</span>
-                <span className="text-xs font-mono text-indigo-600">
-                  {(c.score * 100).toFixed(0)}%
-                </span>
-              </div>
-            </div>
+            <CitationRow key={c.id} c={c} />
           ))}
         </div>
       )}
@@ -68,7 +105,7 @@ export function TrustRail({ artifact }: TrustRailProps) {
       {/* Hive citations */}
       {hiveCitations.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">Hive articles</p>
+          <p className="text-xs font-medium text-muted-foreground">HIVE articles</p>
           {hiveCitations.map((h) => (
             <div
               key={h.article_id}
@@ -76,9 +113,12 @@ export function TrustRail({ artifact }: TrustRailProps) {
             >
               <p className="text-xs font-medium leading-snug line-clamp-2">{h.title}</p>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-mono text-muted-foreground">{h.article_id.slice(0, 8)}…</span>
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                  HIVE
+                </span>
                 <span className="text-xs font-mono text-indigo-600">
-                  {(h.score * 100).toFixed(0)}%
+                  {Math.round((h.score ?? 0) * 100)}%
                 </span>
               </div>
             </div>
@@ -86,9 +126,9 @@ export function TrustRail({ artifact }: TrustRailProps) {
         </div>
       )}
 
-      {totalCitations === 0 && (
+      {total === 0 && (
         <p className="text-xs text-muted-foreground italic">
-          No citations yet. Ask the agent to find evidence.
+          No verified citations yet. Ask the agent to search for evidence.
         </p>
       )}
     </div>

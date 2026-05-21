@@ -481,9 +481,9 @@ def evidence_coverage_summary(results: list[dict[str, Any]]) -> dict[str, Any]:
     hive_chunks = [r for r in results if r.get("source_type") == "hive_chunk"]
 
     similarities = [
-        float(r["similarity"])
+        float(r.get("similarity") or r.get("score") or 0)
         for r in results
-        if r.get("similarity") is not None
+        if r.get("similarity") is not None or r.get("score") is not None
     ]
     top_sim = max(similarities) if similarities else 0.0
     avg_sim = sum(similarities) / len(similarities) if similarities else 0.0

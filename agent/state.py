@@ -74,7 +74,7 @@ class SurfaceState(BaseModel):
 
 
 class ArtifactBlock(BaseModel):
-    type: Literal["brief", "evidence", "chart"] = "brief"
+    type: Literal["brief", "evidence", "chart", "scenario"] = "brief"
     sections: Optional[Dict[str, str]] = None
     corpus_citations: Optional[List[CorpusCitation]] = None
     hive_citations: Optional[List[HiveCitation]] = None

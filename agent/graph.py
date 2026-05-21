@@ -92,12 +92,20 @@ When building a multi-section brief, run targeted queries per section — do not
 
 For a general question (not a full brief), call at least `search_corpus_projects` and `search_corpus_evidence`.
 
+**Scenario / stress-test queries** ("what would need to be true for X?", "stress test Y", "risks of Z"):
+Use `type="scenario"` with exactly these section names:
+  - "Hypothesis" — the claim or scenario being tested (1-2 sentences)
+  - "Supporting Evidence" — 3 bullet points of corpus evidence that support it
+  - "Challenging Evidence" — 3 bullet points of corpus evidence that challenge it
+  - "Key Assumptions" — numbered list; tag each as [HELD], [FRAGILE], or [UNVERIFIED]
+  - "Verdict" — one-line conclusion with a conditional qualifier
+
 ---
 
 ## State-update tools
 
 - `set_artifact_block(type, confidence_tier, sections_json, corpus_citations_json, npv_value?, discount_rate?)`:
-  type: "brief"|"evidence"|"chart". Verifies citations and stores evidence_coverage.
+  type: "brief"|"evidence"|"chart"|"scenario". Verifies citations and stores evidence_coverage.
 - `set_decision_spine(decision, recommendation, confidence_tier, key_assumption, next_action, ...)`:
   confidence_tier is capped at evidence ceiling. Must be: Speculative | Indicative | Supported | Robust
 - `set_surface_state(mode, active_agent, lens)` — update active mode/agent/lens.

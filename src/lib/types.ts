@@ -35,11 +35,30 @@ export type SurfaceState = {
   timestamp: string;
 };
 
+export type SourceType =
+  | "project"
+  | "live_call"
+  | "knowledge_doc"
+  | "knowledge_chunk"
+  | "hive_chunk"
+  | "hive_article";
+
 export type CorpusCitation = {
   id: string;
   title: string;
-  organisation: string;
   score: number;
+  source_type?: SourceType;
+  // project
+  organisation?: string;
+  // live_call
+  funder?: string;
+  deadline?: string | null;
+  // knowledge types
+  chunk_id?: string;
+  document_id?: string;
+  publisher?: string;
+  // hive types
+  article_id?: string;
 };
 
 export type HiveCitation = {
@@ -50,7 +69,7 @@ export type HiveCitation = {
 };
 
 export type ArtifactBlock = {
-  type: "brief" | "evidence" | "chart";
+  type: "brief" | "evidence" | "chart" | "scenario";
   sections?: Record<string, string>;
   corpus_citations?: CorpusCitation[];
   hive_citations?: HiveCitation[];
@@ -73,6 +92,19 @@ export type DecisionSpine = {
 
 // ── Shared agent state (useCoAgent sync contract) ────────────────────────────
 
+export type EvidenceCoverage = {
+  projects_found: number;
+  live_calls_found: number;
+  knowledge_docs_found: number;
+  hive_chunks_found: number;
+  source_diversity: number;
+  top_similarity: number;
+  average_similarity: number;
+  evidence_gaps: string[];
+  suggested_confidence_tier: ConfidenceTier;
+  coverage_note: "thin" | "adequate" | "strong";
+};
+
 export type AgentState = {
   title: string;
   charts: Chart[];
@@ -80,6 +112,7 @@ export type AgentState = {
   surface_state?: SurfaceState;
   artifact_block?: ArtifactBlock;
   decision_spine?: DecisionSpine;
+  evidence_coverage?: EvidenceCoverage;
 };
 
 export type AgentSetState<T extends AgentState> = (
@@ -93,8 +126,8 @@ export const initialState: AgentState = {
     {
       id: "corpus-size",
       title: "Corpus projects",
-      value: "2,847",
-      hint: "Total indexed CPC project records",
+      value: "711",
+      hint: "Indexed atlas.projects records (source: get_corpus_stats)",
       icon: "users",
     },
     {
@@ -119,20 +152,7 @@ export const initialState: AgentState = {
         "Ask the agent a question to generate a brief. Try: \"What is the case for autonomous freight corridors in the UK?\"",
       "Economic Case": "NPV analysis at 3.5% STPR will appear here once evidence is gathered.",
     },
-    corpus_citations: [
-      {
-        id: "demo-atlas-001",
-        title: "Connected and Autonomous Vehicles: UK Readiness Assessment",
-        organisation: "Connected Places Catapult",
-        score: 0.87,
-      },
-      {
-        id: "demo-atlas-002",
-        title: "Urban Freight Decarbonisation Pathways 2030",
-        organisation: "Innovate UK",
-        score: 0.74,
-      },
-    ],
+    corpus_citations: [],
   },
   decision_spine: {
     decision: "Should CPC commission autonomous freight corridor research?",

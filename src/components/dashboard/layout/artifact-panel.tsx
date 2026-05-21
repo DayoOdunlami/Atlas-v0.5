@@ -1,86 +1,46 @@
 "use client";
 
-import { ArtifactBlock, ConfidenceTier } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { ArtifactBlock } from "@/lib/types";
+import {
+  BriefFiveCaseRecipe,
+  EvidencePanelRecipe,
+  StatsDashboardRecipe,
+  ScenarioStressTestRecipe,
+} from "@/components/dashboard/recipes";
 
-const tierStyle: Record<ConfidenceTier, string> = {
-  Speculative: "text-red-600 bg-red-50 border-red-200",
-  Indicative: "text-amber-600 bg-amber-50 border-amber-200",
-  Supported: "text-blue-600 bg-blue-50 border-blue-200",
-  Robust: "text-green-600 bg-green-50 border-green-200",
-};
+const FIVE_CASE_SECTIONS = new Set([
+  "Strategic Case",
+  "Economic Case",
+  "Commercial Case",
+  "Financial Case",
+  "Management Case",
+]);
 
-const typeLabel: Record<ArtifactBlock["type"], string> = {
-  brief: "Opportunity Brief",
-  evidence: "Evidence Summary",
-  chart: "Analysis Chart",
-};
+type RecipeType = "brief_five_case" | "evidence_panel" | "stats_dashboard" | "scenario_stress_test";
+
+function detectRecipe(artifact: ArtifactBlock): RecipeType {
+  if (artifact.type === "scenario") return "scenario_stress_test";
+  if (artifact.type === "chart") return "stats_dashboard";
+  if (artifact.type === "evidence") return "evidence_panel";
+  // For "brief": check section names for Five Case markers
+  const keys = Object.keys(artifact.sections ?? {});
+  if (keys.some((k) => FIVE_CASE_SECTIONS.has(k))) return "brief_five_case";
+  return "brief_five_case";
+}
 
 interface ArtifactPanelProps {
   artifact: ArtifactBlock;
 }
 
 export function ArtifactPanel({ artifact }: ArtifactPanelProps) {
+  const recipe = detectRecipe(artifact);
+
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            {typeLabel[artifact.type]}
-          </span>
-        </div>
-        <span
-          className={cn(
-            "text-xs font-semibold px-2.5 py-0.5 rounded-full border",
-            tierStyle[artifact.confidence_tier],
-          )}
-        >
-          {artifact.confidence_tier}
-        </span>
-      </div>
-
-      <div className="p-4 space-y-4">
-        {/* Sections */}
-        {artifact.sections && Object.keys(artifact.sections).length > 0 && (
-          <div className="space-y-3">
-            {Object.entries(artifact.sections).map(([heading, body]) => (
-              <div key={heading}>
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-                  {heading}
-                </h3>
-                <p className="text-sm text-foreground/85 leading-relaxed">{body}</p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* NPV */}
-        {artifact.npv_value !== undefined && (
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/40">
-            <div>
-              <p className="text-xs text-muted-foreground">NPV (3.5% STPR)</p>
-              <p className="text-lg font-bold">
-                £{(artifact.npv_value / 1_000_000).toFixed(1)}m
-              </p>
-            </div>
-            {artifact.discount_rate && (
-              <div className="ml-6">
-                <p className="text-xs text-muted-foreground">Discount rate</p>
-                <p className="text-lg font-bold">{artifact.discount_rate}%</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* No content placeholder */}
-        {(!artifact.sections || Object.keys(artifact.sections).length === 0) &&
-          artifact.npv_value === undefined && (
-            <p className="text-sm text-muted-foreground italic">
-              Ask the agent to generate a brief.
-            </p>
-          )}
-      </div>
+      {recipe === "brief_five_case" && <BriefFiveCaseRecipe artifact={artifact} />}
+      {recipe === "evidence_panel" && <EvidencePanelRecipe artifact={artifact} />}
+      {recipe === "stats_dashboard" && <StatsDashboardRecipe artifact={artifact} />}
+      {recipe === "scenario_stress_test" && <ScenarioStressTestRecipe artifact={artifact} />}
     </div>
   );
 }
