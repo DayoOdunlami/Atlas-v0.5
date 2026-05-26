@@ -22,9 +22,17 @@ let _pool: Pool | null = null;
 function db(): Pool {
   if (!_pool) {
     const cs = process.env.POSTGRES_URL ?? process.env.DATABASE_URL ?? "";
-    const isLocal = cs.includes("localhost") || cs.includes("127.0.0.1");
+    const isLocal =
+      cs.includes("localhost") || cs.includes("127.0.0.1");
+    // Strip sslmode from the connection string — pg v8 treats sslmode=require
+    // as verify-full (self-signed cert rejection). We handle SSL via the Pool
+    // ssl option instead so rejectUnauthorized: false is respected.
+    const cleanCs = cs
+      .replace(/[?&]sslmode=[^&]*/g, "")
+      .replace(/\?$/, "")
+      .replace(/&$/, "");
     _pool = new Pool({
-      connectionString: cs,
+      connectionString: cleanCs,
       ssl: isLocal ? false : { rejectUnauthorized: false },
       max: 3,
       idleTimeoutMillis: 30_000,

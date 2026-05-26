@@ -1,12 +1,37 @@
-export type LineChartSpec = {
-  type: "line";
-  title: string;
-  x: string;
-  y: string;
-};
+export type LineChartSpec = { type: "line"; title: string; x: string; y: string };
 export type BarChartSpec = { type: "bar"; title: string; x: string; y: string };
+export type AreaChartSpec = { type: "area"; title: string; x: string; y: string };
 export type PieChartSpec = { type: "pie"; title: string; x: string; y: string };
-export type ChartSpec = LineChartSpec | BarChartSpec | PieChartSpec;
+export type ScatterChartSpec = { type: "scatter"; title: string; x: string; y: string };
+export type RadialBarChartSpec = { type: "radial-bar"; title: string; x: string; y: string };
+export type StackedBarChartSpec = {
+  type: "stacked-bar";
+  title: string;
+  x: string;       // category axis (e.g. "funder")
+  y: string;       // value axis (e.g. "count")
+  series: string;  // the field that splits into stacks (e.g. "status")
+};
+
+export type ChartSpec =
+  | LineChartSpec
+  | BarChartSpec
+  | AreaChartSpec
+  | PieChartSpec
+  | ScatterChartSpec
+  | RadialBarChartSpec
+  | StackedBarChartSpec;
+
+/** All supported chart type identifiers — used in the lab type selector */
+export const CHART_TYPES = [
+  "bar",
+  "line",
+  "area",
+  "pie",
+  "scatter",
+  "radial-bar",
+  "stacked-bar",
+] as const;
+export type ChartType = (typeof CHART_TYPES)[number];
 
 // Data records supplied by the agent for charts
 export type ChartDataRecord = Record<string, string | number>;
