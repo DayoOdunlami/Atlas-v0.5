@@ -1,0 +1,10 @@
+feat: chart_specs inside ArtifactBlock — charts travel with artefact
+
+- Add ArtifactBlock.chart_specs?: Chart[] (TS) and chart_specs?: List[Dict] (Python)
+- stats_dashboard recipe renders chart_specs inline via ChartRenderer
+- set_artifact_block() gains chart_specs_json param
+- Rule encoded: chart_specs = artefact-owned charts; AgentState.charts = workspace only
+- MOCK_STATS and test-recipes page updated to demonstrate the split
+- System prompt documents the distinction for the agent
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>

@@ -1,0 +1,10 @@
+feat: explicit artifact.recipe field + render recipe validation
+
+- Add RecipeType union to ArtifactBlock (TS + Python)
+- set_artifact_block() now accepts recipe param; falls back to type-derived default
+- detectRecipe() prefers artifact.recipe over section-name inference
+- Fix hive_chunk badge: evidence panel now shows HIVE not Case Study
+- Add test-recipes page and rich mock states for all four surfaces
+- Update agent system prompt to document recipe values
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>

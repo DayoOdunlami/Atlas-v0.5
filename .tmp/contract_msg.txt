@@ -1,0 +1,7 @@
+docs: Atlas v5 artefact contract
+
+ArtifactBlock fields, RecipeType, required fields per recipe,
+citation shapes, EvidenceCoverage, chart ownership rule,
+backward compat notes, files to change in main repo, port risks.
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>

@@ -30,6 +30,16 @@ import {
   type GraphEdge,
 } from "@/components/lab/echarts-chart";
 import { KnowledgeGraph } from "@/components/lab/knowledge-graph";
+import { FiveCaseFlow } from "@/components/lab/five-case-flow";
+import { VennDiagram, type VennSet } from "@/components/lab/venn-diagram";
+import {
+  AntVChart,
+  buildAntVBarSpec,
+  buildAntVAreaSpec,
+  buildAntVStackedBarSpec,
+  buildAntVPieSpec,
+  buildAntVScatterSpec,
+} from "@/components/lab/antv-chart";
 import {
   Card,
   CardContent,
@@ -629,7 +639,36 @@ const FW = {
     cons: ["Larger than Recharts", "Not JSX-native — needs wrapper", "Sankey needs non-trivial data prep"],
     note: "Install for chart types Recharts can't render. Sankey (funder → project → theme flow) and Radar (Five Case coverage) are the primary Atlas use cases.",
   },
+  antv: {
+    name: "AntV G2",
+    bundle: "~600 kB",
+    approach: "Grammar of Graphics (imperative)",
+    color: "text-rose-400",
+    border: "border-rose-500/25",
+    tag: "bg-rose-500/10 text-rose-400",
+    reliability: 3,
+    pros: ["Venn / Euler — genuinely exclusive (no equivalent in Recharts/Vega/ECharts)", "Chord diagrams, calendar heatmaps, treemap drill-down", "Grammar-of-graphics JSON = LLM-generative path"],
+    cons: ["Largest bundle (~600 kB)", "Imperative API = less React-idiomatic", "LLM reliability lower than Vega-Lite"],
+    note: "Install for Venn diagrams and set intersection queries. The killer Atlas use case: 'Which projects span BOTH freight AND EV charging?' — that set intersection is impossible to show with the other three frameworks.",
+  },
 };
+
+// ── AntV Venn fixture data ────────────────────────────────────────────────────
+// Atlas use case: theme × project set intersections
+// "Which projects span BOTH EV Charging AND Freight Decarb.?"
+
+const VENN_SETS: VennSet[] = [
+  // Single themes — circle size = project count in that theme
+  { sets: ["EV Charging"],    size: 47, label: "EV Charging (47)" },
+  { sets: ["Active Travel"],  size: 39, label: "Active Travel (39)" },
+  { sets: ["Freight Decarb."],size: 31, label: "Freight (31)" },
+  // Pairwise intersections — projects spanning both themes
+  { sets: ["EV Charging", "Active Travel"],   size: 9, label: "9" },
+  { sets: ["EV Charging", "Freight Decarb."], size: 6, label: "6" },
+  { sets: ["Active Travel", "Freight Decarb."],size: 4, label: "4" },
+  // Triple intersection — projects spanning all three
+  { sets: ["EV Charging", "Active Travel", "Freight Decarb."], size: 2, label: "2" },
+];
 
 function ReliabilityStars({ n }: { n: number }) {
   return (
@@ -777,6 +816,23 @@ function BakeoffTab() {
     }
   }, [tc, chartType, data]);
 
+  const antVSpec = useMemo(() => {
+    switch (chartType) {
+      case "area":
+      case "line":
+        return buildAntVAreaSpec(data as Array<Record<string, string | number>>, tc.fixtureX, tc.fixtureY);
+      case "stacked-bar":
+        return buildAntVStackedBarSpec(data as Array<{ funder: string; status: string; count: number }>);
+      case "pie":
+      case "radial-bar":
+        return buildAntVPieSpec(data as Array<Record<string, string | number>>, tc.fixtureX, tc.fixtureY);
+      case "scatter":
+        return buildAntVScatterSpec(data as Array<Record<string, string | number>>, tc.fixtureX, tc.fixtureY);
+      default:
+        return buildAntVBarSpec(data as Array<Record<string, string | number>>, tc.fixtureX, tc.fixtureY);
+    }
+  }, [tc, chartType, data]);
+
   return (
     <div className="space-y-6">
       {/* Dataset picker */}
@@ -812,8 +868,8 @@ function BakeoffTab() {
         </Card>
       )}
 
-      {/* 3-panel comparison */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {/* 4-panel comparison: Recharts | Vega-Lite | ECharts | AntV G2 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <FrameworkPanel fw={FW.recharts} insight={commentary?.ecInsight}>
           <ChartRenderer spec={rechartsSpec} data={data} />
         </FrameworkPanel>
@@ -824,6 +880,14 @@ function BakeoffTab() {
 
         <FrameworkPanel fw={FW.echarts} insight={commentary?.ecInsight}>
           <EChartsChart option={echartsOption} style={{ height: "210px", width: "100%" }} />
+        </FrameworkPanel>
+
+        <FrameworkPanel fw={FW.antv}>
+          <AntVChart
+            key={`${tc.id}-${chartType}`}
+            spec={antVSpec}
+            style={{ height: "210px" }}
+          />
         </FrameworkPanel>
       </div>
 
@@ -908,7 +972,60 @@ function BakeoffTab() {
         </div>
       </div>
 
-      {/* Network graph */}
+      {/* AntV exclusive — Venn only (comparison charts are already above in the 4-col grid) */}
+      <div className="space-y-3 pt-2">
+        <div className="flex items-center gap-2">
+          <h2 className="text-sm font-semibold">AntV G2 exclusive — Venn / Euler diagram</h2>
+          <Badge className={`text-xs ${FW.antv.tag} border-rose-500/30`}>only framework that can render this</Badge>
+        </div>
+        <Card className={`border ${FW.antv.border}`}>
+          <CardHeader className="pb-2">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <CardTitle className={`text-sm font-semibold ${FW.antv.color}`}>
+                  Venn / Euler — Theme × Theme project intersections
+                </CardTitle>
+                <CardDescription className="text-xs mt-0.5">
+                  Set intersection across themes. No native equivalent in Recharts, Vega-Lite, or ECharts.
+                </CardDescription>
+              </div>
+              <div className="flex flex-wrap gap-1 shrink-0">
+                <span className={`text-xs px-1.5 py-0.5 rounded ${FW.antv.tag}`}>+ Cross-sector transfer signal</span>
+                <span className={`text-xs px-1.5 py-0.5 rounded ${FW.antv.tag}`}>+ FalkorDB set queries → Venn</span>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+              <div className="h-[240px]">
+                <VennDiagram data={VENN_SETS} style={{ height: "240px" }} />
+              </div>
+              <div className="space-y-3 text-xs text-muted-foreground">
+                <p className="leading-relaxed">
+                  <strong className="text-foreground">Question:</strong> &ldquo;Which projects span both EV Charging AND Freight Decarbonisation?&rdquo;
+                  A bar or pie chart cannot show this — it requires set intersection. Circle area ∝ project count.
+                  Overlap region = projects that appear in BOTH themes.
+                </p>
+                <div className="space-y-1">
+                  {VENN_SETS.filter(s => s.sets.length > 1).map(s => (
+                    <div key={s.sets.join("&")} className="flex items-center gap-2">
+                      <span className="font-mono text-foreground">{s.sets.join(" ∩ ")}</span>
+                      <span className="text-muted-foreground">→ {s.size} projects span both themes</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-muted-foreground/70 leading-relaxed">
+                  In production: ATLAS agent queries FalkorDB via Graphiti MCP for theme-tagged projects,
+                  groups by theme membership, returns set counts → rendered here. This is the cross-sector
+                  transfer signal that no other chart type can surface.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Network graph — moved to Network Graph tab; brief pointer here */}
       <div className="space-y-3 pt-2">
         <div className="flex items-center gap-2">
           <h2 className="text-sm font-semibold">Network graph — @xyflow/react (installed)</h2>
@@ -1056,22 +1173,120 @@ function VocabularyTab() {
         </div>
       </section>
 
-      {/* @xyflow network graph */}
+      {/* AntV G2 exclusive */}
       <section className="space-y-3">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-semibold">@xyflow/react</h2>
-          <Badge variant="secondary" className="text-xs">network/DAG · ~180 kB · installed</Badge>
+          <h2 className="text-sm font-semibold">AntV G2</h2>
+          <Badge className={`text-xs ${FW.antv.tag} border-rose-500/30`}>exclusive chart types · ~600 kB · installed</Badge>
         </div>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Knowledge Graph: Themes → Projects → Funders</CardTitle>
-            <CardDescription className="text-xs">Sample graph · pan · zoom · click — live @xyflow/react</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <KnowledgeGraph className="h-[320px] w-full rounded border border-border" />
-            <p className="text-xs text-muted-foreground mt-2">In production: nodes from atlas.projects + graphiti knowledge graph. Edges show cross-sector transfer relationships and funder links.</p>
-          </CardContent>
-        </Card>
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          {/* Venn — flagship exclusive — pure SVG, no G2 dependency */}
+          <Card className={`flex flex-col border ${FW.antv.border} col-span-2`}>
+            <CardHeader className="pb-1">
+              <CardTitle className={`text-xs font-semibold ${FW.antv.color}`}>
+                Venn / Euler — THE exclusive
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Set intersection across themes. Zero native equivalents in Recharts, Vega-Lite, or ECharts.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0 flex-1">
+              <div className="h-[220px]">
+                <VennDiagram data={VENN_SETS} style={{ height: "220px" }} />
+              </div>
+              <div className="mt-2 space-y-0.5">
+                <p className="text-xs font-mono text-muted-foreground">
+                  {"sets: string[] · size: number — circle area = count, overlap = intersection"}
+                </p>
+                <p className={`text-xs ${FW.antv.color}`} style={{ opacity: 0.7 }}>
+                  Atlas: theme × theme → projects spanning both sectors
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Bar — bake-off comparison */}
+          <Card className={`flex flex-col border ${FW.antv.border}`}>
+            <CardHeader className="pb-1">
+              <CardTitle className={`text-xs font-semibold ${FW.antv.color}`}>Bar (G2 interval)</CardTitle>
+              <CardDescription className="text-xs">Standard bar for bake-off comparison.</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0 flex-1">
+              <AntVChart
+                key="vocab-bar"
+                spec={buildAntVBarSpec(
+                  [{ label: "Policy", value: 34 }, { label: "Research", value: 28 }, { label: "Guidance", value: 19 }, { label: "Case study", value: 13 }, { label: "Other", value: 5 }],
+                  "label", "value",
+                )}
+                style={{ height: "200px" }}
+              />
+              <p className="text-xs font-mono text-muted-foreground mt-2">x: categorical · y: quantitative</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* AntV other exclusives — descriptive only (not rendered to save bundle) */}
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
+          {[
+            { name: "Chord diagram", when: "Bidirectional flows between N entities. Sector ↔ sector investment.", shape: "matrix: source × target × value" },
+            { name: "Treemap (drill-down)", when: "Hierarchical part-to-whole. Theme → Project → Budget.", shape: "tree: parent + children + value" },
+            { name: "Calendar heatmap", when: "Activity over time (365 days). Project start/end density.", shape: "date: YYYY-MM-DD · value: quantitative" },
+          ].map((item) => (
+            <div key={item.name} className={`border rounded p-2.5 space-y-1 ${FW.antv.border}`}>
+              <p className={`text-xs font-semibold ${FW.antv.color}`}>{item.name}</p>
+              <p className="text-xs text-muted-foreground">{item.when}</p>
+              <p className="text-xs font-mono text-muted-foreground/60">{item.shape}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* @xyflow/react — flows + DAGs */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <h2 className="text-sm font-semibold">@xyflow/react — flows, DAGs, and diagrams</h2>
+          <Badge variant="secondary" className="text-xs">~180 kB · installed</Badge>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Knowledge graph */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Corpus Knowledge Graph</CardTitle>
+              <CardDescription className="text-xs">Themes → Projects → Funders · pan · zoom · click</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <KnowledgeGraph className="h-[300px] w-full rounded border border-border" />
+              <p className="text-xs text-muted-foreground mt-2">Use for corpus-driven graphs where structure is known. In production: nodes from atlas.projects + graphiti knowledge graph.</p>
+            </CardContent>
+          </Card>
+
+          {/* Five Case Model — SVG vs @xyflow comparison */}
+          <Card className="border-violet-500/25 border">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-violet-400">Five Case Model — SVG vs @xyflow</CardTitle>
+              <CardDescription className="text-xs">Same data, two renderers — choose based on interactivity needs</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0 space-y-4">
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-1.5">Static SVG — zero bundle cost, no interactivity</p>
+                <div className="border border-border rounded p-2">
+                  <FiveCaseSvg />
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-violet-400 mb-1.5">@xyflow/react — pan · zoom · drag · click · animated edges</p>
+                <div className="border border-violet-500/25 rounded">
+                  <FiveCaseFlow className="h-[200px] w-full" />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                <strong className="text-foreground">Decision:</strong> SVG for static brief artifacts.
+                @xyflow for the live D7 Five Case canvas where analysts drag nodes, annotate, and follow edges.
+                ECharts tree could also work but @xyflow gives full React control per node.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       </section>
 
       {/* Decision guide */}
@@ -1080,12 +1295,13 @@ function VocabularyTab() {
           <CardTitle className="text-sm">Render stack decision — when to use each</CardTitle>
         </CardHeader>
         <CardContent className="text-xs text-muted-foreground space-y-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             {(
               [
                 { name: FW.recharts.name, bundle: FW.recharts.bundle, color: FW.recharts.color, border: FW.recharts.border, when: "Dashboard widgets, artifact panel charts, agent chart_spec output. Default renderer — keep it for all standard charts.", action: "Default — no action needed" },
                 { name: FW.vegaLite.name, bundle: FW.vegaLite.bundle, color: FW.vegaLite.color, border: FW.vegaLite.border, when: "Agent needs to generate chart configs from scratch in JSON. More LLM-reliable than writing JSX.", action: "Use for agent-generative charts" },
                 { name: FW.echarts.name, bundle: FW.echarts.bundle, color: FW.echarts.color, border: FW.echarts.border, when: "Corpus data needs Sankey (funder flow), Radar (Five Case coverage), Heatmap (evidence matrix), or Gauge.", action: "Wire specific chart types at D7/D8" },
+                { name: FW.antv.name, bundle: FW.antv.bundle, color: FW.antv.color, border: FW.antv.border, when: "Venn / Euler diagrams for set intersection queries. 'Which projects span EV AND freight?' — only AntV can show this.", action: "Use for Venn / set queries" },
                 { name: "@xyflow/react", bundle: "~180 kB", color: "text-violet-400", border: "border-violet-500/25", when: "Five Case flow diagrams, knowledge graph edges, process DAGs. Install complete.", action: "Wire at D7" },
               ] as Array<{ name: string; bundle: string; color: string; border: string; when: string; action: string }>
             ).map((item) => (
@@ -1410,7 +1626,7 @@ export default function VisualisationLabPage() {
         </div>
         <p className="text-sm text-muted-foreground max-w-2xl">
           <strong>Network Graph</strong> — force-directed knowledge graph (query presets simulate agent → Graphiti subgraph → render).{" "}
-          <strong>Bake-off</strong> — Recharts vs Vega-Lite vs ECharts + exclusive types.{" "}
+          <strong>Bake-off</strong> — Recharts vs Vega-Lite vs ECharts vs <span className="text-rose-400">AntV G2</span> + exclusive types incl. Venn.{" "}
           <strong>Vocabulary</strong> — every chart type live.{" "}
           <strong>Corpus Tests</strong> — fixture vs live DB.
         </p>

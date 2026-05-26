@@ -1,0 +1,652 @@
+/**
+ * Atlas 5 — Artifact Pane (D7)
+ *
+ * Right pane — renders structured agent output.
+ *
+ * Renders one of three views based on artifact_block.type:
+ *   'brief'    → Five Case Model (ATLAS): NPV card + 5 sections + citations
+ *   'evidence' → Evidence view (JARVIS/CICERONE/HYVE): analysis + citations
+ *
+ * Populated via useArtifactStore which is updated by useAtlas5Chat when
+ * the /api/copilotkit route emits a structured data annotation.
+ *
+ * data-testid="artifact-pane" — stable selector for Playwright + Tier 1 eval.
+ */
+"use client";
+
+import { useState } from "react";
+
+import {
+  type ArtifactBlock,
+  type EvidenceGap,
+  useArtifactStore,
+} from "@/lib/atlas5/artifact-store";
+import type {
+  CorpusCitation,
+  HiveCitation,
+  RecipeType,
+} from "@/lib/atlas5/types";
+import { useSurfaceGateway } from "@/lib/atlas5/surface-gateway";
+import {
+  BriefFiveCaseRecipe,
+  EvidencePanelRecipe,
+  StatsDashboardRecipe,
+  ScenarioStressTestRecipe,
+} from "@/components/atlas5/recipes";
+import { TrustRail } from "@/components/atlas5/trust-rail";
+import { DecisionSpineCard } from "@/components/atlas5/decision-spine";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const TIER_COLORS: Record<string, string> = {
+  Speculative:
+    "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+  Indicative:
+    "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+  Supported:
+    "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+  Robust:
+    "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
+};
+
+const GAP_COLORS: Record<string, string> = {
+  HAVE: "text-emerald-600 dark:text-emerald-400",
+  PARTIAL: "text-amber-600 dark:text-amber-400",
+  MISSING: "text-red-600 dark:text-red-400",
+};
+
+const GAP_ICONS: Record<string, string> = {
+  HAVE: "✓",
+  PARTIAL: "~",
+  MISSING: "✗",
+};
+
+function ConfidenceBadge({ tier }: { tier: string }) {
+  return (
+    <span
+      data-testid="confidence-tier-badge"
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${TIER_COLORS[tier] ?? TIER_COLORS.Speculative}`}
+    >
+      {tier}
+    </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Section accordion item
+// ---------------------------------------------------------------------------
+
+function SectionItem({
+  title,
+  content,
+  defaultOpen = false,
+}: {
+  title: string;
+  content: string;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <div className="border border-border rounded-lg overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-3 py-2.5 text-left bg-muted/40 hover:bg-muted/70 transition-colors"
+        aria-expanded={open}
+      >
+        <span className="text-xs font-semibold text-foreground uppercase tracking-wide">
+          {title}
+        </span>
+        <span
+          className="text-muted-foreground text-sm transition-transform duration-150"
+          aria-hidden="true"
+          style={{ transform: open ? "rotate(180deg)" : undefined }}
+        >
+          ▾
+        </span>
+      </button>
+      {open && (
+        <div className="px-3 py-2.5 text-sm text-foreground whitespace-pre-wrap leading-relaxed bg-background">
+          {content || (
+            <span className="text-muted-foreground italic">
+              No content provided for this section.
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// NPV card (ATLAS brief)
+// ---------------------------------------------------------------------------
+
+function NpvCard({
+  npvValue,
+  discountRate,
+  optimismBias,
+}: {
+  npvValue: number | null | undefined;
+  discountRate: number | undefined;
+  optimismBias: number | null | undefined;
+}) {
+  if (npvValue == null) return null;
+
+  const isPositive = npvValue >= 0;
+  const formatted = new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "GBP",
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(Math.abs(npvValue));
+
+  return (
+    <div
+      data-testid="npv-card"
+      className="rounded-xl border border-border bg-muted/30 p-4 mb-4"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-0.5">
+            Net Present Value
+          </p>
+          <p
+            className={`text-2xl font-bold tabular-nums ${
+              isPositive
+                ? "text-emerald-600 dark:text-emerald-400"
+                : "text-red-600 dark:text-red-400"
+            }`}
+          >
+            {isPositive ? "+" : "−"}
+            {formatted}
+          </p>
+        </div>
+        <div className="text-right text-[10px] text-muted-foreground space-y-0.5">
+          {discountRate != null && (
+            <p>
+              Discount rate:{" "}
+              <span className="font-semibold text-foreground">
+                {(discountRate * 100).toFixed(1)}%
+              </span>{" "}
+              <span className="text-[9px]">(HMT STPR)</span>
+            </p>
+          )}
+          {optimismBias != null && (
+            <p>
+              Optimism bias:{" "}
+              <span className="font-semibold text-foreground">
+                {(optimismBias * 100).toFixed(0)}%
+              </span>
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Corpus citations list
+// ---------------------------------------------------------------------------
+
+function CorpusCitationsList({
+  citations,
+}: {
+  citations: CorpusCitation[];
+}) {
+  if (!citations.length) return null;
+
+  return (
+    <div data-testid="corpus-citations-list" className="mt-4">
+      <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+        Corpus Citations ({citations.length})
+      </h3>
+      <ol className="space-y-2">
+        {citations.map((c, i) => (
+          <li
+            key={c.id}
+            className="flex gap-2 text-xs bg-muted/30 rounded-lg px-3 py-2 border border-border"
+          >
+            <span className="text-muted-foreground shrink-0 font-mono">
+              [{i + 1}]
+            </span>
+            <div className="min-w-0">
+              <p className="font-medium text-foreground truncate">{c.title}</p>
+              {c.organisation && (
+                <p className="text-muted-foreground text-[10px]">
+                  {c.organisation}
+                </p>
+              )}
+              {c.relevance_note && (
+                <p className="text-muted-foreground mt-0.5 line-clamp-2">
+                  {c.relevance_note}
+                </p>
+              )}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// HIVE citations list
+// ---------------------------------------------------------------------------
+
+function HiveCitationsList({ citations }: { citations: HiveCitation[] }) {
+  if (!citations.length) return null;
+
+  return (
+    <div data-testid="hive-citations-list" className="mt-4">
+      <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+        HIVE Articles ({citations.length})
+      </h3>
+      <ol className="space-y-2">
+        {citations.map((c, i) => (
+          <li
+            key={c.article_id}
+            className="flex gap-2 text-xs bg-muted/30 rounded-lg px-3 py-2 border border-border"
+          >
+            <span className="text-muted-foreground shrink-0 font-mono">
+              [{i + 1}]
+            </span>
+            <div className="min-w-0">
+              <p className="font-medium text-foreground truncate">{c.title}</p>
+              {c.score != null && (
+                <p className="text-muted-foreground text-[10px]">
+                  Relevance: {(c.score * 100).toFixed(0)}%
+                </p>
+              )}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Evidence gaps (CICERONE)
+// ---------------------------------------------------------------------------
+
+function EvidenceGapsList({ gaps }: { gaps: EvidenceGap[] }) {
+  if (!gaps.length) return null;
+
+  return (
+    <div data-testid="evidence-gaps-list" className="mt-4">
+      <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+        Evidence Gaps
+      </h3>
+      <div className="space-y-1.5">
+        {gaps.map((g, i) => (
+          <div
+            key={i}
+            className="flex items-start gap-2 text-xs rounded px-2 py-1.5 bg-muted/30 border border-border"
+          >
+            <span
+              className={`font-bold shrink-0 ${GAP_COLORS[g.status] ?? ""}`}
+              title={g.status}
+            >
+              {GAP_ICONS[g.status]}
+            </span>
+            <div className="min-w-0">
+              <span className="font-medium text-foreground">{g.area}</span>
+              {g.note && (
+                <span className="text-muted-foreground ml-1">— {g.note}</span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Transferability score (CICERONE)
+// ---------------------------------------------------------------------------
+
+function TransferabilityScore({ score }: { score: number }) {
+  const color =
+    score >= 70
+      ? "bg-emerald-500"
+      : score >= 40
+        ? "bg-amber-500"
+        : "bg-red-500";
+
+  return (
+    <div
+      data-testid="transferability-score"
+      className="mb-4 rounded-xl border border-border bg-muted/30 p-4"
+    >
+      <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-2">
+        Transferability Score
+      </p>
+      <div className="flex items-center gap-3">
+        <span className="text-3xl font-bold tabular-nums text-foreground">
+          {score}
+        </span>
+        <span className="text-sm text-muted-foreground">/100</span>
+        <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all ${color}`}
+            style={{ width: `${score}%` }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Recipe router (D7 — explicit recipe field preferred over inference)
+// ---------------------------------------------------------------------------
+
+const FIVE_CASE_KEYS = new Set([
+  "Strategic Case",
+  "Economic Case",
+  "Commercial Case",
+  "Financial Case",
+  "Management Case",
+]);
+
+function detectRecipe(artifact: ArtifactBlock): RecipeType | null {
+  // Agent sets recipe explicitly — always prefer it.
+  if (artifact.recipe) return artifact.recipe;
+  // Infer from type + section keys for backward compat.
+  if (artifact.type === "scenario") return "scenario_stress_test";
+  if (artifact.type === "chart") return "stats_dashboard";
+  if (artifact.type === "evidence") return "evidence_panel";
+  // Brief: check for Title Case Five Case sections.
+  const keys = Object.keys(artifact.sections ?? {});
+  if (keys.some((k) => FIVE_CASE_KEYS.has(k))) return "brief_five_case";
+  // Legacy lowercase sections — fall through to BriefView.
+  return null;
+}
+
+function RecipeView({
+  artifact,
+  decisionSpine,
+}: {
+  artifact: ArtifactBlock;
+  decisionSpine: import("@/lib/atlas5/types").DecisionSpine | null;
+}) {
+  const recipe = detectRecipe(artifact);
+  if (!recipe) return null; // caller falls back to legacy views
+
+  return (
+    <div className="space-y-4" data-testid="recipe-view">
+      {/* Decision Spine — shown above recipe panel when available */}
+      {decisionSpine && <DecisionSpineCard spine={decisionSpine} />}
+
+      {/* Recipe surface + Trust Rail */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 rounded-xl border border-border bg-card overflow-hidden">
+          {recipe === "brief_five_case" && (
+            <BriefFiveCaseRecipe artifact={artifact} />
+          )}
+          {recipe === "evidence_panel" && (
+            <EvidencePanelRecipe artifact={artifact} />
+          )}
+          {recipe === "stats_dashboard" && (
+            <StatsDashboardRecipe artifact={artifact} />
+          )}
+          {recipe === "scenario_stress_test" && (
+            <ScenarioStressTestRecipe artifact={artifact} />
+          )}
+        </div>
+        <div className="lg:col-span-1">
+          <TrustRail artifact={artifact} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Brief view (ATLAS) — legacy fallback for lowercase section keys
+// ---------------------------------------------------------------------------
+
+function BriefView({ artifact }: { artifact: ArtifactBlock }) {
+  const sections = artifact.sections ?? {};
+  const sectionOrder = [
+    "strategic",
+    "economic",
+    "commercial",
+    "financial",
+    "management",
+  ];
+  const sectionLabels: Record<string, string> = {
+    strategic: "Strategic Case",
+    economic: "Economic Case",
+    commercial: "Commercial Case",
+    financial: "Financial Case",
+    management: "Management Case",
+  };
+
+  return (
+    <div data-testid="brief-view">
+      <NpvCard
+        npvValue={artifact.npv_value}
+        discountRate={artifact.discount_rate}
+        optimismBias={artifact.optimism_bias}
+      />
+
+      <div className="space-y-2">
+        {sectionOrder.map((key, i) => (
+          <SectionItem
+            key={key}
+            title={sectionLabels[key]}
+            content={sections[key] ?? ""}
+            defaultOpen={i === 0}
+          />
+        ))}
+      </div>
+
+      {artifact.corpus_citations && artifact.corpus_citations.length > 0 && (
+        <CorpusCitationsList citations={artifact.corpus_citations} />
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Evidence view (JARVIS, CICERONE, HYVE)
+// ---------------------------------------------------------------------------
+
+function EvidenceView({ artifact }: { artifact: ArtifactBlock }) {
+  return (
+    <div data-testid="evidence-view">
+      {/* Transferability score (CICERONE only) */}
+      {artifact.transferability_score != null && (
+        <TransferabilityScore score={artifact.transferability_score} />
+      )}
+
+      {/* Transport mode (HYVE only) */}
+      {artifact.transport_mode && (
+        <div className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs font-medium text-foreground bg-muted/40">
+          <span className="text-muted-foreground">Mode:</span>
+          {artifact.transport_mode}
+        </div>
+      )}
+
+      {/* Sector analogues (CICERONE only) */}
+      {artifact.sector_analogues && artifact.sector_analogues.length > 0 && (
+        <div className="mb-4">
+          <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+            Sector Analogues
+          </h3>
+          <ul className="space-y-1">
+            {artifact.sector_analogues.map((a, i) => (
+              <li
+                key={i}
+                className="text-xs text-foreground bg-muted/30 rounded px-2.5 py-1.5 border border-border"
+              >
+                {a}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Analysis */}
+      {artifact.analysis && (
+        <div className="mb-4">
+          <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+            Analysis
+          </h3>
+          <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+            {artifact.analysis}
+          </p>
+        </div>
+      )}
+
+      {/* Evidence gaps (CICERONE only) */}
+      {artifact.evidence_gaps && (
+        <EvidenceGapsList gaps={artifact.evidence_gaps} />
+      )}
+
+      {/* Corpus citations */}
+      {artifact.corpus_citations && artifact.corpus_citations.length > 0 && (
+        <CorpusCitationsList citations={artifact.corpus_citations} />
+      )}
+
+      {/* HIVE citations (HYVE only) */}
+      {artifact.hive_citations && artifact.hive_citations.length > 0 && (
+        <HiveCitationsList citations={artifact.hive_citations} />
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Loading skeleton
+// ---------------------------------------------------------------------------
+
+function LoadingSkeleton() {
+  return (
+    <div data-testid="artifact-loading" className="space-y-3 animate-pulse">
+      <div className="h-20 rounded-xl bg-muted" />
+      <div className="h-10 rounded-lg bg-muted" />
+      <div className="h-10 rounded-lg bg-muted" />
+      <div className="h-10 rounded-lg bg-muted" />
+      <div className="h-24 rounded-lg bg-muted" />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Empty state
+// ---------------------------------------------------------------------------
+
+function EmptyState({ activeAgent }: { activeAgent: string }) {
+  return (
+    <div
+      data-testid="artifact-empty"
+      className="text-sm text-muted-foreground text-center mt-12"
+    >
+      <div className="mx-auto mb-4 w-12 h-12 rounded-xl bg-muted flex items-center justify-center">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+          <polyline points="14 2 14 8 20 8" />
+        </svg>
+      </div>
+      <p className="font-medium mb-1">No artifact yet</p>
+      <p className="text-xs max-w-xs mx-auto">
+        Send a message to{" "}
+        <strong className="text-foreground">{activeAgent}</strong> — the
+        structured output will appear here.
+      </p>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
+
+export function ArtifactPane() {
+  const { surface } = useSurfaceGateway();
+  const { artifact, decisionSpine, isLoading } = useArtifactStore();
+
+  const agentLabel = artifact?.agent ?? surface.active_agent;
+  const typeLabel =
+    artifact?.recipe === "brief_five_case"
+      ? "Investment Brief"
+      : artifact?.recipe === "evidence_panel"
+        ? "Evidence"
+        : artifact?.recipe === "stats_dashboard"
+          ? "Data Analysis"
+          : artifact?.recipe === "scenario_stress_test"
+            ? "Scenario"
+            : artifact?.type === "brief"
+              ? "Brief"
+              : artifact?.type === "evidence"
+                ? "Evidence"
+                : "Artifact";
+
+  return (
+    <section
+      data-testid="artifact-pane"
+      aria-label="Artifact"
+      className="flex flex-col h-full bg-background"
+    >
+      {/* ----------------------------------------------------------------
+          Header
+      ---------------------------------------------------------------- */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0 gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-sm font-medium text-foreground shrink-0">
+            {typeLabel}
+          </span>
+          {artifact && (
+            <span className="text-xs text-muted-foreground shrink-0">
+              {agentLabel}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {artifact && <ConfidenceBadge tier={artifact.confidence_tier} />}
+          <span className="text-xs text-muted-foreground">
+            {surface.active_lens} lens
+          </span>
+        </div>
+      </div>
+
+      {/* ----------------------------------------------------------------
+          Content
+      ---------------------------------------------------------------- */}
+      <div className="flex-1 overflow-y-auto p-4">
+        {isLoading && !artifact ? (
+          <LoadingSkeleton />
+        ) : !artifact ? (
+          <EmptyState activeAgent={surface.active_agent} />
+        ) : detectRecipe(artifact) !== null ? (
+          // Recipe router: explicit recipe or inferred from Title Case sections / type
+          <RecipeView artifact={artifact} decisionSpine={decisionSpine} />
+        ) : artifact.type === "brief" ? (
+          // Legacy fallback: lowercase section keys from pre-recipe agents
+          <BriefView artifact={artifact} />
+        ) : (
+          <EvidenceView artifact={artifact} />
+        )}
+      </div>
+    </section>
+  );
+}

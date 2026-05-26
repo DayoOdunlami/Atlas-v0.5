@@ -10,6 +10,7 @@ const SUPPORTED_CASES = [
   "knowledge_authority",
   "semantic_clusters",
   "innovation_map",
+  "theme_intersections",
 ] as const;
 type SupportedCase = (typeof SUPPORTED_CASES)[number];
 
@@ -22,17 +23,9 @@ let _pool: Pool | null = null;
 function db(): Pool {
   if (!_pool) {
     const cs = process.env.POSTGRES_URL ?? process.env.DATABASE_URL ?? "";
-    const isLocal =
-      cs.includes("localhost") || cs.includes("127.0.0.1");
-    // Strip sslmode from the connection string — pg v8 treats sslmode=require
-    // as verify-full (self-signed cert rejection). We handle SSL via the Pool
-    // ssl option instead so rejectUnauthorized: false is respected.
-    const cleanCs = cs
-      .replace(/[?&]sslmode=[^&]*/g, "")
-      .replace(/\?$/, "")
-      .replace(/&$/, "");
+    const isLocal = cs.includes("localhost") || cs.includes("127.0.0.1");
     _pool = new Pool({
-      connectionString: cleanCs,
+      connectionString: cs,
       ssl: isLocal ? false : { rejectUnauthorized: false },
       max: 3,
       idleTimeoutMillis: 30_000,
@@ -410,6 +403,112 @@ async function innovationMap(): Promise<VisualisationDataResponse> {
 }
 
 // ---------------------------------------------------------------------------
+// Case: theme_intersections
+// Builds VennSet[] data from atlas.knowledge_documents.themes[] (or projects).
+// Returns single-set sizes + pairwise intersection counts for up to 3 themes.
+// ---------------------------------------------------------------------------
+
+async function themeIntersections(): Promise<VisualisationDataResponse> {
+  // Step 1: discover the top-3 themes by document count
+  const topThemes = await q<{ theme: string; count: number }>(`
+    SELECT unnest(themes) AS theme,
+           COUNT(*)::int  AS count
+    FROM   atlas.knowledge_documents
+    WHERE  themes IS NOT NULL
+      AND  cardinality(themes) > 0
+    GROUP  BY 1
+    ORDER  BY 2 DESC
+    LIMIT  3
+  `).catch(() => [] as { theme: string; count: number }[]);
+
+  // Fallback: try atlas.projects.themes or modes if knowledge_documents empty
+  let themeRows = topThemes;
+  if (themeRows.length === 0) {
+    themeRows = await q<{ theme: string; count: number }>(`
+      SELECT unnest(themes) AS theme,
+             COUNT(*)::int  AS count
+      FROM   atlas.projects
+      WHERE  themes IS NOT NULL
+        AND  cardinality(themes) > 0
+      GROUP  BY 1
+      ORDER  BY 2 DESC
+      LIMIT  3
+    `).catch(() => [] as { theme: string; count: number }[]);
+  }
+
+  // If still empty, return a clearly-labelled empty state
+  if (themeRows.length < 2) {
+    return success({
+      case: "theme_intersections",
+      renderer: "venn",
+      data_source: "atlas.knowledge_documents.themes[] / atlas.projects.themes[]",
+      story: "No theme data found yet. Populate the themes[] column on knowledge_documents or projects to see intersection analysis.",
+      data: [],
+      caveats: [
+        "themes[] column is empty or null across all rows.",
+        "Populate themes[] on atlas.knowledge_documents (or atlas.projects) to enable Venn intersection view.",
+      ],
+    });
+  }
+
+  const themes = themeRows.map((r) => r.theme);
+
+  // Step 2: for each top theme, exact document count (single-set size)
+  const singles = themeRows.map((r) => ({
+    sets: [r.theme],
+    size: Number(r.count),
+  }));
+
+  // Step 3: pairwise intersections
+  const pairs: Array<{ sets: string[]; size: number }> = [];
+  for (let i = 0; i < themes.length; i++) {
+    for (let j = i + 1; j < themes.length; j++) {
+      const rows = await q<{ count: number }>(`
+        SELECT COUNT(*)::int AS count
+        FROM   atlas.knowledge_documents
+        WHERE  $1 = ANY(themes)
+          AND  $2 = ANY(themes)
+      `, [themes[i], themes[j]]).catch(() => [{ count: 0 }]);
+      const pairCount = Number(rows[0]?.count ?? 0);
+      if (pairCount > 0) {
+        pairs.push({ sets: [themes[i], themes[j]], size: pairCount });
+      }
+    }
+  }
+
+  // Step 4: triple intersection (only if 3 themes found)
+  const tripleData: Array<{ sets: string[]; size: number }> = [];
+  if (themes.length === 3) {
+    const rows = await q<{ count: number }>(`
+      SELECT COUNT(*)::int AS count
+      FROM   atlas.knowledge_documents
+      WHERE  $1 = ANY(themes)
+        AND  $2 = ANY(themes)
+        AND  $3 = ANY(themes)
+    `, [themes[0], themes[1], themes[2]]).catch(() => [{ count: 0 }]);
+    const tripleCount = Number(rows[0]?.count ?? 0);
+    if (tripleCount > 0) {
+      tripleData.push({ sets: [themes[0], themes[1], themes[2]], size: tripleCount });
+    }
+  }
+
+  const allSets = [...singles, ...pairs, ...tripleData];
+  const totalDocs = singles.reduce((s, r) => s + r.size, 0);
+
+  return success({
+    case: "theme_intersections",
+    renderer: "venn",
+    data_source: "atlas.knowledge_documents.themes[]",
+    story: `Theme intersection analysis across ${totalDocs} documents. Top themes: ${themes.join(", ")}. Overlap shows projects spanning multiple themes.`,
+    data: allSets as Record<string, unknown>[],
+    caveats:
+      pairs.length === 0
+        ? ["No cross-theme documents found. Themes may be mutually exclusive in this corpus."]
+        : [],
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Route handler
 // ---------------------------------------------------------------------------
 
@@ -422,6 +521,7 @@ const HANDLERS: Record<
   knowledge_authority: knowledgeAuthority,
   semantic_clusters: semanticClusters,
   innovation_map: innovationMap,
+  theme_intersections: themeIntersections,
 };
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
