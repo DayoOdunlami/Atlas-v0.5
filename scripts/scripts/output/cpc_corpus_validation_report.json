@@ -1,0 +1,299 @@
+{
+  "generated_at": "2026-05-22T14:57:56.514Z",
+  "corpus_tag": "cpc_v0_1",
+  "overall": "pass",
+  "sections": {
+    "files": "pass",
+    "schema": "pass",
+    "counts": "pass",
+    "governance": "pass",
+    "queries": "pass",
+    "api": "skip",
+    "idempotency": "pass"
+  },
+  "checks": [
+    {
+      "section": "files",
+      "name": "data/projects_master_v0_4_targeted_enriched.csv",
+      "status": "pass",
+      "detail": "392 rows"
+    },
+    {
+      "section": "files",
+      "name": "projects_master_v0_4_targeted_enriched.csv columns",
+      "status": "pass",
+      "detail": "All 15 required columns present"
+    },
+    {
+      "section": "files",
+      "name": "data/impact_claim_candidates_v0.csv",
+      "status": "pass",
+      "detail": "32 rows"
+    },
+    {
+      "section": "files",
+      "name": "impact_claim_candidates_v0.csv columns",
+      "status": "pass",
+      "detail": "All 10 required columns present"
+    },
+    {
+      "section": "files",
+      "name": "data/evaluation_method_claims_v0.csv",
+      "status": "pass",
+      "detail": "12 rows"
+    },
+    {
+      "section": "files",
+      "name": "evaluation_method_claims_v0.csv columns",
+      "status": "pass",
+      "detail": "All 7 required columns present"
+    },
+    {
+      "section": "files",
+      "name": "data/claim_candidates_v0_7_validated_pmo_subset.csv",
+      "status": "pass",
+      "detail": "5 rows"
+    },
+    {
+      "section": "files",
+      "name": "claim_candidates_v0_7_validated_pmo_subset.csv columns",
+      "status": "pass",
+      "detail": "All 12 required columns present"
+    },
+    {
+      "section": "files",
+      "name": "data/claim_evidence_links_v0_7_validated_pmo_subset.csv",
+      "status": "pass",
+      "detail": "5 rows"
+    },
+    {
+      "section": "files",
+      "name": "claim_evidence_links_v0_7_validated_pmo_subset.csv columns",
+      "status": "pass",
+      "detail": "All 8 required columns present"
+    },
+    {
+      "section": "schema",
+      "name": "atlas.evidence_containers",
+      "status": "pass",
+      "detail": "Table exists"
+    },
+    {
+      "section": "schema",
+      "name": "atlas.claims",
+      "status": "pass",
+      "detail": "Table exists"
+    },
+    {
+      "section": "schema",
+      "name": "atlas.profile_claims",
+      "status": "pass",
+      "detail": "Table exists"
+    },
+    {
+      "section": "schema",
+      "name": "atlas.claim_evidence_links",
+      "status": "pass",
+      "detail": "Table exists"
+    },
+    {
+      "section": "schema",
+      "name": "atlas.evidence_containers columns",
+      "status": "pass",
+      "detail": "All required columns present"
+    },
+    {
+      "section": "schema",
+      "name": "atlas.claims columns",
+      "status": "pass",
+      "detail": "All required columns present"
+    },
+    {
+      "section": "schema",
+      "name": "atlas.profile_claims columns",
+      "status": "pass",
+      "detail": "All required columns present"
+    },
+    {
+      "section": "schema",
+      "name": "atlas.claim_evidence_links columns",
+      "status": "pass",
+      "detail": "All required columns present"
+    },
+    {
+      "section": "counts",
+      "name": "CPC Capability Profile",
+      "status": "pass",
+      "detail": "1 (expected 1)"
+    },
+    {
+      "section": "counts",
+      "name": "Project containers",
+      "status": "pass",
+      "detail": "392 (expected 392)"
+    },
+    {
+      "section": "counts",
+      "name": "Total claims",
+      "status": "pass",
+      "detail": "48 (expected 48)"
+    },
+    {
+      "section": "counts",
+      "name": "Impact claims",
+      "status": "pass",
+      "detail": "31 (expected 31)"
+    },
+    {
+      "section": "counts",
+      "name": "Eval method claims",
+      "status": "pass",
+      "detail": "12 (expected 12)"
+    },
+    {
+      "section": "counts",
+      "name": "PMO validated claims",
+      "status": "pass",
+      "detail": "5 (expected 5)"
+    },
+    {
+      "section": "counts",
+      "name": "Evidence links",
+      "status": "pass",
+      "detail": "48 (expected >= 48)"
+    },
+    {
+      "section": "counts",
+      "name": "Projects with parent_profile_id",
+      "status": "pass",
+      "detail": "All 392 linked"
+    },
+    {
+      "section": "counts",
+      "name": "No container→container profile_claims",
+      "status": "pass",
+      "detail": "Clean"
+    },
+    {
+      "section": "governance",
+      "name": "No Level 3 claims",
+      "status": "pass",
+      "detail": "0 Level 3 claims"
+    },
+    {
+      "section": "governance",
+      "name": "verified_internal not promoted",
+      "status": "pass",
+      "detail": "No improper promotions"
+    },
+    {
+      "section": "governance",
+      "name": "No claims from project metadata",
+      "status": "pass",
+      "detail": "None"
+    },
+    {
+      "section": "governance",
+      "name": "No rejected PMO fragments",
+      "status": "pass",
+      "detail": "None"
+    },
+    {
+      "section": "governance",
+      "name": "All claims pending review",
+      "status": "pass",
+      "detail": "All pending"
+    },
+    {
+      "section": "queries",
+      "name": "Business unit breakdown",
+      "status": "pass",
+      "detail": "5 distinct units"
+    },
+    {
+      "section": "queries",
+      "name": "Top funders",
+      "status": "pass",
+      "detail": "10 returned"
+    },
+    {
+      "section": "queries",
+      "name": "Claims by confidence",
+      "status": "pass",
+      "detail": "1 tiers"
+    },
+    {
+      "section": "queries",
+      "name": "Claims by level",
+      "status": "pass",
+      "detail": "2 levels"
+    },
+    {
+      "section": "queries",
+      "name": "Claims by subtype",
+      "status": "pass",
+      "detail": "9 subtypes"
+    },
+    {
+      "section": "queries",
+      "name": "Evidence links with excerpt",
+      "status": "pass",
+      "detail": "48"
+    },
+    {
+      "section": "queries",
+      "name": "DfT projects",
+      "status": "pass",
+      "detail": "58"
+    },
+    {
+      "section": "queries",
+      "name": "Network Rail projects",
+      "status": "pass",
+      "detail": "32"
+    },
+    {
+      "section": "queries",
+      "name": "PMO claims linked to project containers",
+      "status": "pass",
+      "detail": "5 PMO claims with project links"
+    },
+    {
+      "section": "queries",
+      "name": "Claims linked to Capability Profile",
+      "status": "pass",
+      "detail": "48 claims linked"
+    },
+    {
+      "section": "api",
+      "name": "health endpoint",
+      "status": "skip",
+      "detail": "--skip-api flag set"
+    },
+    {
+      "section": "idempotency",
+      "name": "evidence_containers unique by external_id",
+      "status": "pass",
+      "detail": "Index found"
+    },
+    {
+      "section": "idempotency",
+      "name": "profile_claims unique(container_id, claim_id)",
+      "status": "pass",
+      "detail": "Unique constraint found"
+    },
+    {
+      "section": "idempotency",
+      "name": "No duplicate claims by external_claim_id",
+      "status": "pass",
+      "detail": "None"
+    },
+    {
+      "section": "idempotency",
+      "name": "No duplicate project containers by external_id",
+      "status": "pass",
+      "detail": "None"
+    }
+  ],
+  "warnings": []
+}

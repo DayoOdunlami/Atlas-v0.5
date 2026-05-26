@@ -12,6 +12,22 @@ export type StackedBarChartSpec = {
   series: string;  // the field that splits into stacks (e.g. "status")
 };
 
+/**
+ * VennChartSpec — theme intersection / Euler diagram.
+ *
+ * data rows must conform to VennSet shape:
+ *   { sets: string[], size: number, label?: string }
+ *
+ * Rendered by the pure SVG VennDiagram component (zero external deps).
+ * Populated by the theme_intersections corpus API case.
+ */
+export type VennChartSpec = {
+  type: "venn";
+  title: string;
+  /** Optional: override which corpus case drives this chart */
+  corpus_case?: "theme_intersections";
+};
+
 export type ChartSpec =
   | LineChartSpec
   | BarChartSpec
@@ -19,7 +35,8 @@ export type ChartSpec =
   | PieChartSpec
   | ScatterChartSpec
   | RadialBarChartSpec
-  | StackedBarChartSpec;
+  | StackedBarChartSpec
+  | VennChartSpec;
 
 /** All supported chart type identifiers — used in the lab type selector */
 export const CHART_TYPES = [
@@ -30,6 +47,7 @@ export const CHART_TYPES = [
   "scatter",
   "radial-bar",
   "stacked-bar",
+  "venn",
 ] as const;
 export type ChartType = (typeof CHART_TYPES)[number];
 

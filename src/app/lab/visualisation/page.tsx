@@ -32,6 +32,7 @@ import {
 import { KnowledgeGraph } from "@/components/lab/knowledge-graph";
 import { FiveCaseFlow } from "@/components/lab/five-case-flow";
 import { VennDiagram, type VennSet } from "@/components/lab/venn-diagram";
+import { G6NetworkGraph } from "@/components/lab/g6-network-graph";
 import {
   AntVChart,
   buildAntVBarSpec,
@@ -191,6 +192,25 @@ const TEST_CASES: TestCase[] = [
     })),
   },
   {
+    id: "theme_intersections",
+    title: "Theme Intersections",
+    description: "Which projects span multiple themes? (Venn diagram from corpus)",
+    corpusCase: "theme_intersections",
+    defaultChartType: "venn",
+    fixtureX: "sets",
+    fixtureY: "size",
+    fixtureStory: "Fixture: Atlas theme × theme intersection (EV Charging, Active Travel, Freight Decarb.)",
+    fixtureData: [
+      { sets: ["EV Charging"],    size: 47 },
+      { sets: ["Active Travel"],  size: 39 },
+      { sets: ["Freight Decarb."],size: 31 },
+      { sets: ["EV Charging", "Active Travel"],    size: 9 },
+      { sets: ["EV Charging", "Freight Decarb."],  size: 6 },
+      { sets: ["Active Travel", "Freight Decarb."],size: 4 },
+      { sets: ["EV Charging", "Active Travel", "Freight Decarb."], size: 2 },
+    ] as unknown as ChartDataRecord[],
+  },
+  {
     id: "five_case_flow",
     title: "Five Case Model",
     description: "HM Treasury Five Case Model dependency flow",
@@ -262,7 +282,7 @@ function FiveCaseSvg() {
 
 const TYPE_LABELS: Record<ChartType, string> = {
   bar: "Bar", line: "Line", area: "Area", pie: "Pie",
-  scatter: "Scatter", "radial-bar": "Radial", "stacked-bar": "Stacked",
+  scatter: "Scatter", "radial-bar": "Radial", "stacked-bar": "Stacked", venn: "Venn",
 };
 
 function ChartTypePicker({
@@ -360,6 +380,7 @@ function LabCard({ tc }: { tc: TestCase }) {
   const recommended = suggestChartType(activeData);
 
   function buildSpec(): ChartSpec {
+    if (chartType === "venn") return { type: "venn", title: tc.title };
     const xKey = mode === "corpus" && corpus?.data.length
       ? Object.keys(corpus.data[0]).find((k) => k !== "count" && k !== "value") ?? tc.fixtureX
       : tc.fixtureX;
@@ -368,7 +389,7 @@ function LabCard({ tc }: { tc: TestCase }) {
       : tc.fixtureY;
     const seriesKey = tc.fixtureSeries ?? "series";
     if (chartType === "stacked-bar") return { type: "stacked-bar", title: tc.title, x: xKey, y: yKey, series: seriesKey };
-    return { type: chartType as Exclude<ChartType, "stacked-bar">, title: tc.title, x: xKey, y: yKey };
+    return { type: chartType as Exclude<ChartType, "stacked-bar" | "venn">, title: tc.title, x: xKey, y: yKey };
   }
 
   function renderChart() {
@@ -382,6 +403,13 @@ function LabCard({ tc }: { tc: TestCase }) {
     );
     if (mode === "corpus" && !corpus) return <div className="flex items-center justify-center h-[220px] text-sm text-muted-foreground">Click Corpus to load live data</div>;
     if (activeData.length === 0) return <div className="flex items-center justify-center h-[220px] text-sm text-muted-foreground">No data returned</div>;
+    // Venn — pass VennSet-shaped data directly to VennDiagram
+    if (chartType === "venn" || tc.id === "theme_intersections") {
+      const sets = (activeData as unknown as VennSet[]).filter((d) => Array.isArray(d.sets));
+      return sets.length >= 2
+        ? <VennDiagram data={sets} className="h-[220px] w-full" />
+        : <div className="flex items-center justify-center h-[220px] text-sm text-muted-foreground">No intersection data yet</div>;
+    }
     return <ChartRenderer spec={buildSpec()} data={activeData} />;
   }
 
@@ -1060,11 +1088,11 @@ function BakeoffTab() {
                 },
                 {
                   name: "AntV G6",
-                  status: "❌ not installed",
-                  bundle: "~400 kB",
-                  bestFor: "Force-directed auto-layout, large unknown graphs, clustering",
-                  verdict: "Install if corpus has >50 nodes with unknown structure. Overkill until then.",
-                  color: "text-muted-foreground",
+                  status: "✅ installed",
+                  bundle: "~900 kB",
+                  bestFor: "Force-directed auto-layout, large unknown graphs, clustering, hierarchical layouts",
+                  verdict: "See Network Graph tab for a live side-by-side vs ECharts. Good for 300+ node graphs.",
+                  color: "text-rose-400",
                 },
                 {
                   name: "Neo4j NVL",
@@ -1303,6 +1331,7 @@ function VocabularyTab() {
                 { name: FW.echarts.name, bundle: FW.echarts.bundle, color: FW.echarts.color, border: FW.echarts.border, when: "Corpus data needs Sankey (funder flow), Radar (Five Case coverage), Heatmap (evidence matrix), or Gauge.", action: "Wire specific chart types at D7/D8" },
                 { name: FW.antv.name, bundle: FW.antv.bundle, color: FW.antv.color, border: FW.antv.border, when: "Venn / Euler diagrams for set intersection queries. 'Which projects span EV AND freight?' — only AntV can show this.", action: "Use for Venn / set queries" },
                 { name: "@xyflow/react", bundle: "~180 kB", color: "text-violet-400", border: "border-violet-500/25", when: "Five Case flow diagrams, knowledge graph edges, process DAGs. Install complete.", action: "Wire at D7" },
+                { name: "AntV G6", bundle: "~900 kB", color: "text-rose-400", border: "border-rose-500/25", when: "Force graph with advanced physics layouts (dagre, radial, concentric) for 300+ node corpus graphs.", action: "See Network Graph tab" },
               ] as Array<{ name: string; bundle: string; color: string; border: string; when: string; action: string }>
             ).map((item) => (
               <div key={item.name} className={`border rounded p-3 space-y-1 ${item.border}`}>
@@ -1506,35 +1535,76 @@ function NetworkGraphTab() {
         <p className="text-xs text-emerald-400 mt-1">{preset.story}</p>
       </div>
 
-      {/* Main graph */}
-      <Card className="border-emerald-500/25 border">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-sm text-emerald-400">Knowledge Graph</CardTitle>
-              <CardDescription className="text-xs">
-                {preset.nodes.length} nodes · {preset.edges.length} edges · drag · zoom · pan
-              </CardDescription>
+      {/* Side-by-side: ECharts graph (left) vs AntV G6 (right) */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        {/* ECharts */}
+        <Card className="border-emerald-500/25 border">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-sm text-emerald-400">ECharts — Knowledge Graph</CardTitle>
+                <CardDescription className="text-xs">
+                  {preset.nodes.length} nodes · {preset.edges.length} edges · drag · zoom · pan
+                </CardDescription>
+              </div>
+              <div className="flex flex-wrap gap-2 text-xs">
+                {(["theme", "project", "funder", "document"] as const).map((cat) => (
+                  <span key={cat} className="flex items-center gap-1">
+                    <span className="inline-block w-2 h-2 rounded-full" style={{ background: { theme: "#6366f1", project: "#10b981", funder: "#f59e0b", document: "#06b6d4" }[cat] }} />
+                    <span className="text-muted-foreground">{cat}</span>
+                  </span>
+                ))}
+              </div>
             </div>
-            <div className="flex gap-2 text-xs">
-              {(["theme", "project", "funder", "document"] as const).map((cat) => (
-                <span key={cat} className="flex items-center gap-1">
-                  <span className="inline-block w-2 h-2 rounded-full" style={{ background: { theme: "#6366f1", project: "#10b981", funder: "#f59e0b", document: "#06b6d4" }[cat] }} />
-                  <span className="text-muted-foreground">{cat}</span>
-                </span>
-              ))}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <EChartsChart
-            option={graphOption}
-            style={{ height: "480px", width: "100%" }}
-          />
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <EChartsChart
+              option={graphOption}
+              style={{ height: "420px", width: "100%" }}
+            />
+            <p className="text-xs text-muted-foreground mt-2">
+              JSON option spec — agent-generative. Best for 20–300 nodes. Same API for all ECharts types.
+            </p>
+          </CardContent>
+        </Card>
 
-      {/* Library comparison for network graphs */}
+        {/* AntV G6 */}
+        <Card className="border-rose-500/25 border">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-sm text-rose-400">AntV G6 — Force Graph</CardTitle>
+                <CardDescription className="text-xs">
+                  {preset.nodes.length} nodes · {preset.edges.length} edges · drag · zoom · physics
+                </CardDescription>
+              </div>
+              <span className="text-xs px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400">~900 kB · just installed</span>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <G6NetworkGraph
+              key={`g6-${selectedPreset}`}
+              nodes={preset.nodes.map((n) => ({
+                id: n.id,
+                label: n.name,
+                size: (n.value ?? 3) * 4 + 16,
+                category: n.category,
+              }))}
+              edges={preset.edges.map((e) => ({
+                source: e.source,
+                target: e.target,
+                label: e.label,
+              }))}
+              height={420}
+            />
+            <p className="text-xs text-muted-foreground mt-2">
+              Physics-based force layout. Better for large, unknown graph structures with 300+ nodes or hierarchical clustering.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Comparison verdict */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
           {
@@ -1542,18 +1612,18 @@ function NetworkGraphTab() {
             status: "✅ installed",
             color: "text-emerald-400",
             border: "border-emerald-500/25",
-            best: "Force-directed, 20–300 nodes, agent-generative spec",
+            best: "Force-directed, 20–300 nodes, agent-generative JSON spec, same API as all other ECharts types",
             tradeoff: "Not ideal for 500+ nodes or complex graph algorithms",
-            verdict: "Use now. Handles Atlas corpus subgraphs well.",
+            verdict: "Recommended. Handles Atlas corpus subgraphs well. Zero extra bundle cost.",
           },
           {
             name: "AntV G6",
-            status: "❌ not installed  (~npm install @antv/g6)",
-            color: "text-muted-foreground",
-            border: "border-border",
-            best: "Advanced layouts (dagre, radial, concentric), 500+ nodes, clustering algorithms",
-            tradeoff: "~400 kB, more complex API, React wrapper needed",
-            verdict: "Upgrade path when corpus graphs exceed 300 nodes or need hierarchical layout.",
+            status: "✅ installed (~900 kB)",
+            color: "text-rose-400",
+            border: "border-rose-500/25",
+            best: "Advanced layouts (dagre, radial, concentric), 500+ nodes, built-in clustering algorithms",
+            tradeoff: "~900 kB bundle, imperative React useEffect pattern, no JSON spec for agent generation",
+            verdict: "Upgrade path when corpus graphs exceed 300 nodes or need hierarchical layout. Compare above.",
           },
           {
             name: "Neo4j NVL / FalkorDB browser",

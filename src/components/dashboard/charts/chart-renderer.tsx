@@ -36,8 +36,10 @@ import type {
   ScatterChartSpec,
   RadialBarChartSpec,
   StackedBarChartSpec,
+  VennChartSpec,
   ChartDataRecord,
 } from "@/lib/types";
+import { VennDiagram, type VennSet } from "@/components/lab/venn-diagram";
 
 function safeVar(name: string) {
   return String(name)
@@ -74,6 +76,8 @@ export function ChartRenderer({ spec, data }: ChartRendererProps) {
       return <RadialBarChart spec={spec} data={data} />;
     case "stacked-bar":
       return <StackedBarChart spec={spec} data={data} />;
+    case "venn":
+      return <VennChart spec={spec} data={data} />;
     default:
       return (
         <div className="flex items-center justify-center h-[200px] text-sm text-muted-foreground">
@@ -272,6 +276,30 @@ function RadialBarChart({ spec, data }: { spec: RadialBarChartSpec; data: ChartD
       </ResponsiveContainer>
     </ChartContainer>
   );
+}
+
+// ── Venn / Euler ─────────────────────────────────────────────────────────────
+// data rows must be VennSet-shaped: { sets: string[], size: number, label?: string }
+
+function VennChart({ spec, data }: { spec: VennChartSpec; data: ChartDataRecord[] }) {
+  // Coerce flat data records to VennSet[] — the corpus API returns JSON objects
+  const sets: VennSet[] = data
+    .filter((d) => Array.isArray(d.sets))
+    .map((d) => ({
+      sets: (d.sets as unknown) as string[],
+      size: Number(d.size ?? 0),
+      label: d.label ? String(d.label) : undefined,
+    }));
+
+  if (sets.length < 2) {
+    return (
+      <div className="flex items-center justify-center h-[220px] text-sm text-muted-foreground">
+        {spec.title} — no intersection data yet
+      </div>
+    );
+  }
+
+  return <VennDiagram data={sets} className="h-[220px] w-full" />;
 }
 
 // ── Stacked bar ──────────────────────────────────────────────────────────────
