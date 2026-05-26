@@ -25,6 +25,9 @@ import {
   buildEChartStackedOption,
   buildEChartPieOption,
   buildEChartScatterOption,
+  buildEChartGraphOption,
+  type GraphNode,
+  type GraphEdge,
 } from "@/components/lab/echarts-chart";
 import { KnowledgeGraph } from "@/components/lab/knowledge-graph";
 import {
@@ -1100,6 +1103,300 @@ function VocabularyTab() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Network Graph tab
+// Force-directed corpus knowledge graph via ECharts graph series.
+// Fixture: CPC corpus subgraph (themes → projects → funders)
+// Production path: agent queries Graphiti MCP → returns nodes/edges → renders here
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Fixture corpus subgraph ──────────────────────────────────────────────────
+// Mirrors what a Graphiti MCP response looks like for a semantic search
+// "Show me projects related to EV charging and active travel"
+
+const CORPUS_NODES: GraphNode[] = [
+  // Themes
+  { id: "t-ev",      name: "EV Charging",        category: "theme",   value: 8 },
+  { id: "t-travel",  name: "Active Travel",       category: "theme",   value: 6 },
+  { id: "t-freight", name: "Freight Decarb.",     category: "theme",   value: 5 },
+  { id: "t-av",      name: "Autonomous Vehicles", category: "theme",   value: 4 },
+  { id: "t-maas",    name: "MaaS",                category: "theme",   value: 3 },
+  // Projects
+  { id: "p-1",  name: "EV Corridor Pilot",     category: "project", value: 5 },
+  { id: "p-2",  name: "Urban Cycling AI",      category: "project", value: 4 },
+  { id: "p-3",  name: "Smart Freight Hub",     category: "project", value: 5 },
+  { id: "p-4",  name: "Green Logistics Net",   category: "project", value: 3 },
+  { id: "p-5",  name: "EV Grid Integration",   category: "project", value: 4 },
+  { id: "p-6",  name: "Cycle-to-Rail Link",    category: "project", value: 3 },
+  { id: "p-7",  name: "CAV Safety Trials",     category: "project", value: 4 },
+  { id: "p-8",  name: "MaaS Platform North",   category: "project", value: 3 },
+  { id: "p-9",  name: "Charging Desert Map",   category: "project", value: 2 },
+  { id: "p-10", name: "Electric Bus Corridors",category: "project", value: 3 },
+  // Funders
+  { id: "f-iuk",  name: "Innovate UK", category: "funder", value: 7 },
+  { id: "f-ukri", name: "UKRI",        category: "funder", value: 6 },
+  { id: "f-ozev", name: "OZEV",        category: "funder", value: 4 },
+  { id: "f-dft",  name: "DfT",         category: "funder", value: 5 },
+  // Knowledge docs
+  { id: "d-1", name: "Green Book 2022",          category: "document", value: 3 },
+  { id: "d-2", name: "EV Infrastructure Strategy", category: "document", value: 3 },
+  { id: "d-3", name: "Freight Carbon Review",    category: "document", value: 2 },
+];
+
+const CORPUS_EDGES: GraphEdge[] = [
+  // Theme → Project
+  { source: "t-ev",      target: "p-1",  label: "funded_by" },
+  { source: "t-ev",      target: "p-5",  label: "relates_to" },
+  { source: "t-ev",      target: "p-9",  label: "relates_to" },
+  { source: "t-ev",      target: "p-10", label: "relates_to" },
+  { source: "t-travel",  target: "p-2",  label: "relates_to" },
+  { source: "t-travel",  target: "p-6",  label: "relates_to" },
+  { source: "t-freight", target: "p-3",  label: "relates_to" },
+  { source: "t-freight", target: "p-4",  label: "relates_to" },
+  { source: "t-av",      target: "p-7",  label: "relates_to" },
+  { source: "t-maas",    target: "p-8",  label: "relates_to" },
+  { source: "t-maas",    target: "p-6",  label: "relates_to" },
+  // Project → Funder
+  { source: "p-1",  target: "f-iuk",  label: "funded_by" },
+  { source: "p-2",  target: "f-iuk",  label: "funded_by" },
+  { source: "p-3",  target: "f-iuk",  label: "funded_by" },
+  { source: "p-4",  target: "f-ukri", label: "funded_by" },
+  { source: "p-5",  target: "f-ozev", label: "funded_by" },
+  { source: "p-6",  target: "f-dft",  label: "funded_by" },
+  { source: "p-7",  target: "f-iuk",  label: "funded_by" },
+  { source: "p-8",  target: "f-ukri", label: "funded_by" },
+  { source: "p-9",  target: "f-ozev", label: "funded_by" },
+  { source: "p-10", target: "f-dft",  label: "funded_by" },
+  // Theme cross-links (shared concepts)
+  { source: "t-ev",      target: "t-av",   label: "shares_tech" },
+  { source: "t-travel",  target: "t-maas", label: "complements" },
+  // Docs → Themes
+  { source: "d-1", target: "t-ev",      label: "informs" },
+  { source: "d-1", target: "t-freight", label: "informs" },
+  { source: "d-2", target: "t-ev",      label: "primary_source" },
+  { source: "d-3", target: "t-freight", label: "primary_source" },
+];
+
+// ── Query presets (simulates what an agent would return) ────────────────────
+
+interface QueryPreset {
+  id: string;
+  question: string;
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  story: string;
+}
+
+const QUERY_PRESETS: QueryPreset[] = [
+  {
+    id: "full",
+    question: "Show full corpus subgraph",
+    nodes: CORPUS_NODES,
+    edges: CORPUS_EDGES,
+    story: `${CORPUS_NODES.length} nodes · ${CORPUS_EDGES.length} edges — full fixture corpus`,
+  },
+  {
+    id: "ev-path",
+    question: "What funds EV charging?",
+    nodes: CORPUS_NODES.filter((n) =>
+      ["t-ev", "p-1", "p-5", "p-9", "p-10", "f-iuk", "f-ozev", "f-dft", "d-2"].includes(n.id),
+    ),
+    edges: CORPUS_EDGES.filter((e) =>
+      ["t-ev", "p-1", "p-5", "p-9", "p-10", "f-iuk", "f-ozev", "f-dft", "d-2"].includes(e.source) &&
+      ["t-ev", "p-1", "p-5", "p-9", "p-10", "f-iuk", "f-ozev", "f-dft", "d-2"].includes(e.target),
+    ),
+    story: "Subgraph: EV theme → 4 projects → funders. Innovate UK and OZEV are the primary funding routes.",
+  },
+  {
+    id: "freight-path",
+    question: "Freight decarbonisation funding path",
+    nodes: CORPUS_NODES.filter((n) =>
+      ["t-freight", "p-3", "p-4", "f-iuk", "f-ukri", "d-3", "d-1"].includes(n.id),
+    ),
+    edges: CORPUS_EDGES.filter((e) =>
+      ["t-freight", "p-3", "p-4", "f-iuk", "f-ukri", "d-3", "d-1"].includes(e.source) &&
+      ["t-freight", "p-3", "p-4", "f-iuk", "f-ukri", "d-3", "d-1"].includes(e.target),
+    ),
+    story: "Subgraph: Freight theme → 2 projects → UKRI and Innovate UK. Green Book + Freight Carbon Review as evidence base.",
+  },
+  {
+    id: "funder-iuk",
+    question: "What does Innovate UK fund?",
+    nodes: CORPUS_NODES.filter((n) => {
+      const funded = CORPUS_EDGES.filter((e) => e.target === "f-iuk").map((e) => e.source);
+      const themes = CORPUS_EDGES.filter((e) => funded.includes(e.target) && e.source.startsWith("t-")).map((e) => e.source);
+      return n.id === "f-iuk" || funded.includes(n.id) || themes.includes(n.id);
+    }),
+    edges: CORPUS_EDGES.filter((e) => {
+      const funded = CORPUS_EDGES.filter((x) => x.target === "f-iuk").map((x) => x.source);
+      return e.target === "f-iuk" || (funded.includes(e.target) && e.source.startsWith("t-"));
+    }),
+    story: "Innovate UK funds 4 projects spanning EV, active travel, freight, and AV themes.",
+  },
+];
+
+function NetworkGraphTab() {
+  const [selectedPreset, setSelectedPreset] = useState(QUERY_PRESETS[0].id);
+  const preset = QUERY_PRESETS.find((p) => p.id === selectedPreset) ?? QUERY_PRESETS[0];
+
+  const graphOption = useMemo(
+    () => buildEChartGraphOption(preset.nodes, preset.edges, { repulsion: 150, gravity: 0.06 }),
+    [preset],
+  );
+
+  return (
+    <div className="space-y-5">
+
+      {/* Concept explainer */}
+      <Card className="border-dashed">
+        <CardContent className="pt-4 pb-3 space-y-2">
+          <p className="text-xs font-semibold text-foreground">
+            The killer use case: ask a question → see the knowledge subgraph
+          </p>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            In artifact mode, the Atlas agent queries FalkorDB via the Graphiti MCP, retrieves
+            a relevant subgraph (nodes + edges), and renders it here as an interactive force graph.
+            The user can see <em>why</em> the recommendation makes sense — not just the answer,
+            but the relational path behind it. Click the query presets below to simulate this.
+          </p>
+          <div className="flex flex-wrap gap-2 pt-1 text-xs">
+            <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400">✓ ECharts graph — already installed</span>
+            <span className="px-2 py-0.5 rounded bg-muted text-muted-foreground">↳ Graphiti MCP query at D8</span>
+            <span className="px-2 py-0.5 rounded bg-muted text-muted-foreground">↳ chart_spec.type = &quot;graph&quot; in artifact panel</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Query preset picker — simulates agent queries */}
+      <div className="space-y-1">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          Simulated agent query
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {QUERY_PRESETS.map((q) => (
+            <button
+              key={q.id}
+              onClick={() => setSelectedPreset(q.id)}
+              className={[
+                "px-3 py-1.5 rounded-md text-xs font-medium transition-colors border text-left",
+                selectedPreset === q.id
+                  ? "bg-foreground text-background border-foreground"
+                  : "bg-transparent text-muted-foreground border-border hover:border-foreground hover:text-foreground",
+              ].join(" ")}
+            >
+              &ldquo;{q.question}&rdquo;
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-emerald-400 mt-1">{preset.story}</p>
+      </div>
+
+      {/* Main graph */}
+      <Card className="border-emerald-500/25 border">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-sm text-emerald-400">Knowledge Graph</CardTitle>
+              <CardDescription className="text-xs">
+                {preset.nodes.length} nodes · {preset.edges.length} edges · drag · zoom · pan
+              </CardDescription>
+            </div>
+            <div className="flex gap-2 text-xs">
+              {(["theme", "project", "funder", "document"] as const).map((cat) => (
+                <span key={cat} className="flex items-center gap-1">
+                  <span className="inline-block w-2 h-2 rounded-full" style={{ background: { theme: "#6366f1", project: "#10b981", funder: "#f59e0b", document: "#06b6d4" }[cat] }} />
+                  <span className="text-muted-foreground">{cat}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <EChartsChart
+            option={graphOption}
+            style={{ height: "480px", width: "100%" }}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Library comparison for network graphs */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {[
+          {
+            name: "ECharts graph",
+            status: "✅ installed",
+            color: "text-emerald-400",
+            border: "border-emerald-500/25",
+            best: "Force-directed, 20–300 nodes, agent-generative spec",
+            tradeoff: "Not ideal for 500+ nodes or complex graph algorithms",
+            verdict: "Use now. Handles Atlas corpus subgraphs well.",
+          },
+          {
+            name: "AntV G6",
+            status: "❌ not installed  (~npm install @antv/g6)",
+            color: "text-muted-foreground",
+            border: "border-border",
+            best: "Advanced layouts (dagre, radial, concentric), 500+ nodes, clustering algorithms",
+            tradeoff: "~400 kB, more complex API, React wrapper needed",
+            verdict: "Upgrade path when corpus graphs exceed 300 nodes or need hierarchical layout.",
+          },
+          {
+            name: "Neo4j NVL / FalkorDB browser",
+            status: "❌ external tools",
+            color: "text-muted-foreground",
+            border: "border-border",
+            best: "Native database browser — zero setup, full graph",
+            tradeoff: "Can't embed in artifact panel; separate tool not in the Atlas UI",
+            verdict: "Use FalkorDB browser for debugging/exploration. Not for end-user product.",
+          },
+        ].map((opt) => (
+          <Card key={opt.name} className={`border ${opt.border}`}>
+            <CardHeader className="pb-2">
+              <CardTitle className={`text-xs font-semibold ${opt.color}`}>{opt.name}</CardTitle>
+              <CardDescription className="text-xs">{opt.status}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-1 text-xs text-muted-foreground">
+              <p><strong className="text-foreground">Best for:</strong> {opt.best}</p>
+              <p><strong className="text-foreground">Trade-off:</strong> {opt.tradeoff}</p>
+              <p className={`italic ${opt.color}`}>{opt.verdict}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* What the agent spec looks like */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">What the agent emits → what the artifact panel renders</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <pre className="text-xs font-mono bg-muted p-3 rounded overflow-x-auto leading-relaxed text-foreground">{`// Agent (Python) queries Graphiti MCP, then emits:
+chart_spec = {
+  "type": "graph",
+  "title": "EV Charging funding path",
+  "nodes": [
+    { "id": "t-ev",  "name": "EV Charging",    "category": "theme",   "value": 8 },
+    { "id": "p-1",   "name": "EV Corridor Pilot","category": "project", "value": 5 },
+    { "id": "f-iuk", "name": "Innovate UK",     "category": "funder",  "value": 7 },
+  ],
+  "links": [
+    { "source": "t-ev",  "target": "p-1",  "label": "relates_to" },
+    { "source": "p-1",   "target": "f-iuk","label": "funded_by"  },
+  ]
+}
+// ChartRenderer dispatches to buildEChartGraphOption(nodes, links)
+// → interactive force graph appears in the artifact panel`}</pre>
+          <p className="text-xs text-muted-foreground">
+            This is the D8 wiring task: add <code>type: &quot;graph&quot;</code> to <code>ChartSpec</code>, update
+            <code>ChartRenderer</code> to dispatch to <code>EChartsChart</code>, and have the ATLAS/JARVIS
+            agent include a Graphiti subgraph query in its response flow.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Page
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1112,19 +1409,22 @@ export default function VisualisationLabPage() {
           <Badge variant="secondary" className="text-xs">Lab · Prototype</Badge>
         </div>
         <p className="text-sm text-muted-foreground max-w-2xl">
-          <strong>Corpus Tests</strong> — fixture vs live DB.{" "}
-          <strong>Bake-off</strong> — Recharts vs Vega-Lite vs ECharts side-by-side, plus ECharts-exclusive types (Sankey, Radar, Heatmap, Gauge) and network graph.{" "}
-          <strong>Vocabulary</strong> — every renderable type with live examples.
+          <strong>Network Graph</strong> — force-directed knowledge graph (query presets simulate agent → Graphiti subgraph → render).{" "}
+          <strong>Bake-off</strong> — Recharts vs Vega-Lite vs ECharts + exclusive types.{" "}
+          <strong>Vocabulary</strong> — every chart type live.{" "}
+          <strong>Corpus Tests</strong> — fixture vs live DB.
         </p>
       </div>
 
-      <Tabs defaultValue="bakeoff">
+      <Tabs defaultValue="network">
         <TabsList>
+          <TabsTrigger value="network">Network Graph</TabsTrigger>
           <TabsTrigger value="bakeoff">Framework Bake-off</TabsTrigger>
           <TabsTrigger value="vocabulary">Chart Vocabulary</TabsTrigger>
           <TabsTrigger value="corpus">Corpus Tests</TabsTrigger>
         </TabsList>
 
+        <TabsContent value="network" className="mt-4"><NetworkGraphTab /></TabsContent>
         <TabsContent value="bakeoff" className="mt-4"><BakeoffTab /></TabsContent>
         <TabsContent value="vocabulary" className="mt-4"><VocabularyTab /></TabsContent>
         <TabsContent value="corpus" className="mt-4">

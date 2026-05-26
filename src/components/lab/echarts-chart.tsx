@@ -430,3 +430,121 @@ export function buildEChartScatterOption(
     ],
   };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Force-directed Knowledge Graph
+// The use case: agent queries FalkorDB/Graphiti → returns subgraph → renders here
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type GraphNodeCategory = "theme" | "project" | "funder" | "document" | "concept";
+
+export interface GraphNode {
+  id: string;
+  name: string;
+  category: GraphNodeCategory;
+  /** Controls visual size — use similarity score or connection count */
+  value?: number;
+}
+
+export interface GraphEdge {
+  source: string;
+  target: string;
+  /** Edge label shown on hover */
+  label?: string;
+}
+
+const GRAPH_CATEGORY_COLORS: Record<GraphNodeCategory, string> = {
+  theme:    "#6366f1",  // indigo
+  project:  "#10b981",  // emerald
+  funder:   "#f59e0b",  // amber
+  document: "#06b6d4",  // cyan
+  concept:  "#8b5cf6",  // violet
+};
+
+const GRAPH_CATEGORY_SIZE: Record<GraphNodeCategory, number> = {
+  theme:    28,
+  project:  18,
+  funder:   24,
+  document: 14,
+  concept:  16,
+};
+
+/**
+ * buildEChartGraphOption — force-directed knowledge graph.
+ *
+ * Data shape mirrors what Graphiti MCP returns:
+ *   nodes: Array<{ id, name, category, value? }>
+ *   edges: Array<{ source, target, label? }>
+ *
+ * Atlas agent would emit chart_spec: { type: "graph", nodes: [...], links: [...] }
+ * and the artifact panel renders this.
+ */
+export function buildEChartGraphOption(
+  nodes: GraphNode[],
+  edges: GraphEdge[],
+  opts?: { title?: string; repulsion?: number; gravity?: number },
+): EChartsOption {
+  const categories = (["theme", "project", "funder", "document", "concept"] as GraphNodeCategory[]).map(
+    (cat) => ({ name: cat, itemStyle: { color: GRAPH_CATEGORY_COLORS[cat] } }),
+  );
+
+  return {
+    backgroundColor: "transparent",
+    tooltip: {
+      trigger: "item",
+      formatter: (p: unknown) => {
+        const params = p as { dataType: string; data: { name: string; category?: string; label?: string; source?: string; target?: string } };
+        if (params.dataType === "edge") {
+          return `${params.data.source} → ${params.data.target}${params.data.label ? `<br/><i>${params.data.label}</i>` : ""}`;
+        }
+        return `<b>${params.data.name}</b>${params.data.category ? `<br/>${params.data.category}` : ""}`;
+      },
+    },
+    legend: {
+      data: categories.map((c) => c.name),
+      textStyle: { color: "#94a3b8", fontSize: 10 },
+      bottom: 4,
+      icon: "circle",
+    },
+    series: [
+      {
+        type: "graph",
+        layout: "force",
+        roam: true,  // pan + zoom
+        draggable: true,
+        data: nodes.map((n) => ({
+          id: n.id,
+          name: n.name,
+          category: categories.findIndex((c) => c.name === n.category),
+          symbolSize: (n.value ?? 1) * 4 + GRAPH_CATEGORY_SIZE[n.category],
+          label: {
+            show: true,
+            color: "#f8fafc",
+            fontSize: 10,
+            formatter: (p: unknown) => (p as { data: { name: string } }).data.name,
+          },
+          itemStyle: { color: GRAPH_CATEGORY_COLORS[n.category], opacity: 0.9 },
+        })),
+        links: edges.map((e) => ({
+          source: e.source,
+          target: e.target,
+          label: e.label ? { show: false, formatter: e.label, color: "#94a3b8", fontSize: 9 } : undefined,
+          lineStyle: { color: "#4b5563", width: 1, opacity: 0.6, curveness: 0.1 },
+        })),
+        categories,
+        force: {
+          repulsion: opts?.repulsion ?? 120,
+          gravity: opts?.gravity ?? 0.08,
+          edgeLength: [60, 140],
+          layoutAnimation: true,
+        },
+        emphasis: {
+          focus: "adjacency",
+          lineStyle: { width: 2, opacity: 1, color: "#94a3b8" },
+        },
+        edgeSymbol: ["none", "arrow"],
+        edgeSymbolSize: [0, 6],
+      },
+    ],
+  };
+}
