@@ -15,6 +15,7 @@
 "use client";
 
 import { useState } from "react";
+import Markdown from "react-markdown";
 
 import {
   type ArtifactBlock,
@@ -33,6 +34,12 @@ import {
   StatsDashboardRecipe,
   ScenarioStressTestRecipe,
 } from "@/components/atlas5/recipes";
+import {
+  CpcCapabilityAssessmentRecipe,
+  CpcPortfolioComparisonRecipe,
+  CpcMarketAlignmentRecipe,
+  CpcEvidenceGapsRecipe,
+} from "@/components/dashboard/recipes";
 import { TrustRail } from "@/components/atlas5/trust-rail";
 import { DecisionSpineCard } from "@/components/atlas5/decision-spine";
 
@@ -109,9 +116,13 @@ function SectionItem({
         </span>
       </button>
       {open && (
-        <div className="px-3 py-2.5 text-sm text-foreground whitespace-pre-wrap leading-relaxed bg-background">
-          {content || (
-            <span className="text-muted-foreground italic">
+        <div className="px-3 py-2.5 bg-background">
+          {content ? (
+            <div className="text-sm text-foreground leading-relaxed prose prose-sm prose-slate max-w-none dark:prose-invert">
+              <Markdown>{content}</Markdown>
+            </div>
+          ) : (
+            <span className="text-sm text-muted-foreground italic">
               No content provided for this section.
             </span>
           )}
@@ -399,6 +410,23 @@ function RecipeView({
           {recipe === "scenario_stress_test" && (
             <ScenarioStressTestRecipe artifact={artifact} />
           )}
+          {/* CPC Capability Intelligence recipes — cast bridges atlas5 ↔ dashboard ArtifactBlock types */}
+          {recipe === "cpc_capability_assessment" && (
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            <CpcCapabilityAssessmentRecipe artifact={artifact as any} />
+          )}
+          {recipe === "cpc_portfolio_comparison" && (
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            <CpcPortfolioComparisonRecipe artifact={artifact as any} />
+          )}
+          {recipe === "cpc_market_alignment" && (
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            <CpcMarketAlignmentRecipe artifact={artifact as any} />
+          )}
+          {recipe === "cpc_evidence_gaps" && (
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            <CpcEvidenceGapsRecipe artifact={artifact as any} />
+          )}
         </div>
         <div className="lg:col-span-1">
           <TrustRail artifact={artifact} />
@@ -581,6 +609,74 @@ function EmptyState({ activeAgent }: { activeAgent: string }) {
 // Main component
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Save brief button
+// ---------------------------------------------------------------------------
+
+function SaveBriefButton({
+  artifact,
+  decisionSpine,
+  surface,
+}: {
+  artifact: ArtifactBlock | null;
+  decisionSpine: import("@/lib/atlas5/types").DecisionSpine | null;
+  surface: { active_agent: string; active_lens: string; thread_id: string | null };
+}) {
+  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
+  if (!artifact) return null;
+
+  const handleSave = async () => {
+    setStatus("saving");
+    try {
+      const res = await fetch("/api/atlas5/brief", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          artifact,
+          decision_spine: decisionSpine ?? undefined,
+          thread_id: surface.thread_id ?? undefined,
+          agent: surface.active_agent,
+          lens: surface.active_lens,
+        }),
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error ?? "Save failed");
+      setStatus("saved");
+      setTimeout(() => setStatus("idle"), 2500);
+    } catch {
+      setStatus("error");
+      setTimeout(() => setStatus("idle"), 2500);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleSave}
+      disabled={status === "saving"}
+      className={[
+        "h-7 rounded-md px-3 text-xs font-medium transition-colors",
+        status === "saved"
+          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+          : status === "error"
+            ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+            : "bg-primary/10 text-primary hover:bg-primary/20",
+        status === "saving" ? "opacity-60 cursor-not-allowed" : "",
+      ].join(" ")}
+      title="Save this brief to atlas.briefs"
+    >
+      {status === "saving"
+        ? "Saving…"
+        : status === "saved"
+          ? "✓ Saved"
+          : status === "error"
+            ? "✗ Error"
+            : "Save brief"}
+    </button>
+  );
+}
+
 export function ArtifactPane() {
   const { surface } = useSurfaceGateway();
   const { artifact, decisionSpine, isLoading } = useArtifactStore();
@@ -595,11 +691,19 @@ export function ArtifactPane() {
           ? "Data Analysis"
           : artifact?.recipe === "scenario_stress_test"
             ? "Scenario"
-            : artifact?.type === "brief"
-              ? "Brief"
-              : artifact?.type === "evidence"
-                ? "Evidence"
-                : "Artifact";
+            : artifact?.recipe === "cpc_capability_assessment"
+              ? "CPC Capability Assessment"
+              : artifact?.recipe === "cpc_portfolio_comparison"
+                ? "CPC Portfolio Comparison"
+                : artifact?.recipe === "cpc_market_alignment"
+                  ? "CPC Market Alignment"
+                  : artifact?.recipe === "cpc_evidence_gaps"
+                    ? "CPC Evidence Gaps"
+                    : artifact?.type === "brief"
+                      ? "Brief"
+                      : artifact?.type === "evidence"
+                        ? "Evidence"
+                        : "Artifact";
 
   return (
     <section
@@ -626,6 +730,11 @@ export function ArtifactPane() {
           <span className="text-xs text-muted-foreground">
             {surface.active_lens} lens
           </span>
+          <SaveBriefButton
+            artifact={artifact}
+            decisionSpine={decisionSpine}
+            surface={surface}
+          />
         </div>
       </div>
 

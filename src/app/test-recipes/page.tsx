@@ -136,6 +136,392 @@ const SCENARIO_SPINE: DecisionSpine = {
   would_change_if: "DfT publishes Level 4 autonomy roadmap with confirmed 2026 implementation date.",
 };
 
+// ── CPC mock data ────────────────────────────────────────────────────────────
+
+const CPC_CAPABILITY_ARTIFACT: ArtifactBlock = {
+  type: "brief",
+  recipe: "cpc_capability_assessment",
+  confidence_tier: "Supported",
+  sections: {
+    Summary:
+      "CPC has a meaningful evidence base in autonomous freight technology, with 12 active R&D projects across 3 business units. Programme-level claims (L2) are well-supported, but strategic outcome claims (L3) are thin — only one Indicative L3 claim is verified. Evidence is sufficient for a partnership case with a lead technology operator.",
+  },
+  corpus_citations: [
+    {
+      id: "aaa00001-0000-0000-0000-000000000001",
+      title: "Autonomous Freight Corridor Trials — Phase 2",
+      organisation: "CPC Future Mobility / Highways England",
+      score: 0.92,
+      source_type: "project",
+    },
+    {
+      id: "bbb00002-0000-0000-0000-000000000002",
+      title: "Connected Logistics: Last Mile Automation",
+      organisation: "CPC Future Mobility",
+      score: 0.87,
+      source_type: "project",
+    },
+    {
+      id: "ccc00003-0000-0000-0000-000000000003",
+      title: "Intelligent Transport Systems — R&D Fund 2022",
+      organisation: "CPC Innovation",
+      score: 0.81,
+      source_type: "project",
+    },
+  ],
+  cpc_claims: [
+    {
+      id: "c1",
+      text: "CPC has designed and delivered three motorway freight platooning trials with industry partners since 2020.",
+      level: 2,
+      confidence_tier: "Supported",
+      source_project: "Autonomous Freight Corridor Trials",
+      source_excerpt:
+        "Phase 2 results demonstrate 8% fuel efficiency gain across 3 pilot corridors.",
+    },
+    {
+      id: "c2",
+      text: "CPC convened a cross-sector logistics consortium of 14 industry partners for the LEVI charging programme.",
+      level: 2,
+      confidence_tier: "Supported",
+      source_project: "Connected Logistics",
+    },
+    {
+      id: "c3",
+      text: "CPC operational programme team has delivered 2 multi-partner freight projects on time and within budget.",
+      level: 1,
+      confidence_tier: "Robust",
+      source_project: "Intelligent Transport Systems",
+    },
+    {
+      id: "c4",
+      text: "Connected logistics R&D contributed to a 12% reduction in urban delivery emissions in the Bristol pilot zone.",
+      level: 3,
+      confidence_tier: "Indicative",
+      source_project: "Connected Logistics",
+      source_excerpt: "2022 interim results; not yet independently validated.",
+    },
+    {
+      id: "c5",
+      text: "CPC participates in HorizonEurope AutoFreight consortium as UK convenor.",
+      level: 1,
+      confidence_tier: "Supported",
+    },
+  ],
+  cpc_gaps: [
+    {
+      area: "No Level 3 strategic outcome claims verified",
+      severity: "high",
+      description:
+        "Only one L3 claim exists and it is Indicative — insufficient for a Robust strategic case.",
+      claim_count: 1,
+    },
+    {
+      area: "No partner performance data",
+      severity: "medium",
+      description:
+        "Corpus contains no validated FTE, cost, or productivity data from freight partners.",
+      project_count: 0,
+    },
+    {
+      area: "Rural corridor evidence thin",
+      severity: "medium",
+      description:
+        "All 3 projects cover urban or motorway freight only. Rural last-mile coverage not evidenced.",
+      project_count: 1,
+    },
+    {
+      area: "No validated outcome metrics for platooning",
+      severity: "low",
+      description:
+        "Phase 2 results are interim and not yet independently verified.",
+      project_count: 1,
+    },
+  ],
+  recommendation_action: "partner",
+  recommendation_rationale:
+    "Evidence base supports a partnership role for CPC as technical convenor. Do not lead programme budget without additional L3 strategic claims.",
+};
+
+const CPC_CAPABILITY_SPINE: DecisionSpine = {
+  decision: "Does CPC have sufficient capability evidence to support a lead role in an autonomous freight R&D programme?",
+  recommendation:
+    "Partner — not lead. CPC has verified L2 programme claims but no Robust L3 strategic outcomes. Partner with a logistics operator as the industry prime.",
+  confidence_tier: "Supported",
+  key_assumption:
+    "At least one major logistics operator is willing to take the lead applicant role in an Innovate UK bid.",
+  next_action:
+    "Identify 2-3 potential lead operators; prepare a CPC capability statement drawing on the 3 verified L2 claims.",
+  framework: "CPC Capability Intelligence",
+  strongest_objection:
+    "No independently validated outcome data — L3 claim is Indicative only.",
+  would_change_if:
+    "Phase 2 platooning results receive independent validation and a new Robust L3 claim can be generated.",
+};
+
+const CPC_PORTFOLIO_ARTIFACT: ArtifactBlock = {
+  type: "chart",
+  recipe: "cpc_portfolio_comparison",
+  confidence_tier: "Supported",
+  sections: {
+    Summary:
+      "Portfolio comparison across 5 CPC business units shows significant concentration in Future Mobility (31 projects) and Digital Infrastructure (18 projects). Active Travel and Rural Connectivity are underserved relative to the current funding landscape. Claims depth is strongest in Future Mobility (L2/L3 coverage) but absent in Rural Connectivity (L1 only).",
+  },
+  cpc_portfolio: [
+    {
+      name: "Future Mobility",
+      project_count: 31,
+      claim_count: 42,
+      l1_claims: 12,
+      l2_claims: 22,
+      l3_claims: 8,
+      evidence_links: 78,
+    },
+    {
+      name: "Digital Infrastructure",
+      project_count: 18,
+      claim_count: 28,
+      l1_claims: 9,
+      l2_claims: 15,
+      l3_claims: 4,
+      evidence_links: 41,
+    },
+    {
+      name: "Places & Growth",
+      project_count: 11,
+      claim_count: 14,
+      l1_claims: 6,
+      l2_claims: 7,
+      l3_claims: 1,
+      evidence_links: 23,
+    },
+    {
+      name: "Active Travel",
+      project_count: 7,
+      claim_count: 8,
+      l1_claims: 5,
+      l2_claims: 3,
+      l3_claims: 0,
+      evidence_links: 12,
+    },
+    {
+      name: "Rural Connectivity",
+      project_count: 4,
+      claim_count: 4,
+      l1_claims: 4,
+      l2_claims: 0,
+      l3_claims: 0,
+      evidence_links: 6,
+    },
+  ],
+  cpc_gaps: [
+    {
+      area: "Rural Connectivity: no L2 or L3 claims",
+      severity: "high",
+      description:
+        "4 projects in corpus but only delivery-level claims. Cannot support a programme or strategic investment case.",
+      project_count: 4,
+      claim_count: 4,
+    },
+    {
+      area: "Active Travel: underweight vs. funding landscape",
+      severity: "medium",
+      description:
+        "7 projects vs. £340m available from Active Travel England in 2024-25. Significant gap between CPC capability and market opportunity.",
+      project_count: 7,
+    },
+    {
+      area: "Cannot compare FTE or productivity across units",
+      severity: "low",
+      description:
+        "Corpus compares project volume and evidence coverage only. No resource or cost-per-outcome data is available.",
+    },
+  ],
+};
+
+const CPC_PORTFOLIO_SPINE: DecisionSpine = {
+  decision:
+    "Which CPC business units have the strongest evidence base to support 2025-26 funding bids?",
+  recommendation:
+    "Future Mobility and Digital Infrastructure are bid-ready (L2/L3 coverage). Active Travel has emerging evidence. Rural Connectivity and Places & Growth require corpus enrichment before any strategic case is supportable.",
+  confidence_tier: "Supported",
+  key_assumption:
+    "Corpus coverage is representative — no major unpublished projects exist that would change the unit rankings.",
+  next_action:
+    "Commission retrospective outcome studies for Rural Connectivity and Active Travel to generate L2/L3 claims.",
+  framework: "CPC Capability Intelligence",
+};
+
+const CPC_MARKET_ALIGNMENT_ARTIFACT: ArtifactBlock = {
+  type: "evidence",
+  recipe: "cpc_market_alignment",
+  confidence_tier: "Indicative",
+  sections: {
+    Summary:
+      "Three live funding calls show strong alignment with CPC's Future Mobility and Digital Infrastructure portfolios. UKRI Smart Mobility Challenge (£22m, closes Nov 2024) is the highest-priority match. CPC evidence base covers 8 of 11 required capability areas for the lead applicant role.",
+  },
+  corpus_citations: [
+    {
+      id: "lc1",
+      title: "UKRI Smart Mobility Challenge — Open Call 2024",
+      funder: "UKRI",
+      deadline: "2024-11-30",
+      score: 0.91,
+      source_type: "live_call",
+    },
+    {
+      id: "lc2",
+      title: "Innovate UK Connected Places Round 5",
+      funder: "Innovate UK",
+      deadline: "2024-12-15",
+      score: 0.84,
+      source_type: "live_call",
+    },
+    {
+      id: "lc3",
+      title: "DfT Future of Freight Innovation Fund",
+      funder: "Department for Transport",
+      deadline: "2025-01-31",
+      score: 0.76,
+      source_type: "live_call",
+    },
+    {
+      id: "p1",
+      title: "Autonomous Freight Corridor Trials — Phase 2",
+      organisation: "CPC Future Mobility",
+      score: 0.89,
+      source_type: "project",
+    },
+    {
+      id: "p2",
+      title: "Connected Logistics: Last Mile Automation",
+      organisation: "CPC Future Mobility",
+      score: 0.84,
+      source_type: "project",
+    },
+    {
+      id: "p3",
+      title: "Urban Air Mobility Regulatory Sandbox",
+      organisation: "CPC Innovation",
+      score: 0.78,
+      source_type: "project",
+    },
+  ],
+  cpc_claims: [
+    {
+      id: "mc1",
+      text: "CPC can demonstrate end-to-end smart mobility programme delivery from TRL 4 to TRL 7.",
+      level: 2,
+      confidence_tier: "Supported",
+      source_project: "Autonomous Freight Corridor Trials",
+    },
+    {
+      id: "mc2",
+      text: "CPC has built and managed cross-sector consortia of ≥10 partners in mobility R&D programmes.",
+      level: 2,
+      confidence_tier: "Robust",
+    },
+    {
+      id: "mc3",
+      text: "CPC has convened regulatory sandbox environments for novel transport technologies.",
+      level: 2,
+      confidence_tier: "Supported",
+      source_project: "Urban Air Mobility Regulatory Sandbox",
+    },
+  ],
+  cpc_gaps: [
+    {
+      area: "Insufficient evidence for 3 UKRI capability requirements",
+      severity: "high",
+      description:
+        "UKRI requires: (1) commercial deployment track record, (2) international consortium links, (3) Level 4 autonomy regulatory experience. CPC corpus evidences none at L2 or above.",
+      claim_count: 0,
+    },
+    {
+      area: "No evidence of CPC as lead applicant on >£10m programme",
+      severity: "medium",
+      description:
+        "All verified projects show CPC as convenor or delivery partner, not lead applicant for major funding.",
+      project_count: 0,
+    },
+    {
+      area: "DfT Freight call: corpus coverage partial",
+      severity: "low",
+      description:
+        "3 relevant projects matched but evidence covers only 6 of 9 DfT assessment criteria.",
+      project_count: 3,
+    },
+  ],
+  recommendation_action: "bid",
+  recommendation_rationale:
+    "UKRI Smart Mobility is the strongest match. Recommend CPC as technical lead with an industry prime. Prepare a capability statement drawing on 3 verified L2 claims.",
+};
+
+const CPC_MARKET_ALIGNMENT_SPINE: DecisionSpine = {
+  decision:
+    "Should CPC prepare a bid response for the UKRI Smart Mobility Challenge 2024?",
+  recommendation:
+    "Bid — as technical lead with industry prime. Evidence base is sufficient for 8 of 11 UKRI criteria. Address the 3 missing criteria in the bid application via planned consortium partners.",
+  confidence_tier: "Indicative",
+  key_assumption:
+    "A logistics operator with commercial deployment experience is willing to join the consortium as industry prime.",
+  next_action:
+    "Approach 2 target operators this week; confirm interest before bid preparation begins.",
+  framework: "CPC Capability Intelligence",
+  strongest_objection:
+    "No commercial deployment evidence — UKRI may downgrade CPC's track record assessment.",
+  would_change_if:
+    "A second operator with a live commercial deployment joins the consortium.",
+};
+
+const CPC_EVIDENCE_GAPS_ARTIFACT: ArtifactBlock = {
+  type: "evidence",
+  recipe: "cpc_evidence_gaps",
+  confidence_tier: "Indicative",
+  sections: {
+    Summary:
+      "Evidence gap analysis reveals 9 significant gaps across the CPC corpus. 3 high-severity gaps relate to missing L3 strategic claims in Rural Connectivity, Active Travel, and Freight. Immediate enrichment priorities: commission 2 retrospective outcome studies and ingest 4 unpublished programme evaluations.",
+  },
+  cpc_claims: [
+    { id: "eg-c1", text: "CPC delivered a £6m freight platooning programme within 5% of budget.", level: 1, confidence_tier: "Robust" },
+    { id: "eg-c2", text: "CPC convened the National Active Travel Innovation Forum (2022-23).", level: 1, confidence_tier: "Supported" },
+    { id: "eg-c3", text: "CPC Future Mobility portfolio contributed to DfT's Freight Carbon Review evidence base.", level: 2, confidence_tier: "Supported" },
+    { id: "eg-c4", text: "CPC programme influenced DfT freight decarbonisation policy through corpus-cited work.", level: 3, confidence_tier: "Indicative" },
+    { id: "eg-c5", text: "CPC active travel programme demonstrated 15% uptake in participating boroughs.", level: 3, confidence_tier: "Speculative" },
+  ],
+  cpc_portfolio: [
+    { name: "Future Mobility", project_count: 31, claim_count: 42, l1_claims: 12, l2_claims: 22, l3_claims: 8, evidence_links: 78 },
+    { name: "Digital Infrastructure", project_count: 18, claim_count: 28, l1_claims: 9, l2_claims: 15, l3_claims: 4, evidence_links: 41 },
+    { name: "Places & Growth", project_count: 11, claim_count: 14, l1_claims: 6, l2_claims: 7, l3_claims: 1, evidence_links: 23 },
+    { name: "Active Travel", project_count: 7, claim_count: 8, l1_claims: 5, l2_claims: 3, l3_claims: 0, evidence_links: 12 },
+    { name: "Rural Connectivity", project_count: 4, claim_count: 4, l1_claims: 4, l2_claims: 0, l3_claims: 0, evidence_links: 6 },
+  ],
+  cpc_gaps: [
+    { area: "Rural Connectivity: no strategic outcome claims", severity: "high", description: "4 projects, 0 L2/L3 claims. Cannot support any programme-level or strategic investment case.", project_count: 4, claim_count: 0 },
+    { area: "Active Travel: missing impact outcomes", severity: "high", description: "7 projects but no validated impact data. Speculative L3 claim only — not citable in a funding bid.", project_count: 7, claim_count: 1 },
+    { area: "Freight: no commercial deployment evidence", severity: "high", description: "All freight R&D is TRL 4-6. No evidence of commercial-scale deployment or follow-on investment.", project_count: 3, claim_count: 0 },
+    { area: "Places & Growth: thin policy connection", severity: "medium", description: "14 claims but only 1 reaches L3. Missing link between CPC projects and planning/growth outcomes.", project_count: 11, claim_count: 1 },
+    { area: "No partner outcome data in corpus", severity: "medium", description: "CPC projects lack partner-specific outcome data. Cannot support claims about partner commercial benefits.", project_count: 0 },
+    { area: "Resource/FTE data absent across all units", severity: "medium", description: "No programme has validated FTE or cost-per-outcome data. Cannot support efficiency or value-for-money claims." },
+    { area: "Digital Infrastructure: no international citations", severity: "low", description: "18 projects with no international comparators cited. Limits UKRI and EU funding eligibility.", project_count: 0 },
+    { area: "Only 2 knowledge docs ingested post-2023", severity: "low", description: "Policy knowledge base is outdated. 4 DfT/CCAV documents from 2024 not yet ingested.", claim_count: 0 },
+    { area: "No Level 3 claims for Active Travel or Rural Connectivity", severity: "high", description: "Two entire business units have zero verified strategic outcome claims." },
+  ],
+};
+
+const CPC_EVIDENCE_GAPS_SPINE: DecisionSpine = {
+  decision:
+    "What are the highest-priority evidence gaps to close before the next funding round?",
+  recommendation:
+    "Commission outcome studies for Rural Connectivity and Active Travel immediately. Ingest the 4 outstanding DfT/CCAV 2024 documents. Without these actions, CPC cannot support a strategic case for 2 of its 5 business units.",
+  confidence_tier: "Indicative",
+  key_assumption:
+    "Unpublished programme evaluations exist and can be cleared for corpus ingestion within 8 weeks.",
+  next_action:
+    "Identify 2 retrospective outcome study candidates; raise corpus ingestion request for 4 outstanding policy documents.",
+  framework: "CPC Capability Intelligence",
+};
+
 // ── Recipe block ─────────────────────────────────────────────────────────────
 
 function RecipeBlock({
@@ -170,6 +556,8 @@ function RecipeBlock({
   );
 }
 
+import { CpcLiveSection } from "./live-section";
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function TestRecipesPage() {
@@ -180,8 +568,13 @@ export default function TestRecipesPage() {
         <p className="text-sm text-muted-foreground mt-1">
           All four surfaces with rich mock data. Not wired to the agent — layout validation only.
         </p>
+        <div className="mt-2 flex gap-3 text-xs">
+          <a href="#mock" className="text-primary underline underline-offset-2">↓ Mock data</a>
+          <a href="#live" className="text-green-600 underline underline-offset-2">↓ Live CPC corpus</a>
+        </div>
       </div>
 
+      <div id="mock" />
       <RecipeBlock label="brief_five_case" artifact={BRIEF_ARTIFACT} spine={BRIEF_SPINE} />
       <hr className="border-border" />
       <RecipeBlock label="evidence_panel" artifact={EVIDENCE_ARTIFACT} spine={EVIDENCE_SPINE} />
@@ -189,6 +582,26 @@ export default function TestRecipesPage() {
       <RecipeBlock label="stats_dashboard" artifact={STATS_ARTIFACT} spine={STATS_SPINE} />
       <hr className="border-border" />
       <RecipeBlock label="scenario_stress_test" artifact={SCENARIO_ARTIFACT} spine={SCENARIO_SPINE} />
+
+      <hr className="border-border" />
+      <div className="space-y-2">
+        <h2 className="text-base font-semibold">CPC Capability Intelligence Recipes</h2>
+        <p className="text-xs text-muted-foreground">
+          Four structured recipes for CPC capability, portfolio, market, and gap analysis. Evidence-led — not prose-only.
+        </p>
+      </div>
+
+      <RecipeBlock label="cpc_capability_assessment" artifact={CPC_CAPABILITY_ARTIFACT} spine={CPC_CAPABILITY_SPINE} />
+      <hr className="border-border" />
+      <RecipeBlock label="cpc_portfolio_comparison" artifact={CPC_PORTFOLIO_ARTIFACT} spine={CPC_PORTFOLIO_SPINE} />
+      <hr className="border-border" />
+      <RecipeBlock label="cpc_market_alignment" artifact={CPC_MARKET_ALIGNMENT_ARTIFACT} spine={CPC_MARKET_ALIGNMENT_SPINE} />
+      <hr className="border-border" />
+      <RecipeBlock label="cpc_evidence_gaps" artifact={CPC_EVIDENCE_GAPS_ARTIFACT} spine={CPC_EVIDENCE_GAPS_SPINE} />
+
+      {/* ── Live CPC Corpus section ──────────────────────────────────────── */}
+      <hr className="border-border border-2" id="live" />
+      <CpcLiveSection />
     </main>
   );
 }
