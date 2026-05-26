@@ -237,8 +237,20 @@ function RadialBarChart({ spec, data }: { spec: RadialBarChartSpec; data: ChartD
     ...d,
     fill: chartColors[i % chartColors.length],
   }));
+  // Build a config so ChartContainer context is available for ChartTooltipContent
+  const config: ChartConfig = useMemo(
+    () =>
+      Object.fromEntries(
+        data.map((d, i) => [
+          String(d[spec.x] ?? i),
+          { label: String(d[spec.x] ?? i), color: chartColors[i % chartColors.length] },
+        ]),
+      ) as ChartConfig,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [data, spec.x],
+  );
   return (
-    <div className="h-[220px] w-full">
+    <ChartContainer config={config} className="aspect-auto h-[220px] w-full">
       <ResponsiveContainer width="100%" height="100%">
         <RRadialBarChart
           cx="50%"
@@ -258,7 +270,7 @@ function RadialBarChart({ spec, data }: { spec: RadialBarChartSpec; data: ChartD
           <ChartTooltip content={<ChartTooltipContent />} />
         </RRadialBarChart>
       </ResponsiveContainer>
-    </div>
+    </ChartContainer>
   );
 }
 
