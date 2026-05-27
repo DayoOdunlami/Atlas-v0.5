@@ -6,10 +6,12 @@ import pg from "pg";
 
 const SIGNED_URL_TTL_SEC = 60 * 60 * 24 * 7; // 7 days — model providers fetch this URL
 
-const rawUrl = process.env.POSTGRES_URL!;
-const connectionString = rawUrl.replace(/[?&]sslmode=[^&]*/g, "");
-
 function getPool() {
+  const rawUrl = process.env.POSTGRES_URL ?? process.env.DATABASE_URL;
+  if (!rawUrl) {
+    throw new Error("POSTGRES_URL or DATABASE_URL is required");
+  }
+  const connectionString = rawUrl.replace(/[?&]sslmode=[^&]*/g, "");
   return new pg.Pool({
     connectionString,
     ssl: { rejectUnauthorized: false },
