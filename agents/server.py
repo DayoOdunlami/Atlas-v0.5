@@ -105,13 +105,15 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — atlas5-clone-dashboard dev server (port 3005) + production
+# CORS — local dev + Railway production Vercel deployment
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
         "http://localhost:3005",
         "https://localhost:3005",
+        "https://atlas-v0-5.vercel.app",
+        "https://atlas-v0-5-dayoodunlamis-projects.vercel.app",
         os.getenv("NEXT_PUBLIC_BASE_URL", ""),
     ],
     allow_credentials=True,
