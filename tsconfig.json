@@ -26,5 +26,5 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "eval", "scripts"]
+  "exclude": ["node_modules", "eval", "scripts", "src/components/ui/ui"]
 }

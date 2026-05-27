@@ -50,7 +50,7 @@ const LENS_DESCRIPTIONS: Record<string, string> = {
 
 export function MainLayout({ className }: { className?: string }) {
   const { state, setState } = useCoAgent<AgentState>({
-    name: "my_agent",
+    name: "atlas",
     initialState,
   });
 

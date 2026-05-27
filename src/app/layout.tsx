@@ -27,7 +27,7 @@ export default function RootLayout({
       <body className={"subpixel-antialiased"}>
         <CopilotKit
           runtimeUrl="/api/copilotkit"
-          agent="my_agent"
+          agent="atlas"
           showDevConsole={false}
         >
           {children}
