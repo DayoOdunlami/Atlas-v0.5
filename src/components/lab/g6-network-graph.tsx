@@ -77,44 +77,54 @@ export function G6NetworkGraph({ nodes, edges, className, height = 260 }: G6Netw
           data: {
             nodes: nodes.map((n) => ({
               id: n.id,
-              data: {
-                label: n.label ?? n.id,
-                category: n.category ?? "default",
-              },
+              // G6 v5: label text lives in style.labelText, NOT data.label
               style: {
                 size: n.size ?? 24,
                 fill: n.color ?? CAT_COLORS[n.category ?? "default"] ?? CAT_COLORS.default,
                 fillOpacity: 0.85,
-                stroke: "rgba(255,255,255,0.15)",
+                stroke: "rgba(255,255,255,0.18)",
                 lineWidth: 1,
+                // ── Label properties (G6 v5 prefixed form) ──────────────────
+                labelText: n.label ?? n.id,
                 labelFill: "#e2e8f0",
-                labelFontSize: 10,
+                labelFontSize: 11,
                 labelFontFamily: "Geist, ui-sans-serif, sans-serif",
+                labelFontWeight: "500",
                 labelPlacement: "bottom",
                 labelOffsetY: 4,
+                // Translucent pill behind each label so it reads on any bg
+                labelBackgroundFill: "rgba(15,23,42,0.65)",
+                labelBackgroundRadius: 3,
+                labelPadding: [2, 5],
               },
             })),
             edges: edges.map((e, i) => ({
               id: `e${i}`,
               source: e.source,
               target: e.target,
-              data: { label: e.label ?? "", weight: e.weight ?? 1 },
               style: {
-                stroke: "#334155",
-                lineWidth: Math.max(1, (e.weight ?? 1) * 1.5),
-                strokeOpacity: 0.6,
+                stroke: "#475569",
+                lineWidth: Math.max(1, (e.weight ?? 1) * 1.2),
+                strokeOpacity: 0.55,
                 endArrow: false,
               },
             })),
           },
           layout: {
             type: "force",
+            // Prevent circles from sitting on top of each other
             preventOverlap: true,
-            nodeSize: 28,
-            linkDistance: 80,
-            nodeStrength: -200,
-            edgeStrength: 0.6,
-            alphaDecay: 0.028,
+            // nodeSize + nodeSpacing together determine the exclusion zone
+            nodeSize: 32,
+            nodeSpacing: 16,
+            // Stronger repulsion — default D3 charge is −30; −350 gives visible spread
+            nodeStrength: -350,
+            linkDistance: 110,
+            edgeStrength: 0.35,
+            // Slow cool-down so the layout has time to settle
+            alphaDecay: 0.018,
+            // Gentle gravity pulls the cluster back to center
+            gravity: 0.08,
           },
           behaviors: ["drag-canvas", "zoom-canvas", "drag-element"],
           background: "transparent",

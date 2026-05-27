@@ -5,8 +5,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "ui/card";
-import LightRays from "ui/light-rays";
+} from "@/components/ui/card";
 
 const convertErrorToMessage = (error: string) => {
   switch (error) {
@@ -28,9 +27,6 @@ export default async function ErrorPage({
 
   return (
     <div className="w-full h-screen flex items-center justify-center relative">
-      <div className="absolute inset-0 w-full h-full">
-        <LightRays />
-      </div>
       <Card className="w-sm z-10">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">Auth Error</CardTitle>

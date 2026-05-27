@@ -9,12 +9,16 @@ import type {
 import { cn } from "@/lib/utils";
 import { ChartRenderer } from "@/components/dashboard/charts/chart-renderer";
 import {
+  ChartSpecsPassthrough,
   ConfidenceBadge,
+  DirectorRationalePanel,
   GapCaveatPanel,
   MetricPill,
   RecommendationBanner,
   TIER_BADGE,
+  WhatThisDoesNotProve,
 } from "./cpc-shared";
+import { inspectData, selectVisuals, RECIPE_CONTEXTS } from "@/lib/atlas/visual-recipe-director";
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
@@ -181,6 +185,26 @@ export function CpcMarketAlignmentRecipe({ artifact }: Props) {
   const gaps = artifact.cpc_gaps ?? [];
   const summary = artifact.sections?.["Summary"] ?? "";
 
+  // Radar: evidence readiness across 5 dimensions
+  const l3Count = claims.filter((c) => c.level === 3).length;
+  const supportedPlusCount = claims.filter(
+    (c) => c.confidence_tier === "Supported" || c.confidence_tier === "Robust",
+  ).length;
+  const avgFitScore =
+    liveCalls.length > 0
+      ? Math.round(
+          (liveCalls.reduce((s, c) => s + (c.score ?? 0), 0) / liveCalls.length) * 100,
+        )
+      : 0;
+  const radarData = [
+    { dimension: "Project Match", score: Math.min(projects.length * 15, 100) },
+    { dimension: "Funding Fit",   score: avgFitScore },
+    { dimension: "Claim Depth",   score: claims.length > 0 ? Math.round((l3Count / claims.length) * 100) : 0 },
+    { dimension: "Evidence Quality", score: claims.length > 0 ? Math.round((supportedPlusCount / claims.length) * 100) : 0 },
+    { dimension: "Call Coverage", score: Math.min(liveCalls.length * 25, 100) },
+  ];
+  const showRadar = allCitations.length > 0 || claims.length > 0;
+
   // Chart: fit score by live call
   const fitScoreData = liveCalls.map((c) => ({
     call: c.title.length > 30 ? c.title.slice(0, 30) + "…" : c.title,
@@ -193,6 +217,16 @@ export function CpcMarketAlignmentRecipe({ artifact }: Props) {
     { area: "Matched Claims", count: claims.length },
     { area: "Open Calls", count: liveCalls.length },
   ].filter((d) => d.count > 0);
+
+  // Visual Director — market_alignment intent
+  const directorSelection = selectVisuals(
+    "market_alignment",
+    inspectData([
+      ...liveCalls.map((c) => ({ score: c.score, fit_pct: Math.round((c.score ?? 0) * 100) })),
+      ...claims.map((c) => ({ level: c.level, confidence_tier: c.confidence_tier })),
+    ]),
+    RECIPE_CONTEXTS.cpc_market_alignment,
+  );
 
   return (
     <div className="space-y-1">
@@ -208,6 +242,11 @@ export function CpcMarketAlignmentRecipe({ artifact }: Props) {
         {/* Summary */}
         {summary && (
           <p className="text-sm text-foreground/85 leading-relaxed">{summary}</p>
+        )}
+
+        {/* Visual Director rationale */}
+        {(allCitations.length > 0 || claims.length > 0) && (
+          <DirectorRationalePanel selection={directorSelection} />
         )}
 
         {/* Recommendation */}
@@ -276,12 +315,11 @@ export function CpcMarketAlignmentRecipe({ artifact }: Props) {
             {fitScoreData.length > 0 && (
               <div className="space-y-1">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Fit Score by Live Call
+                  How well does CPC evidence match each live call?
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Semantic similarity of CPC evidence to each call scope.{" "}
-                  <span className="text-green-700 font-medium">85%+ = strong fit</span>;{" "}
-                  below 70% = weak fit.
+                  Semantic similarity score. <span className="text-green-700 font-medium">85%+ = strong fit</span> — CPC evidence is directly relevant.
+                  Below 70% = weak fit — a bid would require significant gap-filling.
                 </p>
                 <ChartRenderer
                   spec={{
@@ -297,11 +335,10 @@ export function CpcMarketAlignmentRecipe({ artifact }: Props) {
             {coverageData.length > 0 && (
               <div className="space-y-1">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  CPC Evidence Coverage
+                  How balanced is the evidence mix?
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Matched items per evidence type. Portfolio breadth across
-                  projects, claims and live calls.
+                  A strong bid needs all three types: R&D projects (delivery track record), claims (outcome evidence), and call alignment (funder relevance).
                 </p>
                 <ChartRenderer
                   spec={{
@@ -317,12 +354,47 @@ export function CpcMarketAlignmentRecipe({ artifact }: Props) {
           </div>
         )}
 
+        {/* Radar: evidence readiness across 5 dimensions */}
+        {showRadar && (
+          <div className="space-y-1 border-t border-border pt-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              How ready is CPC across five market dimensions?
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              A complete spider = bid-ready on all fronts. Flat axes = gaps that need addressing before submission.
+              "Claim Depth" = % of claims at strategic (L3) level. "Evidence Quality" = % Supported or Robust.
+            </p>
+            <ChartRenderer
+              spec={{
+                type: "radar",
+                title: "Evidence Readiness Profile",
+                axis: "dimension",
+                value: "score",
+                max: 100,
+              }}
+              data={radarData}
+            />
+          </div>
+        )}
+
         {/* Gaps */}
         {gaps.length > 0 && (
           <div className="border-t border-border pt-4">
             <GapCaveatPanel gaps={gaps} />
           </div>
         )}
+
+        {/* What this does not prove */}
+        <WhatThisDoesNotProve
+          extra={[
+            "That CPC will win a bid — fit score is based on corpus similarity, not funder assessment criteria",
+            "That matched claims meet the specific eligibility requirements of each funding call",
+            "External market size, competitor positioning, or funder priorities not in the corpus",
+          ]}
+        />
+
+        {/* Agent-injected supplementary charts */}
+        <ChartSpecsPassthrough chartSpecs={artifact.chart_specs} />
 
         {allCitations.length === 0 && claims.length === 0 && (
           <p className="text-sm text-muted-foreground italic">

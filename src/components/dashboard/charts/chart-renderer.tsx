@@ -37,9 +37,24 @@ import type {
   RadialBarChartSpec,
   StackedBarChartSpec,
   VennChartSpec,
+  SankeyChartSpec,
+  RadarChartSpec,
+  HeatmapChartSpec,
+  GaugeChartSpec,
+  GraphChartSpec,
   ChartDataRecord,
 } from "@/lib/types";
-import { VennDiagram, type VennSet } from "@/components/lab/venn-diagram";
+import { type VennSet } from "@/components/lab/venn-diagram";
+import { G2VennChart } from "@/components/lab/g2-venn-chart";
+import {
+  EChartsChart,
+  buildGaugeOption,
+  buildGenericSankeyOption,
+  buildGenericRadarOption,
+  buildGenericHeatmapOption,
+  buildEChartGraphOption,
+} from "@/components/lab/echarts-chart";
+import type { GraphNode, GraphEdge } from "@/components/lab/echarts-chart";
 
 function safeVar(name: string) {
   return String(name)
@@ -78,6 +93,16 @@ export function ChartRenderer({ spec, data }: ChartRendererProps) {
       return <StackedBarChart spec={spec} data={data} />;
     case "venn":
       return <VennChart spec={spec} data={data} />;
+    case "sankey":
+      return <SankeyChart spec={spec} data={data} />;
+    case "radar":
+      return <RadarChart spec={spec} data={data} />;
+    case "heatmap":
+      return <HeatmapChart spec={spec} data={data} />;
+    case "gauge":
+      return <GaugeChart spec={spec} />;
+    case "graph":
+      return <GraphChart spec={spec} />;
     default:
       return (
         <div className="flex items-center justify-center h-[200px] text-sm text-muted-foreground">
@@ -299,7 +324,7 @@ function VennChart({ spec, data }: { spec: VennChartSpec; data: ChartDataRecord[
     );
   }
 
-  return <VennDiagram data={sets} className="h-[220px] w-full" />;
+  return <G2VennChart data={sets} height={220} />;
 }
 
 // ── Stacked bar ──────────────────────────────────────────────────────────────
@@ -363,4 +388,83 @@ function StackedBarChart({ spec, data }: { spec: StackedBarChartSpec; data: Char
       </ResponsiveContainer>
     </ChartContainer>
   );
+}
+
+// ── Sankey ───────────────────────────────────────────────────────────────────
+// data rows: { [spec.source]: string, [spec.target]: string, [spec.value]: number }
+
+function SankeyChart({ spec, data }: { spec: SankeyChartSpec; data: ChartDataRecord[] }) {
+  if (data.length === 0) {
+    return <div className="flex items-center justify-center h-[220px] text-sm text-muted-foreground">{spec.title} — no data</div>;
+  }
+  const option = buildGenericSankeyOption(
+    data as Array<Record<string, string | number>>,
+    spec.source,
+    spec.target,
+    spec.value,
+  );
+  return <EChartsChart option={option} style={{ height: "220px", width: "100%" }} />;
+}
+
+// ── Radar ────────────────────────────────────────────────────────────────────
+// data rows: { [spec.axis]: string, [spec.value]: number }
+
+function RadarChart({ spec, data }: { spec: RadarChartSpec; data: ChartDataRecord[] }) {
+  if (data.length === 0) {
+    return <div className="flex items-center justify-center h-[220px] text-sm text-muted-foreground">{spec.title} — no data</div>;
+  }
+  const option = buildGenericRadarOption(
+    data as Array<Record<string, string | number>>,
+    spec.axis,
+    spec.value,
+    spec.title,
+    spec.max ?? 100,
+  );
+  return <EChartsChart option={option} style={{ height: "220px", width: "100%" }} />;
+}
+
+// ── Heatmap ──────────────────────────────────────────────────────────────────
+// data rows: { [spec.x]: string, [spec.y]: string, [spec.value]: number }
+
+function HeatmapChart({ spec, data }: { spec: HeatmapChartSpec; data: ChartDataRecord[] }) {
+  if (data.length === 0) {
+    return <div className="flex items-center justify-center h-[220px] text-sm text-muted-foreground">{spec.title} — no data</div>;
+  }
+  const option = buildGenericHeatmapOption(
+    data as Array<Record<string, string | number>>,
+    spec.x,
+    spec.y,
+    spec.value,
+  );
+  return <EChartsChart option={option} style={{ height: "220px", width: "100%" }} />;
+}
+
+// ── Gauge ────────────────────────────────────────────────────────────────────
+// value is embedded in spec — no data[] rows needed
+
+function GaugeChart({ spec }: { spec: GaugeChartSpec }) {
+  const option = buildGaugeOption(spec.value, spec.title);
+  return <EChartsChart option={option} style={{ height: "220px", width: "100%" }} />;
+}
+
+// ── Graph ────────────────────────────────────────────────────────────────────
+// nodes and edges are embedded in spec — no data[] rows needed
+
+function GraphChart({ spec }: { spec: GraphChartSpec }) {
+  if (spec.nodes.length === 0) {
+    return <div className="flex items-center justify-center h-[220px] text-sm text-muted-foreground">{spec.title} — no nodes</div>;
+  }
+  const nodes: GraphNode[] = spec.nodes.map((n) => ({
+    id: n.id,
+    name: n.name,
+    category: n.category as GraphNode["category"],
+    value: n.value,
+  }));
+  const edges: GraphEdge[] = spec.edges.map((e) => ({
+    source: e.source,
+    target: e.target,
+    label: e.label,
+  }));
+  const option = buildEChartGraphOption(nodes, edges, { title: spec.title });
+  return <EChartsChart option={option} style={{ height: "280px", width: "100%" }} />;
 }

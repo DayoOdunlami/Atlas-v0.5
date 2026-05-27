@@ -1,5 +1,7 @@
 "use client";
 
+import Markdown from "react-markdown";
+
 import type { ArtifactBlock } from "@/lib/atlas5/artifact-store";
 import type { ConfidenceTier } from "@/lib/atlas5/types";
 import { cn } from "@/lib/utils";
@@ -117,9 +119,9 @@ export function BriefFiveCaseRecipe({ artifact }: Props) {
                   {heading}
                 </h3>
               </div>
-              <p className="text-sm text-foreground/85 leading-relaxed whitespace-pre-wrap">
-                {sections[heading]}
-              </p>
+              <div className="text-sm text-foreground/85 leading-relaxed prose prose-sm prose-slate max-w-none dark:prose-invert">
+                <Markdown>{sections[heading]}</Markdown>
+              </div>
             </div>
           );
         })}

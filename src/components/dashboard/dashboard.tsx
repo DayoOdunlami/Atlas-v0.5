@@ -19,8 +19,19 @@ import { TrustRail } from "@/components/dashboard/layout/trust-rail";
 import { useSurfaceGateway } from "@/lib/atlas5/surface-gateway";
 
 const AGENT_DESCRIPTIONS: Record<string, string> = {
-  ATLAS:
-    "The user is in ATLAS mode. Focus on building a Five Case Model investment brief with NPV analysis, grounded in corpus evidence. Use set_artifact_block with recipe='brief_five_case'.",
+  ATLAS: `The user is in ATLAS mode. Choose the artifact recipe based on query intent — do NOT default to brief_five_case for CPC-inward queries:
+
+INWARD-FACING (about CPC's own evidence, capabilities, or portfolio):
+- "What can CPC evidence support?" / "Where is CPC strongest?" → recipe='cpc_capability_assessment'
+- "Compare CPC business units / domains" / "Which units are evidence-ready?" → recipe='cpc_portfolio_comparison'
+- "Which live calls match CPC evidence?" / "Should CPC bid on X?" → recipe='cpc_market_alignment'
+- "What evidence gaps exist?" / "What should CPC enrich?" → recipe='cpc_evidence_gaps'
+
+OUTWARD-FACING (investment appraisal for an external programme or third-party initiative):
+- "Build a Five Case brief for [external topic]" / "What is the strategic case for [programme]?" → recipe='brief_five_case' with NPV analysis at 3.5% STPR
+
+DEFAULT: if the query mentions CPC capabilities, CPC projects, CPC portfolio, or CPC evidence readiness → use the appropriate cpc_* recipe. Only use brief_five_case for external investment appraisals.`,
+
   JARVIS:
     "The user is in JARVIS mode. Surface ranked evidence from the corpus with citations. Focus on search_corpus_* tools. Use set_artifact_block with recipe='evidence_panel'.",
   CICERONE:

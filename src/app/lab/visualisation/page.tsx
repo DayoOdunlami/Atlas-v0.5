@@ -32,6 +32,8 @@ import {
 import { KnowledgeGraph } from "@/components/lab/knowledge-graph";
 import { FiveCaseFlow } from "@/components/lab/five-case-flow";
 import { VennDiagram, type VennSet } from "@/components/lab/venn-diagram";
+import { G2VennChart } from "@/components/lab/g2-venn-chart";
+import { AntvMcpChart, buildMcpVennSpec } from "@/components/lab/antv-mcp-chart";
 import { G6NetworkGraph } from "@/components/lab/g6-network-graph";
 import {
   AntVChart,
@@ -63,7 +65,8 @@ import {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function inferChartType(rendererHint: string, data: ChartDataRecord[]): ChartType {
-  if (rendererHint.includes("line")) return "line";
+  if (rendererHint.includes("venn"))    return "venn";
+  if (rendererHint.includes("line"))    return "line";
   if (rendererHint.includes("scatter")) return "scatter";
   if (rendererHint.includes("stacked")) {
     const keys = data.length > 0 ? Object.keys(data[0]) : [];
@@ -1000,52 +1003,136 @@ function BakeoffTab() {
         </div>
       </div>
 
-      {/* AntV exclusive — Venn only (comparison charts are already above in the 4-col grid) */}
+      {/* Venn 3-option comparison: SVG vs G2 vs AntV MCP */}
       <div className="space-y-3 pt-2">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-semibold">AntV G2 exclusive — Venn / Euler diagram</h2>
-          <Badge className={`text-xs ${FW.antv.tag} border-rose-500/30`}>only framework that can render this</Badge>
+          <h2 className="text-sm font-semibold">Venn / Euler — 3-renderer comparison</h2>
+          <Badge className={`text-xs ${FW.antv.tag} border-rose-500/30`}>only framework family that can render this</Badge>
         </div>
-        <Card className={`border ${FW.antv.border}`}>
-          <CardHeader className="pb-2">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <CardTitle className={`text-sm font-semibold ${FW.antv.color}`}>
-                  Venn / Euler — Theme × Theme project intersections
-                </CardTitle>
-                <CardDescription className="text-xs mt-0.5">
-                  Set intersection across themes. No native equivalent in Recharts, Vega-Lite, or ECharts.
-                </CardDescription>
+        <p className="text-xs text-muted-foreground">
+          Same dataset ({VENN_SETS.length} sets, 3 themes), three rendering strategies.
+          Compare label placement, overlap clarity, and bundle cost.
+        </p>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+          {/* Option A — pure SVG, zero bundle */}
+          <Card className={`border ${FW.antv.border} flex flex-col`}>
+            <CardHeader className="pb-2">
+              <div className="flex items-start justify-between gap-1">
+                <div>
+                  <CardTitle className={`text-xs font-semibold ${FW.antv.color}`}>
+                    Option A — SVG (zero bundle)
+                  </CardTitle>
+                  <CardDescription className="text-xs mt-0.5">
+                    Hand-drawn circles, centroid-averaged labels
+                  </CardDescription>
+                </div>
+                <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">0 kB</span>
               </div>
-              <div className="flex flex-wrap gap-1 shrink-0">
-                <span className={`text-xs px-1.5 py-0.5 rounded ${FW.antv.tag}`}>+ Cross-sector transfer signal</span>
-                <span className={`text-xs px-1.5 py-0.5 rounded ${FW.antv.tag}`}>+ FalkorDB set queries → Venn</span>
+            </CardHeader>
+            <CardContent className="pt-0 flex-1 space-y-2">
+              <VennDiagram data={VENN_SETS} style={{ height: "240px" }} />
+              <div className="space-y-1 text-xs text-muted-foreground pt-1 border-t">
+                <p className="leading-relaxed">Pure SVG — no JS library. Circle radii ∝ size. Labels placed at centroid average of member circles.</p>
+                <p className="text-amber-400/80">⚠ When overlaps are large (&gt;40%) pairwise labels pile up at the same centre point. Works best for small, distinct sets.</p>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400">+ Zero bundle</span>
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400">+ SSR-safe</span>
+                  <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground">− Label collision on high overlap</span>
+                </div>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
-              <div className="h-[240px]">
-                <VennDiagram data={VENN_SETS} style={{ height: "240px" }} />
+            </CardContent>
+          </Card>
+
+          {/* Option B — G2 venn data transform */}
+          <Card className={`border ${FW.antv.border} flex flex-col`}>
+            <CardHeader className="pb-2">
+              <div className="flex items-start justify-between gap-1">
+                <div>
+                  <CardTitle className={`text-xs font-semibold ${FW.antv.color}`}>
+                    Option B — AntV G2 (path geometry)
+                  </CardTitle>
+                  <CardDescription className="text-xs mt-0.5">
+                    Force-simulation layout + overlapDodgeY labels
+                  </CardDescription>
+                </div>
+                <span className="text-xs px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 shrink-0">~600 kB</span>
               </div>
-              <div className="space-y-3 text-xs text-muted-foreground">
-                <p className="leading-relaxed">
-                  <strong className="text-foreground">Question:</strong> &ldquo;Which projects span both EV Charging AND Freight Decarbonisation?&rdquo;
-                  A bar or pie chart cannot show this — it requires set intersection. Circle area ∝ project count.
-                  Overlap region = projects that appear in BOTH themes.
+            </CardHeader>
+            <CardContent className="pt-0 flex-1 space-y-2">
+              <G2VennChart data={VENN_SETS} height={240} />
+              <div className="space-y-1 text-xs text-muted-foreground pt-1 border-t">
+                <p className="leading-relaxed">Uses G2&apos;s <code className="text-rose-300">venn</code> data transform: computes exact SVG path geometry for crescent/lens shapes via force simulation. Labels use <code className="text-rose-300">overlapDodgeY</code> to physically separate colliding text.</p>
+                <p className="text-rose-400/80">✓ Correct geometry even at 53% overlap. Best for set intersection queries where precision matters.</p>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400">+ Exact path geometry</span>
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400">+ No label collision</span>
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400">+ Interactive hover</span>
+                  <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground">− 600 kB bundle</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Option C — AntV MCP server (static PNG) */}
+          <Card className="border-sky-500/25 flex flex-col">
+            <CardHeader className="pb-2">
+              <div className="flex items-start justify-between gap-1">
+                <div>
+                  <CardTitle className="text-xs font-semibold text-sky-400">
+                    Option C — AntV MCP (static PNG)
+                  </CardTitle>
+                  <CardDescription className="text-xs mt-0.5">
+                    Server-rendered via Alipay GPT-vis API
+                  </CardDescription>
+                </div>
+                <span className="text-xs px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 shrink-0">0 kB client</span>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0 flex-1 space-y-2">
+              <AntvMcpChart
+                spec={buildMcpVennSpec(VENN_SETS, "Theme Intersections")}
+                height={240}
+              />
+              <div className="space-y-1 text-xs text-muted-foreground pt-1 border-t">
+                <p className="leading-relaxed">POSTs spec to our proxy route (<code className="text-sky-300">/api/atlas5/antv-mcp-render</code>) → Alipay renders server-side → returns PNG URL. Zero client JS for the chart itself.</p>
+                <p className="text-sky-400/80">
+                  Set <code className="text-sky-300">VIS_REQUEST_SERVER</code> env var to self-host.
+                  Disabled in production (404 guard).
                 </p>
-                <div className="space-y-1">
+                <div className="flex flex-wrap gap-1 mt-1">
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400">+ Zero client bundle</span>
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400">+ 26 chart types incl. word cloud</span>
+                  <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground">− Static PNG (no hover)</span>
+                  <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground">− External service (~500ms)</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+        </div>
+
+        {/* Intersection data reference */}
+        <Card className="border-dashed">
+          <CardContent className="pt-3 pb-3">
+            <div className="flex flex-wrap gap-4 text-xs">
+              <div className="space-y-1">
+                <p className="font-medium text-foreground">Intersection counts (same data, all three renderers)</p>
+                <div className="space-y-0.5 text-muted-foreground">
                   {VENN_SETS.filter(s => s.sets.length > 1).map(s => (
                     <div key={s.sets.join("&")} className="flex items-center gap-2">
                       <span className="font-mono text-foreground">{s.sets.join(" ∩ ")}</span>
-                      <span className="text-muted-foreground">→ {s.size} projects span both themes</span>
+                      <span>→ {s.size} projects span both themes</span>
                     </div>
                   ))}
                 </div>
-                <p className="text-muted-foreground/70 leading-relaxed">
-                  In production: ATLAS agent queries FalkorDB via Graphiti MCP for theme-tagged projects,
-                  groups by theme membership, returns set counts → rendered here. This is the cross-sector
-                  transfer signal that no other chart type can surface.
+              </div>
+              <div className="space-y-1 border-l pl-4">
+                <p className="font-medium text-foreground">Atlas production path</p>
+                <p className="text-muted-foreground leading-relaxed max-w-xs">
+                  ATLAS agent queries FalkorDB via Graphiti MCP → returns theme membership counts →
+                  ChartRenderer dispatches <code>type: &quot;venn&quot;</code> to G2VennChart (Option B recommended).
+                  Option C for brief PDFs / export where static PNG is acceptable.
                 </p>
               </div>
             </div>
@@ -1208,26 +1295,31 @@ function VocabularyTab() {
           <Badge className={`text-xs ${FW.antv.tag} border-rose-500/30`}>exclusive chart types · ~600 kB · installed</Badge>
         </div>
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          {/* Venn — flagship exclusive — pure SVG, no G2 dependency */}
+          {/* Venn — flagship exclusive — G2 path geometry (recommended) */}
           <Card className={`flex flex-col border ${FW.antv.border} col-span-2`}>
             <CardHeader className="pb-1">
-              <CardTitle className={`text-xs font-semibold ${FW.antv.color}`}>
-                Venn / Euler — THE exclusive
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Set intersection across themes. Zero native equivalents in Recharts, Vega-Lite, or ECharts.
-              </CardDescription>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <CardTitle className={`text-xs font-semibold ${FW.antv.color}`}>
+                    Venn / Euler — THE exclusive (G2 path geometry)
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Set intersection across themes. No native equivalents in Recharts, Vega-Lite, or ECharts.
+                  </CardDescription>
+                </div>
+                <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 shrink-0 whitespace-nowrap">
+                  recommended
+                </span>
+              </div>
             </CardHeader>
             <CardContent className="pt-0 flex-1">
-              <div className="h-[220px]">
-                <VennDiagram data={VENN_SETS} style={{ height: "220px" }} />
-              </div>
+              <G2VennChart data={VENN_SETS} height={220} />
               <div className="mt-2 space-y-0.5">
                 <p className="text-xs font-mono text-muted-foreground">
-                  {"sets: string[] · size: number — circle area = count, overlap = intersection"}
+                  {"sets: string[] · size: number — force-sim layout, exact crescent paths, overlapDodgeY labels"}
                 </p>
                 <p className={`text-xs ${FW.antv.color}`} style={{ opacity: 0.7 }}>
-                  Atlas: theme × theme → projects spanning both sectors
+                  Atlas: theme × theme → projects spanning both sectors. See Bake-off for SVG vs G2 vs MCP comparison.
                 </p>
               </div>
             </CardContent>

@@ -166,34 +166,44 @@ export function VennDiagram({ data, className, style }: VennDiagramProps) {
         const pos = interLabel(inter.sets);
         if (!pos) return null;
         const isTriple = inter.sets.length === 3;
+        const displayText = String(inter.size);
+        // Auto-size pill so 1- and 2-digit numbers both fit with padding
+        const pillW = Math.max(28, displayText.length * 9 + 14);
+        const pillH = 20;
+        const tooltip = isTriple
+          ? `${inter.sets.join(" ∩ ")} — ${inter.size} docs span all three themes`
+          : `${inter.sets.join(" ∩ ")} — ${inter.size} docs span both themes`;
         return (
           <g key={`inter-${inter.sets.join("&")}`}>
-            {/* Small translucent backing pill so count is readable */}
+            <title>{tooltip}</title>
+            {/* Backing pill — wider so the count number breathes */}
             <rect
-              x={pos.x - 10}
-              y={pos.y - 9}
-              width={20}
-              height={16}
-              rx={4}
-              fill="rgba(15,23,42,0.55)"
+              x={pos.x - pillW / 2}
+              y={pos.y - pillH / 2}
+              width={pillW}
+              height={pillH}
+              rx={5}
+              fill="rgba(10,15,30,0.75)"
+              stroke="rgba(255,255,255,0.12)"
+              strokeWidth={0.75}
             />
             <text
               x={pos.x}
-              y={pos.y + 3}
+              y={pos.y + 5}
               textAnchor="middle"
-              fontSize={isTriple ? 10 : 12}
+              fontSize={isTriple ? 11 : 13}
               fontWeight="700"
-              fill="#e2e8f0"
+              fill="#f1f5f9"
               fontFamily="Geist, ui-sans-serif, sans-serif"
             >
-              {inter.size}
+              {displayText}
             </text>
           </g>
         );
       })}
 
       {/* Legend strip at bottom */}
-      <g transform={`translate(${W / 2 - (singles.length * 100) / 2}, ${H - 16})`}>
+      <g transform={`translate(${W / 2 - (singles.length * 100) / 2}, ${H - 28})`}>
         {singles.map((set, i) => (
           <g key={`leg-${set.sets[0]}`} transform={`translate(${i * 104}, 0)`}>
             <circle cx={6} cy={0} r={5} fill={PALETTE[i % PALETTE.length]} fillOpacity={0.8} />
@@ -203,6 +213,19 @@ export function VennDiagram({ data, className, style }: VennDiagramProps) {
           </g>
         ))}
       </g>
+
+      {/* Explanatory caption — tells user what the overlap numbers mean */}
+      <text
+        x={W / 2}
+        y={H - 8}
+        textAnchor="middle"
+        fontSize={8.5}
+        fill="#64748b"
+        fontFamily="Geist, ui-sans-serif, sans-serif"
+        fontStyle="italic"
+      >
+        Numbers in overlaps = docs spanning both themes · circle area = total count
+      </text>
     </svg>
   );
 }

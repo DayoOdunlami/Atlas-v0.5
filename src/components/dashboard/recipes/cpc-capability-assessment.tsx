@@ -4,12 +4,20 @@ import type { ArtifactBlock, CorpusCitation, CpcClaim, SourceType } from "@/lib/
 import { cn } from "@/lib/utils";
 import { ChartRenderer } from "@/components/dashboard/charts/chart-renderer";
 import {
+  ChartSpecsPassthrough,
   ConfidenceBadge,
+  DirectorRationalePanel,
   GapCaveatPanel,
   MetricPill,
   RecommendationBanner,
   TIER_BADGE,
+  WhatThisDoesNotProve,
 } from "./cpc-shared";
+import {
+  inspectData,
+  selectVisuals,
+  RECIPE_CONTEXTS,
+} from "@/lib/atlas/visual-recipe-director";
 
 // ── Source dot / label (mirrored from evidence-panel) ────────────────────────
 
@@ -135,6 +143,23 @@ export function CpcCapabilityAssessmentRecipe({ artifact }: Props) {
     claims.filter((c) => c.business_unit).map((c) => c.business_unit!),
   ).size;
 
+  // Gauge: corpus confidence score (% of claims that are Supported or Robust)
+  const supportedCount = claims.filter((c) => c.confidence_tier === "Supported").length;
+  const robustCount = claims.filter((c) => c.confidence_tier === "Robust").length;
+  const gaugeValue = claims.length > 0
+    ? Math.round(((supportedCount + robustCount) / claims.length) * 100)
+    : 0;
+
+  // Visual Director — readiness_maturity intent for capability assessment
+  const directorSelection = selectVisuals(
+    "readiness_maturity",
+    inspectData([
+      ...claims.map((c) => ({ level: c.level, confidence_tier: c.confidence_tier })),
+      ...projects.map((p) => ({ score: p.score, source_type: p.source_type })),
+    ]),
+    RECIPE_CONTEXTS.cpc_capability_assessment,
+  );
+
   // Chart: claim level distribution
   const claimLevelData = [
     { level: "L1 Delivery", count: l1 },
@@ -168,6 +193,11 @@ export function CpcCapabilityAssessmentRecipe({ artifact }: Props) {
         {/* Summary prose */}
         {summary && (
           <p className="text-sm text-foreground/85 leading-relaxed">{summary}</p>
+        )}
+
+        {/* Visual Director rationale */}
+        {(claims.length > 0 || projects.length > 0) && (
+          <DirectorRationalePanel selection={directorSelection} />
         )}
 
         {/* Recommendation */}
@@ -217,23 +247,43 @@ export function CpcCapabilityAssessmentRecipe({ artifact }: Props) {
           </div>
         )}
 
-        {/* Charts */}
+        {/* Gauge: corpus confidence score */}
+        {claims.length > 0 && (
+          <div className="border-t border-border pt-4 space-y-1">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Corpus Confidence Score
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              {gaugeValue >= 70
+                ? "Strong corpus — majority of claims are Supported or Robust."
+                : gaugeValue >= 40
+                ? "Partial confidence — mix of verified and indicative claims."
+                : "Thin corpus — most claims lack corroborating evidence links."}
+            </p>
+            <ChartRenderer
+              spec={{ type: "gauge", title: "Corpus Confidence %", value: gaugeValue }}
+              data={[]}
+            />
+          </div>
+        )}
+
+        {/* Charts: claim level distribution + confidence pie */}
         {showCharts && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-border pt-4">
             {claimLevelData.length > 0 && (
               <div className="space-y-1">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Claims by Level
+                  How deep does the evidence go?
                 </h3>
                 <p className="text-xs text-muted-foreground">
                   {l3 === 0
-                    ? "No strategic outcome claims verified — evidence is delivery-heavy."
+                    ? "No strategic outcome claims (L3) verified — evidence is delivery-heavy. Cannot support a strategic investment case."
                     : l3 < l1
-                    ? "Delivery claims dominate; strategic claims are thin."
-                    : "Good spread across claim levels."}
+                    ? "Delivery claims dominate. Strategic claims exist but are outnumbered — thin for a Robust case."
+                    : "Good spread across all three levels — sufficient depth for a programme-level case."}
                 </p>
                 <ChartRenderer
-                  spec={{ type: "bar", title: "Claims by Level", x: "level", y: "count" }}
+                  spec={{ type: "bar", title: "How deep does the evidence go?", x: "level", y: "count" }}
                   data={claimLevelData}
                 />
               </div>
@@ -241,16 +291,15 @@ export function CpcCapabilityAssessmentRecipe({ artifact }: Props) {
             {tierData.length > 0 && (
               <div className="space-y-1">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Confidence Distribution
+                  How reliable is the evidence?
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Evidence quality spread across {tierData.length} confidence tier
-                  {tierData.length !== 1 ? "s" : ""}.
+                  Speculative and Indicative claims cannot be cited in funding bids without further validation.
                 </p>
                 <ChartRenderer
                   spec={{
                     type: "pie",
-                    title: "Confidence Tier Distribution",
+                    title: "How reliable is the evidence?",
                     x: "tier",
                     y: "count",
                   }}
@@ -267,6 +316,17 @@ export function CpcCapabilityAssessmentRecipe({ artifact }: Props) {
             <GapCaveatPanel gaps={gaps} />
           </div>
         )}
+
+        {/* What this does not prove */}
+        <WhatThisDoesNotProve
+          extra={[
+            "Whether the claimed capabilities are currently active — projects may be complete",
+            "Capability strength relative to other organisations — no external benchmarking in this corpus",
+          ]}
+        />
+
+        {/* Agent-injected supplementary charts */}
+        <ChartSpecsPassthrough chartSpecs={artifact.chart_specs} />
 
         {projects.length === 0 && claims.length === 0 && (
           <p className="text-sm text-muted-foreground italic">

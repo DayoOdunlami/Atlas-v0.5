@@ -3,7 +3,7 @@ Atlas 5 — JARVIS Agent (LangGraph StateGraph)
 
 JARVIS is the corpus explorer agent. It:
 1. Receives a user query + context packet
-2. Calls search_projects and evidence_for_claim from the CPC-corpus MCP
+2. Calls search_corpus_projects from the CPC-corpus MCP
 3. Verifies all citation IDs exist in atlas.projects (NO fabricated IDs)
 4. Assigns a confidence_tier per the evidence-triage skill
 5. Returns a structured JarvisResponse
@@ -16,8 +16,10 @@ from __future__ import annotations
 import json
 import os
 import sys
+import uuid
 from pathlib import Path
-from typing import Any, Literal, TypedDict
+from typing import Annotated, Any, Literal
+from typing_extensions import TypedDict  # required by Pydantic on Python < 3.12
 
 # Ensure project root on sys.path
 _root = Path(__file__).resolve().parent.parent.parent
@@ -28,10 +30,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from langchain_anthropic import ChatAnthropic
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
+from langgraph.graph.message import add_messages
 
-from agents.mcp_client import search_projects, evidence_for_claim, get_project
+from agents.mcp_client import search_corpus_projects, get_project
 from mcps.cpc_corpus.queries import get_project as _verify_project
 
 # ---------------------------------------------------------------------------
@@ -49,6 +53,10 @@ class CorpusCitation(TypedDict):
 
 
 class JarvisState(TypedDict):
+    # AG-UI messages — primary input via CopilotKit/HttpAgent;
+    # add_messages reducer handles deduplication by message ID.
+    messages: Annotated[list, add_messages]
+    # query — extracted from messages (AG-UI path) or passed directly (REST path)
     query: str
     context_packet: dict[str, Any]
     raw_search_results: list[dict[str, Any]]
@@ -80,6 +88,21 @@ def _llm() -> ChatAnthropic:
     )
 
 
+def extract_query(state: JarvisState) -> dict:
+    """
+    Node 0: Extract query from AG-UI messages when called via CopilotKit.
+    Returns only {"query": "..."} — the reducer handles messages unchanged.
+    If query is already set (REST path), this is a no-op.
+    """
+    if state.get("query"):
+        return {}  # REST path: query already present
+    for msg in reversed(state.get("messages", [])):
+        content = getattr(msg, "content", None)
+        if isinstance(msg, HumanMessage) and content:
+            return {"query": str(content)}
+    return {}
+
+
 def search_corpus(state: JarvisState) -> JarvisState:
     """
     Node 1: Search atlas.projects for the user query.
@@ -87,9 +110,10 @@ def search_corpus(state: JarvisState) -> JarvisState:
     """
     query = state["query"]
     try:
-        # Use MCP tool (returns real atlas.projects records)
-        results = search_projects.invoke({"query": query, "limit": _MAX_CITATIONS})
-        state["raw_search_results"] = results if isinstance(results, list) else []
+        # Use MCP tool — returns {"results": [...], "coverage": {...}}
+        raw = search_corpus_projects.invoke({"query": query, "limit": _MAX_CITATIONS})
+        results = raw.get("results", []) if isinstance(raw, dict) else (raw if isinstance(raw, list) else [])
+        state["raw_search_results"] = results
     except Exception as e:
         state["raw_search_results"] = []
         state["error"] = f"search_corpus error: {e}"
@@ -142,12 +166,17 @@ Respond in JSON only. Format:
             HumanMessage(content=f"Query: {query}"),
         ])
         content = response.content
+        import logging
+        _log = logging.getLogger("jarvis.reason")
+        _log.info("LLM raw response (first 300): %s", content[:300])
         # Extract JSON from response
         if "```json" in content:
             content = content.split("```json")[1].split("```")[0]
         elif "```" in content:
             content = content.split("```")[1].split("```")[0]
+        _log.info("After extraction (first 200): %s", content.strip()[:200])
         parsed = json.loads(content.strip())
+        _log.info("analysis field: %s", str(parsed.get("analysis",""))[:150])
 
         citations = parsed.get("corpus_citations", [])
         tier = parsed.get("confidence_tier", "Speculative")
@@ -215,6 +244,20 @@ def verify_citations(state: JarvisState) -> JarvisState:
     if len(verified) < len(state.get("corpus_citations", [])):
         state["confidence_tier"] = "Speculative"
 
+    # Emit analysis as AIMessage so the AG-UI stream has text content to display.
+    # The add_messages reducer appends this to the existing messages (user question
+    # is already in state["messages"] from extract_query / the AG-UI input).
+    analysis = state.get("analysis", "")
+    tier = state.get("confidence_tier", "Speculative")
+    if analysis:
+        citation_line = f"\n\n**{len(verified)} verified projects** | Confidence: **{tier}**"
+        state["messages"] = state.get("messages", []) + [
+            AIMessage(
+                content=analysis + citation_line,
+                id=str(uuid.uuid4()),
+            )
+        ]
+
     return state
 
 
@@ -225,16 +268,22 @@ def verify_citations(state: JarvisState) -> JarvisState:
 def build_jarvis_graph() -> StateGraph:
     graph = StateGraph(JarvisState)
 
+    # Node 0: extract query from AG-UI messages (no-op on REST path)
+    graph.add_node("extract_query", extract_query)
     graph.add_node("search_corpus", search_corpus)
     graph.add_node("reason_and_cite", reason_and_cite)
     graph.add_node("verify_citations", verify_citations)
 
-    graph.set_entry_point("search_corpus")
+    graph.set_entry_point("extract_query")
+    graph.add_edge("extract_query", "search_corpus")
     graph.add_edge("search_corpus", "reason_and_cite")
     graph.add_edge("reason_and_cite", "verify_citations")
     graph.add_edge("verify_citations", END)
 
-    return graph.compile()
+    # MemorySaver required by ag_ui_langgraph for aget_state() calls.
+    # Each server restart clears checkpoints — fine for dev; swap for
+    # a persistent checkpointer (e.g. PostgresSaver) in production.
+    return graph.compile(checkpointer=MemorySaver())
 
 
 jarvis_graph = build_jarvis_graph()
@@ -259,6 +308,7 @@ def run_jarvis(
     All citation IDs are verified against atlas.projects.
     """
     initial_state: JarvisState = {
+        "messages": [],   # empty on REST path; AG-UI path sets this via input
         "query": query,
         "context_packet": context_packet or {},
         "raw_search_results": [],

@@ -13,6 +13,42 @@ import { ArtifactPanel } from "@/components/dashboard/layout/artifact-panel";
 import { TrustRail } from "@/components/dashboard/layout/trust-rail";
 import { DecisionSpineCard } from "@/components/dashboard/layout/decision-spine";
 import type { ArtifactBlock, DecisionSpine, ConfidenceTier } from "@/lib/types";
+import { cn } from "@/lib/utils";
+
+// ---------------------------------------------------------------------------
+// Preset configs — filter which recipes to show and with what query
+// ---------------------------------------------------------------------------
+
+type RecipeKey = "capability" | "portfolio" | "market" | "gaps";
+
+interface Preset {
+  id: string;
+  label: string;
+  description: string;
+  recipes: RecipeKey[];
+  query?: string;
+}
+
+const PRESETS: Preset[] = [
+  {
+    id: "all",
+    label: "Full View",
+    description: "All four CPC recipes with live corpus data.",
+    recipes: ["capability", "portfolio", "market", "gaps"],
+  },
+  {
+    id: "investment",
+    label: "Investment Readiness",
+    description: "Portfolio coverage and market alignment — bid decision view.",
+    recipes: ["portfolio", "market"],
+  },
+  {
+    id: "audit",
+    label: "Evidence Audit",
+    description: "Capability assessment + gap analysis — strategic planning view.",
+    recipes: ["capability", "gaps"],
+  },
+];
 
 // ---------------------------------------------------------------------------
 // Types for the API response
@@ -220,6 +256,9 @@ export function CpcLiveSection() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [activePreset, setActivePreset] = useState<string>("all");
+
+  const preset = PRESETS.find((p) => p.id === activePreset) ?? PRESETS[0];
 
   async function fetchLive(q?: string) {
     setLoading(true);
@@ -242,35 +281,65 @@ export function CpcLiveSection() {
   return (
     <div className="space-y-8">
       {/* Header + controls */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-base font-semibold">
-            CPC Capability Intelligence — Live Data
-          </h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Fetches from <code className="font-mono text-[11px]">/api/atlas5/cpc-intelligence</code> → live
-            Supabase query against <code className="font-mono text-[11px]">atlas.evidence_containers</code> +{" "}
-            <code className="font-mono text-[11px]">atlas.claims</code> (corpus_tag = cpc_v0_1)
-          </p>
+      <div className="space-y-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-base font-semibold">
+              CPC Capability Intelligence — Live Data
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Fetches from{" "}
+              <code className="font-mono text-[11px]">/api/atlas5/cpc-intelligence</code> → live
+              Supabase query against{" "}
+              <code className="font-mono text-[11px]">atlas.evidence_containers</code> +{" "}
+              <code className="font-mono text-[11px]">atlas.claims</code> (corpus_tag = cpc_v0_1)
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <input
+              type="text"
+              placeholder="Filter by keyword…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && fetchLive(query || undefined)}
+              className="h-8 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring w-44"
+            />
+            <button
+              type="button"
+              onClick={() => fetchLive(query || undefined)}
+              disabled={loading}
+              className="h-8 rounded-md bg-primary px-4 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+            >
+              {loading ? "Loading…" : "Load live data"}
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            placeholder="Filter by keyword…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && fetchLive(query || undefined)}
-            className="h-8 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring w-48"
-          />
-          <button
-            type="button"
-            onClick={() => fetchLive(query || undefined)}
-            disabled={loading}
-            className="h-8 rounded-md bg-primary px-4 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
-          >
-            {loading ? "Loading…" : "Load live data"}
-          </button>
+        {/* Preset chips */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-muted-foreground">View:</span>
+          {PRESETS.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => setActivePreset(p.id)}
+              title={p.description}
+              className={cn(
+                "h-7 rounded-full px-3 text-xs font-medium border transition-colors",
+                activePreset === p.id
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background text-muted-foreground border-border hover:text-foreground hover:border-foreground/40",
+              )}
+            >
+              {p.label}
+            </button>
+          ))}
+          {data && (
+            <span className="ml-2 text-[10px] text-muted-foreground italic">
+              {preset.description}
+            </span>
+          )}
         </div>
       </div>
 
@@ -331,29 +400,47 @@ export function CpcLiveSection() {
           </div>
 
           <div className="pt-4 space-y-12">
-            <RecipeBlock
-              label="cpc_capability_assessment · live"
-              artifact={buildCapabilityArtifact(data)}
-              spine={spines.capability}
-            />
-            <hr className="border-border" />
-            <RecipeBlock
-              label="cpc_portfolio_comparison · live"
-              artifact={buildPortfolioArtifact(data)}
-              spine={spines.portfolio}
-            />
-            <hr className="border-border" />
-            <RecipeBlock
-              label="cpc_market_alignment · live"
-              artifact={buildMarketAlignmentArtifact(data)}
-              spine={spines.market}
-            />
-            <hr className="border-border" />
-            <RecipeBlock
-              label="cpc_evidence_gaps · live"
-              artifact={buildEvidenceGapsArtifact(data)}
-              spine={spines.gaps}
-            />
+            {preset.recipes.includes("capability") && (
+              <>
+                <RecipeBlock
+                  label="cpc_capability_assessment · live"
+                  artifact={buildCapabilityArtifact(data)}
+                  spine={spines.capability}
+                />
+                {preset.recipes.length > 1 && <hr className="border-border" />}
+              </>
+            )}
+            {preset.recipes.includes("portfolio") && (
+              <>
+                <RecipeBlock
+                  label="cpc_portfolio_comparison · live"
+                  artifact={buildPortfolioArtifact(data)}
+                  spine={spines.portfolio}
+                />
+                {preset.recipes.indexOf("portfolio") < preset.recipes.length - 1 && (
+                  <hr className="border-border" />
+                )}
+              </>
+            )}
+            {preset.recipes.includes("market") && (
+              <>
+                <RecipeBlock
+                  label="cpc_market_alignment · live"
+                  artifact={buildMarketAlignmentArtifact(data)}
+                  spine={spines.market}
+                />
+                {preset.recipes.indexOf("market") < preset.recipes.length - 1 && (
+                  <hr className="border-border" />
+                )}
+              </>
+            )}
+            {preset.recipes.includes("gaps") && (
+              <RecipeBlock
+                label="cpc_evidence_gaps · live"
+                artifact={buildEvidenceGapsArtifact(data)}
+                spine={spines.gaps}
+              />
+            )}
           </div>
         </div>
       )}

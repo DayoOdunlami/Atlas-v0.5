@@ -1,4 +1,4 @@
-import { getSession } from "lib/auth/server";
+import { getSession } from "@/lib/auth/server";
 import { redirect } from "next/navigation";
 import { getPassportList } from "@/lib/passport/queries";
 import Link from "next/link";

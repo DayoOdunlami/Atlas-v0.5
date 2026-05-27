@@ -37,8 +37,10 @@ from __future__ import annotations
 import json
 import os
 import sys
+import uuid
 from pathlib import Path
-from typing import Any, Literal, TypedDict
+from typing import Annotated, Any, Literal
+from typing_extensions import TypedDict  # required by Pydantic on Python < 3.12
 
 _root = Path(__file__).resolve().parent.parent.parent
 if str(_root) not in sys.path:
@@ -49,8 +51,10 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 from langchain_anthropic import ChatAnthropic
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
+from langgraph.graph.message import add_messages
 
 # Correct tool names from mcp_client (not the old `search_projects` alias)
 from agents.mcp_client import (
@@ -176,6 +180,9 @@ class DecisionSpine(TypedDict):
 
 
 class AtlasState(TypedDict):
+    # AG-UI messages — primary input via CopilotKit/HttpAgent
+    messages: Annotated[list, add_messages]
+    # query — extracted from messages (AG-UI path) or passed directly (REST path)
     query: str
     context_packet: dict[str, Any]
     raw_search_results: list[dict[str, Any]]
@@ -864,6 +871,25 @@ def verify_citations(state: AtlasState) -> AtlasState:
         "args": {"count": len(state["corpus_citations"])},
         "result": verification_log,
     }]
+
+    # Emit the Five Case decision spine + analysis as an AIMessage for AG-UI streaming.
+    # The add_messages reducer appends this to the existing messages list.
+    spine = state.get("decision_spine") or {}
+    analysis = state.get("analysis", "")
+    tier = state.get("confidence_tier", "Speculative")
+    decision_text = spine.get("recommendation", "") or spine.get("decision", "") or analysis
+    if decision_text:
+        citation_count = len(verified)
+        ai_content = (
+            f"{decision_text}\n\n"
+            f"**Confidence:** {tier} | "
+            f"**Citations:** {citation_count} verified projects | "
+            f"**Discount rate:** {state.get('discount_rate', 0.035):.1%}"
+        )
+        state["messages"] = state.get("messages", []) + [
+            AIMessage(content=ai_content, id=str(uuid.uuid4()))
+        ]
+
     return state
 
 
@@ -872,16 +898,33 @@ def verify_citations(state: AtlasState) -> AtlasState:
 # ---------------------------------------------------------------------------
 
 
+def _extract_query_atlas(state: AtlasState) -> dict:
+    """
+    Node 0: Extract query from AG-UI messages (CopilotKit path).
+    If query is already set (REST path), this is a no-op.
+    """
+    if state.get("query"):
+        return {}
+    for msg in reversed(state.get("messages", [])):
+        content = getattr(msg, "content", None)
+        if isinstance(msg, HumanMessage) and content:
+            return {"query": str(content)}
+    return {}
+
+
 def build_atlas_graph() -> StateGraph:
     graph = StateGraph(AtlasState)
 
+    # Node 0: AG-UI query extraction (no-op on REST path)
+    graph.add_node("extract_query", _extract_query_atlas)
     graph.add_node("search_corpus", search_corpus)
     # Node 1b: External Evidence Router — only fires when gaps call for it
     graph.add_node("external_evidence_search", external_evidence_search)
     graph.add_node("build_five_case", build_five_case)
     graph.add_node("verify_citations", verify_citations)
 
-    graph.set_entry_point("search_corpus")
+    graph.set_entry_point("extract_query")
+    graph.add_edge("extract_query", "search_corpus")
     # Always run external_evidence_search after corpus search.
     # The node is a no-op if no gaps have govuk_search / exa_search tools.
     graph.add_edge("search_corpus", "external_evidence_search")
@@ -889,7 +932,7 @@ def build_atlas_graph() -> StateGraph:
     graph.add_edge("build_five_case", "verify_citations")
     graph.add_edge("verify_citations", END)
 
-    return graph.compile()
+    return graph.compile(checkpointer=MemorySaver())
 
 
 atlas_graph = build_atlas_graph()
@@ -919,6 +962,7 @@ def run_atlas(
     discount_rate (0.035 locked), optimism_bias, and analysis.
     """
     initial_state: AtlasState = {
+        "messages": [],   # empty on REST path; AG-UI path sets this via input
         "query": query,
         "context_packet": context_packet or {},
         "raw_search_results": [],

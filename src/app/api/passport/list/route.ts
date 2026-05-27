@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSession } from "lib/auth/server";
+import { getSession } from "@/lib/auth/server";
 import { getPassportPool } from "@/lib/passport/db";
 import type { PassportSummary } from "@/lib/passport/types";
 

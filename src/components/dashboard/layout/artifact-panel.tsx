@@ -6,6 +6,12 @@ import {
   EvidencePanelRecipe,
   StatsDashboardRecipe,
   ScenarioStressTestRecipe,
+  CpcCapabilityAssessmentRecipe,
+  CpcPortfolioComparisonRecipe,
+  CpcMarketAlignmentRecipe,
+  CpcEvidenceGapsRecipe,
+  CpcOpportunityFitRecipe,
+  CpcFundingFlowRecipe,
 } from "@/components/dashboard/recipes";
 
 const FIVE_CASE_SECTIONS = new Set([
@@ -41,6 +47,12 @@ export function ArtifactPanel({ artifact }: ArtifactPanelProps) {
       {recipe === "evidence_panel" && <EvidencePanelRecipe artifact={artifact} />}
       {recipe === "stats_dashboard" && <StatsDashboardRecipe artifact={artifact} />}
       {recipe === "scenario_stress_test" && <ScenarioStressTestRecipe artifact={artifact} />}
+      {recipe === "cpc_capability_assessment" && <CpcCapabilityAssessmentRecipe artifact={artifact} />}
+      {recipe === "cpc_portfolio_comparison" && <CpcPortfolioComparisonRecipe artifact={artifact} />}
+      {recipe === "cpc_market_alignment" && <CpcMarketAlignmentRecipe artifact={artifact} />}
+      {recipe === "cpc_evidence_gaps" && <CpcEvidenceGapsRecipe artifact={artifact} />}
+      {recipe === "cpc_opportunity_fit" && <CpcOpportunityFitRecipe artifact={artifact} />}
+      {recipe === "cpc_funding_flow" && <CpcFundingFlowRecipe artifact={artifact} />}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSession } from "auth/server";
+import { getSession } from "@/lib/auth/server";
 import {
   buildEmbedPayload,
   detectPassportClaimConflicts,

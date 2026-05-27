@@ -18,12 +18,33 @@ type SupportedCase = (typeof SUPPORTED_CASES)[number];
 // DB pool — read-only, shared across requests in this module instance
 // ---------------------------------------------------------------------------
 
+// Pool is lazily created and shared across requests in this module instance.
+// Re-declare to force a fresh pool after hot-module reload in dev.
 let _pool: Pool | null = null;
+
+/**
+ * Strip `sslmode` from the connection string URL before handing it to pg.
+ * When `sslmode=require` is present in the URL string, pg's URL parser sets
+ * up its own SSL config that ignores the `ssl: { rejectUnauthorized: false }`
+ * Pool option, causing "self-signed certificate in certificate chain" errors
+ * against Supabase's pooler. Removing sslmode from the URL lets our explicit
+ * ssl option take full control.
+ */
+function stripSslMode(cs: string): string {
+  try {
+    const u = new URL(cs);
+    u.searchParams.delete("sslmode");
+    return u.toString();
+  } catch {
+    return cs; // URL parse failed — return as-is
+  }
+}
 
 function db(): Pool {
   if (!_pool) {
-    const cs = process.env.POSTGRES_URL ?? process.env.DATABASE_URL ?? "";
-    const isLocal = cs.includes("localhost") || cs.includes("127.0.0.1");
+    const raw = process.env.POSTGRES_URL ?? process.env.DATABASE_URL ?? "";
+    const cs = stripSslMode(raw);
+    const isLocal = raw.includes("localhost") || raw.includes("127.0.0.1");
     _pool = new Pool({
       connectionString: cs,
       ssl: isLocal ? false : { rejectUnauthorized: false },
@@ -47,8 +68,14 @@ async function q<T extends Record<string, unknown>>(
   }
 }
 
-function isUndefinedTable(e: unknown): boolean {
-  return (e as { code?: string })?.code === "42P01";
+function isSchemaError(e: unknown): boolean {
+  const code = (e as { code?: string })?.code;
+  return (
+    code === "42P01" || // undefined table
+    code === "42703" || // undefined column
+    code === "42883" || // undefined function
+    code === "42601"    // syntax error (malformed column name, etc.)
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -267,7 +294,7 @@ async function semanticClusters(): Promise<VisualisationDataResponse> {
       });
     }
   } catch (e) {
-    if (!isUndefinedTable(e)) throw e;
+    if (!isSchemaError(e)) throw e;
     // fall through to theme proxy
   }
 

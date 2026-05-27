@@ -36,10 +36,14 @@ import type {
   Chart,
   ConfidenceTier,
   CorpusCitation,
+  CpcBusinessUnit,
+  CpcClaim,
+  CpcGap,
   DecisionSpine,
   EvidenceCoverage,
   ExternalCitation,
   HiveCitation,
+  RecommendationAction,
   RecipeType,
 } from "./types";
 
@@ -96,6 +100,13 @@ export interface ArtifactBlock {
 
   // ── HYVE ───────────────────────────────────────────────────────────────
   transport_mode?: string;
+
+  // ── CPC Capability Intelligence ────────────────────────────────────────
+  cpc_claims?: CpcClaim[];
+  cpc_portfolio?: CpcBusinessUnit[];
+  cpc_gaps?: CpcGap[];
+  recommendation_action?: RecommendationAction;
+  recommendation_rationale?: string;
 
   // ── Common ─────────────────────────────────────────────────────────────
   confidence_tier: ConfidenceTier;

@@ -8,14 +8,22 @@ import { NextRequest } from "next/server";
 
 export const runtime = "nodejs";
 
-// ExperimentalEmptyAdapter — the Python agent handles its own LLM calls
+// ExperimentalEmptyAdapter — each Python agent handles its own LLM calls
 const serviceAdapter = new ExperimentalEmptyAdapter();
 
-// HttpAgent connects to the ag_ui_langgraph FastAPI server
+// Base URL for the Python agent service (port 8000)
+const AGENT_BASE = (process.env.AGENT_URL ?? "http://localhost:8000/").replace(/\/$/, "");
+
+// CopilotRuntime — routes to the right AG-UI agent by name
+// JARVIS  → /jarvis  (corpus explorer — evidence search + citation verification)
+// ATLAS   → /atlas   (Green Book strategist — Five Case Model + NPV)
 const agentRuntime = new CopilotRuntime({
   agents: {
-    my_agent: new HttpAgent({
-      url: process.env.AGENT_URL ?? "http://localhost:8000/",
+    jarvis: new HttpAgent({
+      url: `${AGENT_BASE}/jarvis`,
+    }),
+    atlas: new HttpAgent({
+      url: `${AGENT_BASE}/atlas`,
     }),
   },
 });

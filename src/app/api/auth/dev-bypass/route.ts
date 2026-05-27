@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "auth/server";
+import { auth } from "@/lib/auth/server";
 import pg from "pg";
 import {
   getDevBypassPassword,
   isDevTestLoginEnabled,
-} from "lib/auth/dev-test-login";
+} from "@/lib/auth/dev-test-login";
 
 const BOOTSTRAP_ADMIN_EMAIL = "dev-bypass-bootstrap@innovation-atlas.local";
 

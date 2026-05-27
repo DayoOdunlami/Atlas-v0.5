@@ -81,7 +81,47 @@ export type RecipeType =
   | "brief_five_case"
   | "evidence_panel"
   | "stats_dashboard"
-  | "scenario_stress_test";
+  | "scenario_stress_test"
+  | "cpc_capability_assessment"
+  | "cpc_portfolio_comparison"
+  | "cpc_market_alignment"
+  | "cpc_evidence_gaps";
+
+// ---------------------------------------------------------------------------
+// CPC Capability Intelligence types
+// ---------------------------------------------------------------------------
+
+export type CpcClaimLevel = 1 | 2 | 3;
+
+export interface CpcClaim {
+  id: string;
+  text: string;
+  level: CpcClaimLevel;
+  confidence_tier: ConfidenceTier;
+  source_project?: string;
+  source_excerpt?: string;
+  business_unit?: string;
+}
+
+export interface CpcBusinessUnit {
+  name: string;
+  project_count: number;
+  claim_count: number;
+  l1_claims: number;
+  l2_claims: number;
+  l3_claims: number;
+  evidence_links: number;
+}
+
+export interface CpcGap {
+  area: string;
+  severity: "low" | "medium" | "high";
+  description: string;
+  project_count?: number;
+  claim_count?: number;
+}
+
+export type RecommendationAction = "bid" | "partner" | "monitor" | "reject";
 
 // ---------------------------------------------------------------------------
 // Source type (for citations)

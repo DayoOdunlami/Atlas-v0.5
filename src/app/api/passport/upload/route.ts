@@ -1,6 +1,6 @@
 import { getContentTypeFromFilename } from "@/lib/file-storage/storage-utils";
 import { createAdminClient } from "@/lib/supabase/server";
-import { getSession } from "auth/server";
+import { getSession } from "@/lib/auth/server";
 import { NextResponse } from "next/server";
 import pg from "pg";
 

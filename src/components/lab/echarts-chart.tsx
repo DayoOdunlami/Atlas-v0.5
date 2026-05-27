@@ -256,6 +256,141 @@ export function buildGaugeOption(value: number, label: string): EChartsOption {
   };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Generic builders — field-name-agnostic, used by ChartRenderer for agent specs
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Generic Sankey — agent passes field names for source/target/value.
+ * data rows: { [sourceField]: string, [targetField]: string, [valueField]: number }
+ */
+export function buildGenericSankeyOption(
+  data: Array<Record<string, string | number>>,
+  sourceField: string,
+  targetField: string,
+  valueField: string,
+): EChartsOption {
+  const sourceNames = [...new Set(data.map((d) => String(d[sourceField])))];
+  const targetNames = [...new Set(data.map((d) => String(d[targetField])))];
+  // Deduplicate node names across source and target sets
+  const allNames = [...new Set([...sourceNames, ...targetNames])];
+  const nodes = allNames.map((n) => ({ name: n }));
+  const links = data.map((d) => ({
+    source: String(d[sourceField]),
+    target: String(d[targetField]),
+    value: Number(d[valueField] ?? 0),
+  }));
+  return {
+    tooltip: {
+      trigger: "item",
+      triggerOn: "mousemove",
+      formatter: (params: unknown) => {
+        const p = params as { data: { source?: string; target?: string; name?: string; value: number } };
+        if (p.data.source)
+          return `${p.data.source} → ${p.data.target}: <b>${p.data.value}</b>`;
+        return `${p.data.name}: <b>${p.data.value}</b>`;
+      },
+    },
+    series: [{
+      type: "sankey",
+      data: nodes,
+      links,
+      emphasis: { focus: "adjacency" },
+      lineStyle: { color: "gradient", curveness: 0.5, opacity: 0.45 },
+      label: { color: "#f8fafc", fontSize: 11 },
+      nodeWidth: 14,
+      nodeGap: 10,
+      layoutIterations: 32,
+      left: "2%",
+      right: "10%",
+      top: "5%",
+      bottom: "5%",
+    }],
+  };
+}
+
+/**
+ * Generic Radar — agent passes field names for axis label and score value.
+ * data rows: { [axisField]: string, [valueField]: number }
+ * max defaults to 100.
+ */
+export function buildGenericRadarOption(
+  data: Array<Record<string, string | number>>,
+  axisField: string,
+  valueField: string,
+  label = "Coverage",
+  max = 100,
+): EChartsOption {
+  const axes = data.map((d) => String(d[axisField]));
+  const values = data.map((d) => Number(d[valueField] ?? 0));
+  return {
+    tooltip: {},
+    radar: {
+      indicator: axes.map((a) => ({ name: a, max })),
+      radius: "62%",
+      center: ["50%", "52%"],
+      axisName: { color: "#94a3b8", fontSize: 11 },
+      splitLine: { lineStyle: { color: "#1e293b" } },
+      splitArea: { show: false },
+      axisLine: { lineStyle: { color: "#2d3748" } },
+    },
+    series: [{
+      type: "radar",
+      data: [{ value: values, name: label, areaStyle: { opacity: 0.18, color: "#6366f1" } }],
+      lineStyle: { color: "#6366f1", width: 2 },
+      symbol: "circle",
+      symbolSize: 5,
+      itemStyle: { color: "#6366f1" },
+    }],
+  };
+}
+
+/**
+ * Generic Heatmap — agent passes field names for x-axis, y-axis, and cell value.
+ * data rows: { [xField]: string, [yField]: string, [valueField]: number }
+ */
+export function buildGenericHeatmapOption(
+  data: Array<Record<string, string | number>>,
+  xField: string,
+  yField: string,
+  valueField: string,
+): EChartsOption {
+  const xs = [...new Set(data.map((d) => String(d[xField])))];
+  const ys = [...new Set(data.map((d) => String(d[yField])))];
+  const maxVal = Math.max(...data.map((d) => Number(d[valueField] ?? 0)), 1);
+  return {
+    grid: { left: "12%", right: "8%", top: "10%", bottom: "18%", containLabel: false },
+    xAxis: {
+      type: "category",
+      data: xs,
+      axisLabel: { color: "#94a3b8", fontSize: 10, rotate: -20 },
+      axisLine: { lineStyle: { color: "#4b5563" } },
+    },
+    yAxis: {
+      type: "category",
+      data: ys,
+      axisLabel: { color: "#94a3b8", fontSize: 10 },
+      axisLine: { lineStyle: { color: "#4b5563" } },
+    },
+    visualMap: {
+      min: 0,
+      max: maxVal,
+      calculable: true,
+      orient: "horizontal",
+      left: "center",
+      bottom: "2%",
+      inRange: { color: ["#1e293b", "#6366f1"] },
+      textStyle: { color: "#94a3b8", fontSize: 10 },
+    },
+    series: [{
+      type: "heatmap",
+      data: data.map((d) => [xs.indexOf(String(d[xField])), ys.indexOf(String(d[yField])), Number(d[valueField] ?? 0)]),
+      label: { show: true, color: "#f8fafc", fontSize: 10 },
+      emphasis: { itemStyle: { shadowBlur: 10, shadowColor: "rgba(0,0,0,0.5)" } },
+    }],
+  };
+}
+
 /** Standard bar using ECharts — for bake-off comparison with Recharts + Vega-Lite */
 export function buildEChartBarOption(
   data: Array<Record<string, string | number>>,

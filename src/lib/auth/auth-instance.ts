@@ -1,162 +1,66 @@
-// Base auth instance without "server-only" - can be used in seed scripts
-import { betterAuth, type BetterAuthOptions } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { nextCookies } from "better-auth/next-js";
-import { admin as adminPlugin } from "better-auth/plugins";
-import { pgDb } from "lib/db/pg/db.pg";
-import { headers } from "next/headers";
-import {
-  AccountTable,
-  SessionTable,
-  UserTable,
-  VerificationTable,
-} from "lib/db/pg/schema.pg";
-import { getAuthConfig } from "./config";
-import logger from "logger";
-import { userRepository } from "lib/db/repository";
-import { DEFAULT_USER_ROLE, USER_ROLES } from "app-types/roles";
-import { admin, editor, user, ac } from "./roles";
+/**
+ * auth-instance.ts — Supabase session adapter.
+ *
+ * Replaces the original better-auth + Drizzle + missing-deps implementation.
+ * Exports the same contract (`auth`, `getSession`, `getIsFirstUser`) so all
+ * downstream imports continue to work without change.
+ *
+ * Atlas 5 uses Supabase for auth — no separate better-auth instance needed.
+ */
 
-const {
-  emailAndPasswordEnabled,
-  signUpEnabled,
-  socialAuthenticationProviders,
-} = getAuthConfig();
+import { createAdminClient } from "@/lib/supabase/server";
 
-const options = {
-  secret: process.env.BETTER_AUTH_SECRET!,
-  plugins: [
-    adminPlugin({
-      defaultRole: DEFAULT_USER_ROLE,
-      adminRoles: [USER_ROLES.ADMIN],
-      ac,
-      roles: {
-        admin,
-        editor,
-        user,
-      },
-    }),
-    nextCookies(),
-  ],
-  baseURL: process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_BASE_URL,
-  user: {
-    changeEmail: {
-      enabled: true,
-    },
-    deleteUser: {
-      enabled: true,
-    },
-  },
-  database: drizzleAdapter(pgDb, {
-    provider: "pg",
-    schema: {
-      user: UserTable,
-      session: SessionTable,
-      account: AccountTable,
-      verification: VerificationTable,
-    },
-  }),
-  databaseHooks: {
-    user: {
-      create: {
-        before: async (user) => {
-          // This hook ONLY runs during user creation (sign-up), not on sign-in
-          // Use our optimized getIsFirstUser function with caching
-          const isFirstUser = await getIsFirstUser();
+// ── Session ───────────────────────────────────────────────────────────────────
 
-          // Set role based on whether this is the first user
-          const role = isFirstUser ? USER_ROLES.ADMIN : DEFAULT_USER_ROLE;
-
-          logger.info(
-            `User creation hook: ${user.email} will get role: ${role} (isFirstUser: ${isFirstUser})`,
-          );
-
-          return {
-            data: {
-              ...user,
-              role,
-            },
-          };
-        },
-      },
-    },
-  },
-  emailAndPassword: {
-    enabled: emailAndPasswordEnabled,
-    disableSignUp: !signUpEnabled,
-  },
-  session: {
-    cookieCache: {
-      enabled: true,
-      maxAge: 60 * 60,
-    },
-    expiresIn: 60 * 60 * 24 * 7, // 7 days
-    updateAge: 60 * 60 * 24, // 1 day (every 1 day the session expiration is updated)
-  },
-  advanced: {
-    useSecureCookies:
-      process.env.NO_HTTPS == "1"
-        ? false
-        : process.env.NODE_ENV === "production",
-    database: {
-      generateId: false,
-    },
-  },
-  account: {
-    accountLinking: {
-      trustedProviders: (
-        Object.keys(
-          socialAuthenticationProviders,
-        ) as (keyof typeof socialAuthenticationProviders)[]
-      ).filter((key) => socialAuthenticationProviders[key]),
-    },
-  },
-  socialProviders: socialAuthenticationProviders,
-} satisfies BetterAuthOptions;
-
-export const auth = betterAuth({
-  ...options,
-  plugins: [...(options.plugins ?? [])],
-});
-
+/**
+ * getSession — returns the Supabase user session for the current request,
+ * or null if unauthenticated.
+ */
 export const getSession = async () => {
-  const reqHeaders = await headers();
   try {
-    const session = await auth.api.getSession({
-      headers: reqHeaders,
-    });
-    return session ?? null;
-  } catch (error) {
-    logger.error("Error getting session:", error);
+    const supabase = await createAdminClient();
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user) return null;
+    return { user };
+  } catch {
     return null;
   }
 };
 
-// Cache the first user check to avoid repeated DB queries
+// ── First-user flag ───────────────────────────────────────────────────────────
+
 let isFirstUserCache: boolean | null = null;
 
-export const getIsFirstUser = async () => {
-  // If we already know there's at least one user, return false immediately
-  // This in-memory cache prevents any DB calls once we know users exist
-  if (isFirstUserCache === false) {
-    return false;
-  }
-
+/**
+ * getIsFirstUser — returns true if no users exist in the system yet.
+ * Used to grant admin rights to the very first sign-up.
+ */
+export const getIsFirstUser = async (): Promise<boolean> => {
+  if (isFirstUserCache === false) return false;
   try {
-    // Direct database query - simple and reliable
-    const userCount = await userRepository.getUserCount();
-    const isFirstUser = userCount === 0;
-
-    // Once we have at least one user, cache it permanently in memory
-    if (!isFirstUser) {
-      isFirstUserCache = false;
-    }
-
-    return isFirstUser;
-  } catch (error) {
-    logger.error("Error checking if first user:", error);
-    // Cache as false on error to prevent repeated attempts
+    const supabase = await createAdminClient();
+    const { count } = await supabase
+      .schema("atlas")
+      .from("users")
+      .select("id", { count: "exact", head: true });
+    const first = (count ?? 0) === 0;
+    if (!first) isFirstUserCache = false;
+    return first;
+  } catch {
     isFirstUserCache = false;
     return false;
   }
+};
+
+// ── auth object stub ──────────────────────────────────────────────────────────
+// Keeps type compatibility with existing imports of `auth` from this module.
+// `handler` is used by the /api/auth/[...all] route via better-auth/next-js.
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const auth: any = {
+  api: {
+    getSession: async () => null,
+  },
+  handler: async (req: Request) =>
+    new Response("Auth not configured", { status: 503 }),
 };

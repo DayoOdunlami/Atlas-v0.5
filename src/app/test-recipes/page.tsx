@@ -522,6 +522,147 @@ const CPC_EVIDENCE_GAPS_SPINE: DecisionSpine = {
   framework: "CPC Capability Intelligence",
 };
 
+// ── New recipe: CPC Opportunity Fit ──────────────────────────────────────────
+
+const CPC_OPPORTUNITY_FIT_ARTIFACT: ArtifactBlock = {
+  type: "evidence",
+  recipe: "cpc_opportunity_fit",
+  confidence_tier: "Indicative",
+  sections: {
+    Summary:
+      "Three live funding calls assessed against CPC's evidence base. UKRI Smart Mobility is bid-ready — high corpus fit and sufficient L2/L3 claims. Innovate UK Connected Places has strong fit but insufficient evidence depth; enrich before bidding. DfT Future of Freight has strong evidence but lower semantic fit — may need portfolio repositioning.",
+  },
+  corpus_citations: [
+    {
+      id: "lc1",
+      title: "UKRI Smart Mobility Challenge — Open Call 2024",
+      funder: "UKRI",
+      deadline: "2024-11-30",
+      score: 0.91,
+      source_type: "live_call",
+    },
+    {
+      id: "lc2",
+      title: "Innovate UK Connected Places Round 5",
+      funder: "Innovate UK",
+      deadline: "2024-12-15",
+      score: 0.84,
+      source_type: "live_call",
+    },
+    {
+      id: "lc3",
+      title: "DfT Future of Freight Innovation Fund",
+      funder: "Department for Transport",
+      deadline: "2025-01-31",
+      score: 0.71,
+      source_type: "live_call",
+    },
+    {
+      id: "lc4",
+      title: "Active Travel England Cycling Innovation Round 2",
+      funder: "Active Travel England",
+      deadline: "2025-02-28",
+      score: 0.58,
+      source_type: "live_call",
+    },
+  ],
+  cpc_claims: [
+    { id: "of-c1", text: "CPC delivered three motorway platooning trials with industry partners.", level: 2, confidence_tier: "Supported" },
+    { id: "of-c2", text: "CPC convened cross-sector consortia of ≥10 partners in mobility R&D.", level: 2, confidence_tier: "Robust" },
+    { id: "of-c3", text: "CPC has convened regulatory sandboxes for novel transport technologies.", level: 2, confidence_tier: "Supported" },
+    { id: "of-c4", text: "Connected logistics R&D contributed to 12% urban delivery emission reduction.", level: 3, confidence_tier: "Indicative" },
+  ],
+  recommendation_action: "bid",
+  recommendation_rationale:
+    "UKRI Smart Mobility is the clear priority. Bid as technical lead with an industry prime for commercial deployment evidence.",
+};
+
+const CPC_OPPORTUNITY_FIT_SPINE: DecisionSpine = {
+  decision: "Which live funding calls should CPC prioritise for 2024-25?",
+  recommendation:
+    "Bid on UKRI Smart Mobility (91% fit, 4 L2/L3 claims — bid-ready). Enrich evidence before bidding on Innovate UK (84% fit but only 2 supporting claims). Monitor DfT Freight (71% fit, strong evidence — possible repositioning play). Pass on Active Travel England (58% fit — poor match).",
+  confidence_tier: "Indicative",
+  key_assumption:
+    "An industry prime with commercial deployment experience joins the UKRI consortium.",
+  next_action: "Approach 2 logistics operators this week; confirm UKRI interest before beginning bid preparation.",
+  framework: "CPC Capability Intelligence",
+  strongest_objection: "No verified commercial deployment track record for UKRI criterion 3.",
+  would_change_if: "A logistics partner with live commercial deployment joins the consortium.",
+};
+
+// ── New recipe: CPC Funding Flow ──────────────────────────────────────────────
+
+const CPC_FUNDING_FLOW_ARTIFACT: ArtifactBlock = {
+  type: "chart",
+  recipe: "cpc_funding_flow",
+  confidence_tier: "Indicative",
+  sections: {
+    Summary:
+      "Funding flows through CPC's Future Mobility and Digital Infrastructure units most strongly. UKRI and Innovate UK are the dominant funder pathways. Evidence pyramid terminates at L3 Strategic level only in Future Mobility and Digital Infrastructure — these are the only units with a complete funding-to-evidence flow. Rural Connectivity and Active Travel have no L2/L3 claims blocking the strategic tier.",
+  },
+  corpus_citations: [
+    { id: "lc1", title: "UKRI Smart Mobility Challenge", funder: "UKRI", score: 0.91, source_type: "live_call" },
+    { id: "lc2", title: "Innovate UK Connected Places Round 5", funder: "Innovate UK", score: 0.84, source_type: "live_call" },
+    { id: "lc3", title: "DfT Future of Freight Innovation Fund", funder: "DfT", score: 0.71, source_type: "live_call" },
+  ],
+  cpc_portfolio: [
+    { name: "Future Mobility", project_count: 31, claim_count: 42, l1_claims: 12, l2_claims: 22, l3_claims: 8, evidence_links: 78 },
+    { name: "Digital Infrastructure", project_count: 18, claim_count: 28, l1_claims: 9, l2_claims: 15, l3_claims: 4, evidence_links: 41 },
+    { name: "Places & Growth", project_count: 11, claim_count: 14, l1_claims: 6, l2_claims: 7, l3_claims: 1, evidence_links: 23 },
+    { name: "Active Travel", project_count: 7, claim_count: 8, l1_claims: 5, l2_claims: 3, l3_claims: 0, evidence_links: 12 },
+    { name: "Rural Connectivity", project_count: 4, claim_count: 4, l1_claims: 4, l2_claims: 0, l3_claims: 0, evidence_links: 6 },
+  ],
+  cpc_gaps: [
+    { area: "Rural Connectivity: no L2/L3 evidence terminus", severity: "high", description: "Funding flows in but no programme or strategic claims exist — the pipeline terminates at delivery only.", project_count: 4, claim_count: 0 },
+    { area: "Active Travel: missing L3 strategic claims", severity: "medium", description: "L2 claims exist but no L3 — cannot close the loop to strategic outcome.", project_count: 7, claim_count: 3 },
+  ],
+  // Agent-provided Sankey with explicit funder→BU→evidence flows
+  chart_specs: [
+    {
+      type: "sankey",
+      title: "CPC Funding Flow: Funders → Business Units → Evidence Level",
+      source: "source",
+      target: "target",
+      value: "value",
+      data: [
+        // Funder → BU
+        { source: "UKRI", target: "Future Mobility", value: 12 },
+        { source: "UKRI", target: "Digital Infrastructure", value: 7 },
+        { source: "Innovate UK", target: "Future Mobility", value: 9 },
+        { source: "Innovate UK", target: "Places & Growth", value: 4 },
+        { source: "DfT", target: "Future Mobility", value: 6 },
+        { source: "DfT", target: "Active Travel", value: 3 },
+        { source: "ATE", target: "Active Travel", value: 4 },
+        { source: "ATE", target: "Rural Connectivity", value: 2 },
+        // BU → evidence level
+        { source: "Future Mobility", target: "L3 Strategic", value: 8 },
+        { source: "Future Mobility", target: "L2 Programme", value: 14 },
+        { source: "Future Mobility", target: "L1 Delivery", value: 5 },
+        { source: "Digital Infrastructure", target: "L3 Strategic", value: 4 },
+        { source: "Digital Infrastructure", target: "L2 Programme", value: 11 },
+        { source: "Digital Infrastructure", target: "L1 Delivery", value: 4 },
+        { source: "Places & Growth", target: "L2 Programme", value: 7 },
+        { source: "Places & Growth", target: "L1 Delivery", value: 4 },
+        { source: "Active Travel", target: "L2 Programme", value: 3 },
+        { source: "Active Travel", target: "L1 Delivery", value: 3 },
+        { source: "Rural Connectivity", target: "L1 Delivery", value: 4 },
+      ],
+    },
+  ],
+};
+
+const CPC_FUNDING_FLOW_SPINE: DecisionSpine = {
+  decision: "Which funding pathways does CPC have complete evidence chains for?",
+  recommendation:
+    "Future Mobility and Digital Infrastructure have complete funding-to-L3 evidence chains — viable for strategic cases. Three other units have broken chains: Places & Growth stops at L2, Active Travel stops at L2, Rural Connectivity stops at L1. Prioritise evidence enrichment for these units to close the strategic pipeline.",
+  confidence_tier: "Indicative",
+  key_assumption:
+    "Funder-to-BU flow weights are derived from corpus citation scores and project counts — not verified funder allocation data.",
+  next_action:
+    "Commission L3 outcome studies for Active Travel and Rural Connectivity to complete the evidence pipeline.",
+  framework: "CPC Capability Intelligence",
+};
+
 // ── Recipe block ─────────────────────────────────────────────────────────────
 
 function RecipeBlock({
@@ -557,6 +698,7 @@ function RecipeBlock({
 }
 
 import { CpcLiveSection } from "./live-section";
+import { VisualDirectorSection } from "./visual-director-section";
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
@@ -571,6 +713,8 @@ export default function TestRecipesPage() {
         <div className="mt-2 flex gap-3 text-xs">
           <a href="#mock" className="text-primary underline underline-offset-2">↓ Mock data</a>
           <a href="#live" className="text-green-600 underline underline-offset-2">↓ Live CPC corpus</a>
+          <a href="#director" className="text-indigo-600 underline underline-offset-2">↓ Visual Director</a>
+          <a href="#new-recipes" className="text-purple-600 underline underline-offset-2">↓ New recipes</a>
         </div>
       </div>
 
@@ -602,6 +746,32 @@ export default function TestRecipesPage() {
       {/* ── Live CPC Corpus section ──────────────────────────────────────── */}
       <hr className="border-border border-2" id="live" />
       <CpcLiveSection />
+
+      {/* ── Visual Recipe Director section ──────────────────────────────── */}
+      <hr className="border-border border-2" id="director" />
+      <VisualDirectorSection />
+
+      {/* ── New recipes: Opportunity Fit + Funding Flow ─────────────────── */}
+      <hr className="border-border border-2" id="new-recipes" />
+      <div className="space-y-2">
+        <h2 className="text-base font-semibold">New Visual Recipes</h2>
+        <p className="text-xs text-muted-foreground">
+          Two recipes driven by the Visual Director — scatter/quadrant for trade-off analysis,
+          Sankey for funding flow.
+        </p>
+      </div>
+
+      <RecipeBlock
+        label="cpc_opportunity_fit"
+        artifact={CPC_OPPORTUNITY_FIT_ARTIFACT}
+        spine={CPC_OPPORTUNITY_FIT_SPINE}
+      />
+      <hr className="border-border" />
+      <RecipeBlock
+        label="cpc_funding_flow"
+        artifact={CPC_FUNDING_FLOW_ARTIFACT}
+        spine={CPC_FUNDING_FLOW_SPINE}
+      />
     </main>
   );
 }

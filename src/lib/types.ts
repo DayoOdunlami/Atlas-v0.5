@@ -14,18 +14,87 @@ export type StackedBarChartSpec = {
 
 /**
  * VennChartSpec — theme intersection / Euler diagram.
- *
- * data rows must conform to VennSet shape:
- *   { sets: string[], size: number, label?: string }
- *
- * Rendered by the pure SVG VennDiagram component (zero external deps).
- * Populated by the theme_intersections corpus API case.
+ * data rows: { sets: string[], size: number, label?: string }
+ * Rendered by G2VennChart (force-sim layout, overlapDodgeY labels).
  */
 export type VennChartSpec = {
   type: "venn";
   title: string;
-  /** Optional: override which corpus case drives this chart */
   corpus_case?: "theme_intersections";
+};
+
+/**
+ * SankeyChartSpec — directed flow (funder → theme, stage → outcome, etc.)
+ * data rows: { [source]: string, [target]: string, [value]: number }
+ * Agent emits field names; renderer extracts them generically.
+ */
+export type SankeyChartSpec = {
+  type: "sankey";
+  title: string;
+  source: string;   // field name for source node  e.g. "funder"
+  target: string;   // field name for target node  e.g. "theme"
+  value: string;    // field name for flow weight  e.g. "count"
+};
+
+/**
+ * RadarChartSpec — multi-axis coverage/score spider.
+ * data rows: { [axis]: string, [value]: number }
+ * Atlas primary use: Five Case Model completeness, evidence coverage.
+ */
+export type RadarChartSpec = {
+  type: "radar";
+  title: string;
+  axis: string;     // field name for axis label  e.g. "case"
+  value: string;    // field name for score 0–100 e.g. "score"
+  max?: number;     // shared max for all axes (default 100)
+};
+
+/**
+ * HeatmapChartSpec — 2D matrix density.
+ * data rows: { [x]: string, [y]: string, [value]: number }
+ * Atlas use: source_type × tier evidence matrix, theme × theme co-occurrence.
+ */
+export type HeatmapChartSpec = {
+  type: "heatmap";
+  title: string;
+  x: string;        // field name for x-axis category
+  y: string;        // field name for y-axis category
+  value: string;    // field name for cell intensity
+};
+
+/**
+ * GaugeChartSpec — single 0–100 score.
+ * Value is embedded directly in the spec (not in data[]) because it is
+ * a single scalar — no flat-row data is expected.
+ * Atlas use: confidence score, transferability score, evidence coverage %.
+ */
+export type GaugeChartSpec = {
+  type: "gauge";
+  title: string;
+  value: number;    // 0–100
+};
+
+/**
+ * GraphChartSpec — force-directed knowledge graph.
+ * Nodes and edges are embedded in the spec (not in data[]).
+ * Atlas use: Graphiti MCP subgraph → funding path, cross-sector connections.
+ */
+export type ChartGraphNode = {
+  id: string;
+  name: string;
+  category?: "theme" | "project" | "funder" | "document" | "concept";
+  value?: number;   // controls node size
+};
+export type ChartGraphEdge = {
+  source: string;   // node id
+  target: string;   // node id
+  label?: string;
+};
+export type GraphChartSpec = {
+  type: "graph";
+  title: string;
+  nodes: ChartGraphNode[];
+  edges: ChartGraphEdge[];
 };
 
 export type ChartSpec =
@@ -36,7 +105,12 @@ export type ChartSpec =
   | ScatterChartSpec
   | RadialBarChartSpec
   | StackedBarChartSpec
-  | VennChartSpec;
+  | VennChartSpec
+  | SankeyChartSpec
+  | RadarChartSpec
+  | HeatmapChartSpec
+  | GaugeChartSpec
+  | GraphChartSpec;
 
 /** All supported chart type identifiers — used in the lab type selector */
 export const CHART_TYPES = [
@@ -48,6 +122,11 @@ export const CHART_TYPES = [
   "radial-bar",
   "stacked-bar",
   "venn",
+  "sankey",
+  "radar",
+  "heatmap",
+  "gauge",
+  "graph",
 ] as const;
 export type ChartType = (typeof CHART_TYPES)[number];
 
@@ -115,7 +194,49 @@ export type RecipeType =
   | "brief_five_case"
   | "evidence_panel"
   | "stats_dashboard"
-  | "scenario_stress_test";
+  | "scenario_stress_test"
+  | "cpc_capability_assessment"
+  | "cpc_portfolio_comparison"
+  | "cpc_market_alignment"
+  | "cpc_evidence_gaps"
+  | "cpc_opportunity_fit"
+  | "cpc_funding_flow";
+
+// ── CPC Capability Intelligence types ────────────────────────────────────────
+
+export type CpcClaimLevel = 1 | 2 | 3;
+
+export type CpcClaim = {
+  id: string;
+  text: string;
+  level: CpcClaimLevel;
+  confidence_tier: ConfidenceTier;
+  source_project?: string;
+  source_excerpt?: string;
+  business_unit?: string;
+};
+
+export type CpcBusinessUnit = {
+  name: string;
+  project_count: number;
+  claim_count: number;
+  l1_claims: number;
+  l2_claims: number;
+  l3_claims: number;
+  evidence_links: number;
+};
+
+export type CpcGap = {
+  area: string;
+  severity: "low" | "medium" | "high";
+  description: string;
+  project_count?: number;
+  claim_count?: number;
+};
+
+export type RecommendationAction = "bid" | "partner" | "monitor" | "reject";
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export type ArtifactBlock = {
   type: "brief" | "evidence" | "chart" | "scenario";
@@ -132,6 +253,12 @@ export type ArtifactBlock = {
    * Used by stats_dashboard and optionally brief_five_case.
    */
   chart_specs?: Chart[];
+  // CPC Capability Intelligence fields
+  cpc_claims?: CpcClaim[];
+  cpc_portfolio?: CpcBusinessUnit[];
+  cpc_gaps?: CpcGap[];
+  recommendation_action?: RecommendationAction;
+  recommendation_rationale?: string;
 };
 
 export type DecisionSpine = {

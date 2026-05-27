@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { getSession } from "lib/auth/server";
+import { getSession } from "@/lib/auth/server";
 import { getPassportDetail } from "@/lib/passport/queries";
 import { PassportHeader } from "@/components/passport/passport-header";
 import { PassportDocuments } from "@/components/passport/passport-documents";

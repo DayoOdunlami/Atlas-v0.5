@@ -3,7 +3,8 @@
 import type { ArtifactBlock, CpcBusinessUnit, CpcGap } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ChartRenderer } from "@/components/dashboard/charts/chart-renderer";
-import { ConfidenceBadge, MetricPill } from "./cpc-shared";
+import { ChartSpecsPassthrough, ConfidenceBadge, DirectorRationalePanel, MetricPill, WhatThisDoesNotProve } from "./cpc-shared";
+import { inspectData, selectVisuals, RECIPE_CONTEXTS } from "@/lib/atlas/visual-recipe-director";
 
 // ── Gap severity display ──────────────────────────────────────────────────────
 
@@ -207,9 +208,26 @@ export function CpcEvidenceGapsRecipe({ artifact }: Props) {
   const medCount = gaps.filter((g) => g.severity === "medium").length;
   const lowCount = gaps.filter((g) => g.severity === "low").length;
 
+  // Gauge: corpus readiness (inverse of gap severity pressure)
+  // Each HIGH gap = −25, MED = −10, LOW = −3; floor at 0
+  const readinessScore = Math.max(
+    0,
+    Math.round(100 - highCount * 25 - medCount * 10 - lowCount * 3),
+  );
+
   // Sort gaps: high first
   const sortedGaps = [...gaps].sort(
     (a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity],
+  );
+
+  // Visual Director — evidence_coverage intent
+  const directorSelection = selectVisuals(
+    "evidence_coverage",
+    inspectData([
+      ...gaps.map((g) => ({ area: g.area, severity: g.severity })),
+      ...claims.map((c) => ({ level: c.level, confidence_tier: c.confidence_tier })),
+    ]),
+    RECIPE_CONTEXTS.cpc_evidence_gaps,
   );
 
   // Chart: claims by level
@@ -248,6 +266,11 @@ export function CpcEvidenceGapsRecipe({ artifact }: Props) {
         {/* Summary */}
         {summary && (
           <p className="text-sm text-foreground/85 leading-relaxed">{summary}</p>
+        )}
+
+        {/* Visual Director rationale */}
+        {(gaps.length > 0 || claims.length > 0) && (
+          <DirectorRationalePanel selection={directorSelection} />
         )}
 
         {/* Gap severity metrics */}
@@ -301,18 +324,38 @@ export function CpcEvidenceGapsRecipe({ artifact }: Props) {
         {/* Thin evidence table */}
         {portfolio.length > 0 && <ThinEvidenceTable portfolio={portfolio} />}
 
-        {/* Charts */}
+        {/* Gauge: corpus readiness */}
+        {(gaps.length > 0 || claims.length > 0) && (
+          <div className="border-t border-border pt-4 space-y-1">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Corpus Readiness Score
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              {readinessScore >= 75
+                ? "Corpus is investment-ready — gaps are manageable."
+                : readinessScore >= 50
+                ? "Partial readiness — address HIGH severity gaps before submitting bids."
+                : "Low readiness — significant evidence gaps require urgent enrichment."}
+            </p>
+            <ChartRenderer
+              spec={{ type: "gauge", title: "Corpus Readiness %", value: readinessScore }}
+              data={[]}
+            />
+          </div>
+        )}
+
+        {/* Charts: claim level + confidence distribution */}
         {showCharts && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-border pt-4">
             {claimLevelData.length > 0 && (
               <div className="space-y-1">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Claims by Level
+                  Where is the evidence pyramid incomplete?
                 </h3>
                 <p className="text-xs text-muted-foreground">
                   {l3 === 0
-                    ? "No strategic outcome claims (L3) verified in current corpus."
-                    : `${l3} strategic claim${l3 !== 1 ? "s" : ""} verified — review for funding eligibility.`}
+                    ? "No L3 strategic outcome claims verified — the pyramid has no top. Cannot support a strategic case for any bid."
+                    : `${l3} strategic claim${l3 !== 1 ? "s" : ""} verified. Review each for funding eligibility before citing.`}
                 </p>
                 <ChartRenderer
                   spec={{
@@ -328,11 +371,10 @@ export function CpcEvidenceGapsRecipe({ artifact }: Props) {
             {tierData.length > 0 && (
               <div className="space-y-1">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Evidence Quality Distribution
+                  How much evidence is citable in a funding bid?
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Confidence tier spread across reviewed claims. Speculative and
-                  Indicative claims cannot be cited in funding bids.
+                  Only Supported and Robust claims can be cited in a bid. Speculative and Indicative claims require validation before use.
                 </p>
                 <ChartRenderer
                   spec={{
@@ -354,6 +396,18 @@ export function CpcEvidenceGapsRecipe({ artifact }: Props) {
             <EnrichmentActions gaps={gaps} />
           </div>
         )}
+
+        {/* What this does not prove */}
+        <WhatThisDoesNotProve
+          extra={[
+            "That identified gaps are the only gaps — areas not queried may have undiscovered gaps",
+            "That closing gaps will guarantee bid success — funder criteria may extend beyond the corpus scope",
+            "The time or cost required to close each gap — this requires a separate enrichment scoping exercise",
+          ]}
+        />
+
+        {/* Agent-injected supplementary charts */}
+        <ChartSpecsPassthrough chartSpecs={artifact.chart_specs} />
 
         {gaps.length === 0 && claims.length === 0 && portfolio.length === 0 && (
           <p className="text-sm text-muted-foreground italic">

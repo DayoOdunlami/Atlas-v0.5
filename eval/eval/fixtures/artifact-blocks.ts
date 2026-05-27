@@ -17,11 +17,11 @@
  * Security: no service-role keys, no auth secrets.
  */
 
-import type { ArtifactBlock } from "../../src/lib/atlas5/artifact-store";
+import type { ArtifactBlock } from "../../../src/lib/atlas5/artifact-store";
 import type {
   AtlasRoutingGap,
   DecisionSpine,
-} from "../../src/lib/atlas5/types";
+} from "../../../src/lib/atlas5/types";
 
 // ---------------------------------------------------------------------------
 // Shared Decision Spine — can be attached to any recipe

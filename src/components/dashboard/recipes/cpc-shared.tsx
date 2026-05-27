@@ -1,7 +1,9 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import type { ConfidenceTier, CpcGap, RecommendationAction } from "@/lib/types";
+import type { Chart, ConfidenceTier, CpcGap, RecommendationAction } from "@/lib/types";
+import { ChartRenderer } from "@/components/dashboard/charts/chart-renderer";
+import type { AnalyticalIntent, VisualFamily, VisualSelection } from "@/lib/atlas/visual-recipe-director";
 
 // ── Confidence tier badge ─────────────────────────────────────────────────────
 
@@ -114,6 +116,160 @@ const SEVERITY_ORDER: Record<CpcGap["severity"], number> = {
   medium: 1,
   low: 2,
 };
+
+// ── "What this does not prove" caveat panel ──────────────────────────────────
+// Explicitly bounds what conclusions the corpus evidence supports.
+// Reduces the risk of over-claiming in funding bids or internal reviews.
+// Each CPC recipe passes its own caveats; defaults cover the shared corpus limits.
+
+const DEFAULT_CPC_CAVEATS = [
+  "Team productivity or FTE performance — no resource data exists in the corpus",
+  "Project-level commercial outcomes where no independently validated evidence is present",
+  "L3 strategic positioning unless explicitly evidenced at Supported tier or above",
+  "Comparisons with other organisations — this corpus is CPC-internal only",
+];
+
+export function WhatThisDoesNotProve({
+  caveats = DEFAULT_CPC_CAVEATS,
+  extra,
+}: {
+  /** Override the default caveats entirely */
+  caveats?: string[];
+  /** Append extra recipe-specific caveats to the defaults */
+  extra?: string[];
+}) {
+  const all = [...caveats, ...(extra ?? [])];
+  return (
+    <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+        What this does not prove
+      </p>
+      <ul className="space-y-1">
+        {all.map((caveat, i) => (
+          <li key={i} className="flex items-start gap-1.5 text-xs text-amber-800 leading-snug">
+            <span className="shrink-0 font-bold text-amber-400 mt-px">✕</span>
+            {caveat}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// ── Agent-injected chart_specs passthrough ────────────────────────────────────
+// Any chart_specs on the artifact are rendered here after the recipe's own charts.
+// This lets the Python agent emit supplementary gauge/radar/heatmap/graph visuals
+// without the recipe needing to know about them at build-time.
+
+export function ChartSpecsPassthrough({ chartSpecs }: { chartSpecs?: Chart[] }) {
+  if (!chartSpecs || chartSpecs.length === 0) return null;
+  return (
+    <div className="space-y-4 border-t border-border pt-4">
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Agent-Generated Charts
+      </h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {chartSpecs.map((chart, i) => (
+          <div key={i} className="space-y-1">
+            {chart.title && (
+              <p className="text-xs font-medium text-foreground/80">{chart.title}</p>
+            )}
+            <ChartRenderer spec={chart} data={chart.data} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Visual Recipe Director rationale panel ───────────────────────────────────
+// Renders the director's selection reasoning inline in a recipe.
+// Compact by default — shows intent + primary + supporting families.
+// Rejected visuals are shown in a collapsed detail line.
+
+const INTENT_LABEL: Record<AnalyticalIntent, string> = {
+  overlap_intersection: "Overlap / intersection",
+  comparison_ranking: "Comparison / ranking",
+  evidence_coverage: "Evidence coverage",
+  readiness_maturity: "Readiness / maturity",
+  flow_pathway: "Flow / pathway",
+  trade_off_quadrant: "Trade-off / quadrant",
+  timeline_change: "Timeline / change",
+  portfolio_audit: "Portfolio audit",
+  market_alignment: "Market alignment",
+  evidence_quality: "Evidence quality",
+  unknown: "General query",
+};
+
+const FAMILY_LABEL: Record<VisualFamily, string> = {
+  venn: "Venn",
+  heatmap: "Heatmap",
+  radar: "Radar",
+  gauge: "Gauge",
+  scatter: "Scatter",
+  sankey: "Sankey",
+  bar: "Bar",
+  "stacked-bar": "Stacked bar",
+  pie: "Pie",
+  "radial-bar": "Radial bar",
+  line: "Line",
+  area: "Area",
+  graph: "Graph",
+  table: "Table",
+  cards: "Cards",
+};
+
+export function DirectorRationalePanel({ selection }: { selection: VisualSelection }) {
+  return (
+    <div className="rounded-lg border border-border bg-muted/10 px-3 py-2 space-y-1.5">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Visual Director
+        </span>
+        {/* Intent badge */}
+        <span className="text-[10px] font-medium bg-background border border-border text-foreground/80 px-1.5 py-0.5 rounded">
+          {INTENT_LABEL[selection.intent]}
+        </span>
+        {/* Primary visual */}
+        <span className="text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded">
+          ▶ {FAMILY_LABEL[selection.primaryFamily]}
+        </span>
+        {/* Supporting visuals */}
+        {selection.supportingFamilies.map((f) => (
+          <span
+            key={f}
+            className="text-[10px] text-muted-foreground bg-muted border border-border px-1.5 py-0.5 rounded"
+          >
+            + {FAMILY_LABEL[f]}
+          </span>
+        ))}
+      </div>
+      {/* Rationale */}
+      <p className="text-[10px] text-muted-foreground leading-snug">{selection.rationale}</p>
+      {/* Caveats */}
+      {selection.caveats.length > 0 && (
+        <ul className="space-y-0.5">
+          {selection.caveats.map((c, i) => (
+            <li key={i} className="text-[10px] text-amber-700 leading-snug">
+              ⚠ {c}
+            </li>
+          ))}
+        </ul>
+      )}
+      {/* Rejected (collapsed to single line) */}
+      {selection.rejected.length > 0 && (
+        <p className="text-[10px] text-muted-foreground/50 leading-snug">
+          Rejected:{" "}
+          {selection.rejected
+            .map((r) => `${FAMILY_LABEL[r.family]} (${r.reason})`)
+            .join(" · ")}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ── Gap / caveat panel ────────────────────────────────────────────────────────
 
 export function GapCaveatPanel({ gaps }: { gaps: CpcGap[] }) {
   if (gaps.length === 0) return null;
