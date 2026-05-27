@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
     });
 
     const response = NextResponse.json({ ok: true });
-    impersonateResponse.headers.forEach((value, key) => {
+    impersonateResponse.headers.forEach((value: string, key: string) => {
       if (key.toLowerCase() === "set-cookie") {
         response.headers.append("set-cookie", value);
       }
