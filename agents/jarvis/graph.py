@@ -166,17 +166,12 @@ Respond in JSON only. Format:
             HumanMessage(content=f"Query: {query}"),
         ])
         content = response.content
-        import logging
-        _log = logging.getLogger("jarvis.reason")
-        _log.info("LLM raw response (first 300): %s", content[:300])
         # Extract JSON from response
         if "```json" in content:
             content = content.split("```json")[1].split("```")[0]
         elif "```" in content:
             content = content.split("```")[1].split("```")[0]
-        _log.info("After extraction (first 200): %s", content.strip()[:200])
         parsed = json.loads(content.strip())
-        _log.info("analysis field: %s", str(parsed.get("analysis",""))[:150])
 
         citations = parsed.get("corpus_citations", [])
         tier = parsed.get("confidence_tier", "Speculative")
@@ -219,6 +214,7 @@ def verify_citations(state: JarvisState) -> JarvisState:
     SECURITY: removes any citation whose ID cannot be verified in the DB.
     This prevents hallucinated IDs from reaching the response.
     """
+    pre_verify_count = len(state["corpus_citations"])
     verified = []
     for citation in state["corpus_citations"]:
         cid = citation.get("id", "")
@@ -240,8 +236,8 @@ def verify_citations(state: JarvisState) -> JarvisState:
 
     state["corpus_citations"] = verified
 
-    # Downgrade confidence if citations were removed
-    if len(verified) < len(state.get("corpus_citations", [])):
+    # Downgrade confidence if any citations were removed during verification
+    if len(verified) < pre_verify_count:
         state["confidence_tier"] = "Speculative"
 
     # Emit analysis as AIMessage so the AG-UI stream has text content to display.
