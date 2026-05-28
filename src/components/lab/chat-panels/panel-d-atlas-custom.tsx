@@ -270,10 +270,12 @@ function StepRow({ tc, idx, isLast, compact }: StepRowProps) {
 interface ChainOfThoughtProps {
   toolCalls: ToolCallDisplay[];
   compact?: boolean;
+  /** When true the block starts expanded (used for the live streaming sentinel) */
+  defaultOpen?: boolean;
 }
 
-function ChainOfThought({ toolCalls, compact }: ChainOfThoughtProps) {
-  const [open, setOpen] = useState(false);
+function ChainOfThought({ toolCalls, compact, defaultOpen }: ChainOfThoughtProps) {
+  const [open, setOpen] = useState(defaultOpen ?? false);
 
   const doneCount = toolCalls.filter((tc) => tc.trace?.status === "ok").length;
   const errorCount = toolCalls.filter((tc) => tc.trace?.status === "error").length;
@@ -518,13 +520,17 @@ export function PanelDAtlas({ messages, isLoading, compact }: PanelDProps) {
           );
         }
 
-        return (
+        // Streaming sentinel — in-flight CoT block, starts expanded
+      const isStreaming = msg.id === "__streaming__";
+
+      return (
           <div key={msg.id} className={cn("flex flex-col gap-2", compact && "gap-1")}>
             {/* Chain of thought (node steps) */}
             {toolCalls.filter((tc) => tc.kind === "node").length > 0 && (
               <ChainOfThought
                 toolCalls={toolCalls.filter((tc) => tc.kind === "node")}
                 compact={compact}
+                defaultOpen={isStreaming}
               />
             )}
 
@@ -540,8 +546,8 @@ export function PanelDAtlas({ messages, isLoading, compact }: PanelDProps) {
                 </div>
               )}
 
-            {/* Message content */}
-            {msg.content && (
+            {/* Message content — skip for streaming sentinel (empty content) */}
+            {msg.content && !isStreaming && (
               <div
                 className={cn(
                   "text-foreground rounded-lg",

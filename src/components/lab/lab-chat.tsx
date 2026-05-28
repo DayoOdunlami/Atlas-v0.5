@@ -120,14 +120,17 @@ const NODE_LABELS: Record<string, string> = {
   // ATLAS
   extract_query:            "Extracting query intent",
   classify_intent:          "Classifying intent",
+  select_recipe_intent:     "Selecting recipe intent",
   search_corpus:            "Searching CPC corpus",
   external_evidence_search: "Searching external evidence",
   build_five_case:          "Building Five Case brief",
+  select_visual_recipe:     "Selecting visual recipe",
   verify_citations:         "Verifying citations",
   // JARVIS
   search_projects:          "Searching corpus projects",
   search_live_calls:        "Searching live funding calls",
   retrieve_evidence:        "Retrieving evidence",
+  reason_and_cite:          "Reasoning and citing",
   // CICERONE
   evaluate_transfer:        "Evaluating transferability",
   score_transfer:           "Scoring transferability",
@@ -172,33 +175,52 @@ function toDisplayMessages(raw: CpkMessage[]): DisplayMessage[] {
   for (const m of raw) {
     if (m.isAgentStateMessage()) {
       const asm = m as AgentStateMessage;
-      const node = asm.nodeName;
-      if (node && !HIDDEN_NODES.has(node)) {
-        // Grab the reasoning_trace entry for this specific node from the state snapshot.
-        // Each node appends one entry to reasoning_trace, so the last entry in the
-        // snapshot for this nodeName is the thought for this step.
-        const stateObj = (asm as unknown as { state?: Record<string, unknown> }).state;
-        const traceArr = Array.isArray(stateObj?.reasoning_trace) ? stateObj.reasoning_trace as Array<Record<string, unknown>> : [];
-        const traceEntry = [...traceArr].reverse().find((e) => e.node === node) as Record<string, unknown> | undefined;
+      const stateObj = (asm as unknown as { state?: Record<string, unknown> }).state;
+
+      // KEY FIX: CopilotKit may send only ONE final AgentStateMessage with the
+      // complete state snapshot (not one per node). We therefore scan the ENTIRE
+      // reasoning_trace array and upsert an entry for every node found.
+      // This works for both streaming (one msg per node) and batch (one final msg).
+      const traceArr = Array.isArray(stateObj?.reasoning_trace)
+        ? (stateObj!.reasoning_trace as Array<Record<string, unknown>>)
+        : [];
+
+      for (const traceEntry of traceArr) {
+        const node = traceEntry.node as string | undefined;
+        if (!node || HIDDEN_NODES.has(node)) continue;
 
         const existing = pendingNodes.findIndex((n) => n.id === node);
-        const step = {
+        const step: ToolCallDisplay = {
           id: node,
           name: NODE_LABELS[node] ?? node.replace(/_/g, " "),
           args: "",
-          kind: "node" as const,
-          trace: traceEntry
-            ? {
-                thought: traceEntry.thought as string | undefined,
-                tool_calls: traceEntry.tool_calls as import("@/components/lab/types").TraceToolCall[] | undefined,
-                status: traceEntry.status as "ok" | "error" | undefined,
-              }
-            : undefined,
+          kind: "node",
+          trace: {
+            thought: traceEntry.thought as string | undefined,
+            tool_calls: traceEntry.tool_calls as import("@/components/lab/types").TraceToolCall[] | undefined,
+            status: traceEntry.status as "ok" | "error" | undefined,
+          },
         };
         if (existing >= 0) {
           pendingNodes[existing] = step;
         } else {
           pendingNodes.push(step);
+        }
+      }
+
+      // Also handle the case where nodeName is set but no reasoning_trace entries exist yet
+      // (early nodes that don't write to reasoning_trace, e.g. extract_query)
+      const node = asm.nodeName;
+      if (node && !HIDDEN_NODES.has(node)) {
+        const alreadyInTrace = pendingNodes.some((n) => n.id === node);
+        if (!alreadyInTrace) {
+          pendingNodes.push({
+            id: node,
+            name: NODE_LABELS[node] ?? node.replace(/_/g, " "),
+            args: "",
+            kind: "node",
+            trace: undefined, // no thought yet — node fired but left no trace entry
+          });
         }
       }
     } else if (m.isResultMessage()) {
@@ -245,6 +267,19 @@ function toDisplayMessages(raw: CpkMessage[]): DisplayMessage[] {
         pendingActions = [];
       }
     }
+  }
+
+  // Streaming sentinel: if there are accumulated node/action steps that haven't
+  // been consumed by a final assistant TextMessage yet (i.e. the agent is still
+  // running), inject a placeholder message so Panel D can render the in-flight
+  // Chain of Thought in real time.
+  if (pendingNodes.length > 0 || pendingActions.length > 0) {
+    result.push({
+      id: "__streaming__",
+      role: "assistant",
+      content: "",
+      toolCalls: [...pendingNodes, ...pendingActions],
+    });
   }
 
   return result;
