@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { AgentState, AgentSetState, SurfaceState } from "@/lib/types";
 import { useSurfaceGateway } from "@/lib/atlas5/surface-gateway";
 import type { AgentId, LensId } from "@/lib/atlas5/types";
 import { cn } from "@/lib/utils";
 import { AgentStatusDot } from "@/components/dashboard/layout/agent-status-dot";
+import { CorpusHealthPanel } from "@/components/dashboard/layout/corpus-health-panel";
 
 const AGENTS: AgentId[] = ["ATLAS", "JARVIS", "CICERONE", "HYVE"];
 const LENSES: LensId[] = ["CPC", "Atlas", "Ecosystem", "Funder", "Mode"];
@@ -47,6 +49,7 @@ export function SurfaceSwitcher({ state, setState }: SurfaceSwitcherProps) {
   const active = surface.active_agent;
   const lens = surface.active_lens;
   const mode = state.surface_state?.mode ?? "artifact";
+  const [corpusOpen, setCorpusOpen] = useState(false);
 
   const handleAgentClick = (agent: AgentId) => {
     // 1. Update Zustand gateway → CopilotKitProvider picks up new agent prop
@@ -61,6 +64,22 @@ export function SurfaceSwitcher({ state, setState }: SurfaceSwitcherProps) {
   };
 
   return (
+    <>
+    {/* ── Corpus Health slide-over ──────────────────────────────────── */}
+    {corpusOpen && (
+      <div className="fixed inset-0 z-50 flex justify-end">
+        {/* Backdrop */}
+        <div
+          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+          onClick={() => setCorpusOpen(false)}
+        />
+        {/* Panel */}
+        <div className="relative z-10 w-full max-w-xl h-full shadow-2xl">
+          <CorpusHealthPanel onClose={() => setCorpusOpen(false)} />
+        </div>
+      </div>
+    )}
+
     <div className="flex flex-col gap-2 pb-3 border-b border-border">
       {/* Agent row */}
       <div className="flex items-center gap-1 flex-wrap">
@@ -83,6 +102,15 @@ export function SurfaceSwitcher({ state, setState }: SurfaceSwitcherProps) {
           <span className="text-xs text-muted-foreground hidden md:inline">
             {agentDescriptions[active]}
           </span>
+          {/* Corpus health button */}
+          <button
+            onClick={() => setCorpusOpen(true)}
+            title="Corpus health & ingest pipeline"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-indigo-500/10 text-indigo-400/80 border border-indigo-500/20 hover:bg-indigo-500/20 hover:text-indigo-300 transition-all"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+            Corpus
+          </button>
           <AgentStatusDot />
         </span>
       </div>
@@ -124,5 +152,6 @@ export function SurfaceSwitcher({ state, setState }: SurfaceSwitcherProps) {
         </div>
       </div>
     </div>
+    </>
   );
 }
