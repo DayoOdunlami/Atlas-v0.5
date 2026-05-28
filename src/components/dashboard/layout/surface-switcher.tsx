@@ -1,17 +1,20 @@
 "use client";
 
 import { AgentState, AgentSetState, SurfaceState } from "@/lib/types";
+import { useSurfaceGateway } from "@/lib/atlas5/surface-gateway";
+import type { AgentId, LensId } from "@/lib/atlas5/types";
 import { cn } from "@/lib/utils";
+import { AgentStatusDot } from "@/components/dashboard/layout/agent-status-dot";
 
-const AGENTS = ["ATLAS", "JARVIS", "CICERONE", "HYVE"] as const;
-const LENSES = ["CPC", "Atlas", "Ecosystem", "Funder", "Mode"] as const;
+const AGENTS: AgentId[] = ["ATLAS", "JARVIS", "CICERONE", "HYVE"];
+const LENSES: LensId[] = ["CPC", "Atlas", "Ecosystem", "Funder", "Mode"];
 const MODES = ["chat", "artifact", "canvas"] as const;
 
-const agentDescriptions: Record<string, string> = {
-  ATLAS: "Innovation Strategist",
-  JARVIS: "Corpus Explorer",
+const agentDescriptions: Record<AgentId, string> = {
+  ATLAS:    "Innovation Strategist",
+  JARVIS:   "Corpus Explorer",
   CICERONE: "Cross-Sector Transfer",
-  HYVE: "Climate Adaptation",
+  HYVE:     "Climate Adaptation",
 };
 
 interface SurfaceSwitcherProps {
@@ -19,7 +22,7 @@ interface SurfaceSwitcherProps {
   setState: AgentSetState<AgentState>;
 }
 
-function patch(
+function patchCoagentState(
   state: AgentState,
   setState: AgentSetState<AgentState>,
   update: Partial<SurfaceState>,
@@ -37,10 +40,25 @@ function patch(
 }
 
 export function SurfaceSwitcher({ state, setState }: SurfaceSwitcherProps) {
-  const ss = state.surface_state;
-  const active = ss?.activeAgent ?? "ATLAS";
-  const lens = ss?.lens ?? "CPC";
-  const mode = ss?.mode ?? "artifact";
+  // useSurfaceGateway is the single source of truth for active agent/lens/mode.
+  // Clicking a tab updates BOTH the Zustand gateway (→ CopilotKitProvider agent prop)
+  // AND the coagent state (→ Python context packet via useCopilotReadable).
+  const { surface, setAgent, setLens } = useSurfaceGateway();
+  const active = surface.active_agent;
+  const lens = surface.active_lens;
+  const mode = state.surface_state?.mode ?? "artifact";
+
+  const handleAgentClick = (agent: AgentId) => {
+    // 1. Update Zustand gateway → CopilotKitProvider picks up new agent prop
+    setAgent(agent);
+    // 2. Sync into coagent state so useCopilotReadable sends correct context to Python
+    patchCoagentState(state, setState, { activeAgent: agent });
+  };
+
+  const handleLensClick = (l: LensId) => {
+    setLens(l);
+    patchCoagentState(state, setState, { lens: l });
+  };
 
   return (
     <div className="flex flex-col gap-2 pb-3 border-b border-border">
@@ -49,7 +67,7 @@ export function SurfaceSwitcher({ state, setState }: SurfaceSwitcherProps) {
         {AGENTS.map((agent) => (
           <button
             key={agent}
-            onClick={() => patch(state, setState, { activeAgent: agent })}
+            onClick={() => handleAgentClick(agent)}
             title={agentDescriptions[agent]}
             className={cn(
               "px-3 py-1 rounded-full text-xs font-semibold transition-colors",
@@ -61,8 +79,11 @@ export function SurfaceSwitcher({ state, setState }: SurfaceSwitcherProps) {
             {agent}
           </button>
         ))}
-        <span className="ml-auto text-xs text-muted-foreground">
-          {agentDescriptions[active]}
+        <span className="ml-auto flex items-center gap-3">
+          <span className="text-xs text-muted-foreground hidden md:inline">
+            {agentDescriptions[active]}
+          </span>
+          <AgentStatusDot />
         </span>
       </div>
 
@@ -73,7 +94,7 @@ export function SurfaceSwitcher({ state, setState }: SurfaceSwitcherProps) {
           {LENSES.map((l) => (
             <button
               key={l}
-              onClick={() => patch(state, setState, { lens: l })}
+              onClick={() => handleLensClick(l)}
               className={cn(
                 "px-2 py-0.5 rounded text-xs transition-colors",
                 lens === l
@@ -89,7 +110,7 @@ export function SurfaceSwitcher({ state, setState }: SurfaceSwitcherProps) {
           {MODES.map((m) => (
             <button
               key={m}
-              onClick={() => patch(state, setState, { mode: m })}
+              onClick={() => patchCoagentState(state, setState, { mode: m })}
               className={cn(
                 "px-2 py-0.5 rounded text-xs capitalize transition-colors",
                 mode === m
