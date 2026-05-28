@@ -15,7 +15,6 @@ import { useChartActions, useSearchActions } from "@/components/chat/actions";
 import { SurfaceSwitcher } from "@/components/dashboard/layout/surface-switcher";
 import { DecisionSpineCard } from "@/components/dashboard/layout/decision-spine";
 import { ArtifactPanel } from "@/components/dashboard/layout/artifact-panel";
-import { TrustRail } from "@/components/dashboard/layout/trust-rail";
 import { useSurfaceGateway, useSurfaceStore } from "@/lib/atlas5/surface-gateway";
 import type { AgentId } from "@/lib/atlas5/types";
 
@@ -117,17 +116,8 @@ export function MainLayout({ className }: { className?: string }) {
         {/* Decision Spine */}
         {spine && <DecisionSpineCard spine={spine} />}
 
-        {/* Artifact + Trust rail side by side */}
-        {artifact && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2">
-              <ArtifactPanel artifact={artifact} />
-            </div>
-            <div className="lg:col-span-1">
-              <TrustRail artifact={artifact} />
-            </div>
-          </div>
-        )}
+        {/* Artifact — full available width; citations live inside as collapsible Sources footer */}
+        {artifact && <ArtifactPanel artifact={artifact} />}
 
         {/* Secondary: metrics */}
         <PinnedMetrics state={state} setState={setState} />

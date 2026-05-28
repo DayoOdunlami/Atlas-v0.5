@@ -144,6 +144,8 @@ export type Metric = {
 
 export type Chart = ChartSpec & {
   data: ChartDataRecord[];
+  /** One-sentence "So what?" insight rendered above the chart. Populated by the Visual Recipe Director. */
+  insight?: string;
 };
 
 // ── Atlas v5 contracts (locked in CLAUDE.md) ────────────────────────────────
@@ -236,6 +238,27 @@ export type CpcGap = {
 
 export type RecommendationAction = "bid" | "partner" | "monitor" | "reject";
 
+// ── Composite artifact panel ─────────────────────────────────────────────────
+// Compound queries (e.g. "Five Case for X using CPC evidence") produce a primary
+// artifact plus one or more secondary panels, each rendered by a different recipe.
+// Panels carry only the data slice relevant to their recipe; they inherit
+// corpus_citations and confidence_tier from the parent ArtifactBlock.
+
+export type ArtifactPanel = {
+  recipe: RecipeType;
+  /** Short human-readable heading shown in the collapsed panel toggle */
+  label: string;
+  sections?: Record<string, string>;
+  chart_specs?: Chart[];
+  // CPC-specific data slices
+  cpc_claims?: CpcClaim[];
+  cpc_portfolio?: CpcBusinessUnit[];
+  cpc_gaps?: CpcGap[];
+  recommendation_action?: RecommendationAction;
+  recommendation_rationale?: string;
+  confidence_tier?: ConfidenceTier;
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type ArtifactBlock = {
@@ -253,12 +276,16 @@ export type ArtifactBlock = {
    * Used by stats_dashboard and optionally brief_five_case.
    */
   chart_specs?: Chart[];
+  // LLM self-assessed evidence strength per Five Case section (0-100)
+  section_scores?: Record<string, number>;
   // CPC Capability Intelligence fields
   cpc_claims?: CpcClaim[];
   cpc_portfolio?: CpcBusinessUnit[];
   cpc_gaps?: CpcGap[];
   recommendation_action?: RecommendationAction;
   recommendation_rationale?: string;
+  /** Secondary recipe panels for compound queries — rendered below the primary recipe */
+  panels?: ArtifactPanel[];
 };
 
 export type DecisionSpine = {

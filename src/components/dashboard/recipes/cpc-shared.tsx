@@ -174,6 +174,9 @@ export function ChartSpecsPassthrough({ chartSpecs }: { chartSpecs?: Chart[] }) 
             {chart.title && (
               <p className="text-xs font-medium text-foreground/80">{chart.title}</p>
             )}
+            {chart.insight && (
+              <p className="text-[11px] text-muted-foreground leading-snug">{chart.insight}</p>
+            )}
             <ChartRenderer spec={chart} data={chart.data} />
           </div>
         ))}
