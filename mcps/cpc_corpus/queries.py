@@ -202,7 +202,7 @@ def search_live_calls(
                 SELECT id, title, funder, description, status, deadline, source_url,
                        (1 - (embedding <=> %s::vector))::float AS similarity
                 FROM   atlas.live_calls
-                WHERE  embedding IS NOT NULL AND status = 'open'
+                WHERE  embedding IS NOT NULL AND status = 'open' AND (relevance_tag IS NULL OR relevance_tag != 'irrelevant')
                 ORDER  BY embedding <=> %s::vector
                 LIMIT  %s
             """
@@ -211,7 +211,7 @@ def search_live_calls(
                 SELECT id, title, funder, description, status, deadline, source_url,
                        (1 - (embedding <=> %s::vector))::float AS similarity
                 FROM   atlas.live_calls
-                WHERE  embedding IS NOT NULL
+                WHERE  embedding IS NOT NULL AND (relevance_tag IS NULL OR relevance_tag != 'irrelevant')
                 ORDER  BY embedding <=> %s::vector
                 LIMIT  %s
             """
@@ -222,7 +222,7 @@ def search_live_calls(
             sql = """
                 SELECT id, title, funder, description, status, deadline, source_url
                 FROM   atlas.live_calls
-                WHERE  (title ILIKE %s OR description ILIKE %s) AND status = 'open'
+                WHERE  (title ILIKE %s OR description ILIKE %s) AND status = 'open' AND (relevance_tag IS NULL OR relevance_tag != 'irrelevant')
                 ORDER  BY deadline ASC NULLS LAST
                 LIMIT  %s
             """
@@ -230,7 +230,7 @@ def search_live_calls(
             sql = """
                 SELECT id, title, funder, description, status, deadline, source_url
                 FROM   atlas.live_calls
-                WHERE  title ILIKE %s OR description ILIKE %s
+                WHERE  (title ILIKE %s OR description ILIKE %s) AND (relevance_tag IS NULL OR relevance_tag != 'irrelevant')
                 ORDER  BY deadline ASC NULLS LAST
                 LIMIT  %s
             """
