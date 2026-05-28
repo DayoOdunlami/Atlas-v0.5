@@ -19,7 +19,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any, Literal, TypedDict
+from typing import Annotated, Any, Literal, TypedDict
 
 # Ensure project root on sys.path
 _root = Path(__file__).resolve().parent.parent.parent
@@ -31,10 +31,14 @@ load_dotenv()
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
+from langgraph.graph.message import add_messages
 
 from agents.mcp_client import search_hive
 from mcps.cpc_corpus.queries import _conn
+# Shared base utilities — use these for extraction and intent, never re-implement
+from agents.base import make_extract_query_node, make_classify_intent_node
 
 # ---------------------------------------------------------------------------
 # Types
@@ -51,6 +55,10 @@ class HiveCitation(TypedDict):
 
 
 class HyveState(TypedDict):
+    # AG-UI messages — primary input via CopilotKit/HttpAgent;
+    # add_messages reducer handles deduplication by message ID.
+    messages: Annotated[list, add_messages]
+    # query — extracted from messages (AG-UI path) or passed directly (REST path)
     query: str
     context_packet: dict[str, Any]
     raw_hive_results: list[dict[str, Any]]
@@ -59,6 +67,9 @@ class HyveState(TypedDict):
     confidence_tier: ConfidenceTier
     analysis: str
     error: str | None
+    # Set True by classify_intent when the message is conversational (greeting /
+    # meta / off-topic). Routes graph directly to END without calling any tools.
+    _is_conversational: bool
 
 
 class HyveResponse(TypedDict):
@@ -109,6 +120,32 @@ def _llm() -> ChatAnthropic:
 # ---------------------------------------------------------------------------
 # Nodes
 # ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Node 0 — query extraction (shared base)
+# ---------------------------------------------------------------------------
+extract_query = make_extract_query_node({
+    "raw_hive_results": [],
+    "hive_citations": [],
+    "transport_mode": "unspecified",
+    "confidence_tier": "Speculative",
+    "analysis": "",
+    "_is_conversational": False,
+    "error": None,
+})
+
+# ---------------------------------------------------------------------------
+# Node 0b — intent classification (shared base)
+# ---------------------------------------------------------------------------
+classify_intent, _route_after_intent = make_classify_intent_node(
+    agent_name="HYVE",
+    agent_description=(
+        "CPC's climate adaptation agent — surfaces HIVE case studies on climate "
+        "resilience and transport adaptation with article-level citations."
+    ),
+    pipeline_start_node="search_hive_corpus",
+)
+
 
 def search_hive_corpus(state: HyveState) -> HyveState:
     """
@@ -304,16 +341,29 @@ def verify_hive_citations(state: HyveState) -> HyveState:
 def build_hyve_graph() -> StateGraph:
     graph = StateGraph(HyveState)
 
+    # Node 0: extract latest query from AG-UI messages (no-op on REST path)
+    graph.add_node("extract_query", extract_query)
+    # Node 0b: intent gate — instant reply for greetings / meta / off-topic
+    graph.add_node("classify_intent", classify_intent)
     graph.add_node("search_hive_corpus", search_hive_corpus)
     graph.add_node("reason_and_cite", reason_and_cite)
     graph.add_node("verify_hive_citations", verify_hive_citations)
 
-    graph.set_entry_point("search_hive_corpus")
+    graph.set_entry_point("extract_query")
+    graph.add_edge("extract_query", "classify_intent")
+    # Conversational → END immediately; domain query → full pipeline
+    graph.add_conditional_edges(
+        "classify_intent",
+        _route_after_intent,
+        {END: END, "search_hive_corpus": "search_hive_corpus"},
+    )
     graph.add_edge("search_hive_corpus", "reason_and_cite")
     graph.add_edge("reason_and_cite", "verify_hive_citations")
     graph.add_edge("verify_hive_citations", END)
 
-    return graph.compile()
+    # MemorySaver required for AG-UI state snapshots (aget_state() calls).
+    # Swap for PostgresSaver in production.
+    return graph.compile(checkpointer=MemorySaver())
 
 
 hyve_graph = build_hyve_graph()
@@ -344,6 +394,7 @@ def run_hyve(
     Citation model: article-level (locked per ATLAS5.md).
     """
     initial_state: HyveState = {
+        "messages": [],            # empty on REST path; AG-UI path sets via input
         "query": query,
         "context_packet": context_packet or {},
         "raw_hive_results": [],
@@ -352,6 +403,7 @@ def run_hyve(
         "confidence_tier": "Speculative",
         "analysis": "",
         "error": None,
+        "_is_conversational": False,
     }
 
     final_state = hyve_graph.invoke(initial_state)

@@ -6,7 +6,7 @@
  */
 "use client";
 
-import { useCoAgent, useCopilotReadable } from "@copilotkit/react-core";
+import { useCoAgent, useCopilotReadable, useCoAgentStateRender } from "@copilotkit/react-core";
 import { AgentState, initialState } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { PinnedMetrics } from "@/components/dashboard/layout/metrics";
@@ -16,7 +16,16 @@ import { SurfaceSwitcher } from "@/components/dashboard/layout/surface-switcher"
 import { DecisionSpineCard } from "@/components/dashboard/layout/decision-spine";
 import { ArtifactPanel } from "@/components/dashboard/layout/artifact-panel";
 import { TrustRail } from "@/components/dashboard/layout/trust-rail";
-import { useSurfaceGateway } from "@/lib/atlas5/surface-gateway";
+import { useSurfaceGateway, useSurfaceStore } from "@/lib/atlas5/surface-gateway";
+import type { AgentId } from "@/lib/atlas5/types";
+
+/** Same mapping as CopilotKitProvider — must stay in sync. */
+const COAGENT_NAME: Record<AgentId, string> = {
+  ATLAS:    "atlas",
+  JARVIS:   "jarvis",
+  CICERONE: "atlas",
+  HYVE:     "atlas",
+};
 
 const AGENT_DESCRIPTIONS: Record<string, string> = {
   ATLAS: `The user is in ATLAS mode. Choose the artifact recipe based on query intent — do NOT default to brief_five_case for CPC-inward queries:
@@ -49,8 +58,15 @@ const LENS_DESCRIPTIONS: Record<string, string> = {
 };
 
 export function MainLayout({ className }: { className?: string }) {
+  // Derive the coagent name from the active agent in the surface store.
+  // This must match the CopilotKitProvider AGENT_NAME mapping so that
+  // <CopilotKit agent={X}> and useCoAgent({ name: X }) are always in sync.
+  const activeCoagentName = useSurfaceStore(
+    (s) => COAGENT_NAME[s.surface.active_agent] ?? "atlas",
+  );
+
   const { state, setState } = useCoAgent<AgentState>({
-    name: "atlas",
+    name: activeCoagentName,
     initialState,
   });
 
@@ -63,6 +79,23 @@ export function MainLayout({ className }: { className?: string }) {
   useCopilotReadable({
     description: "Active Atlas agent mode and lens",
     value: `${agentHint} ${lensHint}`,
+  });
+
+  // Suppress CopilotKit's default raw-JSON state render in the chat panel.
+  // Without this, CopilotKit renders a ```json code block for every STATE_SNAPSHOT.
+  // We render the output through the structured artifact panel instead.
+  useCoAgentStateRender({
+    name: activeCoagentName,
+    render: ({ status }) => {
+      if (status === "inProgress") {
+        return (
+          <div className="text-sm text-muted-foreground px-3 py-2 animate-pulse">
+            Analysing evidence…
+          </div>
+        );
+      }
+      return null;
+    },
   });
 
   // Setup tool rendering and front-end tools

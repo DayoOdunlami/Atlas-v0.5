@@ -57,6 +57,7 @@ from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
 
 # Correct tool names from mcp_client (not the old `search_projects` alias)
+from agents.llm_factory import get_llm as _get_llm
 from agents.mcp_client import (
     search_corpus_projects,
     search_corpus_live_calls,
@@ -65,6 +66,8 @@ from agents.mcp_client import (
 )
 from agents.external_search import search_govuk, search_exa  # External Evidence Router
 from mcps.cpc_corpus.queries import get_project as _verify_project
+# Shared base utilities — use these for extraction and intent, never re-implement
+from agents.base import extract_latest_query, is_conversational
 
 # ---------------------------------------------------------------------------
 # Types
@@ -199,24 +202,23 @@ class AtlasState(TypedDict):
     # Never added to corpus_citations; requires human review before citing.
     external_search_results: list[dict[str, Any]]
     tool_calls: list[dict[str, Any]]          # trace for G5
+    reasoning_trace: list[dict[str, Any]]     # per-node thought + tool trace (for Panel D)
     analysis: str
+    artifact_block: dict[str, Any] | None    # populated in verify_citations → synced to useCoAgent
+    charts: list[dict[str, Any]]             # synced to AgentState.charts → renders Charts component
     error: str | None
+    _is_conversational: bool                 # True → skip expensive pipeline, respond instantly
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-_MODEL = "claude-sonnet-4-6"
 _MAX_CITATIONS = 8
 
 
-def _llm() -> ChatAnthropic:
-    return ChatAnthropic(
-        model=_MODEL,
-        api_key=os.environ["ANTHROPIC_API_KEY"],
-        max_tokens=8192,
-    )
+def _llm():
+    return _get_llm(max_tokens=8192)
 
 
 def _normalise_sections(raw: dict) -> tuple[dict[str, str], dict[str, str]]:
@@ -245,6 +247,56 @@ def _normalise_sections(raw: dict) -> tuple[dict[str, str], dict[str, str]]:
 # ---------------------------------------------------------------------------
 # Nodes
 # ---------------------------------------------------------------------------
+
+
+def classify_intent(state: AtlasState) -> dict:
+    """
+    Node 0b: Fast intent gate — delegates to is_conversational() from agents.base
+    so the domain-keyword set and conversational rules are shared across all agents.
+
+    Domain queries proceed to search_corpus (35-second pipeline).
+    Greetings / meta / off-topic messages get an instant ATLAS-personalised reply.
+    """
+    query = (state.get("query") or "").strip()
+
+    if is_conversational(query):
+        # ATLAS-specific reply — richer than the generic base reply, with example prompts
+        ql = query.lower()
+        words = ql.split()
+        first = words[0].strip(",.!?") if words else ""
+        from agents.base import _GREETING_WORDS, _THANKS_WORDS
+        if not words or (len(words) <= 6 and first in _GREETING_WORDS):
+            reply = (
+                "👋 Hi! I'm **ATLAS**, CPC's Green Book investment strategist.\n\n"
+                "I build evidence-backed **Five Case Model** briefs grounded in the CPC "
+                "corpus — real projects, live funding calls, and HIVE case studies.\n\n"
+                "Try one of these:\n"
+                "- *What is the strategic case for autonomous freight corridors in the UK?*\n"
+                "- *Build an investment brief for a CPC-led EV charging programme.*\n"
+                "- *Stress test the assumption that CAV achieves commercial viability by 2032.*"
+            )
+        elif len(words) <= 5 and first in _THANKS_WORDS:
+            reply = "You're welcome! Ask me anything about CPC's evidence base or investment briefs. 🙂"
+        else:
+            reply = (
+                "I'm **ATLAS** — CPC's Green Book investment brief agent. "
+                "Ask me a substantive question about a programme, technology domain, or funding "
+                "call and I'll build a full Five Case Model brief with verified corpus citations."
+            )
+        return {
+            "messages": [AIMessage(content=reply, id=str(uuid.uuid4()))],
+            "confidence_tier": "Speculative",
+            "decision_spine": None,
+            "artifact_block": None,
+            "_is_conversational": True,
+        }
+
+    return {"_is_conversational": False}
+
+
+def _route_after_intent(state: AtlasState) -> str:
+    """Conditional edge: skip pipeline for conversational queries."""
+    return END if state.get("_is_conversational") else "search_corpus"
 
 
 def search_corpus(state: AtlasState) -> AtlasState:
@@ -362,6 +414,24 @@ def search_corpus(state: AtlasState) -> AtlasState:
     # Initialise external_search_results — populated by external_evidence_search node
     state["external_search_results"] = []
 
+    n_projects = sum(1 for r in combined if r.get("source_type") == "project")
+    n_live = sum(1 for r in combined if r.get("source_type") == "live_call")
+    n_chunks = sum(1 for r in combined if r.get("source_type") == "knowledge_doc")
+    n_gaps = len(state["evidence_gaps"])
+    state["reasoning_trace"] = state.get("reasoning_trace", []) + [{
+        "node": "search_corpus",
+        "thought": (
+            f"Retrieved {len(combined)} items: {n_projects} corpus projects, "
+            f"{n_live} live calls, {n_chunks} knowledge docs. "
+            f"Detected {n_gaps} evidence gap{'s' if n_gaps != 1 else ''}."
+        ),
+        "tool_calls": [
+            {"tool": tc["tool"], "result_count": tc.get("result_count", 0), "status": "error" if "error" in tc else "ok"}
+            for tc in tool_calls
+        ],
+        "status": "error" if state.get("error") else "ok",
+    }]
+
     return state
 
 
@@ -460,6 +530,26 @@ def external_evidence_search(state: AtlasState) -> AtlasState:
 
     state["external_search_results"] = external_results
     state["tool_calls"] = tool_calls
+
+    ext_tools = [tc["tool"] for tc in tool_calls if tc.get("tool") in ("govuk_search", "exa_search") and not tc.get("skipped")]
+    skipped = [tc["tool"] for tc in tool_calls if tc.get("skipped")]
+    if ext_tools or skipped:
+        thought = (
+            f"External search: {', '.join(ext_tools)} → {len(external_results)} results."
+            + (f" Skipped: {', '.join(skipped)}." if skipped else "")
+        ) if ext_tools else f"External search skipped ({', '.join(skipped)})."
+    else:
+        thought = "No external evidence gaps triggered — corpus coverage sufficient."
+    state["reasoning_trace"] = state.get("reasoning_trace", []) + [{
+        "node": "external_evidence_search",
+        "thought": thought,
+        "tool_calls": [
+            {"tool": tc["tool"], "result_count": tc.get("result_count", 0), "status": "skipped" if tc.get("skipped") else ("error" if "error" in tc else "ok")}
+            for tc in tool_calls if tc.get("tool") in ("govuk_search", "exa_search")
+        ],
+        "status": "ok",
+    }]
+
     return state
 
 
@@ -736,6 +826,10 @@ Respond in JSON ONLY — no markdown, no explanation. Format:
                 "confidence_tier": state["confidence_tier"],
                 "key_assumption": str(raw_spine.get("key_assumption", "")),
                 "next_action": str(raw_spine.get("next_action", "")),
+                # Optional enrichment — shown in DecisionSpineCard if present
+                "framework": str(raw_spine.get("framework", "Green Book / Five Case Model")),
+                "strongest_objection": str(raw_spine.get("strongest_objection", "")),
+                "would_change_if": str(raw_spine.get("would_change_if", "")),
             }
         else:
             # Fallback: construct spine from sections if LLM omitted it
@@ -748,6 +842,20 @@ Respond in JSON ONLY — no markdown, no explanation. Format:
             }
 
         state["analysis"] = parsed.get("analysis", "")
+
+        state["reasoning_trace"] = state.get("reasoning_trace", []) + [{
+            "node": "build_five_case",
+            "thought": (
+                f"Built Five Case brief using {os.environ.get('MODEL_NAME', 'claude-sonnet-4-6')}. "
+                f"{len(safe_citations)} candidate citations selected. "
+                f"Confidence: {state['confidence_tier']}. "
+                f"NPV: £{round(float(state['npv_value']) / 1_000_000, 1)}m" if state.get('npv_value') else
+                f"Built Five Case brief using {os.environ.get('MODEL_NAME', 'claude-sonnet-4-6')}. "
+                f"{len(safe_citations)} candidate citations selected. Confidence: {state['confidence_tier']}."
+            ),
+            "tool_calls": [{"tool": "llm_invoke", "model": os.environ.get("MODEL_NAME", "claude-sonnet-4-6"), "prompt": "five_case_model"}],
+            "status": "ok",
+        }]
 
         # --- Evidence gaps: merge structural (pre-detected) + LLM topic-specific ---
         # Structural gaps were set in search_corpus node (detect_evidence_gaps).
@@ -832,6 +940,12 @@ Respond in JSON ONLY — no markdown, no explanation. Format:
         state["evidence_gaps"] = state.get("evidence_gaps", [])  # keep structural gaps
         state["analysis"] = ""
         state["error"] = f"build_five_case error: {e}"
+        state["reasoning_trace"] = state.get("reasoning_trace", []) + [{
+            "node": "build_five_case",
+            "thought": f"Five Case build failed: {e}",
+            "tool_calls": [{"tool": "llm_invoke", "model": os.environ.get("MODEL_NAME", "claude-sonnet-4-6"), "prompt": "five_case_model"}],
+            "status": "error",
+        }]
 
     return state
 
@@ -866,11 +980,92 @@ def verify_citations(state: AtlasState) -> AtlasState:
             verification_log.append({"id": cid, "verified": False, "reason": str(exc)})
 
     state["corpus_citations"] = verified
+    removed = len(verification_log) - len(verified)
     state["tool_calls"] = state.get("tool_calls", []) + [{
         "tool": "verify_citations",
         "args": {"count": len(state["corpus_citations"])},
         "result": verification_log,
     }]
+    state["reasoning_trace"] = state.get("reasoning_trace", []) + [{
+        "node": "verify_citations",
+        "thought": (
+            f"Verified {len(verified)} citation{'s' if len(verified) != 1 else ''} against atlas.projects. "
+            + (f"{removed} removed (not found in DB)." if removed else "All citations confirmed.")
+        ),
+        "tool_calls": [{"tool": "verify_project", "checked": len(verification_log), "passed": len(verified), "removed": removed}],
+        "status": "ok",
+    }]
+
+    # Build artifact_block — this syncs to useCoAgent and drives ArtifactPanel in the UI.
+    # Mirrors the ArtifactBlock TypeScript type in src/lib/types.ts.
+    tier = state.get("confidence_tier", "Speculative")
+
+    # --- Evidence charts ---
+    # Generate inline charts from the verified citations so the dashboard always
+    # has a data visual when evidence is present. Two charts:
+    #   1. Bar: evidence similarity scores (top-8 citations, sorted desc)
+    #   2. Bar: evidence by source type (projects vs live calls vs policy docs)
+
+    chart_specs: list[dict] = []
+    state_charts: list[dict] = []
+
+    if verified:
+        # Chart 1 — Evidence Scores
+        sorted_v = sorted(verified, key=lambda c: c.get("score", 0.0), reverse=True)
+        score_data = [
+            {
+                "project": (c.get("title") or "Unknown")[:35],
+                "score": round(float(c.get("score", 0.0)) * 100),
+            }
+            for c in sorted_v[:8]
+        ]
+        score_chart = {
+            "type": "bar",
+            "title": "Evidence Scores",
+            "x": "project",
+            "y": "score",
+            "data": score_data,
+        }
+        chart_specs.append(score_chart)
+        state_charts.append(score_chart)
+
+    # Chart 2 — NPV waterfall stub (only when NPV is available)
+    npv = state.get("npv_value")
+    if npv is not None:
+        npv_chart = {
+            "type": "bar",
+            "title": "NPV at 3.5% STPR",
+            "x": "component",
+            "y": "value_m",
+            "data": [
+                {"component": "Gross Benefits",   "value_m": round(abs(npv) / 1_000_000, 1)},
+                {"component": "Optimism Bias Adj","value_m": round(abs(npv) * float(state.get("optimism_bias") or 0.0) / 1_000_000, 1)},
+                {"component": "Net Present Value", "value_m": round(float(npv) / 1_000_000, 1)},
+            ],
+        }
+        chart_specs.append(npv_chart)
+        state_charts.append(npv_chart)
+
+    state["artifact_block"] = {
+        "type": "brief",
+        "recipe": "brief_five_case",
+        "confidence_tier": tier,
+        "sections": state.get("sections", {}),
+        "corpus_citations": [
+            {
+                "id": c.get("id", ""),
+                "title": c.get("title", ""),
+                "organisation": c.get("organisation", ""),
+                "score": c.get("score", 0.0),
+            }
+            for c in verified
+        ],
+        "npv_value": state.get("npv_value"),
+        "discount_rate": state.get("discount_rate", 0.035),
+        "chart_specs": chart_specs,         # ← rendered inline by BriefFiveCaseRecipe
+    }
+    # Also populate state.charts → syncs to AgentState.charts → Charts component
+    state["charts"] = state_charts
 
     # Emit the Five Case decision spine + analysis as an AIMessage for AG-UI streaming.
     # The add_messages reducer appends this to the existing messages list.
@@ -901,15 +1096,34 @@ def verify_citations(state: AtlasState) -> AtlasState:
 def _extract_query_atlas(state: AtlasState) -> dict:
     """
     Node 0: Extract query from AG-UI messages (CopilotKit path).
-    If query is already set (REST path), this is a no-op.
+    REST path (run_atlas): messages is [], query already set — no-op.
+    AG-UI path (CopilotKit): delegates to extract_latest_query() from agents.base
+    so the authoritative extraction logic is shared across all agents.
     """
-    if state.get("query"):
+    if not state.get("messages"):
+        # REST path — query passed directly by run_atlas(), nothing to extract
         return {}
-    for msg in reversed(state.get("messages", [])):
-        content = getattr(msg, "content", None)
-        if isinstance(msg, HumanMessage) and content:
-            return {"query": str(content)}
-    return {}
+    query = extract_latest_query(state)
+    if not query:
+        return {}
+    return {
+        "query": query,
+        # Reset per-turn working state so prior checkpoint doesn't bleed through
+        "sections": {},
+        "five_case_model": {k.split(" ")[0].lower(): "" for k in FIVE_CASE_KEYS},
+        "corpus_citations": [],
+        "decision_spine": None,
+        "artifact_block": None,
+        "charts": [],
+        "evidence_gaps": [],
+        "external_search_results": [],
+        "npv_value": None,
+        "optimism_bias": None,
+        "tool_calls": [],
+        "reasoning_trace": [],
+        "analysis": "",
+        "_is_conversational": False,
+    }
 
 
 def build_atlas_graph() -> StateGraph:
@@ -917,6 +1131,8 @@ def build_atlas_graph() -> StateGraph:
 
     # Node 0: AG-UI query extraction (no-op on REST path)
     graph.add_node("extract_query", _extract_query_atlas)
+    # Node 0b: Intent gate — greetings / meta queries skip the 35-second pipeline
+    graph.add_node("classify_intent", classify_intent)
     graph.add_node("search_corpus", search_corpus)
     # Node 1b: External Evidence Router — only fires when gaps call for it
     graph.add_node("external_evidence_search", external_evidence_search)
@@ -924,9 +1140,13 @@ def build_atlas_graph() -> StateGraph:
     graph.add_node("verify_citations", verify_citations)
 
     graph.set_entry_point("extract_query")
-    graph.add_edge("extract_query", "search_corpus")
-    # Always run external_evidence_search after corpus search.
-    # The node is a no-op if no gaps have govuk_search / exa_search tools.
+    graph.add_edge("extract_query", "classify_intent")
+    # Conditional: conversational → END immediately; business query → full pipeline
+    graph.add_conditional_edges(
+        "classify_intent",
+        _route_after_intent,
+        {END: END, "search_corpus": "search_corpus"},
+    )
     graph.add_edge("search_corpus", "external_evidence_search")
     graph.add_edge("external_evidence_search", "build_five_case")
     graph.add_edge("build_five_case", "verify_citations")
@@ -978,10 +1198,16 @@ def run_atlas(
         "external_search_results": [],
         "tool_calls": [],
         "analysis": "",
+        "artifact_block": None,
+        "charts": [],
         "error": None,
+        "_is_conversational": False,
     }
 
-    final_state = atlas_graph.invoke(initial_state)
+    final_state = atlas_graph.invoke(
+        initial_state,
+        config={"configurable": {"thread_id": str(uuid.uuid4())}},
+    )
 
     evidence_gaps = final_state.get("evidence_gaps", [])
 
@@ -1015,6 +1241,8 @@ def run_atlas(
         # Analysis + legacy compat
         "analysis": final_state["analysis"],
         "five_case_model": final_state["five_case_model"],
+        # Artifact block — primary UI rendering contract (includes chart_specs)
+        "artifact_block": final_state.get("artifact_block") or {},
         # Pass through any error for debugging
         **({"error_detail": final_state["error"]} if final_state.get("error") else {}),
     }

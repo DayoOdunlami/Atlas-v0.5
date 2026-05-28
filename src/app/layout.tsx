@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { CopilotKit } from "@copilotkit/react-core";
+import { CopilotKitProvider } from "@/components/copilotkit-provider";
 import { Manrope } from "next/font/google";
 import { GeistMono } from "geist/font/mono";
 import "./globals.css";
@@ -13,8 +13,8 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "Gen Dashboard",
-  description: "AI-powered analytics dashboard",
+  title: "Atlas 5 — Decision Intelligence",
+  description: "CPC strategic intelligence platform",
 };
 
 export default function RootLayout({
@@ -25,13 +25,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${manrope.variable} ${GeistMono.variable}`}>
       <body className={"subpixel-antialiased"}>
-        <CopilotKit
-          runtimeUrl="/api/copilotkit"
-          agent="atlas"
-          showDevConsole={false}
-        >
+        <CopilotKitProvider>
           {children}
-        </CopilotKit>
+        </CopilotKitProvider>
       </body>
     </html>
   );

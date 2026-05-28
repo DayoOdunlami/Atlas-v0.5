@@ -17,7 +17,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any, Literal, TypedDict
+from typing import Annotated, Any, Literal, TypedDict
 
 # Ensure project root on sys.path
 _root = Path(__file__).resolve().parent.parent.parent
@@ -29,10 +29,14 @@ load_dotenv()
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
+from langgraph.graph.message import add_messages
 
 from agents.mcp_client import search_projects
 from mcps.cpc_corpus.queries import get_project as _verify_project
+# Shared base utilities — use these for extraction and intent, never re-implement
+from agents.base import make_extract_query_node, make_classify_intent_node
 
 # ---------------------------------------------------------------------------
 # Types
@@ -56,6 +60,10 @@ class CorpusCitation(TypedDict):
 
 
 class CiceroneState(TypedDict):
+    # AG-UI messages — primary input via CopilotKit/HttpAgent;
+    # add_messages reducer handles deduplication by message ID.
+    messages: Annotated[list, add_messages]
+    # query — extracted from messages (AG-UI path) or passed directly (REST path)
     query: str
     context_packet: dict[str, Any]
     source_context: str       # the "from" context (e.g. "autonomous last-mile delivery")
@@ -68,6 +76,9 @@ class CiceroneState(TypedDict):
     confidence_tier: ConfidenceTier
     analysis: str
     error: str | None
+    # Set True by classify_intent when the message is conversational (greeting /
+    # meta / off-topic). Routes graph directly to END without calling any tools.
+    _is_conversational: bool
 
 
 class CiceroneResponse(TypedDict):
@@ -93,6 +104,34 @@ def _llm() -> ChatAnthropic:
         api_key=os.environ["ANTHROPIC_API_KEY"],
         max_tokens=4096,
     )
+
+
+# ---------------------------------------------------------------------------
+# Node 0 — query extraction (shared base)
+# ---------------------------------------------------------------------------
+extract_query = make_extract_query_node({
+    "raw_search_results": [],
+    "corpus_citations": [],
+    "transferability_score": None,
+    "sector_analogues": [],
+    "evidence_gaps": [],
+    "confidence_tier": "Speculative",
+    "analysis": "",
+    "_is_conversational": False,
+    "error": None,
+})
+
+# ---------------------------------------------------------------------------
+# Node 0b — intent classification (shared base)
+# ---------------------------------------------------------------------------
+classify_intent, _route_after_intent = make_classify_intent_node(
+    agent_name="CICERONE",
+    agent_description=(
+        "CPC's cross-sector transfer agent — scores how well innovations from one "
+        "sector transfer to another, with HAVE/PARTIAL/MISSING evidence gaps."
+    ),
+    pipeline_start_node="search_corpus",
+)
 
 
 def search_corpus(state: CiceroneState) -> CiceroneState:
@@ -325,16 +364,29 @@ def verify_citations(state: CiceroneState) -> CiceroneState:
 def build_cicerone_graph() -> StateGraph:
     graph = StateGraph(CiceroneState)
 
+    # Node 0: extract latest query from AG-UI messages (no-op on REST path)
+    graph.add_node("extract_query", extract_query)
+    # Node 0b: intent gate — instant reply for greetings / meta / off-topic
+    graph.add_node("classify_intent", classify_intent)
     graph.add_node("search_corpus", search_corpus)
     graph.add_node("assess_transferability", assess_transferability)
     graph.add_node("verify_citations", verify_citations)
 
-    graph.set_entry_point("search_corpus")
+    graph.set_entry_point("extract_query")
+    graph.add_edge("extract_query", "classify_intent")
+    # Conversational → END immediately; domain query → full pipeline
+    graph.add_conditional_edges(
+        "classify_intent",
+        _route_after_intent,
+        {END: END, "search_corpus": "search_corpus"},
+    )
     graph.add_edge("search_corpus", "assess_transferability")
     graph.add_edge("assess_transferability", "verify_citations")
     graph.add_edge("verify_citations", END)
 
-    return graph.compile()
+    # MemorySaver required for AG-UI state snapshots (aget_state() calls).
+    # Swap for PostgresSaver in production.
+    return graph.compile(checkpointer=MemorySaver())
 
 
 cicerone_graph = build_cicerone_graph()
@@ -375,6 +427,7 @@ def run_cicerone(
     resolved_target = target_context or cp.get("target_context", "")
 
     initial_state: CiceroneState = {
+        "messages": [],            # empty on REST path; AG-UI path sets via input
         "query": query,
         "context_packet": cp,
         "source_context": resolved_source,
@@ -387,6 +440,7 @@ def run_cicerone(
         "confidence_tier": "Speculative",
         "analysis": "",
         "error": None,
+        "_is_conversational": False,
     }
 
     final_state = cicerone_graph.invoke(initial_state)
