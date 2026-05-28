@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ArrowUp, Square } from "lucide-react";
 import type { AgentId, LensId } from "@/lib/atlas5/types";
+import { AgentSelector } from "@/components/lab/chat-panels/agent-selector";
 
 // ---------------------------------------------------------------------------
 // @ command options
@@ -116,6 +117,8 @@ interface LabInputProps {
   onStop: () => void;
   onAgentChange: (agent: AgentId) => void;
   onLensChange: (lens: LensId) => void;
+  activeAgent?: AgentId;
+  activeLens?: LensId;
 }
 
 export function LabInput({
@@ -124,6 +127,8 @@ export function LabInput({
   onStop,
   onAgentChange,
   onLensChange,
+  activeAgent = "ATLAS",
+  activeLens = "CPC",
 }: LabInputProps) {
   const [text, setText] = useState("");
   const [showPicker, setShowPicker] = useState(false);
@@ -224,9 +229,18 @@ export function LabInput({
             </Button>
           )}
         </div>
-        <p className="mt-2 text-[11px] text-muted-foreground text-center">
-          Press Enter to send • Shift+Enter for new line • @ to switch agent/lens
-        </p>
+        {/* Footer: agent/lens selector chips + keyboard hint */}
+        <div className="mt-2 flex items-center gap-2 justify-between flex-wrap">
+          <AgentSelector
+            activeAgent={activeAgent}
+            activeLens={activeLens}
+            onAgentChange={onAgentChange}
+            onLensChange={onLensChange}
+          />
+          <p className="text-[10px] text-muted-foreground/60 shrink-0">
+            Enter to send · Shift+Enter new line · @ to switch
+          </p>
+        </div>
       </div>
     </div>
   );

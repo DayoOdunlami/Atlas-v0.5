@@ -493,6 +493,8 @@ export function LabChat({
         onStop={stopGeneration}
         onAgentChange={handleAgentChange}
         onLensChange={handleLensChange}
+        activeAgent={activeAgent as AgentId}
+        activeLens={activeLens as LensId}
       />
     </div>
   );
