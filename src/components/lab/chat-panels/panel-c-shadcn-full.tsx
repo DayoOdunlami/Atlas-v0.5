@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { Markdown } from "@/components/chat/layout/markdown";
 import { Separator } from "@/components/ui/separator";
 import { ChevronDown } from "lucide-react";
+import { ChainOfThought } from "@/components/lab/chain-of-thought";
 
 export interface PanelCProps {
   messages: DisplayMessage[];
@@ -52,6 +53,10 @@ export function PanelCShadcn({ messages, isLoading, compact }: PanelCProps) {
           {messages.map((msg, idx) => {
             const isUser = msg.role === "user";
             const prevIsUser = idx > 0 && messages[idx - 1].role === "user";
+            const nodeToolCalls = !isUser
+              ? (msg.toolCalls ?? []).filter((tc) => tc.kind === "node")
+              : [];
+            const isStreaming = msg.id === "__streaming__";
 
             return (
               <div key={msg.id}>
@@ -72,12 +77,25 @@ export function PanelCShadcn({ messages, isLoading, compact }: PanelCProps) {
                   </div>
                 ) : (
                   <div className={cn("flex flex-col gap-1", compact ? "text-xs" : "text-sm")}>
-                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
-                      Assistant
-                    </span>
-                    <div className="prose prose-sm max-w-none dark:prose-invert">
-                      <Markdown content={msg.content} />
-                    </div>
+                    {/* Chain of thought — above the assistant label */}
+                    {nodeToolCalls.length > 0 && (
+                      <ChainOfThought
+                        toolCalls={nodeToolCalls}
+                        compact={compact}
+                        defaultOpen={isStreaming}
+                      />
+                    )}
+                    {/* Content — hidden for streaming sentinel */}
+                    {!isStreaming && msg.content && (
+                      <>
+                        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                          Assistant
+                        </span>
+                        <div className="prose prose-sm max-w-none dark:prose-invert">
+                          <Markdown content={msg.content} />
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>

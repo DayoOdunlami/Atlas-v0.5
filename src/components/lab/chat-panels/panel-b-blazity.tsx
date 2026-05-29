@@ -11,6 +11,7 @@ import type { DisplayMessage } from "@/components/lab/types";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Markdown } from "@/components/chat/layout/markdown";
+import { ChainOfThought } from "@/components/lab/chain-of-thought";
 
 export interface PanelBProps {
   messages: DisplayMessage[];
@@ -43,37 +44,55 @@ export function PanelBBlazity({ messages, isLoading, compact }: PanelBProps) {
 
       {messages.map((msg) => {
         const isUser = msg.role === "user";
-        return (
-          <div
-            key={msg.id}
-            className={cn("flex gap-2 items-end", isUser ? "flex-row-reverse" : "flex-row")}
-          >
-            <Avatar className={cn("shrink-0", compact ? "size-5" : "size-7")}>
-              <AvatarFallback
-                className={cn(
-                  "text-[10px]",
-                  isUser ? "bg-accent text-accent-foreground" : "bg-primary/10 text-primary"
-                )}
-              >
-                {isUser ? "U" : "A"}
-              </AvatarFallback>
-            </Avatar>
+        const nodeToolCalls = !isUser
+          ? (msg.toolCalls ?? []).filter((tc) => tc.kind === "node")
+          : [];
+        const isStreaming = msg.id === "__streaming__";
 
-            <div
-              className={cn(
-                "max-w-[78%] rounded-2xl px-3 py-2 text-sm leading-relaxed",
-                isUser
-                  ? "rounded-br-sm bg-accent/15 text-foreground"
-                  : "rounded-bl-sm bg-muted text-foreground",
-                compact && "text-xs px-2 py-1.5"
-              )}
-            >
-              {isUser ? (
-                <span className="whitespace-pre-wrap">{msg.content}</span>
-              ) : (
-                <Markdown content={msg.content} />
-              )}
-            </div>
+        return (
+          <div key={msg.id} className="flex flex-col gap-1">
+            {/* Chain of thought — above bubble for assistant messages */}
+            {!isUser && nodeToolCalls.length > 0 && (
+              <ChainOfThought
+                toolCalls={nodeToolCalls}
+                compact={compact}
+                defaultOpen={isStreaming}
+              />
+            )}
+
+            {/* Bubble — hidden for streaming sentinel (no content yet) */}
+            {!isStreaming && (
+              <div
+                className={cn("flex gap-2 items-end", isUser ? "flex-row-reverse" : "flex-row")}
+              >
+                <Avatar className={cn("shrink-0", compact ? "size-5" : "size-7")}>
+                  <AvatarFallback
+                    className={cn(
+                      "text-[10px]",
+                      isUser ? "bg-accent text-accent-foreground" : "bg-primary/10 text-primary"
+                    )}
+                  >
+                    {isUser ? "U" : "A"}
+                  </AvatarFallback>
+                </Avatar>
+
+                <div
+                  className={cn(
+                    "max-w-[78%] rounded-2xl px-3 py-2 text-sm leading-relaxed",
+                    isUser
+                      ? "rounded-br-sm bg-accent/15 text-foreground"
+                      : "rounded-bl-sm bg-muted text-foreground",
+                    compact && "text-xs px-2 py-1.5"
+                  )}
+                >
+                  {isUser ? (
+                    <span className="whitespace-pre-wrap">{msg.content}</span>
+                  ) : (
+                    <Markdown content={msg.content} />
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         );
       })}

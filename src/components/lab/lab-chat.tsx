@@ -12,7 +12,7 @@
  * - @ command wires directly to useSurfaceGateway so agent/lens routing works.
  */
 
-import { useMemo, type CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import { useCopilotChat } from "@copilotkit/react-core";
 import { useSurfaceGateway } from "@/lib/atlas5/surface-gateway";
 import { CopilotChat } from "@copilotkit/react-ui";
@@ -41,6 +41,7 @@ import { PanelCShadcn } from "@/components/lab/chat-panels/panel-c-shadcn-full";
 import { PanelDAtlas } from "@/components/lab/chat-panels/panel-d-atlas-custom";
 
 import type { AgentId, LensId } from "@/lib/atlas5/types";
+import { isConversational, getInstantReply } from "@/lib/atlas5/edge-classifier";
 import type { DisplayMessage, ToolCallDisplay } from "@/components/lab/types";
 import { cn } from "@/lib/utils";
 
@@ -376,12 +377,33 @@ export function LabChat({
   const { visibleMessages, appendMessage, isLoading, stopGeneration } =
     useCopilotChat();
 
-  const displayMessages = useMemo(
+  // Local fast replies — conversational queries answered instantly without hitting Python.
+  // Cleared whenever a domain query fires so CopilotKit owns the full thread from that point.
+  const [localFastReplies, setLocalFastReplies] = useState<DisplayMessage[]>([]);
+
+  const ckMessages = useMemo(
     () => toDisplayMessages(visibleMessages),
     [visibleMessages]
   );
 
+  // Merge: CopilotKit domain exchanges first, then any trailing conversational replies.
+  const displayMessages = useMemo(
+    () => [...ckMessages, ...localFastReplies],
+    [ckMessages, localFastReplies]
+  );
+
   const handleSend = async (text: string) => {
+    if (isConversational(text)) {
+      // Edge-classifier: instant local reply — no round-trip to Python agent.
+      setLocalFastReplies((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), role: "user", content: text },
+        { id: crypto.randomUUID(), role: "assistant", content: getInstantReply(text, activeAgent as AgentId) },
+      ]);
+      return;
+    }
+    // Domain query — clear local replies (CopilotKit owns the thread from here).
+    setLocalFastReplies([]);
     await appendMessage(
       new TextMessage({ role: MessageRole.User, content: text })
     );
