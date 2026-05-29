@@ -99,12 +99,49 @@ export function getInstantReply(text: string, agentId: AgentId): string {
   const emoji = AGENT_EMOJIS[agentId] ?? "👋";
   const desc  = AGENT_DESCRIPTIONS[agentId] ?? AGENT_DESCRIPTIONS.ATLAS;
 
+  // ── Greeting ──────────────────────────────────────────────────────────────
   if (words.length === 0 || (words.length <= 6 && GREETING_WORDS.has(first))) {
     return `${emoji} Hi! I'm **${agentId}** — ${desc}`;
   }
+
+  // ── Thanks ────────────────────────────────────────────────────────────────
   if (words.length <= 5 && THANKS_WORDS.has(first)) {
-    return "You're welcome! Ask me anything. 🙂";
+    return "You're welcome! Fire away with a domain question whenever you're ready. 🙂";
   }
-  // meta / off-topic
-  return `I'm **${agentId}** — ${desc} Ask me a substantive question and I'll return a full response with verified corpus citations.`;
+
+  // ── "How do you work / how does this work" ────────────────────────────────
+  if (ql.includes("how do you work") || ql.includes("how does this work") || ql.includes("how does it work")) {
+    return `I run a multi-step reasoning pipeline: query classification → corpus search → citation verification → structured output. Ask me a domain question to see it in action.`;
+  }
+
+  // ── "Who / what are you" or name queries ──────────────────────────────────
+  if (ql.includes("who are you") || ql.includes("what are you") || ql.includes("your name") || ql.includes("what's your name") || ql.includes("whats your name")) {
+    return `I'm **${agentId}** — ${desc}`;
+  }
+
+  // ── "What can you do / help" ──────────────────────────────────────────────
+  if (ql.includes("what can you do") || ql.includes("what do you do") || ql.includes("help me") || ql === "help") {
+    return `${emoji} **${agentId}** can: search the CPC corpus, build Five Case Model briefs with Green Book NPV, verify every citation against the live Supabase corpus, and score cross-sector transferability. Just ask a domain question.`;
+  }
+
+  // ── Repetition / "why same" frustration ───────────────────────────────────
+  if (
+    ql.includes("repeat") || ql.includes("same") || ql.includes("again") ||
+    ql.includes("why keep") || ql.includes("stop saying")
+  ) {
+    return `Short conversational messages (greetings, thanks, vague phrases) are answered instantly on the client — no Python call. That's why the reply looks the same. Ask me a substantive question (EV charging, freight corridors, investment case…) and you'll get a full reasoned response with live corpus citations.`;
+  }
+
+  // ── "Not working / broken / not responding" ───────────────────────────────
+  if (ql.includes("not working") || ql.includes("broken") || ql.includes("not respond") || ql.includes("not answer")) {
+    return `I'm running fine — short or vague messages get instant local replies to save latency. Try asking a domain question (e.g. *"What is the strategic case for autonomous freight corridors?"*) and you'll see the full reasoning pipeline fire.`;
+  }
+
+  // ── "What is this / what is atlas" ───────────────────────────────────────
+  if (ql.includes("what is this") || ql.includes("what is atlas") || ql.includes("tell me about yourself")) {
+    return `**Atlas 5** is CPC's multi-agent strategic intelligence platform. I'm **${agentId}** — ${desc}`;
+  }
+
+  // ── Noise / trivial (≤ 3 words, no domain keyword) ───────────────────────
+  return `Ask me a substantive question — about transport strategy, investment cases, EV, freight, active travel, climate adaptation — and I'll run the full pipeline with verified corpus citations.`;
 }
