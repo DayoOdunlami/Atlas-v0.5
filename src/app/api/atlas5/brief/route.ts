@@ -135,8 +135,11 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       title: string | null;
       confidence_tier: string | null;
       created_at: string;
+      artifact_json: Record<string, unknown> | null;
+      decision_spine: Record<string, unknown> | null;
     }>(
-      `SELECT id, thread_id, agent, lens, title, confidence_tier, created_at
+      `SELECT id, thread_id, agent, lens, title, confidence_tier, created_at,
+              artifact_json, decision_spine
        FROM   atlas.briefs
        ${where}
        ORDER  BY created_at DESC

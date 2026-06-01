@@ -286,6 +286,7 @@ function FiveCaseSvg() {
 const TYPE_LABELS: Record<ChartType, string> = {
   bar: "Bar", line: "Line", area: "Area", pie: "Pie",
   scatter: "Scatter", "radial-bar": "Radial", "stacked-bar": "Stacked", venn: "Venn",
+  sankey: "Sankey", radar: "Radar", heatmap: "Heatmap", gauge: "Gauge", graph: "Graph",
 };
 
 function ChartTypePicker({
@@ -391,8 +392,8 @@ function LabCard({ tc }: { tc: TestCase }) {
       ? (Object.keys(corpus.data[0]).find((k) => k === "count" || k === "value") ?? tc.fixtureY)
       : tc.fixtureY;
     const seriesKey = tc.fixtureSeries ?? "series";
-    if (chartType === "stacked-bar") return { type: "stacked-bar", title: tc.title, x: xKey, y: yKey, series: seriesKey };
-    return { type: chartType as Exclude<ChartType, "stacked-bar" | "venn">, title: tc.title, x: xKey, y: yKey };
+    if (chartType === "stacked-bar") return { type: "stacked-bar", title: tc.title, x: xKey, y: yKey, series: seriesKey } as ChartSpec;
+    return { type: chartType, title: tc.title, x: xKey, y: yKey } as ChartSpec;
   }
 
   function renderChart() {
@@ -823,7 +824,7 @@ function BakeoffTab() {
   const rechartsSpec: ChartSpec = useMemo(() => {
     if (chartType === "stacked-bar" && tc.fixtureSeries)
       return { type: "stacked-bar", title: tc.title, x: tc.fixtureX, y: tc.fixtureY, series: tc.fixtureSeries };
-    return { type: chartType as Exclude<ChartType, "stacked-bar">, title: tc.title, x: tc.fixtureX, y: tc.fixtureY };
+    return { type: chartType, title: tc.title, x: tc.fixtureX, y: tc.fixtureY } as ChartSpec;
   }, [tc, chartType]);
 
   const vegaSpec = useMemo(() => buildVegaSpec(tc, data, chartType), [tc, chartType, data]);

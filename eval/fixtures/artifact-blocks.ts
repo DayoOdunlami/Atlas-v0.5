@@ -23,6 +23,9 @@ import type {
   DecisionSpine,
 } from "../../src/lib/atlas5/types";
 
+// Re-exported for typing convenience in tests
+export type { DecisionSpine };
+
 // ---------------------------------------------------------------------------
 // Shared Decision Spine — can be attached to any recipe
 // ---------------------------------------------------------------------------
@@ -149,6 +152,7 @@ export const FIXTURE_BRIEF_FIVE_CASE: ArtifactBlock = {
       organisation: "Connected Places Catapult",
       score: 0.91,
       source_type: "project",
+      claim_state: "stated",
     },
     {
       id: "a1b2c3d4-e5f6-4a5b-8c9d-e1f2a3b4c5d2",
@@ -157,6 +161,7 @@ export const FIXTURE_BRIEF_FIVE_CASE: ArtifactBlock = {
       score: 0.84,
       source_type: "knowledge_doc",
       publisher: "DfT",
+      claim_state: "stated",
     },
     {
       id: "a1b2c3d4-e5f6-4a5b-8c9d-e1f2a3b4c5d3",
@@ -165,6 +170,9 @@ export const FIXTURE_BRIEF_FIVE_CASE: ArtifactBlock = {
       score: 0.78,
       source_type: "knowledge_doc",
       publisher: "CCAV",
+      claim_state: "inferred",
+      claim_rationale:
+        "Regulatory readiness inferred from Phase 2 sandbox scope; no explicit corridor approval cited.",
     },
   ],
   // ATLAS routing gaps — lane/provider/tool shape
@@ -191,6 +199,7 @@ export const FIXTURE_EVIDENCE_PANEL: ArtifactBlock = {
       organisation: "InnovateUK",
       score: 0.93,
       source_type: "project",
+      claim_state: "stated",
     },
     {
       id: "b2c3d4e5-f6a7-4b5c-9d0e-f2a3b4c5d6e2",
@@ -199,6 +208,7 @@ export const FIXTURE_EVIDENCE_PANEL: ArtifactBlock = {
       score: 0.88,
       source_type: "live_call",
       deadline: "2026-07-31",
+      claim_state: "stated",
     },
     {
       id: "b2c3d4e5-f6a7-4b5c-9d0e-f2a3b4c5d6e3",
@@ -206,12 +216,16 @@ export const FIXTURE_EVIDENCE_PANEL: ArtifactBlock = {
       publisher: "DfT",
       score: 0.82,
       source_type: "knowledge_doc",
+      claim_state: "stated",
     },
     {
       id: "b2c3d4e5-f6a7-4b5c-9d0e-f2a3b4c5d6e4",
       title: "HIVE Case Study: Bristol EV Fleet Transition",
       score: 0.76,
       source_type: "hive_chunk",
+      claim_state: "inferred",
+      claim_rationale:
+        "HIVE article covers fleet electrification broadly; Bristol-specific charging coverage inferred from scope.",
     },
   ],
 };
@@ -343,6 +357,367 @@ export const FIXTURE_LEGACY_BRIEF: ArtifactBlock = {
 };
 
 // ---------------------------------------------------------------------------
+// FIXTURE 6 — orient
+// Domain heatmap, terrain summary, CPC position, claim_state on citations
+// ---------------------------------------------------------------------------
+
+export const FIXTURE_ORIENT: ArtifactBlock = {
+  type: "evidence",
+  recipe: "orient",
+  confidence_tier: "Supported",
+  sections: {
+    Headline:
+      "The UK smart mobility landscape is moderately saturated in urban freight and " +
+      "EV charging, with significant whitespace in rural connectivity and cross-modal integration. " +
+      "CPC holds a strong position in urban freight but has limited footprint in emerging " +
+      "rural and intermodal sectors.",
+    Context:
+      "Landscape scan across 6 domain areas using CPC corpus, live funding calls, and " +
+      "HIVE knowledge base. 34 relevant corpus items retrieved; 4 active open calls identified.",
+  },
+  corpus_citations: [
+    {
+      id: "e1f2a3b4-c5d6-4e7f-8a9b-c1d2e3f4a5b1",
+      title: "UK Smart Mobility Landscape Report 2025",
+      publisher: "DfT",
+      score: 0.91,
+      source_type: "knowledge_doc",
+      claim_state: "stated",
+    },
+    {
+      id: "e1f2a3b4-c5d6-4e7f-8a9b-c1d2e3f4a5b2",
+      title: "Connected Freight Innovation — Phase 4 Portfolio Review",
+      organisation: "Connected Places Catapult",
+      score: 0.87,
+      source_type: "project",
+      claim_state: "stated",
+    },
+    {
+      id: "e1f2a3b4-c5d6-4e7f-8a9b-c1d2e3f4a5b3",
+      title: "Rural Mobility Gap: Evidence Review 2024",
+      publisher: "CCAV",
+      score: 0.79,
+      source_type: "knowledge_doc",
+      claim_state: "stated",
+    },
+    {
+      id: "e1f2a3b4-c5d6-4e7f-8a9b-c1d2e3f4a5b4",
+      title: "Cross-Modal Integration: International Case Studies",
+      score: 0.72,
+      source_type: "hive_chunk",
+      claim_state: "inferred",
+      claim_rationale:
+        "Cross-modal conclusions drawn from adjacent evidence; direct UK application inferred.",
+    },
+  ],
+  // Domain heatmap data — 6 domains × evidence count
+  orient_domains: [
+    { domain: "Urban Freight", evidence_count: 14, cpc_projects: 8, open_calls: 2, maturity: "high" },
+    { domain: "EV Charging", evidence_count: 11, cpc_projects: 6, open_calls: 3, maturity: "high" },
+    { domain: "Active Travel", evidence_count: 7, cpc_projects: 3, open_calls: 1, maturity: "medium" },
+    { domain: "Rural Connectivity", evidence_count: 4, cpc_projects: 1, open_calls: 0, maturity: "low" },
+    { domain: "Cross-Modal", evidence_count: 3, cpc_projects: 1, open_calls: 1, maturity: "low" },
+    { domain: "Air Quality", evidence_count: 5, cpc_projects: 2, open_calls: 0, maturity: "medium" },
+  ],
+  cpc_position: {
+    lens: "CPC",
+    strongest_domain: "Urban Freight",
+    whitespace_domain: "Rural Connectivity",
+    summary:
+      "CPC has a documented position in Urban Freight (8 projects, 14 evidence items) " +
+      "and EV Charging. Rural Connectivity and Cross-Modal are significant whitespace areas " +
+      "with no funded CPC programme and only 1 project each.",
+  },
+} as unknown as ArtifactBlock;
+
+export const FIXTURE_ORIENT_SPINE: DecisionSpine = {
+  decision: "What does the smart mobility innovation landscape look like for CPC?",
+  recommendation:
+    "Urban Freight and EV Charging are well-covered — do not over-invest here. " +
+    "Rural Connectivity and Cross-Modal represent the highest-opportunity whitespace " +
+    "with minimal CPC footprint and 1 open call each.",
+  confidence_tier: "Supported",
+  key_assumption:
+    "Landscape data reflects CPC corpus as of Q1 2026; new DfT programmes may shift the picture.",
+  next_action: "Find opportunities in Rural Connectivity or Cross-Modal — run CONNECT.",
+  framework: "Evidence Gap & Value Translation",
+};
+
+// ---------------------------------------------------------------------------
+// FIXTURE 7 — connect
+// Opportunity cards, fit bands, sector bridge, claim_state
+// ---------------------------------------------------------------------------
+
+export const FIXTURE_CONNECT: ArtifactBlock = {
+  type: "evidence",
+  recipe: "connect",
+  confidence_tier: "Indicative",
+  sections: {
+    Headline:
+      "4 opportunity routes worth exploring. UKRI Smart Mobility and DfT Rural " +
+      "Mobility Fund show strong fit against CPC's evidence base. Two routes require " +
+      "evidence enrichment before bidding.",
+  },
+  corpus_citations: [
+    {
+      id: "f2a3b4c5-d6e7-4f8a-9b0c-d2e3f4a5b6c1",
+      title: "UKRI Smart Mobility Challenge — Open Call 2026",
+      funder: "UKRI",
+      score: 0.91,
+      source_type: "live_call",
+      deadline: "2026-09-30",
+      claim_state: "stated",
+    },
+    {
+      id: "f2a3b4c5-d6e7-4f8a-9b0c-d2e3f4a5b6c2",
+      title: "DfT Rural Mobility Innovation Fund — Round 2",
+      funder: "Department for Transport",
+      score: 0.84,
+      source_type: "live_call",
+      deadline: "2026-10-31",
+      claim_state: "stated",
+    },
+    {
+      id: "f2a3b4c5-d6e7-4f8a-9b0c-d2e3f4a5b6c3",
+      title: "Horizon Europe Cross-Border Freight Corridor Programme",
+      funder: "European Commission",
+      score: 0.71,
+      source_type: "live_call",
+      claim_state: "inferred",
+      claim_rationale:
+        "UK participation status in this Horizon call not confirmed; eligibility inferred from association agreement scope.",
+    },
+  ],
+  // Opportunity cards
+  connect_opportunities: [
+    {
+      id: "op1",
+      title: "UKRI Smart Mobility Challenge",
+      funder: "UKRI",
+      fit_reason:
+        "Directly aligned with CPC's Future Mobility portfolio — 4 verified L2/L3 claims applicable.",
+      fit_band: "Strong",
+      entry_friction_tags: ["consortium_required", "commercial_deployment_evidence"],
+      deadline: "2026-09-30",
+      value_gbm: 22,
+      claim_state: "stated",
+    },
+    {
+      id: "op2",
+      title: "DfT Rural Mobility Innovation Fund",
+      funder: "DfT",
+      fit_reason:
+        "Addresses CPC's Rural Connectivity whitespace; requires L2 programme evidence to be generated first.",
+      fit_band: "Moderate",
+      entry_friction_tags: ["evidence_gap", "rural_delivery_track_record"],
+      deadline: "2026-10-31",
+      value_gbm: 15,
+      claim_state: "inferred",
+      claim_rationale:
+        "Fit assessed from call specification against CPC evidence base; no prior application data.",
+    },
+    {
+      id: "op3",
+      title: "Innovate UK Connected Places — Round 6",
+      funder: "Innovate UK",
+      fit_reason:
+        "Strong overlap with Digital Infrastructure and Active Travel portfolios.",
+      fit_band: "Strong",
+      entry_friction_tags: ["industry_match_30pct"],
+      deadline: "2026-11-15",
+      value_gbm: 18,
+      claim_state: "stated",
+    },
+    {
+      id: "op4",
+      title: "Horizon Europe Cross-Border Freight Corridor",
+      funder: "European Commission",
+      fit_reason:
+        "Freight corridor expertise applicable; UK eligibility under association agreement uncertain.",
+      fit_band: "Weak",
+      entry_friction_tags: ["eligibility_uncertain", "international_consortium"],
+      deadline: null,
+      value_gbm: 35,
+      claim_state: "contested",
+      claim_rationale:
+        "Two sources conflict: EC association agreement implies eligibility; DfT guidance suggests project-by-project approval required.",
+    },
+  ],
+  // Cross-modal sector bridge
+  connect_bridge: {
+    source_sector: "Urban Freight",
+    target_sector: "Rural Connectivity",
+    bridge_score: 67,
+    why_connected:
+      "Last-mile logistics innovation from CPC's urban freight portfolio is directly transferable " +
+      "to rural first/last-mile delivery challenges. Three urban operators (GNEWT, Zedify, DPD) " +
+      "have active rural expansion programmes.",
+    evidence_ids: ["f2a3b4c5-d6e7-4f8a-9b0c-d2e3f4a5b6c1", "f2a3b4c5-d6e7-4f8a-9b0c-d2e3f4a5b6c2"],
+  },
+} as unknown as ArtifactBlock;
+
+export const FIXTURE_CONNECT_SPINE: DecisionSpine = {
+  decision:
+    "Which opportunity routes should CPC prioritise for the 2026 funding cycle?",
+  recommendation:
+    "Pursue UKRI Smart Mobility (bid-ready) and Innovate UK Connected Places Round 6 now. " +
+    "Generate Rural Connectivity L2 evidence before attempting DfT Rural Mobility Fund. " +
+    "Monitor Horizon Europe — do not invest in preparation until eligibility is confirmed.",
+  confidence_tier: "Indicative",
+  key_assumption:
+    "An industry prime with commercial deployment evidence joins UKRI consortium.",
+  next_action:
+    "Approach 2 logistics operators this week for UKRI. Commission Rural Connectivity outcome study.",
+  framework: "Evidence Gap & Value Translation",
+  strongest_objection: "CPC has no verified Rural Connectivity L2 claims — DfT call may be unwinnable without them.",
+  would_change_if: "Rural Connectivity outcome study delivers 2+ L2 claims within 8 weeks.",
+};
+
+// ---------------------------------------------------------------------------
+// FIXTURE 8 — defend (Speculative tier — tests low visual weight)
+// Evidence tree, objections, assumptions
+// ---------------------------------------------------------------------------
+
+export const FIXTURE_DEFEND: ArtifactBlock = {
+  type: "evidence",
+  recipe: "defend",
+  confidence_tier: "Speculative",
+  sections: {
+    Headline:
+      "Evidence base is Speculative. The investment case rests on two assumptions " +
+      "that cannot be verified from the current corpus. Proceed with high caution.",
+  },
+  corpus_citations: [
+    {
+      id: "a3b4c5d6-e7f8-4a9b-0c1d-e3f4a5b6c7d1",
+      title: "Autonomous HGV Trials — Early Feasibility Study 2022",
+      publisher: "DfT",
+      score: 0.62,
+      source_type: "knowledge_doc",
+      claim_state: "stated",
+    },
+    {
+      id: "a3b4c5d6-e7f8-4a9b-0c1d-e3f4a5b6c7d2",
+      title: "Insurance Market Readiness for AV Freight — Preliminary Assessment",
+      score: 0.54,
+      source_type: "hive_article",
+      claim_state: "contested",
+      claim_rationale:
+        "Two insurance market reports disagree: Tokio Marine report (2023) says market is ready; Lloyd's Market Association review (2024) says structural barriers remain.",
+    },
+    {
+      id: "a3b4c5d6-e7f8-4a9b-0c1d-e3f4a5b6c7d3",
+      title: "Operator Demand Survey: Autonomous Freight UK 2023",
+      organisation: "Logistics UK",
+      score: 0.48,
+      source_type: "knowledge_doc",
+      claim_state: "inferred",
+      claim_rationale:
+        "Survey covers freight operators broadly; demand specifically for autonomous corridor trials inferred from willingness-to-trial responses.",
+    },
+  ],
+  // Evidence tree items
+  defend_evidence: [
+    {
+      id: "ev1",
+      claim: "UK regulatory framework supports Level 4 autonomy on public roads by 2028.",
+      claim_state: "unknown",
+      source: "No confirmed regulatory timeline found in corpus.",
+      rationale: "AV Act 2024 provides a legal framework but DfT has not published an implementation roadmap.",
+    },
+    {
+      id: "ev2",
+      claim: "Insurance underwriting is available for commercial AV HGV operations.",
+      claim_state: "contested",
+      source: "Tokio Marine (2023) vs Lloyd's Market Association (2024)",
+      rationale: "Tokio Marine willing to underwrite at standard rates; Lloyd's Market Association identifies structural gaps. Neither position is confirmed.",
+    },
+    {
+      id: "ev3",
+      claim: "Three operators have expressed commitment to trial participation.",
+      claim_state: "inferred",
+      source: "CPC stakeholder engagement log Q4 2025",
+      rationale: "Letters of intent held by CPC programme team; not yet converted to contractual commitments.",
+    },
+  ],
+  // Objection cards
+  defend_objections: [
+    {
+      id: "obj1",
+      objection: "No confirmed regulatory timeline means the programme cannot set a viable delivery date.",
+      response:
+        "The AV Act 2024 provides the legal basis. DfT is expected to publish implementation guidance by Q4 2026. " +
+        "A conditional programme can be scoped with a regulatory gate before deployment commitment.",
+      what_would_change:
+        "DfT publishes Level 4 autonomy implementation roadmap with confirmed 2027 effective date.",
+    },
+    {
+      id: "obj2",
+      objection: "Insurance market is not ready — programme cannot proceed without underwriting certainty.",
+      response:
+        "Tokio Marine has confirmed in-principle willingness. A pilot programme can be structured within existing HGV " +
+        "insurance frameworks while the broader market develops.",
+      what_would_change:
+        "A second major insurer confirms underwriting capacity, or Lloyd's Market Association publishes updated guidance.",
+    },
+    {
+      id: "obj3",
+      objection:
+        "Operator commitments are letters of intent only — commercial risk remains unacceptably high.",
+      response:
+        "Letters of intent are standard at programme feasibility stage. Contractual commitments are scoped for post-sandbox approval.",
+      what_would_change:
+        "One operator converts letter of intent to a signed collaboration agreement before feasibility phase begins.",
+    },
+  ],
+  // Assumption list
+  defend_assumptions: [
+    {
+      id: "as1",
+      text: "DfT regulatory sandbox approval within 90 days of application.",
+      confidence_tier: "Speculative",
+      basis: "No precedent for sandbox approval timeline found in corpus.",
+    },
+    {
+      id: "as2",
+      text: "Three operator commitments hold through pilot phase.",
+      confidence_tier: "Indicative",
+      basis: "Letters of intent received Q4 2025; operators have confirmed budget allocation for 2026.",
+    },
+    {
+      id: "as3",
+      text: "Insurance market provides a second underwriter by 2027.",
+      confidence_tier: "Speculative",
+      basis: "Lloyd's Market Association assessment is negative; no second underwriter has confirmed.",
+    },
+    {
+      id: "as4",
+      text: "Public acceptance does not require additional primary legislation.",
+      confidence_tier: "Indicative",
+      basis: "AV Act 2024 includes public safety provisions; legal opinion supports current framework.",
+    },
+  ],
+} as unknown as ArtifactBlock;
+
+export const FIXTURE_DEFEND_SPINE: DecisionSpine = {
+  decision:
+    "Is the evidence base sufficient to defend an investment case for autonomous freight corridors?",
+  recommendation:
+    "No. Two critical assumptions are Speculative — regulatory timeline and insurance market readiness. " +
+    "Do not present to investment committee until at least one assumption is upgraded to Indicative.",
+  confidence_tier: "Speculative",
+  key_assumption:
+    "DfT publishes Level 4 autonomy implementation roadmap before programme commitment.",
+  next_action:
+    "Set a 3-month evidence watch: DfT roadmap + Lloyd's update. Review at Q3 2026.",
+  framework: "Green Book",
+  strongest_objection:
+    "Regulatory timeline is unknown — no credible delivery date can be stated.",
+  would_change_if:
+    "DfT Level 4 roadmap published with confirmed 2027 effective date.",
+};
+
+// ---------------------------------------------------------------------------
 // Named map — used by fixture API route
 // ---------------------------------------------------------------------------
 
@@ -352,6 +727,9 @@ export const FIXTURE_MAP = {
   stats_dashboard: FIXTURE_STATS_DASHBOARD,
   scenario_stress_test: FIXTURE_SCENARIO_STRESS_TEST,
   legacy_brief: FIXTURE_LEGACY_BRIEF,
+  orient: FIXTURE_ORIENT,
+  connect: FIXTURE_CONNECT,
+  defend: FIXTURE_DEFEND,
 } as const;
 
 export type FixtureName = keyof typeof FIXTURE_MAP;

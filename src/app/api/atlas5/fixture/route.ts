@@ -11,6 +11,9 @@
  *   curl "http://localhost:3000/api/atlas5/fixture?recipe=stats_dashboard"
  *   curl "http://localhost:3000/api/atlas5/fixture?recipe=scenario_stress_test"
  *   curl "http://localhost:3000/api/atlas5/fixture?recipe=legacy_brief"
+ *   curl "http://localhost:3000/api/atlas5/fixture?recipe=orient"
+ *   curl "http://localhost:3000/api/atlas5/fixture?recipe=connect"
+ *   curl "http://localhost:3000/api/atlas5/fixture?recipe=defend"
  *
  * Returns JSON:
  *   ok                    boolean — fixture loaded and schema-valid
@@ -100,6 +103,40 @@ function getMissingFields(
       )
         missing.push("sections.Hypothesis or sections.Scenario");
       break;
+    case "orient": {
+      const a = artifact as { orient_domains?: unknown[] };
+      if (!a.orient_domains || a.orient_domains.length === 0)
+        missing.push("orient_domains");
+      if (!artifact.sections?.["Headline"])
+        missing.push("sections.Headline");
+      break;
+    }
+    case "connect": {
+      const a = artifact as { connect_opportunities?: unknown[] };
+      if (!a.connect_opportunities || a.connect_opportunities.length === 0)
+        missing.push("connect_opportunities");
+      if (!artifact.sections?.["Headline"])
+        missing.push("sections.Headline");
+      break;
+    }
+    case "diagnose":
+      // diagnose = extended evidence_panel; corpus_citations required
+      if (!artifact.corpus_citations || artifact.corpus_citations.length === 0)
+        missing.push("corpus_citations (at least one)");
+      break;
+    case "act":
+      // act = extended brief_five_case; sections required
+      if (!artifact.sections || Object.keys(artifact.sections).length === 0)
+        missing.push("sections");
+      break;
+    case "defend": {
+      const a = artifact as { defend_evidence?: unknown[] };
+      if (!a.defend_evidence || a.defend_evidence.length === 0)
+        missing.push("defend_evidence");
+      if (!artifact.sections?.["Headline"])
+        missing.push("sections.Headline");
+      break;
+    }
     case null:
       // legacy BriefView — sections should exist
       if (!artifact.sections || Object.keys(artifact.sections).length === 0)

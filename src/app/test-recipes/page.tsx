@@ -699,6 +699,26 @@ function RecipeBlock({
 
 import { CpcLiveSection } from "./live-section";
 import { VisualDirectorSection } from "./visual-director-section";
+import {
+  OrientSurface,
+  ConnectSurface,
+  DefendSurface,
+  BriefFiveCaseRecipe,
+  EvidencePanelRecipe,
+} from "@/components/atlas5/recipes";
+import { TrustRail as Atlas5TrustRail } from "@/components/atlas5/trust-rail";
+import type { ArtifactBlock as Atlas5ArtifactBlock } from "@/lib/atlas5/artifact-store";
+import {
+  FIXTURE_ORIENT,
+  FIXTURE_ORIENT_SPINE,
+  FIXTURE_CONNECT,
+  FIXTURE_CONNECT_SPINE,
+  FIXTURE_DEFEND,
+  FIXTURE_DEFEND_SPINE,
+  FIXTURE_BRIEF_FIVE_CASE,
+  FIXTURE_DECISION_SPINE,
+  FIXTURE_EVIDENCE_PANEL,
+} from "../../../eval/fixtures/artifact-blocks";
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
@@ -772,6 +792,108 @@ export default function TestRecipesPage() {
         artifact={CPC_FUNDING_FLOW_ARTIFACT}
         spine={CPC_FUNDING_FLOW_SPINE}
       />
+
+      {/* ── Sprint UX Surfaces ─────────────────────────────────────────── */}
+      <hr className="border-border border-2" id="sprint-ux" />
+      <div className="space-y-2">
+        <h2 className="text-base font-semibold">Sprint UX Surfaces</h2>
+        <p className="text-xs text-muted-foreground">
+          Five new outcome surfaces — ORIENT, CONNECT, DIAGNOSE, ACT, DEFEND.
+          Visual weight from confidence tier. Claim state badges on all citations.
+          NPV waterfall on ACT. Cold session entry on lab/langgraph shell.
+        </p>
+        <div className="mt-1 flex gap-3 text-xs">
+          <a href="#sprint-ux" className="text-indigo-600 underline underline-offset-2">↑ top</a>
+        </div>
+      </div>
+
+      {/* ACT — BriefFiveCaseRecipe with waterfall */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-mono bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded">act</span>
+          <span className="text-xs text-muted-foreground">NPV waterfall · claim state · visual weight · canvas stub</span>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2 rounded-xl border border-border bg-card overflow-hidden">
+            <BriefFiveCaseRecipe artifact={FIXTURE_BRIEF_FIVE_CASE as unknown as Atlas5ArtifactBlock} />
+          </div>
+          <div className="lg:col-span-1">
+            <Atlas5TrustRail artifact={FIXTURE_BRIEF_FIVE_CASE as unknown as Atlas5ArtifactBlock} />
+          </div>
+        </div>
+      </section>
+
+      <hr className="border-border" />
+
+      {/* DIAGNOSE — EvidencePanelRecipe restructured */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-mono bg-amber-100 text-amber-700 px-2 py-0.5 rounded">diagnose</span>
+          <span className="text-xs text-muted-foreground">Gap matrix · value translation · recommended move · escalation</span>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2 rounded-xl border border-border bg-card overflow-hidden">
+            <EvidencePanelRecipe artifact={FIXTURE_EVIDENCE_PANEL as unknown as Atlas5ArtifactBlock} />
+          </div>
+          <div className="lg:col-span-1">
+            <Atlas5TrustRail artifact={FIXTURE_EVIDENCE_PANEL as unknown as Atlas5ArtifactBlock} />
+          </div>
+        </div>
+      </section>
+
+      <hr className="border-border" />
+
+      {/* ORIENT */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-mono bg-blue-100 text-blue-700 px-2 py-0.5 rounded">orient</span>
+          <span className="text-xs text-muted-foreground">Domain heatmap · CPC position · top evidence · find opportunities</span>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2 rounded-xl border border-border bg-card overflow-hidden">
+            <OrientSurface artifact={FIXTURE_ORIENT as unknown as Atlas5ArtifactBlock} />
+          </div>
+          <div className="lg:col-span-1">
+            <Atlas5TrustRail artifact={FIXTURE_ORIENT as unknown as Atlas5ArtifactBlock} />
+          </div>
+        </div>
+      </section>
+
+      <hr className="border-border" />
+
+      {/* CONNECT */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-mono bg-violet-100 text-violet-700 px-2 py-0.5 rounded">connect</span>
+          <span className="text-xs text-muted-foreground">Opportunity cards · fit bands · sector bridge · diagnose fit</span>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2 rounded-xl border border-border bg-card overflow-hidden">
+            <ConnectSurface artifact={FIXTURE_CONNECT as unknown as Atlas5ArtifactBlock} />
+          </div>
+          <div className="lg:col-span-1">
+            <Atlas5TrustRail artifact={FIXTURE_CONNECT as unknown as Atlas5ArtifactBlock} />
+          </div>
+        </div>
+      </section>
+
+      <hr className="border-border" />
+
+      {/* DEFEND — Speculative tier tests low visual weight */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-mono bg-red-100 text-red-700 px-2 py-0.5 rounded">defend</span>
+          <span className="text-xs text-muted-foreground">Speculative tier · evidence tree · objection cards · assumptions</span>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2 rounded-xl border border-border bg-card overflow-hidden">
+            <DefendSurface artifact={FIXTURE_DEFEND as unknown as Atlas5ArtifactBlock} />
+          </div>
+          <div className="lg:col-span-1">
+            <Atlas5TrustRail artifact={FIXTURE_DEFEND as unknown as Atlas5ArtifactBlock} />
+          </div>
+        </div>
+      </section>
     </main>
   );
 }

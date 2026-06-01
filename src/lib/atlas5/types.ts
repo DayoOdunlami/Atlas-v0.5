@@ -85,7 +85,26 @@ export type RecipeType =
   | "cpc_capability_assessment"
   | "cpc_portfolio_comparison"
   | "cpc_market_alignment"
-  | "cpc_evidence_gaps";
+  | "cpc_evidence_gaps"
+  | "orient"
+  | "connect"
+  | "diagnose"
+  | "act"
+  | "defend";
+
+// ---------------------------------------------------------------------------
+// Claim state — Principle 3 (claim states are first-class citizens)
+// ---------------------------------------------------------------------------
+
+/**
+ * Epistemic status of a citation, gap row, or assertion.
+ *
+ * stated    = directly extracted from a cited source
+ * inferred  = agent-derived from adjacent evidence
+ * unknown   = no data found
+ * contested = sources conflict
+ */
+export type ClaimState = "stated" | "inferred" | "unknown" | "contested";
 
 // ---------------------------------------------------------------------------
 // CPC Capability Intelligence types
@@ -163,6 +182,10 @@ export interface CorpusCitation {
   publisher?: string;
   // hive types
   article_id?: string;
+  /** Epistemic status — Principle 3 */
+  claim_state?: ClaimState;
+  /** Rationale for inferred/contested states, shown in tooltip */
+  claim_rationale?: string;
 }
 
 /** A verified citation from hive.articles */
@@ -177,6 +200,10 @@ export interface HiveCitation {
   chunk_id?: string;
   transport_mode?: string;
   relevance_note?: string;
+  /** Epistemic status — Principle 3 */
+  claim_state?: ClaimState;
+  /** Rationale for inferred/contested states, shown in tooltip */
+  claim_rationale?: string;
 }
 
 // ---------------------------------------------------------------------------

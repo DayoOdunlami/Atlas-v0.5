@@ -14,7 +14,7 @@
  */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Markdown from "react-markdown";
 
 import {
@@ -23,6 +23,7 @@ import {
   useArtifactStore,
 } from "@/lib/atlas5/artifact-store";
 import type {
+  ConfidenceTier,
   CorpusCitation,
   HiveCitation,
   RecipeType,
@@ -33,6 +34,9 @@ import {
   EvidencePanelRecipe,
   StatsDashboardRecipe,
   ScenarioStressTestRecipe,
+  OrientSurface,
+  ConnectSurface,
+  DefendSurface,
 } from "@/components/atlas5/recipes";
 import {
   CpcCapabilityAssessmentRecipe,
@@ -366,9 +370,11 @@ const FIVE_CASE_KEYS = new Set([
   "Management Case",
 ]);
 
+const NEW_RECIPES = new Set<RecipeType>(["orient", "connect", "diagnose", "act", "defend"]);
+
 function detectRecipe(artifact: ArtifactBlock): RecipeType | null {
   // Agent sets recipe explicitly — always prefer it.
-  if (artifact.recipe) return artifact.recipe;
+  if (artifact.recipe) return artifact.recipe as RecipeType;
   // Infer from type + section keys for backward compat.
   if (artifact.type === "scenario") return "scenario_stress_test";
   if (artifact.type === "chart") return "stats_dashboard";
@@ -409,6 +415,22 @@ function RecipeView({
           )}
           {recipe === "scenario_stress_test" && (
             <ScenarioStressTestRecipe artifact={artifact} />
+          )}
+          {/* Sprint UX recipes */}
+          {recipe === "orient" && (
+            <OrientSurface artifact={artifact} />
+          )}
+          {recipe === "connect" && (
+            <ConnectSurface artifact={artifact} />
+          )}
+          {recipe === "act" && (
+            <BriefFiveCaseRecipe artifact={artifact} />
+          )}
+          {recipe === "diagnose" && (
+            <EvidencePanelRecipe artifact={artifact} />
+          )}
+          {recipe === "defend" && (
+            <DefendSurface artifact={artifact} />
           )}
           {/* CPC Capability Intelligence recipes — cast bridges atlas5 ↔ dashboard ArtifactBlock types */}
           {recipe === "cpc_capability_assessment" && (
@@ -679,7 +701,53 @@ function SaveBriefButton({
 
 export function ArtifactPane() {
   const { surface } = useSurfaceGateway();
-  const { artifact, decisionSpine, isLoading } = useArtifactStore();
+  const { artifact, decisionSpine, isLoading, setArtifact, setDecisionSpine } = useArtifactStore();
+
+  // ── Brief persistence ───────────────────────────────────────────────────
+  // Auto-load: when a thread_id is set and the pane is empty, fetch the most
+  // recent saved brief for that thread and hydrate the store.
+  const loadedThreadRef = useRef<string | null>(null);
+  useEffect(() => {
+    const tid = surface.thread_id;
+    if (!tid || artifact || loadedThreadRef.current === tid) return;
+    loadedThreadRef.current = tid;
+    fetch(`/api/atlas5/brief?thread_id=${encodeURIComponent(tid)}&limit=1`)
+      .then((r) => r.json())
+      .then((data: { ok: boolean; briefs?: Array<{ id: string; artifact_json: ArtifactBlock; decision_spine?: import("@/lib/atlas5/types").DecisionSpine; confidence_tier?: ConfidenceTier }> }) => {
+        if (!data.ok || !data.briefs?.length) return;
+        const saved = data.briefs[0];
+        if (saved.artifact_json) setArtifact(saved.artifact_json);
+        if (saved.decision_spine) setDecisionSpine(saved.decision_spine);
+      })
+      .catch(() => {});
+  }, [surface.thread_id, artifact, setArtifact, setDecisionSpine]);
+
+  // Auto-save: debounced 3 s after a new artifact lands (agent response complete).
+  // Skips if artifact is already null or thread_id is unset.
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedArtifactRef = useRef<ArtifactBlock | null>(null);
+  useEffect(() => {
+    if (!artifact || !surface.thread_id) return;
+    if (artifact === lastSavedArtifactRef.current) return;
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
+      lastSavedArtifactRef.current = artifact;
+      fetch("/api/atlas5/brief", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          artifact,
+          decision_spine: decisionSpine ?? undefined,
+          thread_id: surface.thread_id,
+          agent: surface.active_agent,
+          lens: surface.active_lens,
+        }),
+      }).catch(() => {});
+    }, 3000);
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  }, [artifact, decisionSpine, surface]);
 
   const agentLabel = artifact?.agent ?? surface.active_agent;
   const typeLabel =
@@ -699,11 +767,21 @@ export function ArtifactPane() {
                   ? "CPC Market Alignment"
                   : artifact?.recipe === "cpc_evidence_gaps"
                     ? "CPC Evidence Gaps"
-                    : artifact?.type === "brief"
-                      ? "Brief"
-                      : artifact?.type === "evidence"
-                        ? "Evidence"
-                        : "Artifact";
+                    : artifact?.recipe === "orient"
+                      ? "ORIENT"
+                      : artifact?.recipe === "connect"
+                        ? "CONNECT"
+                        : artifact?.recipe === "diagnose"
+                          ? "DIAGNOSE"
+                          : artifact?.recipe === "act"
+                            ? "ACT"
+                            : artifact?.recipe === "defend"
+                              ? "DEFEND"
+                              : artifact?.type === "brief"
+                                ? "Brief"
+                                : artifact?.type === "evidence"
+                                  ? "Evidence"
+                                  : "Artifact";
 
   return (
     <section

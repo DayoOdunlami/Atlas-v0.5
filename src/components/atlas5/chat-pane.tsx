@@ -21,6 +21,57 @@ import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useAtlas5Chat } from "@/hooks/use-atlas5-chat";
 import { useSurfaceGateway } from "@/lib/atlas5/surface-gateway";
 
+// ---------------------------------------------------------------------------
+// Cold session entry chips (Principle 5 — surfaces are workspaces)
+// Visible when thread_id is null and no messages. Fades out on first message.
+// ---------------------------------------------------------------------------
+
+const COLD_CHIPS = [
+  {
+    label: "Explore the innovation landscape",
+    prompt: "Explore the innovation landscape for connected and autonomous transport in the UK.",
+  },
+  {
+    label: "Assess a capability or product",
+    prompt: "Assess CPC's capability evidence for leading an autonomous freight R&D programme.",
+  },
+  {
+    label: "Build an investment case",
+    prompt: "Build a Green Book investment case for a UK autonomous freight corridor pilot programme.",
+  },
+];
+
+function ColdSessionEntry({ onSelect }: { onSelect: (prompt: string) => void }) {
+  return (
+    <div
+      data-testid="cold-session-entry"
+      className="flex flex-col items-center justify-center gap-5 h-full px-6 py-12 animate-in fade-in duration-300"
+    >
+      <div className="text-center space-y-1.5 max-w-xs">
+        <p className="text-sm font-semibold text-foreground">
+          What are you trying to understand or decide?
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Choose a starting point or type your own question below.
+        </p>
+      </div>
+      <div className="flex flex-col gap-2 w-full max-w-xs">
+        {COLD_CHIPS.map((chip) => (
+          <button
+            key={chip.label}
+            type="button"
+            onClick={() => onSelect(chip.prompt)}
+            data-testid={`cold-chip-${chip.label.toLowerCase().replace(/\s+/g, "-")}`}
+            className="rounded-lg border border-border bg-muted/40 px-4 py-2.5 text-xs text-left font-medium text-foreground hover:bg-muted/80 hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors"
+          >
+            {chip.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function ChatPane() {
   const { surface } = useSurfaceGateway();
   const { messages, sendMessage, status } = useAtlas5Chat();
@@ -28,12 +79,15 @@ export function ChatPane() {
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Cold session: show entry chips when thread_id is null and no messages
+  const isColdSession = !surface.thread_id && messages.length === 0;
+
   // Auto-scroll to the bottom when a new message arrives
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const isStreaming = status === "streaming" || status === "submitted";
+  const isStreaming = status === "streaming";
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -41,6 +95,11 @@ export function ChatPane() {
     if (!trimmed || isStreaming) return;
     sendMessage({ role: "user", parts: [{ type: "text", text: trimmed }] });
     setInput("");
+  };
+
+  const handleChipSelect = (prompt: string) => {
+    // Populate input — do NOT auto-submit (per spec)
+    setInput(prompt);
   };
 
   return (
@@ -69,15 +128,8 @@ export function ChatPane() {
         data-testid="message-list"
         className="flex-1 overflow-y-auto p-4 space-y-4"
       >
-        {messages.length === 0 && (
-          <div className="text-sm text-muted-foreground text-center mt-8">
-            <p className="font-medium mb-1">Atlas 5 — {surface.active_agent}</p>
-            <p className="text-xs">
-              Send a message to begin. The{" "}
-              <strong>{surface.active_agent}</strong> agent will respond with
-              verified corpus citations.
-            </p>
-          </div>
+        {isColdSession && (
+          <ColdSessionEntry onSelect={handleChipSelect} />
         )}
 
         {messages.map((message) => {

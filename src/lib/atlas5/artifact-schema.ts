@@ -26,11 +26,32 @@ export const ConfidenceTierSchema = z.enum([
   "Robust",
 ]);
 
+/**
+ * Claim state — epistemic status of a citation, gap row, or assertion.
+ * Principle 3: "Never show a claim without its state."
+ *
+ * stated    = directly extracted from a cited source
+ * inferred  = agent-derived from adjacent evidence; tooltip shows rationale
+ * unknown   = no data found
+ * contested = sources conflict; tooltip shows both positions
+ */
+export const ClaimStateSchema = z.enum([
+  "stated",
+  "inferred",
+  "unknown",
+  "contested",
+]);
+
 export const RecipeTypeSchema = z.enum([
   "brief_five_case",
   "evidence_panel",
   "stats_dashboard",
   "scenario_stress_test",
+  "orient",
+  "connect",
+  "diagnose",
+  "act",
+  "defend",
 ]);
 
 export const SourceTypeSchema = z.enum([
@@ -64,6 +85,10 @@ export const CorpusCitationSchema = z.object({
   document_id: z.string().optional(),
   publisher: z.string().optional(),
   article_id: z.string().optional(),
+  /** Epistemic status of this citation — Principle 3 */
+  claim_state: ClaimStateSchema.optional(),
+  /** Rationale for inferred/contested states — shown in tooltip */
+  claim_rationale: z.string().optional(),
 });
 
 export const HiveCitationSchema = z.object({
@@ -74,6 +99,10 @@ export const HiveCitationSchema = z.object({
   chunk_id: z.string().optional(),
   transport_mode: z.string().optional(),
   relevance_note: z.string().optional(),
+  /** Epistemic status of this citation — Principle 3 */
+  claim_state: ClaimStateSchema.optional(),
+  /** Rationale for inferred/contested states — shown in tooltip */
+  claim_rationale: z.string().optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -242,6 +271,53 @@ export const ExternalCitationSchema = z.object({
 // ArtifactBlock schema
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Sprint UX surface-specific schemas
+// ---------------------------------------------------------------------------
+
+export const OrientDomainSchema = z.object({
+  domain: z.string(),
+  evidence_count: z.number().int().min(0),
+  cpc_projects: z.number().int().min(0).optional(),
+  open_calls: z.number().int().min(0).optional(),
+  maturity: z.enum(["low", "medium", "high"]).optional(),
+});
+
+export const ConnectOpportunitySchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  funder: z.string().optional(),
+  fit_reason: z.string(),
+  fit_band: z.enum(["Strong", "Moderate", "Weak"]),
+  entry_friction_tags: z.array(z.string()),
+  deadline: z.string().nullable().optional(),
+  value_gbm: z.number().optional(),
+  claim_state: ClaimStateSchema.optional(),
+  claim_rationale: z.string().optional(),
+});
+
+export const DefendEvidenceItemSchema = z.object({
+  id: z.string(),
+  claim: z.string(),
+  claim_state: ClaimStateSchema,
+  source: z.string(),
+  rationale: z.string().optional(),
+});
+
+export const DefendObjectionSchema = z.object({
+  id: z.string(),
+  objection: z.string(),
+  response: z.string(),
+  what_would_change: z.string(),
+});
+
+export const DefendAssumptionSchema = z.object({
+  id: z.string(),
+  text: z.string(),
+  confidence_tier: ConfidenceTierSchema,
+  basis: z.string().optional(),
+});
+
 export const ArtifactBlockSchema = z.object({
   type: z.enum(["brief", "evidence", "chart", "scenario"]),
   recipe: RecipeTypeSchema.optional(),
@@ -266,6 +342,45 @@ export const ArtifactBlockSchema = z.object({
   chart_spec: z.record(z.string(), z.unknown()).optional(),
   agent: z.string().optional(),
   timestamp: z.string().optional(),
+
+  // ── Sprint UX surface-specific optional fields ───────────────────────────
+  // ORIENT
+  orient_domains: z.array(OrientDomainSchema).optional(),
+  cpc_position: z.object({
+    lens: z.string(),
+    strongest_domain: z.string().optional(),
+    whitespace_domain: z.string().optional(),
+    summary: z.string(),
+  }).optional(),
+
+  // CONNECT
+  connect_opportunities: z.array(ConnectOpportunitySchema).optional(),
+  connect_bridge: z.object({
+    source_sector: z.string(),
+    target_sector: z.string(),
+    bridge_score: z.number().min(0).max(100),
+    why_connected: z.string(),
+    evidence_ids: z.array(z.string()).optional(),
+  }).optional(),
+
+  // DIAGNOSE
+  diagnose_gaps: z.array(z.object({
+    criterion: z.string(),
+    response: z.string(),
+    claim_state: ClaimStateSchema.optional(),
+    claim_rationale: z.string().optional(),
+    fit: z.enum(["Met", "Partial", "Gap", "Unknown"]),
+    evidence_count: z.number().int().min(0),
+  })).optional(),
+  entry_friction_tags: z.array(z.string()).optional(),
+  move_type: z.enum(["apply_now", "reposition", "evidence_build", "seek_partner", "monitor", "stop", "escalate"]).optional(),
+  move_rationale: z.string().optional(),
+  what_would_change: z.string().optional(),
+
+  // DEFEND
+  defend_evidence: z.array(DefendEvidenceItemSchema).optional(),
+  defend_objections: z.array(DefendObjectionSchema).optional(),
+  defend_assumptions: z.array(DefendAssumptionSchema).optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -297,3 +412,4 @@ export type DecisionSpineInput = z.input<typeof DecisionSpineSchema>;
 export type ArtifactBlockInput = z.input<typeof ArtifactBlockSchema>;
 export type AtlasRoutingGapInput = z.input<typeof AtlasRoutingGapSchema>;
 export type ExternalCitationInput = z.input<typeof ExternalCitationSchema>;
+export type ClaimState = z.infer<typeof ClaimStateSchema>;

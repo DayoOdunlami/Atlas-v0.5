@@ -1,6 +1,7 @@
 "use client";
 
 import type { ArtifactBlock } from "@/lib/atlas5/artifact-store";
+import { ClaimStateBadge } from "@/components/atlas5/claim-state-badge";
 import type {
   AtlasRoutingGap,
   AvailableTool,
@@ -62,9 +63,18 @@ function CitationRow({ c }: { c: CorpusCitation }) {
             {c.organisation ?? c.funder ?? c.publisher ?? ""}
           </span>
         </div>
-        <span className="text-xs font-mono text-indigo-600 shrink-0">
-          {pct}%
-        </span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {c.claim_state && (
+            <ClaimStateBadge
+              state={c.claim_state}
+              rationale={c.claim_rationale}
+              showLabel={false}
+            />
+          )}
+          <span className="text-xs font-mono text-indigo-600">
+            {pct}%
+          </span>
+        </div>
       </div>
     </div>
   );
