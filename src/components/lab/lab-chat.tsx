@@ -19,9 +19,6 @@ import { CopilotChat } from "@copilotkit/react-ui";
 import {
   TextMessage,
   MessageRole,
-  ActionExecutionMessage,
-  AgentStateMessage,
-  ResultMessage,
 } from "@copilotkit/runtime-client-gql";
 
 import { Header } from "@/components/chat/layout/header";
@@ -42,7 +39,8 @@ import { PanelDAtlas } from "@/components/lab/chat-panels/panel-d-atlas-custom";
 
 import type { AgentId, LensId } from "@/lib/atlas5/types";
 import { isConversational, getInstantReply } from "@/lib/atlas5/edge-classifier";
-import type { DisplayMessage, ToolCallDisplay } from "@/components/lab/types";
+import { toDisplayMessages } from "@/lib/atlas5/display-messages";
+import type { DisplayMessage } from "@/components/lab/types";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -103,188 +101,7 @@ const AGENT_CONFIG: Record<
   },
 };
 
-// ---------------------------------------------------------------------------
-// Transform GQL visibleMessages → DisplayMessage[]
-//
-// Two sources of "tool calls" for Panel D's Chain of Thought:
-//   1. AgentStateMessage.nodeName — LangGraph nodes firing in the Python agent
-//   2. ActionExecutionMessage    — CopilotKit frontend actions (add_chart etc.)
-//
-// Raw JSON state TextMessages (the CopilotKit state snapshot) are suppressed
-// the same way AssistantBubble does in Panel A.
-// ---------------------------------------------------------------------------
-
-type CpkMessage = ReturnType<typeof useCopilotChat>["visibleMessages"][number];
-
-/** Human-readable labels for known ATLAS/JARVIS/CICERONE/HYVE graph nodes. */
-const NODE_LABELS: Record<string, string> = {
-  // ATLAS
-  extract_query:            "Extracting query intent",
-  classify_intent:          "Classifying intent",
-  select_recipe_intent:     "Selecting recipe intent",
-  search_corpus:            "Searching CPC corpus",
-  external_evidence_search: "Searching external evidence",
-  build_five_case:          "Building Five Case brief",
-  select_visual_recipe:     "Selecting visual recipe",
-  verify_citations:         "Verifying citations",
-  // JARVIS
-  search_projects:          "Searching corpus projects",
-  search_live_calls:        "Searching live funding calls",
-  retrieve_evidence:        "Retrieving evidence",
-  reason_and_cite:          "Reasoning and citing",
-  // CICERONE
-  evaluate_transfer:        "Evaluating transferability",
-  score_transfer:           "Scoring transferability",
-  // HYVE
-  search_hive:              "Searching HIVE case studies",
-  map_transport_modes:      "Mapping transport modes",
-};
-
-/** Nodes that are internal routing artefacts — never shown in CoT. */
-const HIDDEN_NODES = new Set([
-  "__start__", "__end__", "_route_after_intent",
-  "route_after_intent", "router",
-]);
-
-/** Mirrors AssistantBubble's isRawStateMessage — suppresses JSON state dumps. */
-function isRawStateContent(content: string): boolean {
-  const trimmed = content.trim();
-  let inner = trimmed;
-  if (trimmed.startsWith("```")) {
-    inner = trimmed
-      .replace(/^```(?:json)?\s*/i, "")
-      .replace(/\s*```\s*$/, "")
-      .trim();
-  }
-  if (!inner.startsWith("{")) return false;
-  return (
-    inner.includes('"sections"') ||
-    inner.includes('"corpus_citations"') ||
-    inner.includes('"decision_spine"') ||
-    inner.includes('"confidence_tier"') ||
-    inner.includes('"artifact_block"') ||
-    inner.includes('"five_case_model"') ||
-    inner.includes('"evidence_gaps"')
-  );
-}
-
-function toDisplayMessages(raw: CpkMessage[]): DisplayMessage[] {
-  const result: DisplayMessage[] = [];
-  let pendingNodes: ToolCallDisplay[] = [];
-  let pendingActions: ToolCallDisplay[] = [];
-
-  for (const m of raw) {
-    if (m.isAgentStateMessage()) {
-      const asm = m as AgentStateMessage;
-      const stateObj = (asm as unknown as { state?: Record<string, unknown> }).state;
-
-      // KEY FIX: CopilotKit may send only ONE final AgentStateMessage with the
-      // complete state snapshot (not one per node). We therefore scan the ENTIRE
-      // reasoning_trace array and upsert an entry for every node found.
-      // This works for both streaming (one msg per node) and batch (one final msg).
-      const traceArr = Array.isArray(stateObj?.reasoning_trace)
-        ? (stateObj!.reasoning_trace as Array<Record<string, unknown>>)
-        : [];
-
-      for (const traceEntry of traceArr) {
-        const node = traceEntry.node as string | undefined;
-        if (!node || HIDDEN_NODES.has(node)) continue;
-
-        const existing = pendingNodes.findIndex((n) => n.id === node);
-        const step: ToolCallDisplay = {
-          id: node,
-          name: NODE_LABELS[node] ?? node.replace(/_/g, " "),
-          args: "",
-          kind: "node",
-          trace: {
-            thought: traceEntry.thought as string | undefined,
-            tool_calls: traceEntry.tool_calls as import("@/components/lab/types").TraceToolCall[] | undefined,
-            status: traceEntry.status as "ok" | "error" | undefined,
-          },
-        };
-        if (existing >= 0) {
-          pendingNodes[existing] = step;
-        } else {
-          pendingNodes.push(step);
-        }
-      }
-
-      // Also handle the case where nodeName is set but no reasoning_trace entries exist yet
-      // (early nodes that don't write to reasoning_trace, e.g. extract_query)
-      const node = asm.nodeName;
-      if (node && !HIDDEN_NODES.has(node)) {
-        const alreadyInTrace = pendingNodes.some((n) => n.id === node);
-        if (!alreadyInTrace) {
-          pendingNodes.push({
-            id: node,
-            name: NODE_LABELS[node] ?? node.replace(/_/g, " "),
-            args: "",
-            kind: "node",
-            trace: undefined, // no thought yet — node fired but left no trace entry
-          });
-        }
-      }
-    } else if (m.isResultMessage()) {
-      // CopilotKit frontend action result — update the matching action entry's trace
-      const rm = m as ResultMessage;
-      const idx = pendingActions.findIndex((a) => a.id === rm.actionExecutionId);
-      if (idx >= 0) {
-        pendingActions[idx] = {
-          ...pendingActions[idx],
-          trace: { thought: `Result: ${String(rm.result ?? "").slice(0, 200)}`, status: "ok" },
-        };
-      }
-    } else if (m.isActionExecutionMessage()) {
-      const aem = m as ActionExecutionMessage;
-      pendingActions.push({
-        id: aem.id ?? crypto.randomUUID(),
-        name: aem.name ?? "unknown_tool",
-        args: JSON.stringify(aem.arguments ?? {}),
-        kind: "action",
-      });
-    } else if (m.isTextMessage()) {
-      const tm = m as TextMessage;
-      if (tm.role === MessageRole.User) {
-        // Reset pending context on each new user turn
-        pendingNodes = [];
-        pendingActions = [];
-        result.push({
-          id: tm.id ?? crypto.randomUUID(),
-          role: "user",
-          content: tm.content ?? "",
-        });
-      } else if (tm.role === MessageRole.Assistant) {
-        const content = tm.content ?? "";
-        // Skip CopilotKit raw JSON state snapshots
-        if (isRawStateContent(content)) continue;
-        const allCalls = [...pendingNodes, ...pendingActions];
-        result.push({
-          id: tm.id ?? crypto.randomUUID(),
-          role: "assistant",
-          content,
-          toolCalls: allCalls.length > 0 ? allCalls : undefined,
-        });
-        pendingNodes = [];
-        pendingActions = [];
-      }
-    }
-  }
-
-  // Streaming sentinel: if there are accumulated node/action steps that haven't
-  // been consumed by a final assistant TextMessage yet (i.e. the agent is still
-  // running), inject a placeholder message so Panel D can render the in-flight
-  // Chain of Thought in real time.
-  if (pendingNodes.length > 0 || pendingActions.length > 0) {
-    result.push({
-      id: "__streaming__",
-      role: "assistant",
-      content: "",
-      toolCalls: [...pendingNodes, ...pendingActions],
-    });
-  }
-
-  return result;
-}
+// toDisplayMessages is imported from @/lib/atlas5/display-messages (shared with shell)
 
 // ---------------------------------------------------------------------------
 // Null input — used for Panel A when side-by-side (shared LabInput used instead)
