@@ -417,6 +417,105 @@ def search_hive_evidence(query: str, limit: int = 10) -> list[dict[str, Any]]:
 
 
 # ---------------------------------------------------------------------------
+# atlas.evidence_containers + atlas.claims — CPC internal capability corpus
+# ---------------------------------------------------------------------------
+
+def search_cpc_evidence_containers(query: str, limit: int = 10) -> list[dict[str, Any]]:
+    """
+    Search atlas.evidence_containers for CPC internal project/capability records.
+    Used for CPC-inward queries (Decision 3 Rule A).
+    """
+    limit = min(int(limit), 20)
+    embedding = embed_query(query)
+    if embedding:
+        rows = _query(
+            """
+            SELECT id, description, business_unit, mode_or_focus_area, customer_or_funder,
+                   delivery_status, cpc_role, corpus_tag,
+                   1 - (embedding <=> %s::vector) AS similarity
+            FROM atlas.evidence_containers
+            WHERE corpus_tag = 'cpc_v0_1' AND is_active IS NOT FALSE
+            ORDER BY embedding <=> %s::vector
+            LIMIT %s
+            """,
+            (embedding, embedding, limit),
+        )
+    else:
+        term = f"%{query}%"
+        rows = _query(
+            """
+            SELECT id, description, business_unit, mode_or_focus_area, customer_or_funder,
+                   delivery_status, cpc_role, corpus_tag,
+                   NULL::float AS similarity
+            FROM atlas.evidence_containers
+            WHERE corpus_tag = 'cpc_v0_1' AND is_active IS NOT FALSE
+              AND (description ILIKE %s OR business_unit ILIKE %s OR mode_or_focus_area ILIKE %s)
+            LIMIT %s
+            """,
+            (term, term, term, limit),
+        )
+
+    return [
+        {
+            "id": str(r["id"]),
+            "title": (r.get("description") or r.get("business_unit") or "CPC evidence")[:120],
+            "organisation": "Connected Places Catapult",
+            "business_unit": r.get("business_unit"),
+            "mode_or_focus_area": r.get("mode_or_focus_area"),
+            "score": round(float(r["similarity"]), 4) if r.get("similarity") is not None else 0.55,
+            "source_type": "cpc_internal",
+            "source_label": "CPC internal — evidence_containers",
+        }
+        for r in rows
+    ]
+
+
+def search_cpc_claims(query: str, limit: int = 10) -> list[dict[str, Any]]:
+    """Search atlas.claims for structured CPC capability claims."""
+    limit = min(int(limit), 20)
+    embedding = embed_query(query)
+    if embedding:
+        rows = _query(
+            """
+            SELECT id, claim_text, claim_domain, confidence_tier, source_label,
+                   1 - (embedding <=> %s::vector) AS similarity
+            FROM atlas.claims
+            WHERE corpus_tag = 'cpc_v0_1'
+            ORDER BY embedding <=> %s::vector
+            LIMIT %s
+            """,
+            (embedding, embedding, limit),
+        )
+    else:
+        term = f"%{query}%"
+        rows = _query(
+            """
+            SELECT id, claim_text, claim_domain, confidence_tier, source_label,
+                   NULL::float AS similarity
+            FROM atlas.claims
+            WHERE corpus_tag = 'cpc_v0_1'
+              AND (claim_text ILIKE %s OR claim_domain ILIKE %s)
+            LIMIT %s
+            """,
+            (term, term, limit),
+        )
+
+    return [
+        {
+            "id": str(r["id"]),
+            "title": (r.get("claim_text") or "")[:120],
+            "organisation": "Connected Places Catapult",
+            "claim_domain": r.get("claim_domain"),
+            "confidence_tier": r.get("confidence_tier"),
+            "score": round(float(r["similarity"]), 4) if r.get("similarity") is not None else 0.5,
+            "source_type": "cpc_claim",
+            "source_label": "CPC internal — claims",
+        }
+        for r in rows
+    ]
+
+
+# ---------------------------------------------------------------------------
 # Allowlisted record lookup
 # ---------------------------------------------------------------------------
 

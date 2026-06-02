@@ -92,6 +92,19 @@ export interface ArtifactBlock {
   // Rendered by BlockRenderer; falls back to chart_specs if absent.
   visual_blocks?: VisualBlock[];
 
+  /** One-sentence verdict — Principle 1 waterfall, always first in UI */
+  headline?: string;
+
+  /** Structured gap rows for Diagnose — mirrors gap_matrix block data */
+  gap_rows?: Array<{
+    criterion: string;
+    response: string;
+    claim_state?: import("./types").ClaimState;
+    fit: string;
+    evidence_strength?: string;
+    action?: string;
+  }>;
+
   // ── ATLAS evidence routing gaps ────────────────────────────────────────
   // Structured gaps from detect_evidence_gaps() + LLM domain analysis.
   // Uses the lane/provider/tool shape (NOT the CICERONE HAVE/PARTIAL/MISSING shape).
@@ -252,6 +265,8 @@ export function buildArtifactFromAtlas(
       (data.corpus_citations as CorpusCitation[] | undefined) ?? [],
     chart_specs: data.chart_specs as Chart[] | undefined,
     visual_blocks: data.visual_blocks as VisualBlock[] | undefined,
+    headline: data.headline as string | undefined,
+    gap_rows: data.gap_rows as ArtifactBlock["gap_rows"],
     confidence_tier: (data.confidence_tier as ConfidenceTier) ?? "Speculative",
     // Routing gaps from ATLAS evidence gap analysis (lane/provider/tool shape)
     routing_gaps: (data.evidence_gaps as AtlasRoutingGap[] | undefined) ?? [],

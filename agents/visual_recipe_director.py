@@ -29,7 +29,7 @@ _INTENT_PATTERNS: list[tuple[str, list[re.Pattern[str]]]] = [
         re.compile(r"\bvenn\b|\beuler\b", re.I),
     ]),
     ("flow_pathway", [
-        re.compile(r"\bflow\b|pathway|route.*through|channel|sankey|where.*fund|fund.*move|money.*go", re.I),
+        re.compile(r"\bflows?\b|pathway|route.*through|channel|sankey|where.*fund|fund.*move|money.*go", re.I),
         # "funding landscape", "funders backing X", "who funds Y" — all want a Sankey
         re.compile(r"fund.*landscape|landscape.*fund|\bfunders?\b|who.*fund|back.*resear", re.I),
     ]),
@@ -156,7 +156,7 @@ _BID_DECISION = re.compile(r"should.*\bbid\b|should.*we.*bid|\bbid.*on.*call|\bb
 
 _INVESTMENT_ASK = re.compile(
     r"five.case|investment brief|business case|strategic case|npv|stpr|public value|"
-    r"investment appraisal|economic case",
+    r"investment appraisal|economic case|make.*case for|build a case",
     re.I,
 )
 _CPC_EVIDENCE_REF = re.compile(
@@ -164,6 +164,18 @@ _CPC_EVIDENCE_REF = re.compile(
     r"using.*cpc|leverage.*cpc|draw on our|using our evidence",
     re.I,
 )
+
+# Decision 3 Rule B — comparison queries blend internal + external sources
+_COMPARISON_QUERY = re.compile(
+    r"\bcompar\b|\bversus\b|\bvs\.?\b|relative to|how does.*compare|compare.*to|"
+    r"compare.*with|compare.*against|sit relative|where does.*sit",
+    re.I,
+)
+
+
+def is_comparison_query(query: str) -> bool:
+    """True when query explicitly compares CPC to external landscape (Decision 3 Rule B)."""
+    return bool(_COMPARISON_QUERY.search(query))
 
 
 def select_recipe(query: str) -> str:
@@ -176,7 +188,7 @@ def select_recipe(query: str) -> str:
 
     # Defend/challenge queries → Defend mode regardless of inward/outward.
     if intent == "defend_challenge":
-        return "cpc_defend"
+        return "defend"
 
     # Funding flow: Sankey is the right primary visual regardless of inward/outward.
     # "Funding landscape" queries are always about flows, not Five Case structure.
@@ -184,9 +196,8 @@ def select_recipe(query: str) -> str:
         return "cpc_funding_flow"
 
     # Trade-off quadrant: in Atlas every bidding decision refers to CPC.
-    # Route to opportunity fit even without an explicit CPC mention.
     if intent == "trade_off_quadrant":
-        return "cpc_opportunity_fit"
+        return "cpc_opportunity_fit" if inward else "connect"
 
     # Explicit bid decision ("should CPC bid on X") → opportunity fit even when
     # the default inward routing would pick capability_assessment.
@@ -206,12 +217,25 @@ def select_recipe(query: str) -> str:
         # Default inward: capability assessment
         return "cpc_capability_assessment"
 
-    # Landscape / exploration queries → Orient surface, not investment brief
+    # --- Outward-facing modes (Decision 1 + 4) ---
+    # Act / Five Case ONLY on explicit investment language — never unprompted.
+    if _INVESTMENT_ASK.search(query):
+        return "act"
+
+    if intent == "evidence_coverage":
+        return "diagnose"
+
+    if intent == "market_alignment":
+        return "connect"
+
     if intent == "orient_explore":
         return "orient"
 
-    # Outward-facing (external investment appraisal) → always Five Case brief
-    return "brief_five_case"
+    if intent == "readiness_maturity":
+        return "connect"
+
+    # Decision 4: ambiguous outward queries default to Orient, not Five Case.
+    return "orient"
 
 
 def select_recipes(query: str) -> tuple[str, list[str]]:
@@ -229,13 +253,13 @@ def select_recipes(query: str) -> tuple[str, list[str]]:
     has_investment_ask = bool(_INVESTMENT_ASK.search(query))
     has_cpc_evidence_ref = bool(_CPC_EVIDENCE_REF.search(query))
 
-    if primary == "brief_five_case" and (has_cpc_evidence_ref or inward):
+    if primary == "act" and (has_cpc_evidence_ref or inward):
         # "Five Case for X using CPC evidence" → Five Case primary + capability readiness panel
         secondaries.append("cpc_capability_assessment")
 
     elif primary in ("cpc_capability_assessment", "cpc_opportunity_fit") and has_investment_ask:
         # "Is CPC ready to bid AND what's the public investment case?" → capability primary + five case panel
-        secondaries.append("brief_five_case")
+        secondaries.append("act")
 
     elif primary == "cpc_opportunity_fit" and not has_investment_ask:
         # Opportunity fit always benefits from showing evidence gaps alongside the quadrant
@@ -1025,12 +1049,12 @@ def build_visual_blocks(
         if bar:
             blocks.append(bar)
 
-    elif recipe_id in ("connect", "cpc_opportunity_fit", "cpc_market_alignment", "cpc_funding_flow"):
+    elif recipe_id in ("defend", "cpc_defend"):
         bar = _vb_evidence_bar(verified)
         if bar:
             blocks.append(bar)
 
-    elif recipe_id in ("defend", "cpc_defend"):
+    elif recipe_id in ("connect", "cpc_opportunity_fit", "cpc_market_alignment", "cpc_funding_flow"):
         bar = _vb_evidence_bar(verified)
         if bar:
             blocks.append(bar)

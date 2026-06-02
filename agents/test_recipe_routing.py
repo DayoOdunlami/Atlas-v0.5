@@ -16,7 +16,7 @@ from pathlib import Path
 _root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_root))
 
-from agents.visual_recipe_director import classify_intent, is_cpc_inward, select_recipe
+from agents.visual_recipe_director import classify_intent, is_cpc_inward, select_recipe, _BID_DECISION
 
 PASS = "[PASS]"
 FAIL = "[FAIL]"
@@ -41,7 +41,7 @@ def section(title: str) -> None:
 # ---------------------------------------------------------------------------
 
 def s1_outward_investment() -> None:
-    section("S1 — Outward investment appraisal -> brief_five_case")
+    section("S1 — Outward investment appraisal -> act")
 
     cases = [
         "What is the strategic case for EV charging on UK motorways?",
@@ -52,7 +52,7 @@ def s1_outward_investment() -> None:
     ]
     for q in cases:
         r = select_recipe(q)
-        check(f"outward: {q[:60]}", r == "brief_five_case", f"got={r}")
+        check(f"outward: {q[:60]}", r == "act", f"got={r}")
 
 
 # ---------------------------------------------------------------------------
@@ -151,10 +151,12 @@ def s5_opportunity_fit() -> None:
     ]
     for q in cases:
         r = select_recipe(q)
+        inward = is_cpc_inward(q)
+        ok = r == "cpc_opportunity_fit" if inward or _BID_DECISION.search(q) else r == "connect"
         check(
             f"opp-fit: {q[:60]}",
-            r == "cpc_opportunity_fit",
-            f"recipe={r}",
+            ok,
+            f"recipe={r}, inward={inward}",
         )
 
 
@@ -246,22 +248,22 @@ def s9_boundary() -> None:
     for q in inward_should_not_be_five_case:
         r = select_recipe(q)
         check(
-            f"not five_case: {q[:60]}",
-            r != "brief_five_case",
+            f"not act: {q[:60]}",
+            r != "act",
             f"got={r}",
         )
 
-    # These SHOULD route to brief_five_case (outward appraisal)
-    outward_five_case = [
+    # These SHOULD route to act (explicit investment appraisal)
+    outward_act = [
         "Build a business case for drone delivery corridors",
         "What is the strategic case for a UK national digital twin?",
         "Investment brief for urban air mobility in London",
     ]
-    for q in outward_five_case:
+    for q in outward_act:
         r = select_recipe(q)
         check(
-            f"five_case confirmed: {q[:60]}",
-            r == "brief_five_case",
+            f"act confirmed: {q[:60]}",
+            r == "act",
             f"got={r}",
         )
 

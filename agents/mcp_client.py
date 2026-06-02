@@ -305,6 +305,24 @@ def search_hive_evidence(query: str, limit: int = 10) -> dict[str, Any]:
 
 
 @tool
+def search_cpc_internal(query: str, limit: int = 10) -> dict[str, Any]:
+    """
+    Search CPC internal capability data: atlas.evidence_containers and atlas.claims.
+
+    Use for CPC-inward entity queries (Decision 3 Rule A).
+    Returns source_type cpc_internal / cpc_claim — label as 'CPC internal' in output.
+
+    Args:
+        query: Search query (e.g. 'autonomous systems capability', 'rail innovation')
+        limit: Max results per table (default 10)
+    """
+    containers = queries.search_cpc_evidence_containers(query, limit=min(int(limit), 15))
+    claims = queries.search_cpc_claims(query, limit=min(int(limit), 10))
+    combined = containers + claims
+    return {"results": combined, "coverage": evidence_coverage_summary(combined)}
+
+
+@tool
 def get_corpus_record(source_type: str, record_id: str) -> dict[str, Any]:
     """
     Fetch a full record by ID from the corpus. Only allowlisted source types.

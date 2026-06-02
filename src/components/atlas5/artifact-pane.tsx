@@ -42,6 +42,8 @@ import {
 import { TrustRail } from "@/components/atlas5/trust-rail";
 import { DecisionSpineCard } from "@/components/atlas5/decision-spine";
 import { BlocksView } from "@/components/atlas5/block-renderer";
+import { SurfaceHeadline } from "@/components/atlas5/recipes/surface-primitives";
+import type { VisualBlock } from "@/lib/atlas5/types";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -397,6 +399,7 @@ function RecipeView({
     switch (recipe) {
       // Five Case brief (ATLAS outward-facing investment appraisal only)
       case "brief_five_case":
+      case "act":
         return <BriefFiveCaseRecipe artifact={artifact} />;
       // Evidence panel (JARVIS / CICERONE / HYVE)
       case "evidence_panel":
@@ -410,9 +413,8 @@ function RecipeView({
         return <StatsDashboardRecipe artifact={artifact} />;
       case "scenario_stress_test":
         return <ScenarioStressTestRecipe artifact={artifact} />;
-      // ORIENT — landscape exploration, act, capability assessment, market alignment
+      // ORIENT — landscape exploration, capability assessment, market alignment
       case "orient":
-      case "act":
       case "cpc_capability_assessment":
       case "cpc_market_alignment":
         return <OrientSurface artifact={artifact} />;
@@ -433,18 +435,36 @@ function RecipeView({
 
   if (!surface) return null;
 
-  // If the agent emitted visual_blocks, render them above the surface
-  const hasVisualBlocks = artifact.visual_blocks && artifact.visual_blocks.length > 0;
+  const headlineText =
+    artifact.headline ||
+    decisionSpine?.decision ||
+    undefined;
+
+  const displayBlocks = artifact.visual_blocks ?? [];
+  const hasVisualBlocks = displayBlocks.length > 0;
 
   return (
     <div className="space-y-4" data-testid="recipe-view">
-      {decisionSpine && <DecisionSpineCard spine={decisionSpine} />}
-
-      {/* Art Director blocks — shown when Python emits visual_blocks[] */}
-      {hasVisualBlocks && (
-        <BlocksView blocks={artifact.visual_blocks!} />
+      {/* Principle 1 — headline first, always */}
+      {headlineText && (
+        <SurfaceHeadline
+          text={headlineText}
+          tier={artifact.confidence_tier}
+          label={recipe.replace(/_/g, " ")}
+        />
       )}
 
+      {/* Decision spine — only when no dedicated headline field */}
+      {decisionSpine && !artifact.headline && (
+        <DecisionSpineCard spine={decisionSpine} />
+      )}
+
+      {/* Dominant visuals — before surface body (Principle 1 waterfall) */}
+      {hasVisualBlocks && (
+        <BlocksView blocks={displayBlocks} />
+      )}
+
+      {/* Mode surface — primary prose sections + actions */}
       <div className={hasVisualBlocks ? "grid grid-cols-1 gap-4" : "grid grid-cols-1 lg:grid-cols-3 gap-4"}>
         <div className={hasVisualBlocks ? "rounded-xl border border-border bg-card overflow-hidden" : "lg:col-span-2 rounded-xl border border-border bg-card overflow-hidden"}>
           {surface}
@@ -456,14 +476,15 @@ function RecipeView({
         )}
       </div>
 
-      {/* Inline citations when visual_blocks are present (replaces TrustRail sidebar) */}
-      {hasVisualBlocks && artifact.corpus_citations && artifact.corpus_citations.length > 0 && (
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
-          <div className="px-3 py-2 border-b border-border bg-muted/20 flex items-center justify-between">
+      {/* Inline citations — collapsed strip last (Principle 1) */}
+      {artifact.corpus_citations && artifact.corpus_citations.length > 0 && (
+        <details className="rounded-xl border border-border bg-card overflow-hidden group">
+          <summary className="px-3 py-2 border-b border-border bg-muted/20 cursor-pointer list-none flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
               {artifact.corpus_citations.length} verified sources
             </span>
-          </div>
+            <span className="text-[10px] text-muted-foreground group-open:hidden">Show →</span>
+          </summary>
           <div className="divide-y divide-border/60">
             {artifact.corpus_citations.slice(0, 8).map((c) => (
               <div key={c.id} className="flex items-start gap-2.5 px-3 py-2">
@@ -479,7 +500,7 @@ function RecipeView({
               </div>
             ))}
           </div>
-        </div>
+        </details>
       )}
     </div>
   );

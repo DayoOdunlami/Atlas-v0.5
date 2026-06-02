@@ -62,6 +62,7 @@ from agents.mcp_client import (
     search_corpus_projects,
     search_corpus_live_calls,
     search_corpus_evidence,   # Corpus Recall Audit fix: knowledge_chunks were never queried
+    search_cpc_internal,      # Gap F: CPC internal evidence_containers + claims
     detect_evidence_gaps,     # Structured gap classification — retrieval/corpus/landscape
 )
 from agents.external_search import search_govuk, search_exa  # External Evidence Router
@@ -72,6 +73,7 @@ from agents.visual_recipe_director import (
     build_chart_specs as _build_chart_specs,
     build_visual_blocks as _build_visual_blocks,
     is_cpc_inward as _is_cpc_inward,
+    is_comparison_query as _is_comparison_query,
     classify_intent as _classify_intent_vrd,
     select_recipe as _select_recipe_vrd,
     select_recipes as _select_recipes_vrd,
@@ -89,7 +91,18 @@ def _load_data_viz_skill() -> dict[str, str] | None:
         pass
     return None
 
+def _load_surface_composition_skill() -> dict[str, str] | None:
+    """Read skills/surface-composition.md relative to repo root."""
+    try:
+        skills_path = _Path(__file__).resolve().parent.parent.parent / "skills" / "surface-composition.md"
+        if skills_path.exists():
+            return {"name": "surface-composition", "content": skills_path.read_text(encoding="utf-8")}
+    except Exception:
+        pass
+    return None
+
 _DATA_VIZ_SKILL: dict[str, str] | None = _load_data_viz_skill()
+_SURFACE_COMPOSITION_SKILL: dict[str, str] | None = _load_surface_composition_skill()
 
 # ---------------------------------------------------------------------------
 # Types
@@ -368,7 +381,29 @@ def select_recipe_intent(state: AtlasState) -> dict:
     if _DATA_VIZ_SKILL and not any(
         s.get("name") == "data-visualization" for s in existing_skills
     ):
-        ctx["active_skills"] = existing_skills + [_DATA_VIZ_SKILL]
+        existing_skills = existing_skills + [_DATA_VIZ_SKILL]
+    if _SURFACE_COMPOSITION_SKILL and not any(
+        s.get("name") == "surface-composition" for s in existing_skills
+    ):
+        existing_skills = existing_skills + [_SURFACE_COMPOSITION_SKILL]
+    ctx["active_skills"] = existing_skills
+
+    _BUILD_PATHS: dict[str, str] = {
+        "orient": "Orient terrain report",
+        "connect": "Connect opportunity routes",
+        "diagnose": "Diagnose gap & value translation",
+        "defend": "Defend challenge-readiness",
+        "act": "Green Book Five Case (Act)",
+        "brief_five_case": "Green Book Five Case (Act)",
+        "cpc_capability_assessment": "CPC capability assessment",
+        "cpc_evidence_gaps": "CPC evidence gaps",
+        "cpc_opportunity_fit": "CPC opportunity fit",
+        "cpc_market_alignment": "CPC market alignment",
+        "cpc_portfolio_comparison": "CPC portfolio comparison",
+        "cpc_funding_flow": "CPC funding flow",
+        "cpc_defend": "CPC defend",
+    }
+    build_path = _BUILD_PATHS.get(primary_recipe, f"Mode: {primary_recipe}")
 
     is_compound = len(secondary_recipes) > 0
     return {
@@ -382,8 +417,7 @@ def select_recipe_intent(state: AtlasState) -> dict:
                 f"Intent: '{intent}'. CPC-inward: {inward}. "
                 f"Primary recipe: '{primary_recipe}'. "
                 + (f"Secondary recipes: {secondary_recipes}. Composite artifact." if is_compound else "Single-recipe artifact.")
-                + f" Build path: "
-                f"{'CPC capability/evidence assessment' if inward else 'Green Book Five Case Model'}."
+                + f" Build path: {build_path}."
             ),
             "tool_calls": [],
             "status": "ok",
@@ -437,42 +471,65 @@ def search_corpus(state: AtlasState) -> AtlasState:
     tool_calls: list[dict[str, Any]] = []
     combined: list[dict[str, Any]] = []
 
-    # Tool call 1: corpus projects
-    try:
-        result = search_corpus_projects.invoke({"query": query, "limit": _MAX_CITATIONS})
-        projects = result.get("results", []) if isinstance(result, dict) else []
-        combined.extend(projects)
-        tool_calls.append({
-            "tool": "search_corpus_projects",
-            "args": {"query": query, "limit": _MAX_CITATIONS},
-            "result_count": len(projects),
-        })
-    except Exception as e:
-        tool_calls.append({
-            "tool": "search_corpus_projects",
-            "args": {"query": query},
-            "error": str(e),
-        })
-        state["error"] = f"search_corpus_projects error: {e}"
+    inward = state.get("is_cpc_inward", False)
+    comparison = _is_comparison_query(query)
+    cpc_internal_only = inward and not comparison
 
-    # Tool call 2: live funding calls
-    try:
-        live_result = search_corpus_live_calls.invoke(
-            {"query": query, "limit": 5, "open_only": False}
-        )
-        live = live_result.get("results", []) if isinstance(live_result, dict) else []
-        combined.extend(live)
-        tool_calls.append({
-            "tool": "search_corpus_live_calls",
-            "args": {"query": query, "limit": 5, "open_only": False},
-            "result_count": len(live),
-        })
-    except Exception as e:
-        tool_calls.append({
-            "tool": "search_corpus_live_calls",
-            "args": {"query": query},
-            "error": str(e),
-        })
+    # CPC internal retrieval (Decision 3 Rule A) — primary for entity queries
+    if inward or state.get("target_recipe", "").startswith("cpc_"):
+        try:
+            internal_result = search_cpc_internal.invoke({"query": query, "limit": _MAX_CITATIONS})
+            internal_items = internal_result.get("results", []) if isinstance(internal_result, dict) else []
+            combined.extend(internal_items)
+            tool_calls.append({
+                "tool": "search_cpc_internal",
+                "args": {"query": query, "limit": _MAX_CITATIONS},
+                "result_count": len(internal_items),
+            })
+        except Exception as e:
+            tool_calls.append({
+                "tool": "search_cpc_internal",
+                "args": {"query": query},
+                "error": str(e),
+            })
+
+    # External GtR corpus — skip as primary when CPC-internal-only (Rule A)
+    if not cpc_internal_only:
+        try:
+            result = search_corpus_projects.invoke({"query": query, "limit": _MAX_CITATIONS})
+            projects = result.get("results", []) if isinstance(result, dict) else []
+            combined.extend(projects)
+            tool_calls.append({
+                "tool": "search_corpus_projects",
+                "args": {"query": query, "limit": _MAX_CITATIONS},
+                "result_count": len(projects),
+            })
+        except Exception as e:
+            tool_calls.append({
+                "tool": "search_corpus_projects",
+                "args": {"query": query},
+                "error": str(e),
+            })
+            state["error"] = f"search_corpus_projects error: {e}"
+
+        # Tool call 2: live funding calls
+        try:
+            live_result = search_corpus_live_calls.invoke(
+                {"query": query, "limit": 5, "open_only": False}
+            )
+            live = live_result.get("results", []) if isinstance(live_result, dict) else []
+            combined.extend(live)
+            tool_calls.append({
+                "tool": "search_corpus_live_calls",
+                "args": {"query": query, "limit": 5, "open_only": False},
+                "result_count": len(live),
+            })
+        except Exception as e:
+            tool_calls.append({
+                "tool": "search_corpus_live_calls",
+                "args": {"query": query},
+                "error": str(e),
+            })
 
     # Tool call 3: policy / report evidence from atlas.knowledge_chunks
     # -----------------------------------------------------------------------
@@ -508,6 +565,8 @@ def search_corpus(state: AtlasState) -> AtlasState:
         evidence_passes.append((focused_claim, "focused"))
 
     for claim, pass_label in evidence_passes:
+        if cpc_internal_only:
+            break
         try:
             ev_result = search_corpus_evidence.invoke({"claim": claim, "limit": 5})
             ev_items = ev_result.get("results", []) if isinstance(ev_result, dict) else []
@@ -994,6 +1053,9 @@ Respond in JSON ONLY:
             content = content.split("```")[1].split("```")[0]
         parsed = json.loads(content.strip())
 
+        if parsed.get("headline"):
+            state["_headline"] = str(parsed.get("headline", "")).strip()  # type: ignore[attr-defined]
+
         raw_sections = parsed.get("sections", {})
         state["sections"] = raw_sections
         state["five_case_model"] = {}
@@ -1359,7 +1421,8 @@ Respond in JSON ONLY:
     "maturity": "stated"
   }},
   "confidence_tier": "Speculative|Indicative|Supported|Robust",
-  "analysis": "One-paragraph gap analysis summary: what the most critical gap is and why."
+  "analysis": "One-paragraph gap analysis summary: what the most critical gap is and why.",
+  "headline": "One-sentence verdict: the primary action recommendation in plain English (max 30 words). Required."
 }}"""
 
     try:
@@ -1374,6 +1437,9 @@ Respond in JSON ONLY:
         elif "```" in content:
             content = content.split("```")[1].split("```")[0]
         parsed = json.loads(content.strip())
+
+        if parsed.get("headline"):
+            state["_headline"] = str(parsed.get("headline", "")).strip()  # type: ignore[attr-defined]
 
         # Sections (8-section Diagnose report — no Five Case keys)
         raw_sections = parsed.get("sections", {})
@@ -1706,17 +1772,17 @@ def build_five_case(state: AtlasState) -> AtlasState:
     # Gap A fix (2026-06-01): target_recipe now drives output for all outward queries.
     # Previously target_recipe was set in select_recipe_intent but never read here.
     target_recipe = state.get("target_recipe", "brief_five_case")
-    if target_recipe == "cpc_evidence_gaps":
+    if target_recipe in ("cpc_evidence_gaps", "diagnose"):
         return _build_diagnose_report(state)   # Diagnose → Evidence Gap & Value Translation
-    elif target_recipe in ("cpc_capability_assessment", "cpc_market_alignment"):
+    elif target_recipe in ("cpc_capability_assessment", "cpc_market_alignment", "orient"):
         return _build_orient_report(state)     # Orient → terrain surfacing
     elif target_recipe in (
-        "cpc_opportunity_fit", "cpc_portfolio_comparison", "cpc_funding_flow"
+        "cpc_opportunity_fit", "cpc_portfolio_comparison", "cpc_funding_flow", "connect",
     ):
         return _build_connect_report(state)    # Connect → opportunity routes
-    elif target_recipe == "cpc_defend":
+    elif target_recipe in ("cpc_defend", "defend"):
         return _build_defend_report(state)     # Defend → challenge-readiness
-    # Act mode: brief_five_case (and unknown recipes) → Five Case path (falls through)
+    # Act mode: brief_five_case / act → Five Case path (falls through)
 
     ctx = state.get("context_packet", {})
     skills_text = "\n\n".join(
@@ -2189,6 +2255,53 @@ def _build_secondary_panel(
     return None
 
 
+def _extract_headline(state: AtlasState) -> str:
+    """One-sentence verdict for artifact waterfall (Principle 1)."""
+    parsed_headline = state.get("_headline")  # type: ignore[attr-defined]
+    if isinstance(parsed_headline, str) and parsed_headline.strip():
+        return parsed_headline.strip()[:320]
+
+    spine = state.get("decision_spine") or {}
+    decision = str(spine.get("decision") or "").strip()
+    if decision and not decision.startswith("["):
+        return decision[:320]
+
+    sections = state.get("sections") or {}
+    for key in ("Headline", "Verdict", "Recommended Next Move", "Entity Summary", "Landscape Overview"):
+        val = sections.get(key, "")
+        if val and not str(val).startswith("["):
+            first_line = str(val).strip().split("\n")[0].strip()
+            if len(first_line) > 24:
+                return first_line[:320]
+
+    analysis = str(state.get("analysis") or "").strip()
+    if analysis and len(analysis) > 24:
+        first_sent = analysis.split(".")[0].strip()
+        if len(first_sent) > 24:
+            return first_sent + "."
+
+    return ""
+
+
+def _build_gap_rows(state: AtlasState) -> list[dict[str, Any]]:
+    """Structured gap rows for Diagnose surface + gap_matrix block."""
+    rows: list[dict[str, Any]] = []
+    for g in (state.get("evidence_gaps") or [])[:8]:
+        if not isinstance(g, dict):
+            continue
+        severity = str(g.get("severity", "medium")).lower()
+        fit = "Gap" if severity == "high" else "Partial" if severity == "medium" else "Met"
+        rows.append({
+            "criterion": g.get("area") or g.get("topic") or "Unknown",
+            "response": g.get("description") or g.get("reason") or "",
+            "claim_state": "unknown" if severity == "high" else "inferred",
+            "fit": fit,
+            "evidence_strength": "None" if severity == "high" else "Weak",
+            "action": g.get("recommended_action") or "",
+        })
+    return rows
+
+
 def verify_citations(state: AtlasState) -> AtlasState:
     """
     Node 3: Verify every corpus_citation.id against atlas.projects.
@@ -2197,12 +2310,29 @@ def verify_citations(state: AtlasState) -> AtlasState:
     """
     verified: list[CorpusCitation] = []
     verification_log: list[dict] = []
+    raw_ids = {
+        str(r.get("id")) for r in state.get("raw_search_results", [])
+        if r.get("id")
+    }
 
     for citation in state["corpus_citations"]:
         cid = citation.get("id", "")
         if not cid:
             continue
         try:
+            if citation.get("source_type") in ("cpc_internal", "cpc_claim") and cid in raw_ids:
+                verified.append({
+                    "id": cid,
+                    "title": citation.get("title", ""),
+                    "organisation": citation.get("organisation", "Connected Places Catapult"),
+                    "relevance_note": citation.get("relevance_note", ""),
+                    "score": citation.get("score", 0.0),
+                    "claim_state": citation.get("claim_state", "stated"),
+                    "source_type": citation.get("source_type"),
+                })
+                verification_log.append({"id": cid, "verified": True, "source": "cpc_internal"})
+                continue
+
             project = _verify_project(cid)
             if project:
                 verified.append({
@@ -2272,6 +2402,8 @@ def verify_citations(state: AtlasState) -> AtlasState:
     artifact_block: dict[str, Any] = {
         "type": "brief",
         "recipe": recipe_id,
+        "headline": _extract_headline(state),
+        "gap_rows": _build_gap_rows(state),
         "confidence_tier": tier,
         "sections": state.get("sections", {}),
         "corpus_citations": [

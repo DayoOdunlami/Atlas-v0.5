@@ -44,6 +44,19 @@ interface GapRow {
 }
 
 function parseGapRows(artifact: ArtifactBlock): GapRow[] {
+  // Prefer structured gap_rows from verify_citations
+  const structured = artifact.gap_rows;
+  if (structured && structured.length > 0) {
+    return structured.map((r) => ({
+      criterion: r.criterion,
+      response: r.response,
+      claim_state: r.claim_state,
+      fit: r.fit as GapRow["fit"],
+      evidence_strength: r.evidence_strength as GapRow["evidence_strength"],
+      action: r.action,
+    }));
+  }
+
   // Use cpc_gaps if the agent returned them
   const cpcGaps = (artifact as unknown as Record<string, unknown>).cpc_gaps as Array<{
     area: string; severity: string; description: string; claim_count?: number;
@@ -134,11 +147,11 @@ function CriticalGaps({ rows }: { rows: GapRow[] }) {
   return (
     <div className="space-y-2" data-testid="diagnose-critical-gaps">
       {gaps.map((g, i) => (
-        <div key={i} className="rounded-lg border border-red-200/60 dark:border-red-900/50 bg-red-50/30 dark:bg-red-950/20 p-3">
+        <div key={i} className="rounded-lg border border-amber-200/60 dark:border-amber-900/50 bg-amber-50/20 dark:bg-amber-950/10 p-3">
           <div className="flex items-start gap-2">
-            <AlertTriangle className="size-3.5 text-red-500 shrink-0 mt-0.5" />
+            <AlertTriangle className="size-3.5 text-amber-600 shrink-0 mt-0.5" />
             <div>
-              <p className="text-xs font-semibold text-red-700 dark:text-red-300 mb-0.5">{g.criterion}</p>
+              <p className="text-xs font-semibold text-foreground mb-0.5">{g.criterion}</p>
               <p className="text-xs text-muted-foreground">{g.response}</p>
               {g.action && (
                 <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1">
@@ -282,12 +295,14 @@ export function DiagnoseSurface({ artifact }: { artifact: ArtifactBlock }) {
   const styles    = getConfidenceStyles(artifact.confidence_tier);
   const gapRows   = parseGapRows(artifact);
   const frictionTags = ((artifact as unknown as Record<string, unknown>).entry_friction_tags as string[]) ?? [];
+  const hasBlockGapMatrix = artifact.visual_blocks?.some((b) => b.type === "gap_matrix");
 
   const headlineText =
-    sections["Headline"] ??
-    sections["Verdict"] ??
-    artifact.analysis ??
-    "Diagnose surface — gap analysis in progress.";
+    artifact.headline ||
+    sections["Headline"] ||
+    sections["Verdict"] ||
+    artifact.analysis ||
+    "";
 
   // Extra sections to show as accordion (excluding known structured ones)
   const KNOWN_SECTIONS = new Set([
@@ -317,19 +332,21 @@ export function DiagnoseSurface({ artifact }: { artifact: ArtifactBlock }) {
 
       <div className="p-4 space-y-4">
 
-        {/* 1. Bold verdict */}
-        <SurfaceHeadline
-          text={headlineText}
-          tier={artifact.confidence_tier}
-          label="gap analysis"
-        />
+        {/* 1. Bold verdict — headline rendered at RecipeView level when set; repeat only if local */}
+        {headlineText && !artifact.headline && (
+          <SurfaceHeadline
+            text={headlineText}
+            tier={artifact.confidence_tier}
+            label="gap analysis"
+          />
+        )}
 
-        {/* 2. Gap matrix */}
-        {gapRows.length > 0 && (
+        {/* 2. Gap matrix — skip when art director block already shown */}
+        {gapRows.length > 0 && !hasBlockGapMatrix && (
           <SurfaceSection
             title="Gap matrix"
             preview={`${gapRows.filter((r) => r.fit === "Gap").length} gaps · ${gapRows.filter((r) => r.fit === "Met").length} met · ${gapRows.filter((r) => r.fit === "Partial").length} partial`}
-            defaultOpen
+            defaultOpen={false}
             testId="diagnose-gap-section"
           >
             <GapMatrix rows={gapRows} />
@@ -340,7 +357,7 @@ export function DiagnoseSurface({ artifact }: { artifact: ArtifactBlock }) {
         {gapRows.some((r) => r.fit === "Gap") && (
           <SurfaceSection
             title="Evidence gaps — what's missing and why it matters"
-            defaultOpen
+            defaultOpen={false}
             testId="diagnose-critical-section"
           >
             <CriticalGaps rows={gapRows} />
@@ -365,11 +382,12 @@ export function DiagnoseSurface({ artifact }: { artifact: ArtifactBlock }) {
           </SurfaceSection>
         )}
 
-        {/* 6. Evidence strip */}
+        {/* 6. Evidence strip — collapsed; full list at RecipeView level */}
         {citations.length > 0 && (
           <SurfaceSection
             title={`${citations.length} verified sources`}
             preview={`${citations.filter((c) => c.claim_state === "stated").length} stated · ${citations.filter((c) => c.claim_state === "inferred").length} inferred`}
+            defaultOpen={false}
             testId="diagnose-evidence-section"
           >
             <div className="divide-y divide-border">
