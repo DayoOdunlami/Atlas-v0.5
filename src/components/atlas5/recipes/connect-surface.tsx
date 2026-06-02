@@ -14,6 +14,11 @@ import type { ArtifactBlock } from "@/lib/atlas5/artifact-store";
 import { cn } from "@/lib/utils";
 import { getConfidenceStyles } from "@/lib/atlas5/confidence-styles";
 import { ClaimStateBadge } from "@/components/atlas5/claim-state-badge";
+import {
+  SurfaceHeadline,
+  EvidenceCountStrip,
+  TIER_BADGE,
+} from "./surface-primitives";
 import { ArrowRight } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -61,31 +66,6 @@ const FRICTION_LABELS: Record<string, string> = {
   international_consortium:     "Intl. consortium",
   eligibility_uncertain:        "Eligibility ?",
 };
-
-// ---------------------------------------------------------------------------
-// Headline
-// ---------------------------------------------------------------------------
-
-function ConnectHeadline({
-  opportunityCount,
-  headline,
-  styles,
-}: {
-  opportunityCount: number;
-  headline?: string;
-  styles: ReturnType<typeof getConfidenceStyles>;
-}) {
-  return (
-    <div
-      data-testid="connect-headline-card"
-      className={cn("rounded-lg border p-3.5 bg-muted/20", styles.border)}
-    >
-      <p className={cn("text-sm font-semibold leading-snug", styles.headline)}>
-        {headline ?? `${opportunityCount} opportunity route${opportunityCount !== 1 ? "s" : ""} worth exploring`}
-      </p>
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Opportunity card
@@ -241,6 +221,7 @@ interface Props {
 
 export function ConnectSurface({ artifact }: Props) {
   const sections = artifact.sections ?? {};
+  const citations = artifact.corpus_citations ?? [];
   const styles = getConfidenceStyles(artifact.confidence_tier);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -262,27 +243,27 @@ export function ConnectSurface({ artifact }: Props) {
       data-testid="recipe-connect"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/20">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/20">
         <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Opportunities — CONNECT
+          Connect
         </span>
-        <span
-          data-testid="confidence-tier-badge"
-          className={cn(
-            "text-xs font-semibold px-2.5 py-0.5 rounded-full border",
-            styles.badge,
-          )}
-        >
-          {artifact.confidence_tier}
-        </span>
+        <div className="flex items-center gap-2">
+          <EvidenceCountStrip citations={citations} />
+          <span
+            data-testid="confidence-tier-badge"
+            className={cn("text-xs font-semibold px-2.5 py-0.5 rounded-full border", TIER_BADGE[artifact.confidence_tier])}
+          >
+            {artifact.confidence_tier}
+          </span>
+        </div>
       </div>
 
       <div className="p-4 space-y-4">
-        {/* 1. Headline */}
-        <ConnectHeadline
-          opportunityCount={opportunities.length}
-          headline={headlineText}
-          styles={styles}
+        {/* 1. Headline — answer first */}
+        <SurfaceHeadline
+          text={headlineText ?? `${opportunities.length} opportunity route${opportunities.length !== 1 ? "s" : ""} worth exploring`}
+          tier={artifact.confidence_tier}
+          label="opportunity fit"
         />
 
         {/* 2. Opportunity cards */}

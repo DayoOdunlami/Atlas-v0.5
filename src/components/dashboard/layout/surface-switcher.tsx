@@ -112,6 +112,13 @@ export function SurfaceSwitcher({ state, setState }: SurfaceSwitcherProps) {
             Corpus
           </button>
           <AgentStatusDot />
+          <a
+            href="/dev"
+            title="Developer control panel — service terminals"
+            className="px-2 py-0.5 rounded text-[11px] font-mono text-zinc-500 border border-zinc-700 hover:text-zinc-300 hover:border-zinc-500 transition-colors"
+          >
+            dev
+          </a>
         </span>
       </div>
 

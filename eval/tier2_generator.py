@@ -83,7 +83,7 @@ MIN_CRITERION_SCORE = 2  # each criterion must score >= 2
 
 #: Pass threshold: at least this many graders must pass (skipped graders
 #  are excluded from the denominator, so 4/5 → 4/4 if one is skipped).
-GOLDEN_PASS_THRESHOLD = 4
+GOLDEN_PASS_THRESHOLD = 7
 
 GOLDEN_QUERIES = [
     {

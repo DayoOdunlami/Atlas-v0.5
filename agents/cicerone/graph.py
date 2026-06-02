@@ -33,7 +33,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
 
-from agents.mcp_client import search_projects
+from agents.mcp_client import search_corpus_projects
 from mcps.cpc_corpus.queries import get_project as _verify_project
 # Shared base utilities — use these for extraction and intent, never re-implement
 from agents.base import make_extract_query_node, make_classify_intent_node
@@ -153,7 +153,7 @@ def search_corpus(state: CiceroneState) -> CiceroneState:
         combined_query = f"{query} {target}"
 
     try:
-        results = search_projects.invoke({"query": combined_query, "limit": _MAX_RESULTS})
+        results = search_corpus_projects.invoke({"query": combined_query, "limit": _MAX_RESULTS})
         state["raw_search_results"] = results if isinstance(results, list) else []
     except Exception as e:
         state["raw_search_results"] = []
@@ -384,9 +384,9 @@ def build_cicerone_graph() -> StateGraph:
     graph.add_edge("assess_transferability", "verify_citations")
     graph.add_edge("verify_citations", END)
 
-    # MemorySaver required for AG-UI state snapshots (aget_state() calls).
-    # Swap for PostgresSaver in production.
-    return graph.compile(checkpointer=MemorySaver())
+    import sys as _sys
+    _checkpointer = None if "langgraph_api" in _sys.modules else MemorySaver()
+    return graph.compile(checkpointer=_checkpointer)
 
 
 cicerone_graph = build_cicerone_graph()

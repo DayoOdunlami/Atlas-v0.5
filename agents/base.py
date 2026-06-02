@@ -141,6 +141,12 @@ _META_PHRASES: frozenset[str] = frozenset({
     "help", "help me", "whats your name", "what's your name",
     "tell me about yourself", "how do you work", "how does this work",
     "what is this", "what is atlas",
+    # Complaint / confusion phrases — these are about the agent, not a domain query
+    "why are you not", "why aren't you", "why wont you", "why won't you",
+    "i dont understand", "i don't understand", "i don't get it", "i dont get it",
+    "not responding", "not answering", "not working",
+    "what are you doing", "what is happening", "whats happening",
+    "are you broken", "are you working",
 })
 
 

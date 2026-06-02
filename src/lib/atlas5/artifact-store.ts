@@ -45,7 +45,10 @@ import type {
   HiveCitation,
   RecommendationAction,
   RecipeType,
+  VisualBlock,
 } from "./types";
+
+export type { VisualBlock };
 
 // ---------------------------------------------------------------------------
 // Types
@@ -84,6 +87,11 @@ export interface ArtifactBlock {
   // Distinct from workspace charts on AgentState.charts.
   chart_specs?: Chart[];
 
+  // ── Visual blocks (art director output — supersedes chart_specs) ────────
+  // Emitted by build_visual_blocks() in verify_citations.
+  // Rendered by BlockRenderer; falls back to chart_specs if absent.
+  visual_blocks?: VisualBlock[];
+
   // ── ATLAS evidence routing gaps ────────────────────────────────────────
   // Structured gaps from detect_evidence_gaps() + LLM domain analysis.
   // Uses the lane/provider/tool shape (NOT the CICERONE HAVE/PARTIAL/MISSING shape).
@@ -108,6 +116,10 @@ export interface ArtifactBlock {
   recommendation_action?: RecommendationAction;
   recommendation_rationale?: string;
 
+  // ── Defend mode ────────────────────────────────────────────────────────
+  // entry_friction_tags from Diagnose mode (cpc_evidence_gaps recipe)
+  entry_friction_tags?: string[];
+
   // ── Common ─────────────────────────────────────────────────────────────
   confidence_tier: ConfidenceTier;
   analysis?: string;
@@ -123,15 +135,34 @@ export interface ArtifactBlock {
 // Store
 // ---------------------------------------------------------------------------
 
+export interface ReasoningStep {
+  node?: string;
+  thought: string;
+  evidence_count?: number;
+}
+
 interface ArtifactState {
   artifact: ArtifactBlock | null;
   decisionSpine: DecisionSpine | null;
   evidenceCoverage: EvidenceCoverage | null;
   isLoading: boolean;
+  statusText: string | undefined;
+  /** Live reasoning trace — steps append as each LangGraph node completes. */
+  reasoningTrace: ReasoningStep[];
   setArtifact: (block: ArtifactBlock) => void;
+  /**
+   * Set a partial (mid-run) artifact — does NOT clear isLoading or statusText.
+   * Use for intermediate state from build_five_case before verify_citations runs.
+   */
+  setPartialArtifact: (block: ArtifactBlock) => void;
   setDecisionSpine: (spine: DecisionSpine) => void;
   setEvidenceCoverage: (coverage: EvidenceCoverage) => void;
   setLoading: (loading: boolean) => void;
+  /** Clear the loading/thinking state without touching the artifact itself. */
+  clearLoading: () => void;
+  setStatusText: (text: string | undefined) => void;
+  setReasoningTrace: (trace: ReasoningStep[]) => void;
+  startRun: () => void;
   clearArtifact: () => void;
 }
 
@@ -140,16 +171,25 @@ export const useArtifactStore = create<ArtifactState>((set) => ({
   decisionSpine: null,
   evidenceCoverage: null,
   isLoading: false,
-  setArtifact: (block) => set({ artifact: block, isLoading: false }),
+  statusText: undefined,
+  reasoningTrace: [],
+  setArtifact: (block) => set({ artifact: block, isLoading: false, statusText: undefined }),
+  setPartialArtifact: (block) => set({ artifact: block }), // keeps isLoading + statusText + reasoningTrace
   setDecisionSpine: (spine) => set({ decisionSpine: spine }),
   setEvidenceCoverage: (coverage) => set({ evidenceCoverage: coverage }),
   setLoading: (loading) => set({ isLoading: loading }),
+  clearLoading: () => set({ isLoading: false, statusText: undefined, reasoningTrace: [] }),
+  setStatusText: (text) => set({ statusText: text }),
+  setReasoningTrace: (trace) => set({ reasoningTrace: trace }),
+  startRun: () => set({ artifact: null, decisionSpine: null, evidenceCoverage: null, isLoading: true, statusText: undefined, reasoningTrace: [] }),
   clearArtifact: () =>
     set({
       artifact: null,
       decisionSpine: null,
       evidenceCoverage: null,
       isLoading: false,
+      statusText: undefined,
+      reasoningTrace: [],
     }),
 }));
 
@@ -183,7 +223,20 @@ export function buildArtifactFromAtlas(
   data: Record<string, unknown>,
 ): ArtifactBlock {
   const recipe = data.recipe as RecipeType | undefined;
-  return {
+
+  // Bridge Defend mode claims[] to the shape DefendSurface reads (defend_evidence[])
+  type RawClaim = { text?: string; state?: string; confidence_tier?: string; source?: string };
+  const rawClaims = (data.claims as RawClaim[] | undefined) ?? [];
+  const defendEvidence = rawClaims.length > 0
+    ? rawClaims.map((c, i) => ({
+        id: String(i),
+        claim: c.text ?? "",
+        claim_state: (c.state ?? "inferred") as import("./types").ClaimState,
+        source: c.source ?? "",
+      }))
+    : undefined;
+
+  const block: ArtifactBlock = {
     type: typeFromRecipe(recipe, "brief"),
     recipe,
     // Prefer title-case sections (run_atlas "sections" field) over legacy lowercase
@@ -198,15 +251,25 @@ export function buildArtifactFromAtlas(
     corpus_citations:
       (data.corpus_citations as CorpusCitation[] | undefined) ?? [],
     chart_specs: data.chart_specs as Chart[] | undefined,
+    visual_blocks: data.visual_blocks as VisualBlock[] | undefined,
     confidence_tier: (data.confidence_tier as ConfidenceTier) ?? "Speculative",
     // Routing gaps from ATLAS evidence gap analysis (lane/provider/tool shape)
     routing_gaps: (data.evidence_gaps as AtlasRoutingGap[] | undefined) ?? [],
     // External citations (populated by Commit 2 external evidence router)
     external_citations:
       (data.external_citations as ExternalCitation[] | undefined) ?? [],
+    // Diagnose mode (cpc_evidence_gaps)
+    entry_friction_tags: data.entry_friction_tags as string[] | undefined,
     agent: "ATLAS",
     timestamp: new Date().toISOString(),
   };
+
+  // Attach bridged defend_evidence via dynamic property (read by DefendSurface via `as any`)
+  if (defendEvidence) {
+    (block as unknown as Record<string, unknown>).defend_evidence = defendEvidence;
+  }
+
+  return block;
 }
 
 export function buildArtifactFromJarvis(

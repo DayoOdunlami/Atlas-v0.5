@@ -202,7 +202,12 @@ export type RecipeType =
   | "cpc_market_alignment"
   | "cpc_evidence_gaps"
   | "cpc_opportunity_fit"
-  | "cpc_funding_flow";
+  | "cpc_funding_flow"
+  | "orient"
+  | "connect"
+  | "diagnose"
+  | "act"
+  | "defend";
 
 // ── CPC Capability Intelligence types ────────────────────────────────────────
 

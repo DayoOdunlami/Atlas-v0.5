@@ -1,17 +1,54 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState, useCallback } from "react";
 import { CopilotKitCSSProperties } from "@copilotkit/react-ui";
 import { LabChat } from "@/components/lab/lab-chat";
 import { MobileChat } from "@/components/chat/mobile-chat";
 import { MainLayout } from "@/components/dashboard/dashboard";
 import { useIsMobile } from "@/lib/isMobile";
 import type { PanelId } from "@/components/lab/chat-panels/panel-switcher";
+import {
+  Panel,
+  PanelGroup,
+  PanelResizeHandle,
+  type ImperativePanelHandle,
+} from "react-resizable-panels";
+import {
+  PanelRightClose,
+  PanelRightOpen,
+} from "lucide-react";
 
 const ALL_PANELS: PanelId[] = ["A", "B", "C", "D"];
 
+// ---------------------------------------------------------------------------
+// Collapse handle for the artifact divider
+// ---------------------------------------------------------------------------
+
+function ArtifactHandle({
+  onToggle,
+  collapsed,
+}: {
+  onToggle: () => void;
+  collapsed: boolean;
+}) {
+  const Icon = collapsed ? PanelRightOpen : PanelRightClose;
+  return (
+    <PanelResizeHandle className="group relative flex w-px items-center justify-center bg-border transition-colors hover:bg-border/80 data-[resize-handle-active]:bg-primary/30">
+      <button
+        onClick={onToggle}
+        className="absolute z-10 flex size-5 items-center justify-center rounded-full border bg-background text-muted-foreground shadow-sm opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground"
+        title={collapsed ? "Show artifact" : "Hide artifact"}
+      >
+        <Icon className="size-3" />
+      </button>
+    </PanelResizeHandle>
+  );
+}
+
 export default function CopilotKitPage() {
   const isMobile = useIsMobile();
+  const artifactRef = useRef<ImperativePanelHandle>(null);
+  const [artifactCollapsed, setArtifactCollapsed] = useState(false);
 
   // Any combination of panels can be active. Default: D only (Atlas Custom with CoT).
   const [selectedPanels, setSelectedPanels] = useState<Set<PanelId>>(
@@ -32,35 +69,53 @@ export default function CopilotKitPage() {
 
   const handleSelectAll = () => setSelectedPanels(new Set(ALL_PANELS));
 
-  // Chat area grows with panel count; artifact stays at flex-[2].
-  const panelFlex = selectedPanels.size;
+  const toggleArtifact = useCallback(() => {
+    const panel = artifactRef.current;
+    if (!panel) return;
+    if (panel.isCollapsed()) panel.expand(); else panel.collapse();
+  }, []);
 
   return (
     <main
       style={
         { "--copilot-kit-primary-color": "#6366f1" } as CopilotKitCSSProperties
       }
-      className="h-screen overflow-hidden bg-background text-foreground antialiased flex flex-row"
+      className="h-screen overflow-hidden bg-background text-foreground antialiased"
     >
       {isMobile ? (
         <MobileChat />
       ) : (
-        <LabChat
-          className="min-h-0"
-          style={{ flex: panelFlex }}
-          selectedPanels={selectedPanels}
-          onToggle={handleToggle}
-          onSelectAll={handleSelectAll}
-        />
-      )}
+        <PanelGroup direction="horizontal" className="h-full">
+          {/* Col 1: chat panels */}
+          <Panel minSize={30} defaultSize={58} className="min-w-0 min-h-0">
+            <LabChat
+              className="h-full"
+              selectedPanels={selectedPanels}
+              onToggle={handleToggle}
+              onSelectAll={handleSelectAll}
+            />
+          </Panel>
 
-      {/* Artifact / dashboard pane — always visible, takes flex-2 */}
-      <div
-        className="overflow-y-auto max-h-screen border-l"
-        style={{ flex: 2, minWidth: 380 }}
-      >
-        <MainLayout className="w-full" />
-      </div>
+          <ArtifactHandle
+            onToggle={toggleArtifact}
+            collapsed={artifactCollapsed}
+          />
+
+          {/* Col 2: artifact / dashboard — collapsible */}
+          <Panel
+            ref={artifactRef}
+            defaultSize={42}
+            minSize={24}
+            collapsible
+            collapsedSize={0}
+            onCollapse={() => setArtifactCollapsed(true)}
+            onExpand={() => setArtifactCollapsed(false)}
+            className="border-l overflow-hidden"
+          >
+            <MainLayout className="h-full" />
+          </Panel>
+        </PanelGroup>
+      )}
     </main>
   );
 }

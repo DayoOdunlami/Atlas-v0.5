@@ -68,6 +68,28 @@ from agents.external_search import search_govuk, search_exa  # External Evidence
 from mcps.cpc_corpus.queries import get_project as _verify_project
 # Shared base utilities — use these for extraction and intent, never re-implement
 from agents.base import extract_latest_query, is_conversational
+from agents.visual_recipe_director import (
+    build_chart_specs as _build_chart_specs,
+    build_visual_blocks as _build_visual_blocks,
+    is_cpc_inward as _is_cpc_inward,
+    classify_intent as _classify_intent_vrd,
+    select_recipe as _select_recipe_vrd,
+    select_recipes as _select_recipes_vrd,
+)
+from pathlib import Path as _Path
+
+# Load data-visualization skill once at module level
+def _load_data_viz_skill() -> dict[str, str] | None:
+    """Read skills/data-visualization.md relative to repo root."""
+    try:
+        skills_path = _Path(__file__).resolve().parent.parent.parent / "skills" / "data-visualization.md"
+        if skills_path.exists():
+            return {"name": "data-visualization", "content": skills_path.read_text(encoding="utf-8")}
+    except Exception:
+        pass
+    return None
+
+_DATA_VIZ_SKILL: dict[str, str] | None = _load_data_viz_skill()
 
 # ---------------------------------------------------------------------------
 # Types
@@ -208,6 +230,11 @@ class AtlasState(TypedDict):
     charts: list[dict[str, Any]]             # synced to AgentState.charts → renders Charts component
     error: str | None
     _is_conversational: bool                 # True → skip expensive pipeline, respond instantly
+    # Recipe intent (set by select_recipe_intent, consumed by build_five_case + verify_citations)
+    is_cpc_inward: bool                      # True = CPC capability/evidence query (inward-facing)
+    target_recipe: str                       # primary recipe ID selected before corpus search
+    target_secondary_recipes: list[str]      # secondary recipe IDs for composite artifact panels
+    section_scores: dict[str, int]           # LLM self-assessed evidence strength per Five Case section
 
 
 # ---------------------------------------------------------------------------
@@ -216,9 +243,26 @@ class AtlasState(TypedDict):
 
 _MAX_CITATIONS = 8
 
+# Confidence tier ordering — module scope so CICERONE and future routing nodes
+# can import and use _cap_tier without depending on build_five_case internals.
+_TIER_ORDER = ["Speculative", "Indicative", "Supported", "Robust"]
+
+
+def _cap_tier(current: str, max_allowed: str) -> str:
+    """Cap confidence tier at max_allowed. Both args must be valid tier strings."""
+    ci = _TIER_ORDER.index(current) if current in _TIER_ORDER else 0
+    mi = _TIER_ORDER.index(max_allowed) if max_allowed in _TIER_ORDER else 0
+    return _TIER_ORDER[min(ci, mi)]
+
 
 def _llm():
     return _get_llm(max_tokens=8192)
+
+
+def _llm_internal():
+    """Non-streaming LLM for nodes that produce JSON (build_five_case, cpc_inward).
+    LangGraph's messages-tuple streaming would otherwise leak raw JSON into the chat."""
+    return _get_llm(max_tokens=8192, streaming=False)
 
 
 def _normalise_sections(raw: dict) -> tuple[dict[str, str], dict[str, str]]:
@@ -296,7 +340,92 @@ def classify_intent(state: AtlasState) -> dict:
 
 def _route_after_intent(state: AtlasState) -> str:
     """Conditional edge: skip pipeline for conversational queries."""
-    return END if state.get("_is_conversational") else "search_corpus"
+    return END if state.get("_is_conversational") else "select_recipe_intent"
+
+
+def select_recipe_intent(state: AtlasState) -> dict:
+    """
+    Node 0c: Classify query intent and select target recipe(s) BEFORE corpus search.
+
+    Runs while corpus is still empty — intent is purely query-based (fast regex).
+    Sets is_cpc_inward, target_recipe, and target_secondary_recipes so that:
+    - build_five_case dispatches to the right LLM prompt
+    - select_visual_recipe / verify_citations use the right chart families
+    - verify_citations builds composite panels for compound queries
+
+    This is the single authoritative source of recipe selection; verify_citations
+    reads state["target_recipe"] rather than re-classifying from the query.
+    """
+    query = state.get("query", "")
+    inward = _is_cpc_inward(query)
+    intent = _classify_intent_vrd(query)
+    primary_recipe, secondary_recipes = _select_recipes_vrd(query)
+
+    # Inject data-visualization skill so every content-generation LLM call
+    # has art-director guidance in context — loaded once at module level.
+    ctx = dict(state.get("context_packet") or {})
+    existing_skills: list[dict] = list(ctx.get("active_skills") or [])
+    if _DATA_VIZ_SKILL and not any(
+        s.get("name") == "data-visualization" for s in existing_skills
+    ):
+        ctx["active_skills"] = existing_skills + [_DATA_VIZ_SKILL]
+
+    is_compound = len(secondary_recipes) > 0
+    return {
+        "context_packet": ctx,
+        "is_cpc_inward": inward,
+        "target_recipe": primary_recipe,
+        "target_secondary_recipes": secondary_recipes,
+        "reasoning_trace": state.get("reasoning_trace", []) + [{
+            "node": "select_recipe_intent",
+            "thought": (
+                f"Intent: '{intent}'. CPC-inward: {inward}. "
+                f"Primary recipe: '{primary_recipe}'. "
+                + (f"Secondary recipes: {secondary_recipes}. Composite artifact." if is_compound else "Single-recipe artifact.")
+                + f" Build path: "
+                f"{'CPC capability/evidence assessment' if inward else 'Green Book Five Case Model'}."
+            ),
+            "tool_calls": [],
+            "status": "ok",
+        }],
+    }
+
+
+def select_visual_recipe(state: AtlasState) -> dict:
+    """
+    Node 2b: Record visual recipe decision in reasoning_trace after LLM build.
+
+    Runs AFTER build_five_case so we have full context (confidence tier, NPV,
+    section count) to explain WHY this recipe was chosen. The recipe itself was
+    already selected in select_recipe_intent; this node makes that decision
+    auditable and surfaceable in Panel D without changing it.
+    """
+    recipe = state.get("target_recipe", "brief_five_case")
+    tier = state.get("confidence_tier", "Speculative")
+    npv = state.get("npv_value")
+    inward = state.get("is_cpc_inward", False)
+    sections = state.get("sections", {})
+    n_sections = sum(
+        1 for v in sections.values()
+        if v and not str(v).startswith("[")
+    )
+
+    thought = (
+        f"Visual recipe confirmed: '{recipe}'. "
+        f"Query path: {'CPC-inward' if inward else 'outward Five Case'}. "
+        f"Confidence: {tier}. "
+        + (f"NPV: £{round(float(npv) / 1_000_000, 1)}m. " if npv else "No NPV. ")
+        + f"{n_sections}/5 sections populated."
+    )
+
+    return {
+        "reasoning_trace": state.get("reasoning_trace", []) + [{
+            "node": "select_visual_recipe",
+            "thought": thought,
+            "tool_calls": [],
+            "status": "ok",
+        }],
+    }
 
 
 def search_corpus(state: AtlasState) -> AtlasState:
@@ -553,6 +682,1009 @@ def external_evidence_search(state: AtlasState) -> AtlasState:
     return state
 
 
+def _build_cpc_inward_assessment(state: AtlasState) -> AtlasState:
+    """
+    CPC-inward LLM path — generates capability/evidence assessment fields.
+
+    Called by build_five_case when state["is_cpc_inward"] is True.
+    Produces cpc_claims, cpc_portfolio, cpc_gaps and recommendation fields
+    that the CPC recipe components (cpc_capability_assessment, cpc_evidence_gaps,
+    cpc_market_alignment, cpc_portfolio_comparison) actually consume.
+
+    Does NOT produce Five Case sections — those are for external investment appraisals.
+    """
+    from decimal import Decimal
+
+    def _json_default(o: object) -> object:
+        if isinstance(o, Decimal):
+            return float(o)
+        raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+
+    query = state["query"]
+    results_json = json.dumps(state["raw_search_results"], indent=2, default=_json_default)
+    structural_gaps = state.get("evidence_gaps", [])
+    gaps_json = json.dumps(structural_gaps, indent=2) if structural_gaps else "[]"
+    recipe = state.get("target_recipe", "cpc_capability_assessment")
+
+    system = f"""You are ATLAS operating in CPC Evidence Intelligence mode.
+
+The user is asking about CPC's own evidence, capabilities, or portfolio readiness
+(NOT requesting an external investment appraisal). Your job is to analyse the
+CPC corpus results and produce a structured capability assessment.
+
+MANDATORY RULES:
+1. cpc_claims.id must be a real UUID from the corpus results (source_type project/live_call).
+2. claim level meanings:
+   - 1 (L1 Delivery): CPC can deliver/implement (project execution evidence)
+   - 2 (L2 Programme): CPC has programme-level expertise (portfolio depth)
+   - 3 (L3 Strategic): CPC can lead/shape strategy (sector influence evidence)
+3. confidence_tier per the evidence-triage skill: Speculative/Indicative/Supported/Robust.
+4. recommendation_action must be one of: "bid" | "partner" | "monitor" | "reject"
+   - bid: strong evidence, proceed with submission
+   - partner: evidence exists but gaps need a consortium partner
+   - monitor: too early; evidence needs enrichment first
+   - reject: evidence too thin or misaligned
+5. cpc_gaps.severity: "high" = blocks bid, "medium" = weakens case, "low" = minor.
+6. recipe context: '{recipe}' — shape your analysis for this view.
+
+CORPUS SEARCH RESULTS:
+{results_json}
+
+STRUCTURAL EVIDENCE GAPS (pre-detected):
+{gaps_json}
+
+Respond in JSON ONLY — no markdown. Format:
+{{
+  "summary": "2-3 sentence executive summary of CPC's capability position",
+  "cpc_claims": [
+    {{
+      "id": "<real UUID from corpus>",
+      "text": "CPC has demonstrated [specific capability] through [specific project/evidence]",
+      "level": 1,
+      "confidence_tier": "Supported",
+      "source_project": "Project name",
+      "source_excerpt": "Brief quote or finding from the evidence",
+      "business_unit": "Business unit name or null"
+    }}
+  ],
+  "cpc_portfolio": [
+    {{
+      "name": "Business unit or theme name",
+      "project_count": 3,
+      "claim_count": 5,
+      "l1_claims": 2,
+      "l2_claims": 2,
+      "l3_claims": 1,
+      "evidence_links": 3
+    }}
+  ],
+  "cpc_gaps": [
+    {{
+      "area": "Gap domain (e.g. Commercial deployment evidence)",
+      "severity": "high",
+      "description": "What is missing and why it matters for this query"
+    }}
+  ],
+  "recommendation_action": "bid",
+  "recommendation_rationale": "2-3 sentence explanation of the recommendation",
+  "confidence_tier": "Supported",
+  "analysis": "One paragraph confidence summary citing specific evidence and gaps"
+}}"""
+
+    try:
+        llm = _llm_internal()
+        response = llm.invoke([
+            SystemMessage(content=system),
+            HumanMessage(content=f"CPC evidence query: {query}"),
+        ])
+        content = response.content
+        if "```json" in content:
+            content = content.split("```json")[1].split("```")[0]
+        elif "```" in content:
+            content = content.split("```")[1].split("```")[0]
+        parsed = json.loads(content.strip())
+
+        tier = parsed.get("confidence_tier", "Speculative")
+        valid_tiers = {"Speculative", "Indicative", "Supported", "Robust"}
+        tier = tier if tier in valid_tiers else "Speculative"
+
+        # Store as sections["Summary"] so the recipe component can render summary prose
+        state["sections"] = {"Summary": parsed.get("summary", "")}
+        state["five_case_model"] = {}
+        state["npv_value"] = None
+        state["discount_rate"] = HMT_STPR
+        state["optimism_bias"] = None
+        state["confidence_tier"] = tier
+        state["decision_spine"] = None
+        state["section_scores"] = {}
+        state["analysis"] = parsed.get("analysis", "")
+
+        # Validate corpus citations from cpc_claims
+        valid_id_to_sim: dict[str, float] = {
+            r["id"]: float(r.get("similarity") or 0.0)
+            for r in state["raw_search_results"]
+            if r.get("id") and r.get("source_type") in ("project", "live_call")
+        }
+        # Build corpus_citations from cpc_claims' source IDs
+        seen_ids: set[str] = set()
+        safe_citations: list[CorpusCitation] = []
+        for claim in parsed.get("cpc_claims", []):
+            cid = claim.get("id", "")
+            if cid in valid_id_to_sim and cid not in seen_ids:
+                seen_ids.add(cid)
+                safe_citations.append({
+                    "id": cid,
+                    "title": claim.get("source_project", ""),
+                    "organisation": "",
+                    "relevance_note": claim.get("text", ""),
+                    "score": float(valid_id_to_sim[cid]),
+                })
+        state["corpus_citations"] = safe_citations
+
+        # Store CPC-specific fields directly on state for artifact_block assembly
+        # These are non-standard AtlasState keys but get forwarded via artifact_block
+        state["_cpc_claims"] = parsed.get("cpc_claims", [])          # type: ignore[typeddict-unknown-key]
+        state["_cpc_portfolio"] = parsed.get("cpc_portfolio", [])    # type: ignore[typeddict-unknown-key]
+        state["_cpc_gaps"] = parsed.get("cpc_gaps", [])              # type: ignore[typeddict-unknown-key]
+        state["_recommendation_action"] = parsed.get("recommendation_action")  # type: ignore[typeddict-unknown-key]
+        state["_recommendation_rationale"] = parsed.get("recommendation_rationale")  # type: ignore[typeddict-unknown-key]
+
+        # Merge LLM-provided cpc_gaps into evidence_gaps for gap bar charts
+        structural = state.get("evidence_gaps", [])
+        for g in parsed.get("cpc_gaps", []):
+            structural.append({
+                "type": "corpus_gap",
+                "topic": str(g.get("area", ""))[:200],
+                "severity": g.get("severity", "medium"),
+                "reason": str(g.get("description", ""))[:500],
+                "recommended_action": "Enrich corpus or engage partner",
+                "recommended_source_lane": "ingestion_backlog",
+                "recommended_provider": "CPC_Corpus",
+                "available_tool": "cpc_corpus",
+                "can_lift_confidence": True,
+                "citation_status": "direct",
+            })
+        state["evidence_gaps"] = structural
+
+        state["reasoning_trace"] = state.get("reasoning_trace", []) + [{
+            "node": "build_five_case",
+            "thought": (
+                f"CPC-inward assessment. {len(safe_citations)} verified corpus citations. "
+                f"{len(parsed.get('cpc_claims', []))} claims extracted. "
+                f"Confidence: {tier}. Recipe: {recipe}."
+            ),
+            "tool_calls": [{"tool": "llm_invoke", "model": os.environ.get("MODEL_NAME", "claude-sonnet-4-6"), "prompt": "cpc_inward_assessment"}],
+            "status": "ok",
+        }]
+
+    except Exception as e:
+        state["sections"] = {"Summary": f"[CPC assessment error: {e}]"}
+        state["five_case_model"] = {}
+        state["npv_value"] = None
+        state["discount_rate"] = HMT_STPR
+        state["optimism_bias"] = None
+        state["corpus_citations"] = []
+        state["confidence_tier"] = "Speculative"
+        state["decision_spine"] = None
+        state["section_scores"] = {}
+        state["analysis"] = ""
+        state["error"] = f"_build_cpc_inward_assessment error: {e}"
+        state["_cpc_claims"] = []          # type: ignore[typeddict-unknown-key]
+        state["_cpc_portfolio"] = []       # type: ignore[typeddict-unknown-key]
+        state["_cpc_gaps"] = []            # type: ignore[typeddict-unknown-key]
+        state["_recommendation_action"] = None   # type: ignore[typeddict-unknown-key]
+        state["_recommendation_rationale"] = None  # type: ignore[typeddict-unknown-key]
+        state["reasoning_trace"] = state.get("reasoning_trace", []) + [{
+            "node": "build_five_case",
+            "thought": f"CPC-inward assessment failed: {e}",
+            "tool_calls": [],
+            "status": "error",
+        }]
+
+    return state
+
+
+# ---------------------------------------------------------------------------
+# Mode-specific builders — Orient, Connect, Diagnose, Act, Defend
+# (Gap D fix — 2026-06-01)
+#
+# build_five_case is the dispatcher; it routes to these helpers based on
+# target_recipe.  The Act path (brief_five_case) remains inline in
+# build_five_case to preserve the G1–G7 golden eval contract.
+# ---------------------------------------------------------------------------
+
+def _build_orient_report(state: AtlasState) -> AtlasState:
+    """
+    Orient mode — surface the terrain relevant to the user's decision.
+
+    Maps to recipes: cpc_capability_assessment, cpc_market_alignment
+    North Star v3.1: "Do not show the whole landscape — show what matters
+    given who the user is, what they have, and what they are trying to decide."
+
+    Output sections: Landscape Overview, What Exists, Key Players, CPC Position,
+    Market Signals, Evidence Gaps, Recommended Orientation
+    """
+    ctx = state.get("context_packet", {})
+    skills_text = "\n\n".join(
+        f"=== SKILL: {s['name']} ===\n{s['content']}"
+        for s in ctx.get("active_skills", [])
+    )
+    from decimal import Decimal
+
+    def _json_default(o: object) -> object:
+        if isinstance(o, Decimal):
+            return float(o)
+        raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+
+    results_json = json.dumps(state["raw_search_results"], indent=2, default=_json_default)
+    query = state["query"]
+    recipe = state.get("target_recipe", "cpc_capability_assessment")
+
+    system = f"""You are ATLAS in Orient mode, the terrain-surfacing agent for Connected Places Catapult.
+
+Your task is to help the user understand the relevant landscape for their decision — NOT to produce
+a business case. Focus on: what exists, who is doing it, where CPC sits, and what signals matter.
+
+MANDATORY RULES:
+1. All corpus_citation.id values MUST come from items with source_type "project" or "live_call" in results.
+2. NEVER fabricate project IDs.
+3. Orient reports surface terrain — they do not recommend a single course of action.
+4. Assign confidence_tier per evidence-triage skill: Speculative (no corpus hits), Indicative (1-2),
+   Supported (3+ mixed), Robust (5+ strong).
+5. decision_spine.recommendation must orient the user, not tell them to apply for something.
+6. Include all five decision_spine fields: decision, recommendation, confidence_tier,
+   key_assumption, next_action.
+
+{"RECIPE: CPC Capability Assessment — focus on CPC's existing capabilities vs. market demand." if recipe == "cpc_capability_assessment" else "RECIPE: CPC Market Alignment — focus on how CPC's portfolio aligns with current market signals."}
+
+{skills_text}
+
+CORPUS SEARCH RESULTS:
+{results_json}
+
+Respond in JSON ONLY:
+{{
+  "sections": {{
+    "Landscape Overview": "What the terrain looks like — key players, funding flows, activity clusters...",
+    "What Exists": "Specific projects, programmes, and precedents found in corpus...",
+    "Key Players": "Who is active in this space — funders, operators, R&D orgs...",
+    "CPC Position": "Where CPC sits relative to this landscape (based on corpus evidence)...",
+    "Market Signals": "Signals about demand, policy direction, investment momentum...",
+    "Evidence Gaps": "What is missing from this terrain picture and why it matters..."
+  }},
+  "decision_spine": {{
+    "decision": "One-sentence statement of the terrain judgement",
+    "recommendation": "2-3 sentence orientation: what to watch, what to exploit, what to avoid",
+    "confidence_tier": "Speculative|Indicative|Supported|Robust",
+    "key_assumption": "The most fragile assumption in this landscape reading",
+    "next_action": "The immediate next step to sharpen this orientation"
+  }},
+  "corpus_citations": [
+    {{"id": "<from results>", "title": "...", "organisation": "...",
+      "relevance_note": "...", "score": 0.00}}
+  ],
+  "evidence_gaps": [
+    {{
+      "type": "corpus_gap",
+      "topic": "Specific terrain gap",
+      "severity": "medium",
+      "reason": "Why this gap limits orientation quality",
+      "recommended_action": "How to close it",
+      "recommended_source_lane": "official_policy|funding|research|market_discovery",
+      "recommended_provider": "DfT|InnovateUK|CCAV|UKRI|Exa|GovUK|CPC_Corpus",
+      "available_tool": "cpc_corpus|live_calls|govuk_search|exa_search|none_yet",
+      "can_lift_confidence": true,
+      "citation_status": "candidate|background"
+    }}
+  ],
+  "confidence_tier": "Speculative|Indicative|Supported|Robust",
+  "analysis": "One-paragraph orientation summary."
+}}"""
+
+    try:
+        llm = _llm_internal()
+        response = llm.invoke([
+            SystemMessage(content=system),
+            HumanMessage(content=f"Orient query: {query}"),
+        ])
+        content = response.content
+        if "```json" in content:
+            content = content.split("```json")[1].split("```")[0]
+        elif "```" in content:
+            content = content.split("```")[1].split("```")[0]
+        parsed = json.loads(content.strip())
+
+        raw_sections = parsed.get("sections", {})
+        state["sections"] = raw_sections
+        state["five_case_model"] = {}
+        state["npv_value"] = None
+        state["discount_rate"] = HMT_STPR
+        state["optimism_bias"] = None
+        state["section_scores"] = {}
+        state["analysis"] = parsed.get("analysis", "")
+
+        # Citations — verify against corpus
+        raw_cites = parsed.get("corpus_citations", [])
+        safe_citations = [
+            c for c in raw_cites
+            if isinstance(c, dict) and c.get("id") and _verify_project(c["id"])
+        ]
+        state["corpus_citations"] = safe_citations
+
+        # Confidence tier
+        tier = parsed.get("confidence_tier", "Speculative")
+        tier = tier if tier in {t for t in _TIER_ORDER} else "Speculative"
+        state["confidence_tier"] = _cap_tier(tier, "Indicative") if not safe_citations else tier
+
+        # Decision spine
+        raw_spine = parsed.get("decision_spine", {})
+        state["decision_spine"] = {
+            "decision": str(raw_spine.get("decision", "")),
+            "recommendation": str(raw_spine.get("recommendation", "")),
+            "confidence_tier": state["confidence_tier"],
+            "key_assumption": str(raw_spine.get("key_assumption", "")),
+            "next_action": str(raw_spine.get("next_action", "")),
+            "framework": "Atlas Orient / North Star v3.1",
+        }
+
+        state["evidence_gaps"] = state.get("evidence_gaps", [])
+        state["reasoning_trace"] = state.get("reasoning_trace", []) + [{
+            "node": "build_five_case",
+            "thought": f"Orient report built (recipe={recipe}). {len(safe_citations)} citations. Confidence: {state['confidence_tier']}.",
+            "tool_calls": [{"tool": "llm_invoke", "model": os.environ.get("MODEL_NAME", "claude-sonnet-4-6"), "prompt": "orient_mode"}],
+            "status": "ok",
+        }]
+
+    except Exception as e:
+        state["sections"] = {"Landscape Overview": f"[Orient error: {e}]"}
+        state["five_case_model"] = {}
+        state["npv_value"] = None
+        state["discount_rate"] = HMT_STPR
+        state["optimism_bias"] = None
+        state["corpus_citations"] = []
+        state["confidence_tier"] = "Speculative"
+        state["decision_spine"] = None
+        state["section_scores"] = {}
+        state["analysis"] = ""
+        state["error"] = f"_build_orient_report error: {e}"
+        state["reasoning_trace"] = state.get("reasoning_trace", []) + [{
+            "node": "build_five_case",
+            "thought": f"Orient report failed: {e}",
+            "tool_calls": [],
+            "status": "error",
+        }]
+
+    return state
+
+
+def _build_connect_report(state: AtlasState) -> AtlasState:
+    """
+    Connect mode — find credible opportunity routes not immediately obvious.
+
+    Maps to recipes: cpc_opportunity_fit, cpc_portfolio_comparison, cpc_funding_flow
+    North Star v3.1: "Every connection must be explainable — no black-box similarity."
+
+    Output sections: Opportunity Routes, Adjacent Sectors, Relevant Funders,
+    Partner Landscape, Policy Signals, Funding Flows, Next Connection
+    """
+    ctx = state.get("context_packet", {})
+    skills_text = "\n\n".join(
+        f"=== SKILL: {s['name']} ===\n{s['content']}"
+        for s in ctx.get("active_skills", [])
+    )
+    from decimal import Decimal
+
+    def _json_default(o: object) -> object:
+        if isinstance(o, Decimal):
+            return float(o)
+        raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+
+    results_json = json.dumps(state["raw_search_results"], indent=2, default=_json_default)
+    query = state["query"]
+    recipe = state.get("target_recipe", "cpc_opportunity_fit")
+
+    recipe_focus = {
+        "cpc_opportunity_fit": "Focus on how well this opportunity fits CPC's current capabilities and portfolio.",
+        "cpc_portfolio_comparison": "Focus on comparing multiple opportunities or portfolio options. Produce a structured comparison with each opportunity as a named row and evaluation criteria as columns — not flowing prose.",
+        "cpc_funding_flow": "Focus on funding routes, grant programmes, and investment flows.",
+    }.get(recipe, "Focus on connecting relevant opportunities to the user's context.")
+
+    system = f"""You are ATLAS in Connect mode, the opportunity-route agent for Connected Places Catapult.
+
+Your task is to find credible, explainable routes to opportunities the user would not immediately see.
+Every connection must be explicable — not black-box similarity suggestions.
+
+MANDATORY RULES:
+1. All corpus_citation.id values MUST come from source_type "project" or "live_call" items.
+2. NEVER fabricate IDs.
+3. Connect reports map routes — every route has a rationale.
+4. Confidence_tier follows evidence-triage skill rules.
+5. decision_spine.recommendation must name a specific route, not a generic instruction.
+6. All five decision_spine fields required.
+
+{recipe_focus}
+
+{skills_text}
+
+CORPUS SEARCH RESULTS:
+{results_json}
+
+Respond in JSON ONLY:
+{{
+  "sections": {{
+    "Opportunity Routes": "Specific, explainable routes with rationale for each...",
+    "Adjacent Sectors": "Non-obvious sector analogues worth exploring...",
+    "Relevant Funders": "Specific funders and programmes, with fit rationale...",
+    "Partner Landscape": "Potential partners and why they are relevant...",
+    "Policy Signals": "Policy or investment signals that strengthen or weaken these routes...",
+    "Recommended Route": "The strongest single route and why..."
+  }},
+  "decision_spine": {{
+    "decision": "The connection decision: which route to pursue",
+    "recommendation": "2-3 sentences on the specific route, timing, and key conditions",
+    "confidence_tier": "Speculative|Indicative|Supported|Robust",
+    "key_assumption": "The most fragile assumption this route rests on",
+    "next_action": "The immediate step to activate this connection"
+  }},
+  "corpus_citations": [
+    {{"id": "<from results>", "title": "...", "organisation": "...",
+      "relevance_note": "...", "score": 0.00}}
+  ],
+  "evidence_gaps": [
+    {{
+      "type": "corpus_gap",
+      "topic": "Missing connection evidence",
+      "severity": "medium",
+      "reason": "Why this gap weakens the route",
+      "recommended_action": "How to close it",
+      "recommended_source_lane": "funding|market_discovery|research",
+      "recommended_provider": "InnovateUK|DfT|CCAV|UKRI|Exa|GovUK|CPC_Corpus",
+      "available_tool": "cpc_corpus|live_calls|govuk_search|exa_search|none_yet",
+      "can_lift_confidence": true,
+      "citation_status": "candidate|background"
+    }}
+  ],
+  "confidence_tier": "Speculative|Indicative|Supported|Robust",
+  "analysis": "One-paragraph route summary."
+}}"""
+
+    try:
+        llm = _llm_internal()
+        response = llm.invoke([
+            SystemMessage(content=system),
+            HumanMessage(content=f"Connect query: {query}"),
+        ])
+        content = response.content
+        if "```json" in content:
+            content = content.split("```json")[1].split("```")[0]
+        elif "```" in content:
+            content = content.split("```")[1].split("```")[0]
+        parsed = json.loads(content.strip())
+
+        state["sections"] = parsed.get("sections", {})
+        state["five_case_model"] = {}
+        state["npv_value"] = None
+        state["discount_rate"] = HMT_STPR
+        state["optimism_bias"] = None
+        state["section_scores"] = {}
+        state["analysis"] = parsed.get("analysis", "")
+
+        raw_cites = parsed.get("corpus_citations", [])
+        safe_citations = [
+            c for c in raw_cites
+            if isinstance(c, dict) and c.get("id") and _verify_project(c["id"])
+        ]
+        state["corpus_citations"] = safe_citations
+
+        tier = parsed.get("confidence_tier", "Speculative")
+        tier = tier if tier in {t for t in _TIER_ORDER} else "Speculative"
+        state["confidence_tier"] = _cap_tier(tier, "Indicative") if not safe_citations else tier
+
+        raw_spine = parsed.get("decision_spine", {})
+        state["decision_spine"] = {
+            "decision": str(raw_spine.get("decision", "")),
+            "recommendation": str(raw_spine.get("recommendation", "")),
+            "confidence_tier": state["confidence_tier"],
+            "key_assumption": str(raw_spine.get("key_assumption", "")),
+            "next_action": str(raw_spine.get("next_action", "")),
+            "framework": "Atlas Connect / North Star v3.1",
+        }
+
+        state["evidence_gaps"] = state.get("evidence_gaps", [])
+        state["reasoning_trace"] = state.get("reasoning_trace", []) + [{
+            "node": "build_five_case",
+            "thought": f"Connect report built (recipe={recipe}). {len(safe_citations)} citations. Confidence: {state['confidence_tier']}.",
+            "tool_calls": [{"tool": "llm_invoke", "model": os.environ.get("MODEL_NAME", "claude-sonnet-4-6"), "prompt": "connect_mode"}],
+            "status": "ok",
+        }]
+
+    except Exception as e:
+        state["sections"] = {"Opportunity Routes": f"[Connect error: {e}]"}
+        state["five_case_model"] = {}
+        state["npv_value"] = None
+        state["discount_rate"] = HMT_STPR
+        state["optimism_bias"] = None
+        state["corpus_citations"] = []
+        state["confidence_tier"] = "Speculative"
+        state["decision_spine"] = None
+        state["section_scores"] = {}
+        state["analysis"] = ""
+        state["error"] = f"_build_connect_report error: {e}"
+        state["reasoning_trace"] = state.get("reasoning_trace", []) + [{
+            "node": "build_five_case",
+            "thought": f"Connect report failed: {e}",
+            "tool_calls": [],
+            "status": "error",
+        }]
+
+    return state
+
+
+def _build_diagnose_report(state: AtlasState) -> AtlasState:
+    """
+    Diagnose mode — Evidence Gap & Value Translation Report.
+
+    Maps to recipe: cpc_evidence_gaps
+    North Star v3.1: "Surface what proof would unlock value, fit, safety,
+    adoption, or credibility in a new context. This is value translation."
+
+    Output: 8-section report per Notion template
+    (https://www.notion.so/36dc9b382a7481c1b556de97246134e4):
+      1. Entity Summary
+      2. Opportunity Context
+      3. Fit Analysis
+      4. Evidence Gaps
+      5. Value Translation Assessment
+      6. Entry Friction Summary
+      7. Recommended Next Move
+      8. Defend Package
+    """
+    ctx = state.get("context_packet", {})
+    skills_text = "\n\n".join(
+        f"=== SKILL: {s['name']} ===\n{s['content']}"
+        for s in ctx.get("active_skills", [])
+    )
+    from decimal import Decimal
+
+    def _json_default(o: object) -> object:
+        if isinstance(o, Decimal):
+            return float(o)
+        raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+
+    results_json = json.dumps(state["raw_search_results"], indent=2, default=_json_default)
+    query = state["query"]
+    structural_gaps = state.get("evidence_gaps", [])
+    gaps_json = json.dumps(structural_gaps, indent=2) if structural_gaps else "[]"
+    external_results = state.get("external_search_results", [])
+    external_json = json.dumps(external_results, indent=2) if external_results else "[]"
+
+    system = f"""You are ATLAS in Diagnose mode, the evidence gap and value translation agent for Connected Places Catapult.
+
+Your task is to produce an Evidence Gap & Value Translation Report.
+This is NOT a Five Case brief. Do not produce NPV calculations or HMT Green Book sections.
+
+Your job: explain what proof would unlock value, fit, or credibility in a specific context —
+and what the entity should do to close the gap or reframe the value claim.
+
+REPORT STRUCTURE — you must produce ALL eight sections:
+
+1. Entity Summary — what the entity is, its core claims with claim states
+   (stated ✓ / inferred ~ / unknown ? / contested ⚠), maturity, sector validity
+2. Opportunity Context — what the matched opportunity demands:
+   funder, deadline, eligibility, value weighting, entry-friction tags
+3. Fit Analysis — per-criterion table: criterion / passport response / claim state /
+   fit level (Met/Partial/Gap/Unknown) / evidence strength (Strong/Moderate/Weak/None)
+4. Evidence Gaps — for each gap: what is missing, WHY it matters (fundability /
+   transferability / adoption / procurement / safety / trust), evidence risk level,
+   effort to close, suggested action
+   FRAMING RULE: Never say "X is missing." Say "X is missing, which blocks Y because Z."
+5. Value Translation Assessment — which claims travel as-is, which need reframing,
+   which are not yet credible here and why; what reframing or new proof would help
+6. Entry Friction Summary — entry-friction tags explained for this specific entity;
+   combined entry risk level; key questions to resolve before committing effort
+7. Recommended Next Move — primary recommendation with confidence tier;
+   specific options (Apply now / Reposition / Evidence-build / Seek partner / Monitor / Stop);
+   key assumptions; what would change the recommendation
+8. Defend Package — evidence trail; assumptions; confidence tiers per section;
+   alternative interpretations; likely objections and responses;
+   what evidence would change the conclusion
+
+MANDATORY RULES:
+1. All corpus_citation.id values MUST come from source_type "project" or "live_call" in results.
+2. NEVER fabricate IDs.
+3. confidence_tier must reflect the evidence quality for THIS gap analysis, not the
+   entity's general quality.
+4. All five decision_spine fields required: decision, recommendation, confidence_tier,
+   key_assumption, next_action.
+5. entry_friction_tags must draw from:
+   procurement_route | prime_partner_needed | regulatory_barrier | certification_required |
+   sales_cycle_length | liability_exposure | data_access_dependency | integration_complexity |
+   local_presence_required | funding_deadline_pressure
+6. claim_states notation: stated / inferred / unknown / contested
+
+{skills_text}
+
+Note: Entity Passport data is not yet available in Phase 1. Infer all entity claims and capabilities from the query context and corpus evidence only. Do not fabricate passport fields.
+
+STRUCTURAL EVIDENCE GAPS (pre-detected):
+{gaps_json}
+
+EXTERNAL EVIDENCE (context only — do NOT put URLs in corpus_citations):
+{external_json}
+
+CORPUS SEARCH RESULTS (only use IDs from source_type project/live_call in corpus_citations):
+{results_json}
+
+Respond in JSON ONLY:
+{{
+  "sections": {{
+    "Entity Summary": "Entity name, type, core claims with claim states, maturity, sector validity...",
+    "Opportunity Context": "Requirement spec name, source, deadline, eligibility, value weighting, entry-friction tags...",
+    "Fit Analysis": "Per-criterion table as markdown: | Criterion | Passport response | Claim state | Fit level | Evidence strength |\\n|---|---|---|---|---|\\n...",
+    "Evidence Gaps": "For each gap: what, why it matters (value consequence), evidence risk, effort, action. Use FRAMING RULE.",
+    "Value Translation Assessment": "Claims that travel as-is, claims needing reframing, claims not yet credible. Specific reframing instructions.",
+    "Entry Friction Summary": "Entry-friction tags explained for this entity. Combined risk level (Low/Medium/High). Key questions to resolve.",
+    "Recommended Next Move": "Primary recommendation + confidence. Options (Apply now / Reposition / Evidence-build / Seek partner / Monitor / Stop). Assumptions. What would change this.",
+    "Defend Package": "Evidence trail (citations). Assumptions explicitly stated. Confidence per section. Alternative interpretations. Likely objections and responses. What would overturn this."
+  }},
+  "decision_spine": {{
+    "decision": "One-sentence: the primary action recommendation",
+    "recommendation": "2-3 sentences: specific next move with conditions",
+    "confidence_tier": "Speculative|Indicative|Supported|Robust",
+    "key_assumption": "The most fragile assumption this recommendation rests on",
+    "next_action": "The single most important immediate action"
+  }},
+  "corpus_citations": [
+    {{"id": "<from results>", "title": "...", "organisation": "...",
+      "relevance_note": "...", "score": 0.00}}
+  ],
+  "evidence_gaps": [
+    {{
+      "type": "corpus_gap|retrieval_gap|landscape_gap",
+      "topic": "Specific gap with value consequence",
+      "severity": "low|medium|high",
+      "reason": "What is missing and why it blocks value / fit / credibility",
+      "recommended_action": "Specific closing action",
+      "recommended_source_lane": "official_policy|funding|research|market_discovery|procurement",
+      "recommended_provider": "InnovateUK|DfT|CCAV|UKRI|HorizonEurope|FindATender|Exa|GovUK|CPC_Corpus",
+      "available_tool": "cpc_corpus|live_calls|govuk_search|exa_search|future_innovateuk_api|none_yet",
+      "can_lift_confidence": true,
+      "citation_status": "direct|candidate|background"
+    }}
+  ],
+  "entry_friction_tags": ["procurement_route", "certification_required"],
+  "claim_states": {{
+    "core_claim_1": "stated",
+    "core_claim_2": "inferred",
+    "maturity": "stated"
+  }},
+  "confidence_tier": "Speculative|Indicative|Supported|Robust",
+  "analysis": "One-paragraph gap analysis summary: what the most critical gap is and why."
+}}"""
+
+    try:
+        llm = _llm_internal()
+        response = llm.invoke([
+            SystemMessage(content=system),
+            HumanMessage(content=f"Evidence gap and value translation query: {query}"),
+        ])
+        content = response.content
+        if "```json" in content:
+            content = content.split("```json")[1].split("```")[0]
+        elif "```" in content:
+            content = content.split("```")[1].split("```")[0]
+        parsed = json.loads(content.strip())
+
+        # Sections (8-section Diagnose report — no Five Case keys)
+        raw_sections = parsed.get("sections", {})
+        state["sections"] = raw_sections
+        state["five_case_model"] = {}   # not applicable for Diagnose
+        state["npv_value"] = None       # not applicable for Diagnose
+        state["discount_rate"] = HMT_STPR
+        state["optimism_bias"] = None
+        state["section_scores"] = {}
+
+        # Extended Diagnose-specific fields
+        state["entry_friction_tags"] = parsed.get("entry_friction_tags", [])  # type: ignore[typeddict-unknown-key]
+        state["claim_states"] = parsed.get("claim_states", {})                 # type: ignore[typeddict-unknown-key]
+
+        # Citations
+        raw_cites = parsed.get("corpus_citations", [])
+        safe_citations = [
+            c for c in raw_cites
+            if isinstance(c, dict) and c.get("id") and _verify_project(c["id"])
+        ]
+        state["corpus_citations"] = safe_citations
+        has_external = bool(state.get("external_search_results"))
+
+        # Confidence ceiling — same rules as Act path
+        tier = parsed.get("confidence_tier", "Speculative")
+        tier = tier if tier in {t for t in _TIER_ORDER} else "Speculative"
+        if not safe_citations and has_external:
+            tier = _cap_tier(tier, "Supported")
+        remaining_gaps = state.get("evidence_gaps", [])
+        all_background = (
+            bool(remaining_gaps)
+            and not safe_citations
+            and all(not g.get("can_lift_confidence", True) for g in remaining_gaps)
+        )
+        if all_background:
+            tier = _cap_tier(tier, "Indicative")
+        state["confidence_tier"] = tier
+
+        raw_spine = parsed.get("decision_spine", {})
+        state["decision_spine"] = {
+            "decision": str(raw_spine.get("decision", "")),
+            "recommendation": str(raw_spine.get("recommendation", "")),
+            "confidence_tier": state["confidence_tier"],
+            "key_assumption": str(raw_spine.get("key_assumption", "")),
+            "next_action": str(raw_spine.get("next_action", "")),
+            "framework": "Atlas Diagnose / Evidence Gap & Value Translation Report",
+        }
+
+        state["analysis"] = parsed.get("analysis", "")
+
+        # Merge structural + LLM evidence gaps
+        structural = state.get("evidence_gaps", [])
+        llm_raw_gaps = parsed.get("evidence_gaps", [])
+        valid_gap_types = {"retrieval_gap", "corpus_gap", "landscape_gap"}
+        valid_severities = {"low", "medium", "high"}
+        valid_lanes = {
+            "internal_precedent", "official_policy", "funding", "procurement",
+            "research", "market_discovery", "ingestion_backlog",
+        }
+        valid_providers = {
+            "InnovateUK", "DfT", "NationalHighways", "CCAV", "UKRI",
+            "HorizonEurope", "FindATender", "Exa", "GovUK", "CPC_Corpus",
+        }
+        valid_tools = {
+            "cpc_corpus", "live_calls", "govuk_search", "exa_search",
+            "future_innovateuk_api", "future_tender_api", "none_yet",
+        }
+        valid_cite = {"direct", "candidate", "background"}
+
+        llm_gaps = []
+        for g in llm_raw_gaps:
+            if g.get("type", "") not in valid_gap_types:
+                continue
+            raw_lane = g.get("recommended_source_lane", "")
+            lane = raw_lane if raw_lane in valid_lanes else "ingestion_backlog"
+            raw_provider = g.get("recommended_provider", "")
+            provider = raw_provider if raw_provider in valid_providers else "CPC_Corpus"
+            raw_tool = g.get("available_tool", "")
+            tool = raw_tool if raw_tool in valid_tools else "none_yet"
+            raw_can_lift = g.get("can_lift_confidence", True)
+            can_lift = bool(raw_can_lift) if isinstance(raw_can_lift, bool) else str(raw_can_lift).lower() != "false"
+            raw_cite = g.get("citation_status", "candidate")
+            cite = raw_cite if raw_cite in valid_cite else "candidate"
+            llm_gaps.append({
+                "type": g["type"],
+                "topic": str(g.get("topic", ""))[:200],
+                "severity": g.get("severity", "medium") if g.get("severity") in valid_severities else "medium",
+                "reason": str(g.get("reason", ""))[:500],
+                "recommended_action": str(g.get("recommended_action", ""))[:300],
+                "recommended_source_lane": lane,
+                "recommended_provider": provider,
+                "available_tool": tool,
+                "can_lift_confidence": can_lift,
+                "citation_status": cite,
+            })
+        seen_topics = {(g["type"], g["topic"].lower()[:40]) for g in structural}
+        for g in llm_gaps:
+            key = (g["type"], g["topic"].lower()[:40])
+            if key not in seen_topics:
+                structural.append(g)
+                seen_topics.add(key)
+        state["evidence_gaps"] = structural
+
+        state["reasoning_trace"] = state.get("reasoning_trace", []) + [{
+            "node": "build_five_case",
+            "thought": (
+                f"Diagnose report built (Evidence Gap & Value Translation). "
+                f"{len(safe_citations)} citations. {len(state['evidence_gaps'])} gaps. "
+                f"Confidence: {state['confidence_tier']}."
+            ),
+            "tool_calls": [{"tool": "llm_invoke", "model": os.environ.get("MODEL_NAME", "claude-sonnet-4-6"), "prompt": "diagnose_mode"}],
+            "status": "ok",
+        }]
+
+    except Exception as e:
+        state["sections"] = {
+            s: f"[Diagnose error: {e}]"
+            for s in [
+                "Entity Summary", "Opportunity Context", "Fit Analysis",
+                "Evidence Gaps", "Value Translation Assessment",
+                "Entry Friction Summary", "Recommended Next Move", "Defend Package",
+            ]
+        }
+        state["five_case_model"] = {}
+        state["npv_value"] = None
+        state["discount_rate"] = HMT_STPR
+        state["optimism_bias"] = None
+        state["corpus_citations"] = []
+        state["confidence_tier"] = "Speculative"
+        state["decision_spine"] = None
+        state["section_scores"] = {}
+        state["analysis"] = ""
+        state["entry_friction_tags"] = []   # type: ignore[typeddict-unknown-key]
+        state["claim_states"] = {}           # type: ignore[typeddict-unknown-key]
+        state["error"] = f"_build_diagnose_report error: {e}"
+        state["reasoning_trace"] = state.get("reasoning_trace", []) + [{
+            "node": "build_five_case",
+            "thought": f"Diagnose report failed: {e}",
+            "tool_calls": [],
+            "status": "error",
+        }]
+
+    return state
+
+
+def _build_defend_report(state: AtlasState) -> AtlasState:
+    """
+    Defend mode — help the user hold their position under challenge.
+
+    North Star v3.1: "Help the user hold up under challenge in a board, panel,
+    procurement, funding, or stakeholder room. Defend is not just the final step —
+    it is the quality standard across the whole journey."
+
+    Output sections: Evidence Trail, Assumptions, Confidence per Claim,
+    Objections & Responses, Alternative Interpretations, What Would Change This
+    """
+    ctx = state.get("context_packet", {})
+    skills_text = "\n\n".join(
+        f"=== SKILL: {s['name']} ===\n{s['content']}"
+        for s in ctx.get("active_skills", [])
+    )
+    from decimal import Decimal
+
+    def _json_default(o: object) -> object:
+        if isinstance(o, Decimal):
+            return float(o)
+        raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+
+    results_json = json.dumps(state["raw_search_results"], indent=2, default=_json_default)
+    query = state["query"]
+
+    system = f"""You are ATLAS in Defend mode, the challenge-readiness agent for Connected Places Catapult.
+
+Your task is to help the user defend a position, recommendation, or investment decision
+under rigorous challenge from a board, panel, funding body, or sceptical stakeholder.
+
+Defend is a quality standard, not a final step. Every claim must be traceable.
+Every assumption must be explicit. Every likely objection must be anticipated.
+
+MANDATORY RULES:
+1. All corpus_citation.id values MUST come from source_type "project" or "live_call" in results.
+2. NEVER fabricate IDs.
+3. Defend reports must surface objections honestly — do not suppress challenges.
+4. Confidence tiers are per-claim, not just overall.
+5. "What would change this" must be specific, not generic.
+6. All five decision_spine fields required.
+
+{skills_text}
+
+CORPUS SEARCH RESULTS:
+{results_json}
+
+Respond in JSON ONLY:
+{{
+  "sections": {{
+    "Evidence Trail": "Full citation trail: which claims rest on which corpus evidence, with IDs and similarity scores...",
+    "Assumptions": "All assumptions explicitly stated — what has been treated as given and why...",
+    "Confidence per Claim": "Confidence tier and rationale for each key claim (not just overall)...",
+    "Objections & Responses": "Likely objections a sceptical reviewer would raise, with specific responses to each...",
+    "Alternative Interpretations": "Where this evidence or recommendation could legitimately be read differently...",
+    "What Would Change This": "Specific evidence, events, or findings that would materially change the recommendation..."
+  }},
+  "decision_spine": {{
+    "decision": "The position being defended",
+    "recommendation": "2-3 sentences on how to hold the position and what to acknowledge",
+    "confidence_tier": "Speculative|Indicative|Supported|Robust",
+    "key_assumption": "The assumption most likely to be challenged",
+    "next_action": "The most important preparation before the challenge room"
+  }},
+  "corpus_citations": [
+    {{"id": "<from results>", "title": "...", "organisation": "...",
+      "relevance_note": "...", "score": 0.00}}
+  ],
+  "evidence_gaps": [
+    {{
+      "type": "corpus_gap",
+      "topic": "Evidence that would strengthen defence",
+      "severity": "high",
+      "reason": "What challengers will probe without this",
+      "recommended_action": "How to close before the challenge room",
+      "recommended_source_lane": "official_policy|funding|research",
+      "recommended_provider": "DfT|InnovateUK|CCAV|UKRI|Exa|GovUK|CPC_Corpus",
+      "available_tool": "cpc_corpus|govuk_search|exa_search|none_yet",
+      "can_lift_confidence": true,
+      "citation_status": "direct|candidate|background"
+    }}
+  ],
+  "claims": [
+    {{
+      "text": "One sentence stating the claim exactly as it would be challenged",
+      "state": "stated|inferred|unknown|contested",
+      "confidence_tier": "Speculative|Indicative|Supported|Robust",
+      "source": "corpus citation ID, external source title, or 'inferred from context'"
+    }}
+  ],
+  "confidence_tier": "Speculative|Indicative|Supported|Robust",
+  "analysis": "One-paragraph: how defensible is the position and what is the weakest link."
+}}"""
+
+    try:
+        llm = _llm_internal()
+        response = llm.invoke([
+            SystemMessage(content=system),
+            HumanMessage(content=f"Defend query: {query}"),
+        ])
+        content = response.content
+        if "```json" in content:
+            content = content.split("```json")[1].split("```")[0]
+        elif "```" in content:
+            content = content.split("```")[1].split("```")[0]
+        parsed = json.loads(content.strip())
+
+        state["sections"] = parsed.get("sections", {})
+        state["five_case_model"] = {}
+        state["npv_value"] = None
+        state["discount_rate"] = HMT_STPR
+        state["optimism_bias"] = None
+        state["section_scores"] = {}
+        state["analysis"] = parsed.get("analysis", "")
+
+        raw_cites = parsed.get("corpus_citations", [])
+        safe_citations = [
+            c for c in raw_cites
+            if isinstance(c, dict) and c.get("id") and _verify_project(c["id"])
+        ]
+        state["corpus_citations"] = safe_citations
+
+        tier = parsed.get("confidence_tier", "Speculative")
+        tier = tier if tier in {t for t in _TIER_ORDER} else "Speculative"
+        state["confidence_tier"] = tier
+
+        raw_spine = parsed.get("decision_spine", {})
+        state["decision_spine"] = {
+            "decision": str(raw_spine.get("decision", "")),
+            "recommendation": str(raw_spine.get("recommendation", "")),
+            "confidence_tier": state["confidence_tier"],
+            "key_assumption": str(raw_spine.get("key_assumption", "")),
+            "next_action": str(raw_spine.get("next_action", "")),
+            "framework": "Atlas Defend / North Star v3.1",
+        }
+
+        state["evidence_gaps"] = state.get("evidence_gaps", [])
+        state["reasoning_trace"] = state.get("reasoning_trace", []) + [{
+            "node": "build_five_case",
+            "thought": f"Defend report built. {len(safe_citations)} citations. Confidence: {state['confidence_tier']}.",
+            "tool_calls": [{"tool": "llm_invoke", "model": os.environ.get("MODEL_NAME", "claude-sonnet-4-6"), "prompt": "defend_mode"}],
+            "status": "ok",
+        }]
+
+    except Exception as e:
+        state["sections"] = {"Evidence Trail": f"[Defend error: {e}]"}
+        state["five_case_model"] = {}
+        state["npv_value"] = None
+        state["discount_rate"] = HMT_STPR
+        state["optimism_bias"] = None
+        state["corpus_citations"] = []
+        state["confidence_tier"] = "Speculative"
+        state["decision_spine"] = None
+        state["section_scores"] = {}
+        state["analysis"] = ""
+        state["error"] = f"_build_defend_report error: {e}"
+        state["reasoning_trace"] = state.get("reasoning_trace", []) + [{
+            "node": "build_five_case",
+            "thought": f"Defend report failed: {e}",
+            "tool_calls": [],
+            "status": "error",
+        }]
+
+    return state
+
+
 def build_five_case(state: AtlasState) -> AtlasState:
     """
     Node 2: Use claude-sonnet-4-6 to draft the Five Case Model brief.
@@ -566,6 +1698,26 @@ def build_five_case(state: AtlasState) -> AtlasState:
 
     Returns title-case sections + decision_spine for the eval graders.
     """
+    # CPC-inward queries use a different LLM prompt and output schema.
+    # Recipe was selected in select_recipe_intent; trust it, don't re-classify.
+    if state.get("is_cpc_inward"):
+        return _build_cpc_inward_assessment(state)
+
+    # Gap A fix (2026-06-01): target_recipe now drives output for all outward queries.
+    # Previously target_recipe was set in select_recipe_intent but never read here.
+    target_recipe = state.get("target_recipe", "brief_five_case")
+    if target_recipe == "cpc_evidence_gaps":
+        return _build_diagnose_report(state)   # Diagnose → Evidence Gap & Value Translation
+    elif target_recipe in ("cpc_capability_assessment", "cpc_market_alignment"):
+        return _build_orient_report(state)     # Orient → terrain surfacing
+    elif target_recipe in (
+        "cpc_opportunity_fit", "cpc_portfolio_comparison", "cpc_funding_flow"
+    ):
+        return _build_connect_report(state)    # Connect → opportunity routes
+    elif target_recipe == "cpc_defend":
+        return _build_defend_report(state)     # Defend → challenge-readiness
+    # Act mode: brief_five_case (and unknown recipes) → Five Case path (falls through)
+
     ctx = state.get("context_packet", {})
     skills_text = "\n\n".join(
         f"=== SKILL: {s['name']} ===\n{s['content']}"
@@ -728,11 +1880,18 @@ Respond in JSON ONLY — no markdown, no explanation. Format:
     }}
   ],
   "confidence_tier": "Speculative|Indicative|Supported|Robust",
+  "section_scores": {{
+    "Strategic Case": 72,
+    "Economic Case": 45,
+    "Commercial Case": 60,
+    "Financial Case": 55,
+    "Management Case": 70
+  }},
   "analysis": "One-paragraph confidence summary. Explicitly reference evidence gaps when explaining why confidence is limited."
 }}"""
 
     try:
-        llm = _llm()
+        llm = _llm_internal()
         response = llm.invoke([
             SystemMessage(content=system),
             HumanMessage(content=f"Business case query: {query}"),
@@ -746,6 +1905,14 @@ Respond in JSON ONLY — no markdown, no explanation. Format:
 
         # Enforce discount_rate lock
         parsed["discount_rate"] = HMT_STPR
+
+        # --- Section scores (LLM self-assessed evidence strength per case, 0-100) ---
+        raw_scores = parsed.get("section_scores") or {}
+        state["section_scores"] = {
+            k: int(max(0, min(100, v)))
+            for k, v in raw_scores.items()
+            if isinstance(v, (int, float))
+        }
 
         # --- Sections (title-case + legacy) ---
         raw_sections = parsed.get("sections") or parsed.get("five_case_model") or {}
@@ -789,14 +1956,12 @@ Respond in JSON ONLY — no markdown, no explanation. Format:
         # Confidence ceiling rules — enforced in code, not just LLM prompt:
         #   1. Exa-only (no corpus citations, external results present) → max Supported
         #   2. Background-only gaps (no can_lift_confidence gaps) → max Indicative
-        _tier_order = ["Speculative", "Indicative", "Supported", "Robust"]
+        # _cap_tier and _TIER_ORDER are module-level (extracted from nested scope — Gap C fix).
 
-        def _cap_tier(current: str, max_allowed: str) -> str:
-            ci = _tier_order.index(current) if current in _tier_order else 0
-            mi = _tier_order.index(max_allowed) if max_allowed in _tier_order else 0
-            return _tier_order[min(ci, mi)]
-
-        if not safe_citations and has_external:
+        if not safe_citations and not has_external:
+            # Act mode (Five Case): zero corpus citations, zero external evidence → Speculative ceiling
+            tier = _cap_tier(tier, "Speculative")
+        elif not safe_citations and has_external:
             # External evidence only — cannot exceed Supported
             tier = _cap_tier(tier, "Supported")
 
@@ -937,6 +2102,7 @@ Respond in JSON ONLY — no markdown, no explanation. Format:
         state["corpus_citations"] = []
         state["confidence_tier"] = "Speculative"
         state["decision_spine"] = None
+        state["section_scores"] = {}
         state["evidence_gaps"] = state.get("evidence_gaps", [])  # keep structural gaps
         state["analysis"] = ""
         state["error"] = f"build_five_case error: {e}"
@@ -948,6 +2114,79 @@ Respond in JSON ONLY — no markdown, no explanation. Format:
         }]
 
     return state
+
+
+def _build_secondary_panel(
+    state: dict[str, Any],
+    secondary_recipe: str,
+    verified: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    """
+    Build a lightweight secondary panel from existing state data — no extra LLM call.
+
+    Called by verify_citations when target_secondary_recipes is set.
+    Each secondary panel carries only the data slice relevant to its recipe;
+    corpus_citations and confidence_tier are inherited from the parent artifact.
+    """
+    tier = state.get("confidence_tier", "Speculative")
+    sections = state.get("sections", {})
+
+    if secondary_recipe == "cpc_capability_assessment":
+        cpc_claims = state.get("_cpc_claims") or []
+        cpc_portfolio = state.get("_cpc_portfolio") or []
+        # Surface the strategic rationale as the capability summary
+        summary = ""
+        for key in ("Strategic Case", "Summary", "Economic Case"):
+            if sections.get(key):
+                summary = str(sections[key])[:400]
+                break
+        return {
+            "recipe": secondary_recipe,
+            "label": "CPC Evidence Readiness",
+            "sections": {"Summary": summary} if summary else {},
+            "chart_specs": [],
+            "cpc_claims": cpc_claims,
+            "cpc_portfolio": cpc_portfolio,
+            "confidence_tier": tier,
+        }
+
+    if secondary_recipe == "brief_five_case":
+        # Stub panel — surfaces the investment context from an inward assessment.
+        # A future enhancement could run a second LLM pass for a full Five Case.
+        summary = sections.get("Summary", "")
+        if not summary:
+            return None
+        return {
+            "recipe": secondary_recipe,
+            "label": "Investment Case Context",
+            "sections": {"Strategic Case": summary},
+            "chart_specs": [],
+            "confidence_tier": tier,
+        }
+
+    if secondary_recipe == "cpc_evidence_gaps":
+        cpc_gaps = state.get("_cpc_gaps") or []
+        evidence_gaps = state.get("evidence_gaps") or []
+        # Normalise raw evidence_gaps (strings or dicts) into gap dicts
+        normalised = []
+        for g in evidence_gaps:
+            if isinstance(g, dict):
+                normalised.append(g)
+            elif isinstance(g, str):
+                normalised.append({"area": g, "severity": "medium", "description": g})
+        all_gaps = cpc_gaps + normalised
+        if not all_gaps:
+            return None
+        return {
+            "recipe": secondary_recipe,
+            "label": "Evidence Gaps",
+            "sections": {},
+            "chart_specs": [],
+            "cpc_gaps": all_gaps,
+            "confidence_tier": tier,
+        }
+
+    return None
 
 
 def verify_citations(state: AtlasState) -> AtlasState:
@@ -999,56 +2238,40 @@ def verify_citations(state: AtlasState) -> AtlasState:
     # Build artifact_block — this syncs to useCoAgent and drives ArtifactPanel in the UI.
     # Mirrors the ArtifactBlock TypeScript type in src/lib/types.ts.
     tier = state.get("confidence_tier", "Speculative")
+    query = state.get("query", "")
 
-    # --- Evidence charts ---
-    # Generate inline charts from the verified citations so the dashboard always
-    # has a data visual when evidence is present. Two charts:
-    #   1. Bar: evidence similarity scores (top-8 citations, sorted desc)
-    #   2. Bar: evidence by source type (projects vs live calls vs policy docs)
+    # --- Visual Recipe Director ---
+    # Recipe was selected by select_recipe_intent (query-phase) and confirmed by
+    # select_visual_recipe (post-LLM). Pass recipe_override so we don't re-classify.
+    # Pass section_scores so the radar uses LLM self-assessment, not word-count.
+    recipe_id, chart_specs = _build_chart_specs(
+        query=query,
+        verified=list(verified),
+        sections=state.get("sections", {}),
+        confidence_tier=tier,
+        npv_value=state.get("npv_value"),
+        optimism_bias=state.get("optimism_bias"),
+        evidence_gaps=state.get("evidence_gaps", []),
+        section_scores=state.get("section_scores") or {},
+        recipe_override=state.get("target_recipe"),
+    )
 
-    chart_specs: list[dict] = []
-    state_charts: list[dict] = []
+    # Art director: deterministic block selection (new vocabulary system)
+    visual_blocks = _build_visual_blocks(
+        recipe_id=recipe_id,
+        verified=list(verified),
+        sections=state.get("sections", {}),
+        confidence_tier=tier,
+        npv_value=state.get("npv_value"),
+        discount_rate=state.get("discount_rate") or 0.035,
+        evidence_gaps=state.get("evidence_gaps", []),
+        section_scores=state.get("section_scores") or {},
+    )
 
-    if verified:
-        # Chart 1 — Evidence Scores
-        sorted_v = sorted(verified, key=lambda c: c.get("score", 0.0), reverse=True)
-        score_data = [
-            {
-                "project": (c.get("title") or "Unknown")[:35],
-                "score": round(float(c.get("score", 0.0)) * 100),
-            }
-            for c in sorted_v[:8]
-        ]
-        score_chart = {
-            "type": "bar",
-            "title": "Evidence Scores",
-            "x": "project",
-            "y": "score",
-            "data": score_data,
-        }
-        chart_specs.append(score_chart)
-        state_charts.append(score_chart)
-
-    # Chart 2 — NPV waterfall stub (only when NPV is available)
-    npv = state.get("npv_value")
-    if npv is not None:
-        npv_chart = {
-            "type": "bar",
-            "title": "NPV at 3.5% STPR",
-            "x": "component",
-            "y": "value_m",
-            "data": [
-                {"component": "Gross Benefits",   "value_m": round(abs(npv) / 1_000_000, 1)},
-                {"component": "Optimism Bias Adj","value_m": round(abs(npv) * float(state.get("optimism_bias") or 0.0) / 1_000_000, 1)},
-                {"component": "Net Present Value", "value_m": round(float(npv) / 1_000_000, 1)},
-            ],
-        }
-        chart_specs.append(npv_chart)
-        state_charts.append(npv_chart)
-
-    state["artifact_block"] = {
+    # CPC-inward fields — populated by _build_cpc_inward_assessment if applicable
+    artifact_block: dict[str, Any] = {
         "type": "brief",
-        "recipe": "brief_five_case",
+        "recipe": recipe_id,
         "confidence_tier": tier,
         "sections": state.get("sections", {}),
         "corpus_citations": [
@@ -1062,10 +2285,41 @@ def verify_citations(state: AtlasState) -> AtlasState:
         ],
         "npv_value": state.get("npv_value"),
         "discount_rate": state.get("discount_rate", 0.035),
-        "chart_specs": chart_specs,         # ← rendered inline by BriefFiveCaseRecipe
+        "chart_specs": chart_specs,
+        "visual_blocks": visual_blocks,
+        "section_scores": state.get("section_scores") or {},
+        # Decision spine and analysis — surfaced in the ArtifactPanel
+        "decision_spine": state.get("decision_spine"),
+        "analysis": state.get("analysis", ""),
     }
+    # Forward CPC-inward intelligence fields when present
+    if state.get("is_cpc_inward"):
+        artifact_block["cpc_claims"] = state.get("_cpc_claims") or []          # type: ignore[attr-defined]
+        artifact_block["cpc_portfolio"] = state.get("_cpc_portfolio") or []    # type: ignore[attr-defined]
+        artifact_block["cpc_gaps"] = state.get("_cpc_gaps") or []              # type: ignore[attr-defined]
+        if state.get("_recommendation_action"):                                 # type: ignore[attr-defined]
+            artifact_block["recommendation_action"] = state.get("_recommendation_action")     # type: ignore[attr-defined]
+        if state.get("_recommendation_rationale"):                              # type: ignore[attr-defined]
+            artifact_block["recommendation_rationale"] = state.get("_recommendation_rationale")  # type: ignore[attr-defined]
+
+    # Build secondary panels for compound queries (no extra LLM call)
+    secondary_recipes = state.get("target_secondary_recipes") or []
+    if secondary_recipes:
+        panels = []
+        for sec_recipe in secondary_recipes:
+            panel = _build_secondary_panel(state, sec_recipe, verified)
+            if panel:
+                panels.append(panel)
+        if panels:
+            artifact_block["panels"] = panels
+
+    state["artifact_block"] = artifact_block
     # Also populate state.charts → syncs to AgentState.charts → Charts component
-    state["charts"] = state_charts
+    state["charts"] = [c for c in chart_specs if c.get("data")]
+
+    # artifact_block is stored in state.values — the React client reads it via the
+    # "values" stream event (onValues handler in MyRuntimeProvider). No tool-call
+    # message is emitted; this avoids large JSON code blocks streaming in the chat thread.
 
     # Emit the Five Case decision spine + analysis as an AIMessage for AG-UI streaming.
     # The add_messages reducer appends this to the existing messages list.
@@ -1123,6 +2377,10 @@ def _extract_query_atlas(state: AtlasState) -> dict:
         "reasoning_trace": [],
         "analysis": "",
         "_is_conversational": False,
+        "is_cpc_inward": False,
+        "target_recipe": "brief_five_case",
+        "target_secondary_recipes": [],
+        "section_scores": {},
     }
 
 
@@ -1133,26 +2391,40 @@ def build_atlas_graph() -> StateGraph:
     graph.add_node("extract_query", _extract_query_atlas)
     # Node 0b: Intent gate — greetings / meta queries skip the 35-second pipeline
     graph.add_node("classify_intent", classify_intent)
+    # Node 0c: Recipe intent selection — runs BEFORE corpus search so build_five_case
+    #           knows which LLM prompt to use (Five Case vs CPC-inward assessment)
+    graph.add_node("select_recipe_intent", select_recipe_intent)
     graph.add_node("search_corpus", search_corpus)
     # Node 1b: External Evidence Router — only fires when gaps call for it
     graph.add_node("external_evidence_search", external_evidence_search)
     graph.add_node("build_five_case", build_five_case)
+    # Node 2b: Visual recipe confirmation — post-LLM, records decision in reasoning_trace
+    graph.add_node("select_visual_recipe", select_visual_recipe)
     graph.add_node("verify_citations", verify_citations)
 
     graph.set_entry_point("extract_query")
     graph.add_edge("extract_query", "classify_intent")
-    # Conditional: conversational → END immediately; business query → full pipeline
+    # Conditional: conversational → END immediately; business query → recipe intent selection
     graph.add_conditional_edges(
         "classify_intent",
         _route_after_intent,
-        {END: END, "search_corpus": "search_corpus"},
+        {END: END, "select_recipe_intent": "select_recipe_intent"},
     )
+    graph.add_edge("select_recipe_intent", "search_corpus")
     graph.add_edge("search_corpus", "external_evidence_search")
     graph.add_edge("external_evidence_search", "build_five_case")
-    graph.add_edge("build_five_case", "verify_citations")
+    graph.add_edge("build_five_case", "select_visual_recipe")
+    graph.add_edge("select_visual_recipe", "verify_citations")
     graph.add_edge("verify_citations", END)
 
-    return graph.compile(checkpointer=MemorySaver())
+    # When running under LangGraph Platform (langgraph dev / LangGraph Cloud),
+    # the platform provides its own managed checkpointer — using MemorySaver raises
+    # a ValueError in v0.9.0+.  When running under FastAPI + ag_ui_langgraph,
+    # MemorySaver IS required (graph.aget_state needs a checkpointer).
+    # We detect the runtime by checking whether langgraph_api is already loaded.
+    import sys as _sys
+    _checkpointer = None if "langgraph_api" in _sys.modules else MemorySaver()
+    return graph.compile(checkpointer=_checkpointer)
 
 
 atlas_graph = build_atlas_graph()
@@ -1202,6 +2474,10 @@ def run_atlas(
         "charts": [],
         "error": None,
         "_is_conversational": False,
+        "is_cpc_inward": False,
+        "target_recipe": "brief_five_case",
+        "target_secondary_recipes": [],
+        "section_scores": {},
     }
 
     final_state = atlas_graph.invoke(
@@ -1243,6 +2519,10 @@ def run_atlas(
         "five_case_model": final_state["five_case_model"],
         # Artifact block — primary UI rendering contract (includes chart_specs)
         "artifact_block": final_state.get("artifact_block") or {},
+        # Recipe intent — useful for eval harness and debugging
+        "target_recipe": final_state.get("target_recipe", "brief_five_case"),
+        "is_cpc_inward": final_state.get("is_cpc_inward", False),
+        "section_scores": final_state.get("section_scores", {}),
         # Pass through any error for debugging
         **({"error_detail": final_state["error"]} if final_state.get("error") else {}),
     }

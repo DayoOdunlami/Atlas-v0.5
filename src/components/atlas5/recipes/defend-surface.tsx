@@ -18,6 +18,11 @@ import type { ConfidenceTier } from "@/lib/atlas5/types";
 import { cn } from "@/lib/utils";
 import { getConfidenceStyles } from "@/lib/atlas5/confidence-styles";
 import { ClaimStateBadge } from "@/components/atlas5/claim-state-badge";
+import {
+  SurfaceHeadline,
+  EvidenceCountStrip,
+  TIER_BADGE as TIER_BADGE_STYLES,
+} from "./surface-primitives";
 import { ChevronDown, ChevronRight, AlertCircle } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -44,52 +49,6 @@ interface AssumptionItem {
   text: string;
   confidence_tier: ConfidenceTier;
   basis?: string;
-}
-
-// ---------------------------------------------------------------------------
-// Tier badge (for assumptions)
-// ---------------------------------------------------------------------------
-
-const TIER_BADGE: Record<ConfidenceTier, string> = {
-  Speculative: "bg-slate-100 text-slate-600 border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-600",
-  Indicative:  "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-700",
-  Supported:   "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-700",
-  Robust:      "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/40 dark:text-green-300 dark:border-green-700",
-};
-
-// ---------------------------------------------------------------------------
-// HeadlineCard
-// ---------------------------------------------------------------------------
-
-function DefendHeadline({
-  tier,
-  text,
-  styles,
-}: {
-  tier: ConfidenceTier;
-  text?: string;
-  styles: ReturnType<typeof getConfidenceStyles>;
-}) {
-  const tierStatement: Record<ConfidenceTier, string> = {
-    Speculative: "Evidence base is Speculative. Key assumptions are unverified. Do not use for investment decisions.",
-    Indicative:  "Evidence base is Indicative. Core claims are plausible but not fully evidenced.",
-    Supported:   "Evidence base is Supported. Primary claims are verified; minor gaps remain.",
-    Robust:      "Evidence base is Robust. All primary claims are verified and independently corroborated.",
-  };
-
-  return (
-    <div
-      data-testid="defend-headline-card"
-      className={cn("rounded-lg border p-3.5 bg-muted/20", styles.border)}
-    >
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-        Confidence Verdict
-      </p>
-      <p className={cn("text-sm font-medium leading-snug", styles.headline)}>
-        {text ?? tierStatement[tier]}
-      </p>
-    </div>
-  );
 }
 
 // ---------------------------------------------------------------------------
@@ -237,7 +196,7 @@ function AssumptionsList({
             <span
               className={cn(
                 "inline-flex items-center rounded border px-1.5 py-0.5 text-[9px] font-semibold shrink-0",
-                TIER_BADGE[a.confidence_tier],
+                TIER_BADGE_STYLES[a.confidence_tier],
               )}
             >
               {a.confidence_tier}
@@ -257,8 +216,16 @@ interface Props {
   artifact: ArtifactBlock;
 }
 
+const TIER_VERDICT: Record<ConfidenceTier, string> = {
+  Speculative: "Evidence base is Speculative. Key assumptions are unverified. Do not use for investment decisions.",
+  Indicative:  "Evidence base is Indicative. Core claims are plausible but not fully evidenced.",
+  Supported:   "Evidence base is Supported. Primary claims are verified; minor gaps remain.",
+  Robust:      "Evidence base is Robust. All primary claims are verified and independently corroborated.",
+};
+
 export function DefendSurface({ artifact }: Props) {
   const sections = artifact.sections ?? {};
+  const citations = artifact.corpus_citations ?? [];
   const styles = getConfidenceStyles(artifact.confidence_tier);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -275,27 +242,27 @@ export function DefendSurface({ artifact }: Props) {
       data-testid="recipe-defend"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/20">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/20">
         <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Evidence Trail — DEFEND
+          Defend
         </span>
-        <span
-          data-testid="confidence-tier-badge"
-          className={cn(
-            "text-xs font-semibold px-2.5 py-0.5 rounded-full border",
-            styles.badge,
-          )}
-        >
-          {artifact.confidence_tier}
-        </span>
+        <div className="flex items-center gap-2">
+          <EvidenceCountStrip citations={citations} />
+          <span
+            data-testid="confidence-tier-badge"
+            className={cn("text-xs font-semibold px-2.5 py-0.5 rounded-full border", TIER_BADGE_STYLES[artifact.confidence_tier])}
+          >
+            {artifact.confidence_tier}
+          </span>
+        </div>
       </div>
 
       <div className="p-4 space-y-5">
-        {/* 1. Headline */}
-        <DefendHeadline
+        {/* 1. Headline — confidence verdict */}
+        <SurfaceHeadline
+          text={headlineText ?? TIER_VERDICT[artifact.confidence_tier]}
           tier={artifact.confidence_tier}
-          text={headlineText}
-          styles={styles}
+          label="confidence verdict"
         />
 
         {/* 2. Evidence tree */}

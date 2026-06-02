@@ -52,26 +52,26 @@ export const HIDDEN_NODES = new Set([
   "route_after_intent", "router",
 ]);
 
-/** Returns true for CopilotKit raw JSON state snapshots (suppress in UI). */
+/** Returns true for raw JSON agent state/tool output — suppress in chat UI. */
 export function isRawStateContent(content: string): boolean {
   const trimmed = content.trim();
   let inner = trimmed;
   if (trimmed.startsWith("```")) {
     inner = trimmed
-      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/^```(?:json|python)?\s*/i, "")
       .replace(/\s*```\s*$/, "")
       .trim();
   }
-  if (!inner.startsWith("{")) return false;
-  return (
-    inner.includes('"sections"') ||
-    inner.includes('"corpus_citations"') ||
-    inner.includes('"decision_spine"') ||
-    inner.includes('"confidence_tier"') ||
-    inner.includes('"artifact_block"') ||
-    inner.includes('"five_case_model"') ||
-    inner.includes('"evidence_gaps"')
-  );
+  if (!inner.startsWith("{") && !inner.startsWith("[")) return false;
+  if (inner.length < 100) return false;
+  const AGENT_FIELDS = [
+    '"sections"', '"corpus_citations"', '"decision_spine"',
+    '"confidence_tier"', '"artifact_block"', '"five_case_model"',
+    '"evidence_gaps"', '"reasoning_trace"', '"tool_calls"',
+    '"capability_scores"', '"recipe"', '"artifact_delta"',
+    '"projects"', '"hive_citations"', '"transferability_score"',
+  ];
+  return AGENT_FIELDS.some((f) => inner.includes(f));
 }
 
 // ---------------------------------------------------------------------------

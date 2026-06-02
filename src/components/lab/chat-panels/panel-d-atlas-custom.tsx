@@ -103,13 +103,20 @@ function ToolBlock({ tc, compact }: ToolBlockProps) {
 // Panel D
 // ---------------------------------------------------------------------------
 
+const COLD_CHIPS = [
+  { label: "Explore the innovation landscape", prompt: "Explore the innovation landscape for connected and autonomous transport in the UK." },
+  { label: "Assess a capability or product",   prompt: "Assess CPC's capability evidence for leading an autonomous freight R&D programme." },
+  { label: "Build an investment case",          prompt: "Build a Green Book investment case for a UK autonomous freight corridor pilot programme." },
+];
+
 export interface PanelDProps {
   messages: DisplayMessage[];
   isLoading: boolean;
   compact?: boolean;
+  onChipSelect?: (prompt: string) => void;
 }
 
-export function PanelDAtlas({ messages, isLoading, compact }: PanelDProps) {
+export function PanelDAtlas({ messages, isLoading, compact, onChipSelect }: PanelDProps) {
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -135,8 +142,25 @@ export function PanelDAtlas({ messages, isLoading, compact }: PanelDProps) {
       )}
 
       {messages.length === 0 && !isLoading && (
-        <div className="flex-1 flex items-center justify-center py-8">
-          <p className="text-sm text-muted-foreground">No messages yet.</p>
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 px-4 py-8">
+          <div className="text-center space-y-1">
+            <p className="text-sm font-semibold text-foreground">What are you trying to understand or decide?</p>
+            <p className="text-xs text-muted-foreground">Choose a starting point or type your own question below.</p>
+          </div>
+          {onChipSelect && (
+            <div className="flex flex-col gap-2 w-full max-w-xs">
+              {COLD_CHIPS.map((chip) => (
+                <button
+                  key={chip.label}
+                  type="button"
+                  onClick={() => onChipSelect(chip.prompt)}
+                  className="rounded-lg border border-border bg-muted/40 px-4 py-2.5 text-xs text-left font-medium text-foreground hover:bg-muted/80 hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors"
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

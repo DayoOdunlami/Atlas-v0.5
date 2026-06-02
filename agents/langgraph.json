@@ -1,0 +1,10 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "atlas": "./atlas/graph.py:atlas_graph",
+    "jarvis": "./jarvis/graph.py:jarvis_graph",
+    "cicerone": "./cicerone/graph.py:cicerone_graph",
+    "hyve": "./hyve/graph.py:hyve_graph"
+  },
+  "env": "../.env.local"
+}

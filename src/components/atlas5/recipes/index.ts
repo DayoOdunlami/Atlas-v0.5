@@ -5,3 +5,4 @@ export { ScenarioStressTestRecipe } from "./scenario-stress-test";
 export { OrientSurface } from "./orient-surface";
 export { ConnectSurface } from "./connect-surface";
 export { DefendSurface } from "./defend-surface";
+export { DiagnoseSurface } from "./diagnose-surface";

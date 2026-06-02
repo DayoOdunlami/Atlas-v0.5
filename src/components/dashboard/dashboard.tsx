@@ -6,24 +6,23 @@
  */
 "use client";
 
+import { useEffect } from "react";
 import { useCoAgent, useCopilotReadable, useCoAgentStateRender } from "@copilotkit/react-core";
 import { AgentState, initialState } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { PinnedMetrics } from "@/components/dashboard/layout/metrics";
-import { Charts } from "@/components/dashboard/layout/charts";
 import { useChartActions, useSearchActions } from "@/components/chat/actions";
 import { SurfaceSwitcher } from "@/components/dashboard/layout/surface-switcher";
-import { DecisionSpineCard } from "@/components/dashboard/layout/decision-spine";
-import { ArtifactPanel } from "@/components/dashboard/layout/artifact-panel";
 import { useSurfaceGateway, useSurfaceStore } from "@/lib/atlas5/surface-gateway";
+import { useArtifactStore, buildArtifactFromAtlas } from "@/lib/atlas5/artifact-store";
+import { ArtifactPane } from "@/components/atlas5/artifact-pane";
 import type { AgentId } from "@/lib/atlas5/types";
 
-/** Same mapping as CopilotKitProvider — must stay in sync. */
+/** Same mapping as CopilotKitProvider — must stay in sync with agents/server.py. */
 const COAGENT_NAME: Record<AgentId, string> = {
   ATLAS:    "atlas",
   JARVIS:   "jarvis",
-  CICERONE: "atlas",
-  HYVE:     "atlas",
+  CICERONE: "cicerone",
+  HYVE:     "hyve",
 };
 
 const AGENT_DESCRIPTIONS: Record<string, string> = {
@@ -83,13 +82,19 @@ export function MainLayout({ className }: { className?: string }) {
   // Suppress CopilotKit's default raw-JSON state render in the chat panel.
   // Without this, CopilotKit renders a ```json code block for every STATE_SNAPSHOT.
   // We render the output through the structured artifact panel instead.
+  // reasoning_trace is written by each graph node — show the last entry's thought
+  // as a plain-English status message while the agent runs.
   useCoAgentStateRender({
     name: activeCoagentName,
-    render: ({ status }) => {
+    render: ({ status, state: agentState }) => {
       if (status === "inProgress") {
+        const trace = (agentState as Record<string, unknown>)?.reasoning_trace;
+        const entries = Array.isArray(trace) ? trace as Array<Record<string, unknown>> : [];
+        const last = entries.length > 0 ? entries[entries.length - 1] : null;
+        const thought = last?.thought as string | undefined;
         return (
           <div className="text-sm text-muted-foreground px-3 py-2 animate-pulse">
-            Analysing evidence…
+            {thought ? thought : "Analysing evidence…"}
           </div>
         );
       }
@@ -101,29 +106,26 @@ export function MainLayout({ className }: { className?: string }) {
   useChartActions({ state, setState });
   useSearchActions();
 
-  const artifact = state?.artifact_block;
-  const spine = state?.decision_spine;
-  const hasCharts = (state?.charts?.length ?? 0) > 0;
+  // Bridge coagent artifact_block → shared ArtifactStore so ArtifactPane can render it
+  const { setArtifact, startRun } = useArtifactStore();
+
+  useEffect(() => {
+    const ab = (state as Record<string, unknown> | undefined)?.artifact_block;
+    if (ab && typeof ab === "object" && !Array.isArray(ab)) {
+      const raw = ab as Record<string, unknown>;
+      if (raw.sections && Object.keys(raw.sections as object).length > 0) {
+        setArtifact(buildArtifactFromAtlas(raw));
+      }
+    } else if (ab === null || ab === undefined) {
+      // Only call startRun when the agent is actively running
+    }
+  }, [(state as Record<string, unknown> | undefined)?.artifact_block, setArtifact]);
 
   return (
-    <div
-      className={cn("min-h-screen bg-background text-foreground", className)}
-    >
-      <div className="max-w-6xl mx-auto p-4 grid gap-4">
-        {/* Atlas surface controls */}
-        <SurfaceSwitcher state={state} setState={setState} />
-
-        {/* Decision Spine */}
-        {spine && <DecisionSpineCard spine={spine} />}
-
-        {/* Artifact — full available width; citations live inside as collapsible Sources footer */}
-        {artifact && <ArtifactPanel artifact={artifact} />}
-
-        {/* Secondary: metrics */}
-        <PinnedMetrics state={state} setState={setState} />
-
-        {/* Secondary: charts (only shown when agent has populated them) */}
-        {hasCharts && <Charts state={state} setState={setState} />}
+    <div className={cn("h-full flex flex-col overflow-hidden bg-muted/5", className)}>
+      <SurfaceSwitcher state={state} setState={setState} />
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <ArtifactPane />
       </div>
     </div>
   );

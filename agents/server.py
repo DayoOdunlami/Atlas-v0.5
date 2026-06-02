@@ -72,6 +72,16 @@ def _load_atlas():
     return atlas_graph
 
 
+def _load_cicerone():
+    from agents.cicerone.graph import cicerone_graph
+    return cicerone_graph
+
+
+def _load_hyve():
+    from agents.hyve.graph import hyve_graph
+    return hyve_graph
+
+
 # ---------------------------------------------------------------------------
 # App lifecycle
 # ---------------------------------------------------------------------------
@@ -85,7 +95,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     print(f"  POSTGRES_URL:      {'set' if os.getenv('POSTGRES_URL') else 'MISSING!'}")
     print(f"  OPENAI_API_KEY:    {'set' if os.getenv('OPENAI_API_KEY') else 'not set (ILIKE fallback)'}")
     print(f"  EXA_API_KEY:       {'set' if os.getenv('EXA_API_KEY') else 'not set (Exa disabled)'}")
-    print("  Agents: JARVIS /jarvis | ATLAS /atlas")
+    print("  Agents: JARVIS /jarvis | ATLAS /atlas | CICERONE /cicerone | HYVE /hyve")
     print("  Docs:   http://localhost:8000/docs")
     yield
     print("Atlas 5 agent service shutting down.")
@@ -140,13 +150,17 @@ async def root() -> dict[str, str]:
         "version": "0.5.0",
         "protocol": "AG-UI (ag_ui_langgraph)",
         "agents": {
-            "jarvis": "/jarvis  POST → AG-UI SSE stream",
-            "atlas": "/atlas   POST → AG-UI SSE stream",
+            "jarvis":    "/jarvis    POST → AG-UI SSE stream",
+            "atlas":     "/atlas     POST → AG-UI SSE stream",
+            "cicerone":  "/cicerone  POST → AG-UI SSE stream",
+            "hyve":      "/hyve      POST → AG-UI SSE stream",
         },
         "health": {
-            "service": "/health",
-            "jarvis": "/jarvis/health",
-            "atlas": "/atlas/health",
+            "service":  "/health",
+            "jarvis":   "/jarvis/health",
+            "atlas":    "/atlas/health",
+            "cicerone": "/cicerone/health",
+            "hyve":     "/hyve/health",
         },
         "docs": "/docs",
     }
@@ -195,6 +209,52 @@ try:
 except Exception as _atlas_err:
     print(f"[server] WARNING: ATLAS failed to load: {_atlas_err}")
     print("[server] ATLAS endpoint will return 500 until graph is fixed.")
+
+
+# ---------------------------------------------------------------------------
+# CICERONE — /cicerone (AG-UI streaming endpoint)
+# ---------------------------------------------------------------------------
+
+try:
+    _cicerone_graph = _load_cicerone()
+    cicerone_agent = LangGraphAgent(
+        name="cicerone",
+        graph=_cicerone_graph,
+        description=(
+            "CICERONE is the Atlas 5 cross-sector transfer agent. Given a source context "
+            "and target opportunity, it scores transferability (0–100), identifies sector "
+            "analogues, and classifies evidence gaps as HAVE / PARTIAL / MISSING with "
+            "verified corpus citations and a confidence tier."
+        ),
+    )
+    add_langgraph_fastapi_endpoint(app, cicerone_agent, path="/cicerone")
+    print("[server] CICERONE registered at /cicerone")
+except Exception as _cicerone_err:
+    print(f"[server] WARNING: CICERONE failed to load: {_cicerone_err}")
+    print("[server] CICERONE endpoint will return 500 until graph is fixed.")
+
+
+# ---------------------------------------------------------------------------
+# HYVE — /hyve (AG-UI streaming endpoint)
+# ---------------------------------------------------------------------------
+
+try:
+    _hyve_graph = _load_hyve()
+    hyve_agent = LangGraphAgent(
+        name="hyve",
+        graph=_hyve_graph,
+        description=(
+            "HYVE is the Atlas 5 climate adaptation agent. Given a query, it searches "
+            "the HIVE corpus of climate adaptation and transport resilience case studies, "
+            "resolves chunk-level results to parent article IDs, and returns verified "
+            "hive_citations with a transport mode classification and confidence tier."
+        ),
+    )
+    add_langgraph_fastapi_endpoint(app, hyve_agent, path="/hyve")
+    print("[server] HYVE registered at /hyve")
+except Exception as _hyve_err:
+    print(f"[server] WARNING: HYVE failed to load: {_hyve_err}")
+    print("[server] HYVE endpoint will return 500 until graph is fixed.")
 
 
 # ---------------------------------------------------------------------------

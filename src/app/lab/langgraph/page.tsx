@@ -30,7 +30,7 @@ import {
   PanelResizeHandle,
   type ImperativePanelHandle,
 } from "react-resizable-panels";
-import { useRef, useCallback, useState } from "react";
+import { useRef, useCallback, useState, useEffect, type FC } from "react";
 import {
   RadarChart,
   Radar,
@@ -49,7 +49,6 @@ import { MyRuntimeProvider } from "./MyRuntimeProvider";
 import { ArtifactPane } from "@/components/atlas5/artifact-pane";
 import { useArtifactStore } from "@/lib/atlas5/artifact-store";
 import { buildArtifactFromAtlas } from "@/lib/atlas5/artifact-store";
-import type { FC } from "react";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -523,6 +522,34 @@ function ArtifactPanel({ artifact, statusText }: { artifact: ArtifactArgs | null
 }
 
 // ---------------------------------------------------------------------------
+// ArtifactRunBridge — fires startRun() the instant the thread transitions to
+// running, giving the ThinkingIndicator immediate feedback before the first
+// values event arrives from the Python agent.
+// ---------------------------------------------------------------------------
+
+function ArtifactRunBridge() {
+  const isRunning = useAuiState(
+    (s) => (s.thread as unknown as { isRunning?: boolean }).isRunning ?? false,
+  );
+  const { startRun, clearLoading, isLoading, artifact } = useArtifactStore();
+  const wasRunningRef = useRef(false);
+
+  useEffect(() => {
+    if (isRunning && !wasRunningRef.current) {
+      // Low→high edge: message just sent — show loading indicator immediately
+      startRun();
+    } else if (!isRunning && wasRunningRef.current && isLoading && !artifact) {
+      // High→low edge: run finished but no artifact arrived (error / cancel / 500)
+      // Clear the thinking indicator so it doesn't stay stuck forever
+      clearLoading();
+    }
+    wasRunningRef.current = isRunning;
+  }, [isRunning, startRun, clearLoading, isLoading, artifact]);
+
+  return null;
+}
+
+// ---------------------------------------------------------------------------
 // Thread with Atlas suggestions
 // ---------------------------------------------------------------------------
 
@@ -552,6 +579,8 @@ const ThreadWithSuggestions: FC = () => {
   return (
     <AuiProvider value={aui}>
       <ArtifactBlockTool />
+      {/* Fires startRun() immediately when thread becomes running — before first values event */}
+      <ArtifactRunBridge />
       <Thread />
     </AuiProvider>
   );
@@ -576,10 +605,14 @@ function CollapseHandle({
       : collapsed ? PanelRightOpen : PanelRightClose;
 
   return (
-    <PanelResizeHandle className="group relative flex w-px items-center justify-center bg-border transition-colors hover:bg-border/80 data-[resize-handle-active]:bg-primary/30">
+    // When collapsed the panel beside this handle is 0px — widen the handle so it's still
+    // hoverable and clickable. Full opacity when collapsed so the button is always findable.
+    <PanelResizeHandle
+      className={`group relative flex items-center justify-center bg-border transition-colors hover:bg-border/80 data-[resize-handle-active]:bg-primary/30 ${collapsed ? "w-5" : "w-px"}`}
+    >
       <button
         onClick={onToggle}
-        className="absolute z-10 flex size-5 items-center justify-center rounded-full border bg-background text-muted-foreground shadow-sm opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground"
+        className={`absolute z-10 flex size-5 items-center justify-center rounded-full border bg-background text-muted-foreground shadow-sm transition-opacity hover:text-foreground ${collapsed ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
         title={collapsed ? "Expand" : "Collapse"}
       >
         <Icon className="size-3" />
@@ -597,7 +630,16 @@ export default function LangGraphPage() {
   const artifactRef = useRef<ImperativePanelHandle>(null);
   const [threadCollapsed, setThreadCollapsed] = useState(false);
   const [artifactCollapsed, setArtifactCollapsed] = useState(false);
-  const { setArtifact, clearArtifact } = useArtifactStore();
+  const { setArtifact, setPartialArtifact, startRun, setStatusText, setReasoningTrace } = useArtifactStore();
+
+  // Collapse the thread list on initial mount — looks cleaner on first load.
+  // Using imperative handle is more reliable than defaultSize={0} with resizable panels.
+  useEffect(() => {
+    const panel = threadListRef.current;
+    if (panel && !panel.isCollapsed()) {
+      panel.collapse();
+    }
+  }, []);
 
   const toggleThreadList = useCallback(() => {
     const panel = threadListRef.current;
@@ -611,29 +653,66 @@ export default function LangGraphPage() {
     if (panel.isCollapsed()) panel.expand(); else panel.collapse();
   }, []);
 
+  // Auto-expand artifact panel when sections start arriving
+  const autoExpandArtifact = useCallback(() => {
+    const panel = artifactRef.current;
+    if (panel && panel.isCollapsed()) {
+      panel.expand();
+    }
+  }, []);
+
   const handleValues = useCallback((values: Record<string, unknown>) => {
+    // ── 1. Reasoning trace — update on every node transition ─────────────
+    const trace = values.reasoning_trace;
+    if (Array.isArray(trace) && trace.length > 0) {
+      setReasoningTrace(trace as Array<{ node?: string; thought: string; evidence_count?: number }>);
+      const last = trace[trace.length - 1] as Record<string, unknown>;
+      const thought = typeof last.thought === "string" ? last.thought : undefined;
+      if (thought) setStatusText(thought);
+    }
+
+    // ── 2. Final artifact — artifact_block set by verify_citations ────────
     const ab = values.artifact_block;
     if (ab && typeof ab === "object" && !Array.isArray(ab)) {
       const raw = ab as Record<string, unknown>;
-      // Only update when we have real content (verify_citations has run)
       if (raw.sections && Object.keys(raw.sections as object).length > 0) {
+        autoExpandArtifact();
         setArtifact(buildArtifactFromAtlas(raw));
+        return; // done — final artifact rendered
       }
-    } else if (ab === null || ab === undefined) {
-      clearArtifact();
     }
-  }, [setArtifact, clearArtifact]);
+
+    // ── 3. Progressive partial — sections available from build_five_case ──
+    // Shows the brief filling in before verify_citations finishes.
+    const intermediateSections = values.sections;
+    if (
+      !ab &&
+      intermediateSections &&
+      typeof intermediateSections === "object" &&
+      !Array.isArray(intermediateSections)
+    ) {
+      const sectionKeys = Object.keys(intermediateSections as object);
+      if (sectionKeys.length > 0) {
+        autoExpandArtifact();
+        setPartialArtifact(buildArtifactFromAtlas({
+          ...values,
+          sections: intermediateSections as Record<string, string>,
+          confidence_tier: (values.confidence_tier as string) ?? "Speculative",
+        }));
+      }
+    }
+  }, [setArtifact, setPartialArtifact, setStatusText, setReasoningTrace, autoExpandArtifact]);
 
   return (
     <MyRuntimeProvider onValues={handleValues}>
       <div className="h-dvh overflow-hidden bg-background text-foreground antialiased">
         <PanelGroup direction="horizontal" className="h-full">
 
-          {/* Col 1: thread list */}
+          {/* Col 1: thread list — collapsed on mount via useEffect; toggle always visible */}
           <Panel
             ref={threadListRef}
             defaultSize={15}
-            minSize={10}
+            minSize={12}
             collapsible
             collapsedSize={0}
             onCollapse={() => setThreadCollapsed(true)}
@@ -651,8 +730,8 @@ export default function LangGraphPage() {
             side="left"
           />
 
-          {/* Col 2: chat */}
-          <Panel minSize={28} defaultSize={47} className="min-w-0">
+          {/* Col 2: chat — takes full width when thread list is collapsed */}
+          <Panel minSize={25} defaultSize={48} className="min-w-0">
             <ThreadWithSuggestions />
           </Panel>
 
@@ -662,11 +741,11 @@ export default function LangGraphPage() {
             side="right"
           />
 
-          {/* Col 3: artifact panel */}
+          {/* Col 3: artifact panel — 52% default, wider than chat */}
           <Panel
             ref={artifactRef}
-            defaultSize={38}
-            minSize={22}
+            defaultSize={52}
+            minSize={28}
             collapsible
             collapsedSize={0}
             onCollapse={() => setArtifactCollapsed(true)}

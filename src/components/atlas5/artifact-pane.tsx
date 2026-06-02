@@ -37,15 +37,11 @@ import {
   OrientSurface,
   ConnectSurface,
   DefendSurface,
+  DiagnoseSurface,
 } from "@/components/atlas5/recipes";
-import {
-  CpcCapabilityAssessmentRecipe,
-  CpcPortfolioComparisonRecipe,
-  CpcMarketAlignmentRecipe,
-  CpcEvidenceGapsRecipe,
-} from "@/components/dashboard/recipes";
 import { TrustRail } from "@/components/atlas5/trust-rail";
 import { DecisionSpineCard } from "@/components/atlas5/decision-spine";
+import { BlocksView } from "@/components/atlas5/block-renderer";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -396,64 +392,95 @@ function RecipeView({
   const recipe = detectRecipe(artifact);
   if (!recipe) return null; // caller falls back to legacy views
 
+  // Route recipe ID → surface component
+  const surface = (() => {
+    switch (recipe) {
+      // Five Case brief (ATLAS outward-facing investment appraisal only)
+      case "brief_five_case":
+        return <BriefFiveCaseRecipe artifact={artifact} />;
+      // Evidence panel (JARVIS / CICERONE / HYVE)
+      case "evidence_panel":
+        return <EvidencePanelRecipe artifact={artifact} />;
+      // DIAGNOSE — gap analysis
+      case "diagnose":
+      case "cpc_evidence_gaps":
+        return <DiagnoseSurface artifact={artifact} />;
+      // Stats / scenario
+      case "stats_dashboard":
+        return <StatsDashboardRecipe artifact={artifact} />;
+      case "scenario_stress_test":
+        return <ScenarioStressTestRecipe artifact={artifact} />;
+      // ORIENT — landscape exploration, act, capability assessment, market alignment
+      case "orient":
+      case "act":
+      case "cpc_capability_assessment":
+      case "cpc_market_alignment":
+        return <OrientSurface artifact={artifact} />;
+      // CONNECT — opportunity fit / portfolio comparison / funding flow
+      case "connect":
+      case "cpc_opportunity_fit":
+      case "cpc_portfolio_comparison":
+      case "cpc_funding_flow":
+        return <ConnectSurface artifact={artifact} />;
+      // DEFEND
+      case "defend":
+      case "cpc_defend":
+        return <DefendSurface artifact={artifact} />;
+      default:
+        return null;
+    }
+  })();
+
+  if (!surface) return null;
+
+  // If the agent emitted visual_blocks, render them above the surface
+  const hasVisualBlocks = artifact.visual_blocks && artifact.visual_blocks.length > 0;
+
   return (
     <div className="space-y-4" data-testid="recipe-view">
-      {/* Decision Spine — shown above recipe panel when available */}
       {decisionSpine && <DecisionSpineCard spine={decisionSpine} />}
 
-      {/* Recipe surface + Trust Rail */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 rounded-xl border border-border bg-card overflow-hidden">
-          {recipe === "brief_five_case" && (
-            <BriefFiveCaseRecipe artifact={artifact} />
-          )}
-          {recipe === "evidence_panel" && (
-            <EvidencePanelRecipe artifact={artifact} />
-          )}
-          {recipe === "stats_dashboard" && (
-            <StatsDashboardRecipe artifact={artifact} />
-          )}
-          {recipe === "scenario_stress_test" && (
-            <ScenarioStressTestRecipe artifact={artifact} />
-          )}
-          {/* Sprint UX recipes */}
-          {recipe === "orient" && (
-            <OrientSurface artifact={artifact} />
-          )}
-          {recipe === "connect" && (
-            <ConnectSurface artifact={artifact} />
-          )}
-          {recipe === "act" && (
-            <BriefFiveCaseRecipe artifact={artifact} />
-          )}
-          {recipe === "diagnose" && (
-            <EvidencePanelRecipe artifact={artifact} />
-          )}
-          {recipe === "defend" && (
-            <DefendSurface artifact={artifact} />
-          )}
-          {/* CPC Capability Intelligence recipes — cast bridges atlas5 ↔ dashboard ArtifactBlock types */}
-          {recipe === "cpc_capability_assessment" && (
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            <CpcCapabilityAssessmentRecipe artifact={artifact as any} />
-          )}
-          {recipe === "cpc_portfolio_comparison" && (
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            <CpcPortfolioComparisonRecipe artifact={artifact as any} />
-          )}
-          {recipe === "cpc_market_alignment" && (
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            <CpcMarketAlignmentRecipe artifact={artifact as any} />
-          )}
-          {recipe === "cpc_evidence_gaps" && (
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            <CpcEvidenceGapsRecipe artifact={artifact as any} />
-          )}
+      {/* Art Director blocks — shown when Python emits visual_blocks[] */}
+      {hasVisualBlocks && (
+        <BlocksView blocks={artifact.visual_blocks!} />
+      )}
+
+      <div className={hasVisualBlocks ? "grid grid-cols-1 gap-4" : "grid grid-cols-1 lg:grid-cols-3 gap-4"}>
+        <div className={hasVisualBlocks ? "rounded-xl border border-border bg-card overflow-hidden" : "lg:col-span-2 rounded-xl border border-border bg-card overflow-hidden"}>
+          {surface}
         </div>
-        <div className="lg:col-span-1">
-          <TrustRail artifact={artifact} />
-        </div>
+        {!hasVisualBlocks && (
+          <div className="lg:col-span-1">
+            <TrustRail artifact={artifact} />
+          </div>
+        )}
       </div>
+
+      {/* Inline citations when visual_blocks are present (replaces TrustRail sidebar) */}
+      {hasVisualBlocks && artifact.corpus_citations && artifact.corpus_citations.length > 0 && (
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <div className="px-3 py-2 border-b border-border bg-muted/20 flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              {artifact.corpus_citations.length} verified sources
+            </span>
+          </div>
+          <div className="divide-y divide-border/60">
+            {artifact.corpus_citations.slice(0, 8).map((c) => (
+              <div key={c.id} className="flex items-start gap-2.5 px-3 py-2">
+                {c.score != null && (
+                  <span className="text-[10px] font-mono text-muted-foreground w-8 shrink-0 tabular-nums pt-0.5">
+                    {Math.round(c.score * 100)}%
+                  </span>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-foreground line-clamp-1">{c.title}</p>
+                  <p className="text-[10px] text-muted-foreground">{c.organisation ?? c.publisher ?? ""}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -578,7 +605,7 @@ function EvidenceView({ artifact }: { artifact: ArtifactBlock }) {
 // Loading skeleton
 // ---------------------------------------------------------------------------
 
-function LoadingSkeleton() {
+function LoadingSkeleton({ statusText }: { statusText?: string }) {
   return (
     <div data-testid="artifact-loading" className="space-y-3 animate-pulse">
       <div className="h-20 rounded-xl bg-muted" />
@@ -586,6 +613,9 @@ function LoadingSkeleton() {
       <div className="h-10 rounded-lg bg-muted" />
       <div className="h-10 rounded-lg bg-muted" />
       <div className="h-24 rounded-lg bg-muted" />
+      {statusText && (
+        <p className="text-[11px] text-muted-foreground text-center pt-1 not-animate-pulse">{statusText}</p>
+      )}
     </div>
   );
 }
@@ -701,7 +731,7 @@ function SaveBriefButton({
 
 export function ArtifactPane() {
   const { surface } = useSurfaceGateway();
-  const { artifact, decisionSpine, isLoading, setArtifact, setDecisionSpine } = useArtifactStore();
+  const { artifact, decisionSpine, isLoading, statusText, setArtifact, setDecisionSpine } = useArtifactStore();
 
   // ── Brief persistence ───────────────────────────────────────────────────
   // Auto-load: when a thread_id is set and the pane is empty, fetch the most
@@ -750,38 +780,33 @@ export function ArtifactPane() {
   }, [artifact, decisionSpine, surface]);
 
   const agentLabel = artifact?.agent ?? surface.active_agent;
-  const typeLabel =
-    artifact?.recipe === "brief_five_case"
-      ? "Investment Brief"
-      : artifact?.recipe === "evidence_panel"
+
+  const RECIPE_LABELS: Record<string, string> = {
+    brief_five_case:           "Investment Brief",
+    act:                       "Investment Brief",
+    evidence_panel:            "Evidence",
+    diagnose:                  "Evidence Gaps",
+    stats_dashboard:           "Data Analysis",
+    scenario_stress_test:      "Scenario",
+    orient:                    "Innovation Landscape",
+    cpc_capability_assessment: "Capability Assessment",
+    cpc_market_alignment:      "Market Alignment",
+    connect:                   "Opportunity Fit",
+    cpc_opportunity_fit:       "Opportunity Fit",
+    cpc_portfolio_comparison:  "Portfolio Comparison",
+    cpc_funding_flow:          "Funding Flow",
+    cpc_evidence_gaps:         "Evidence Gaps",
+    defend:                    "Defend",
+    cpc_defend:                "Defend",
+  };
+
+  const typeLabel = artifact?.recipe
+    ? (RECIPE_LABELS[artifact.recipe] ?? artifact.recipe)
+    : artifact?.type === "brief"
+      ? "Brief"
+      : artifact?.type === "evidence"
         ? "Evidence"
-        : artifact?.recipe === "stats_dashboard"
-          ? "Data Analysis"
-          : artifact?.recipe === "scenario_stress_test"
-            ? "Scenario"
-            : artifact?.recipe === "cpc_capability_assessment"
-              ? "CPC Capability Assessment"
-              : artifact?.recipe === "cpc_portfolio_comparison"
-                ? "CPC Portfolio Comparison"
-                : artifact?.recipe === "cpc_market_alignment"
-                  ? "CPC Market Alignment"
-                  : artifact?.recipe === "cpc_evidence_gaps"
-                    ? "CPC Evidence Gaps"
-                    : artifact?.recipe === "orient"
-                      ? "ORIENT"
-                      : artifact?.recipe === "connect"
-                        ? "CONNECT"
-                        : artifact?.recipe === "diagnose"
-                          ? "DIAGNOSE"
-                          : artifact?.recipe === "act"
-                            ? "ACT"
-                            : artifact?.recipe === "defend"
-                              ? "DEFEND"
-                              : artifact?.type === "brief"
-                                ? "Brief"
-                                : artifact?.type === "evidence"
-                                  ? "Evidence"
-                                  : "Artifact";
+        : "Artifact";
 
   return (
     <section
@@ -819,9 +844,19 @@ export function ArtifactPane() {
       {/* ----------------------------------------------------------------
           Content
       ---------------------------------------------------------------- */}
+      {/* Verifying banner — shows when partial artifact is displayed but citations are still being verified */}
+      {isLoading && artifact && (
+        <div className="shrink-0 flex items-center gap-2 px-4 py-1.5 bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200/60 dark:border-amber-800/40">
+          <span className="size-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
+          <p className="text-[11px] text-amber-700 dark:text-amber-300 font-medium truncate">
+            {statusText ?? "Verifying citations…"}
+          </p>
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto p-4">
         {isLoading && !artifact ? (
-          <LoadingSkeleton />
+          <LoadingSkeleton statusText={statusText} />
         ) : !artifact ? (
           <EmptyState activeAgent={surface.active_agent} />
         ) : detectRecipe(artifact) !== null ? (

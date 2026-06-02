@@ -16,6 +16,11 @@ import type { ArtifactBlock } from "@/lib/atlas5/artifact-store";
 import { cn } from "@/lib/utils";
 import { getConfidenceStyles } from "@/lib/atlas5/confidence-styles";
 import { ClaimStateBadge } from "@/components/atlas5/claim-state-badge";
+import {
+  SurfaceHeadline,
+  EvidenceCountStrip,
+  TIER_BADGE,
+} from "./surface-primitives";
 import { EChartsChart } from "@/components/lab/echarts-chart";
 import { ArrowRight, MapPin } from "lucide-react";
 import type { EChartsOption } from "echarts";
@@ -107,36 +112,6 @@ function buildDomainHeatmapOption(domains: DomainData[]): EChartsOption {
       },
     ],
   };
-}
-
-// ---------------------------------------------------------------------------
-// HeadlineCard
-// ---------------------------------------------------------------------------
-
-function OrientHeadline({
-  text,
-  styles,
-}: {
-  text?: string;
-  styles: ReturnType<typeof getConfidenceStyles>;
-}) {
-  return (
-    <div
-      data-testid="orient-headline-card"
-      className={cn("rounded-lg border p-3.5 bg-muted/20", styles.border)}
-    >
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
-        Terrain Summary
-      </p>
-      {text ? (
-        <p className={cn("text-sm leading-relaxed", styles.body)}>{text}</p>
-      ) : (
-        <p className="text-sm text-muted-foreground italic">
-          Landscape overview will appear here.
-        </p>
-      )}
-    </div>
-  );
 }
 
 // ---------------------------------------------------------------------------
@@ -277,24 +252,28 @@ export function OrientSurface({ artifact }: Props) {
       data-testid="recipe-orient"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/20">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/20">
         <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Landscape — ORIENT
+          Orient
         </span>
-        <span
-          data-testid="confidence-tier-badge"
-          className={cn(
-            "text-xs font-semibold px-2.5 py-0.5 rounded-full border",
-            styles.badge,
-          )}
-        >
-          {artifact.confidence_tier}
-        </span>
+        <div className="flex items-center gap-2">
+          <EvidenceCountStrip citations={citations} />
+          <span
+            data-testid="confidence-tier-badge"
+            className={cn("text-xs font-semibold px-2.5 py-0.5 rounded-full border", TIER_BADGE[artifact.confidence_tier])}
+          >
+            {artifact.confidence_tier}
+          </span>
+        </div>
       </div>
 
       <div className="p-4 space-y-5">
-        {/* 1. Headline */}
-        <OrientHeadline text={headlineText} styles={styles} />
+        {/* 1. Headline — answer first */}
+        <SurfaceHeadline
+          text={headlineText ?? "Innovation landscape overview in progress."}
+          tier={artifact.confidence_tier}
+          label="terrain summary"
+        />
 
         {/* 2. Domain heatmap */}
         {showHeatmap && (

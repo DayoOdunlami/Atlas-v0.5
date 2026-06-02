@@ -36,6 +36,11 @@ const RECIPE_LABELS: Record<RecipeType, string> = {
   cpc_evidence_gaps:          "Evidence Gaps",
   cpc_opportunity_fit:        "Opportunity Fit",
   cpc_funding_flow:           "Funding Flow",
+  orient:                     "ORIENT",
+  connect:                    "CONNECT",
+  diagnose:                   "DIAGNOSE",
+  act:                        "ACT",
+  defend:                     "DEFEND",
 };
 
 function detectRecipe(artifact: ArtifactBlock): RecipeType {

@@ -74,6 +74,26 @@ export type ChartSpec = LineChartSpec | BarChartSpec | PieChartSpec;
 export type Chart = ChartSpec & { data: ChartDataRecord[] };
 
 // ---------------------------------------------------------------------------
+// VisualBlock — art director output (replaces generic chart_specs)
+// ---------------------------------------------------------------------------
+
+/**
+ * A single visual block emitted by the art director node.
+ * type must match a BLOCK_VOCABULARY entry.
+ * data is block-specific — see block-vocabulary.ts for per-type contracts.
+ */
+export interface VisualBlock {
+  /** Matches BLOCK_VOCABULARY entry.type */
+  type: string;
+  /** Insight-first title — the conclusion, not the chart label */
+  title?: string;
+  /** Block-specific payload */
+  data: unknown;
+  /** Number of corpus sources this block derives from */
+  source_count?: number;
+}
+
+// ---------------------------------------------------------------------------
 // RecipeType — explicit render surface selector
 // ---------------------------------------------------------------------------
 
@@ -86,11 +106,14 @@ export type RecipeType =
   | "cpc_portfolio_comparison"
   | "cpc_market_alignment"
   | "cpc_evidence_gaps"
+  | "cpc_opportunity_fit"
+  | "cpc_funding_flow"
   | "orient"
   | "connect"
   | "diagnose"
   | "act"
-  | "defend";
+  | "defend"
+  | "cpc_defend";
 
 // ---------------------------------------------------------------------------
 // Claim state — Principle 3 (claim states are first-class citizens)

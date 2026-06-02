@@ -433,36 +433,42 @@ export async function runPassportMatching(
 
     // 3. Cosine similarity against atlas.projects
     //    Weighted score = cosine_sim * 0.6 + (transport_relevance_score / 100) * 0.3 + (has_outcomes) * 0.1
+    //    Floor: weighted_score >= 0.50 — prevents noise matches from diluting evidence quality
     const projectResult = await pool.query<RawProjectMatch>(
-      `SELECT
-         p.id,
-         p.title,
-         p.lead_funder,
-         p.funding_amount,
-         p.abstract,
-         p.transport_relevance_score,
-         (1 - (p.embedding <=> $1::vector))::float                              AS cosine_sim,
-         ((1 - (p.embedding <=> $1::vector)) * 0.6
-           + COALESCE(p.transport_relevance_score::float / 100.0, 0) * 0.3
-           + LEAST(COUNT(po.id), 5)::float / 50.0 * 0.1
-         )::float                                                                AS weighted_score,
-         COUNT(po.id)::int                                                       AS outcomes_count,
-         COALESCE(
-           p.source_url,
-           CASE WHEN p.gtr_id IS NOT NULL
-                THEN 'https://gtr.ukri.org/projects?ref=' || p.gtr_id
-                ELSE NULL END
-         )                                                                       AS source_url
-       FROM atlas.projects p
-       LEFT JOIN atlas.project_outcomes po ON po.project_id = p.id
-       WHERE p.embedding IS NOT NULL
-       GROUP BY p.id
+      `SELECT *
+       FROM (
+         SELECT
+           p.id,
+           p.title,
+           p.lead_funder,
+           p.funding_amount,
+           p.abstract,
+           p.transport_relevance_score,
+           (1 - (p.embedding <=> $1::vector))::float                              AS cosine_sim,
+           ((1 - (p.embedding <=> $1::vector)) * 0.6
+             + COALESCE(p.transport_relevance_score::float / 100.0, 0) * 0.3
+             + LEAST(COUNT(po.id), 5)::float / 50.0 * 0.1
+           )::float                                                                AS weighted_score,
+           COUNT(po.id)::int                                                       AS outcomes_count,
+           COALESCE(
+             p.source_url,
+             CASE WHEN p.gtr_id IS NOT NULL
+                  THEN 'https://gtr.ukri.org/projects?ref=' || p.gtr_id
+                  ELSE NULL END
+           )                                                                       AS source_url
+         FROM atlas.projects p
+         LEFT JOIN atlas.project_outcomes po ON po.project_id = p.id
+         WHERE p.embedding IS NOT NULL
+         GROUP BY p.id
+       ) sub
+       WHERE weighted_score >= 0.50
        ORDER BY weighted_score DESC
        LIMIT 10`,
       [vectorStr],
     );
 
     // 4. Cosine similarity against atlas.live_calls (open only)
+    //    Floor: cosine_sim >= 0.50 — matches must be genuinely similar to the passport claims
     const liveResult = await pool.query<RawLiveCallMatch>(
       `SELECT
          lc.id,
@@ -478,6 +484,7 @@ export async function runPassportMatching(
        WHERE lc.embedding IS NOT NULL
          AND (lc.relevance_tag IS NULL OR lc.relevance_tag != 'irrelevant')
          AND lc.status = 'open'
+         AND (1 - (lc.embedding <=> $1::vector)) >= 0.50
        ORDER BY cosine_sim DESC
        LIMIT 5`,
       [vectorStr],

@@ -342,10 +342,9 @@ def build_jarvis_graph() -> StateGraph:
     graph.add_edge("reason_and_cite", "verify_citations")
     graph.add_edge("verify_citations", END)
 
-    # MemorySaver required by ag_ui_langgraph for aget_state() calls.
-    # Each server restart clears checkpoints — fine for dev; swap for
-    # a persistent checkpointer (e.g. PostgresSaver) in production.
-    return graph.compile(checkpointer=MemorySaver())
+    import sys as _sys
+    _checkpointer = None if "langgraph_api" in _sys.modules else MemorySaver()
+    return graph.compile(checkpointer=_checkpointer)
 
 
 jarvis_graph = build_jarvis_graph()

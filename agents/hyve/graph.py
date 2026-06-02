@@ -361,9 +361,9 @@ def build_hyve_graph() -> StateGraph:
     graph.add_edge("reason_and_cite", "verify_hive_citations")
     graph.add_edge("verify_hive_citations", END)
 
-    # MemorySaver required for AG-UI state snapshots (aget_state() calls).
-    # Swap for PostgresSaver in production.
-    return graph.compile(checkpointer=MemorySaver())
+    import sys as _sys
+    _checkpointer = None if "langgraph_api" in _sys.modules else MemorySaver()
+    return graph.compile(checkpointer=_checkpointer)
 
 
 hyve_graph = build_hyve_graph()

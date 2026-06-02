@@ -448,10 +448,10 @@ describe("D5 — ATLAS agent", () => {
     expect(src).toContain("_verify_project");
     // Safe citation list built from verified results only
     expect(src).toContain("safe_citations");
-    // POST /agents/atlas endpoint wired in server.py
+    // /atlas endpoint wired in server.py via add_langgraph_fastapi_endpoint
     const server = readFileSync("agents/server.py", "utf8");
-    expect(server).toContain("/agents/atlas");
-    expect(server).toContain("run_atlas");
+    expect(server).toContain('path="/atlas"');
+    expect(server).toContain("atlas_graph");
   });
 
   it("ATLAS confidence_tier is defined", async () => {
@@ -475,35 +475,39 @@ describe("D5 — ATLAS agent", () => {
 // ---------------------------------------------------------------------------
 describe("D6 — AG-UI wiring", () => {
   it("sending a chat message triggers a request to /api/copilotkit", async () => {
-    // Source check: /api/copilotkit route exists and POSTs to agent endpoint
+    // Source check: /api/copilotkit route exists and registers all four AG-UI agents
     const { readFileSync, existsSync } = await import("node:fs");
     expect(existsSync("src/app/api/copilotkit/route.ts")).toBe(true);
     const src = readFileSync("src/app/api/copilotkit/route.ts", "utf8");
-    // Route handles POST
-    expect(src).toContain("export async function POST");
-    // Routes to the Python agents endpoint
-    expect(src).toContain("/agents/atlas");
-    expect(src).toContain("/agents/jarvis");
-    // Active agent is read from the request body
-    expect(src).toContain("active_agent");
-    // Uses Anthropic model (never OpenAI)
-    expect(src).toContain("claude-sonnet-4-6");
+    // Route exports POST handler (via const, not async function — CopilotKit pattern)
+    expect(src).toContain("export const POST");
+    // All four agents registered as HttpAgent endpoints
+    expect(src).toContain("/atlas");
+    expect(src).toContain("/jarvis");
+    expect(src).toContain("/cicerone");
+    expect(src).toContain("/hyve");
+    // Uses AG-UI / CopilotKit transport (not raw streamText)
+    expect(src).toContain("CopilotRuntime");
+    expect(src).toContain("HttpAgent");
+    // Uses ExperimentalEmptyAdapter — Python agents handle their own LLM calls
+    expect(src).toContain("ExperimentalEmptyAdapter");
+    // Must NOT use OpenAI models directly in this route
     expect(src).not.toContain("gpt-");
   });
 
   it("response streams to chat pane without page refresh", async () => {
-    // Source check: route uses streamText + createUIMessageStreamResponse (AI SDK v5)
+    // Source check: route uses CopilotKit AG-UI streaming (not AI SDK streamText)
     const { readFileSync } = await import("node:fs");
     const route = readFileSync("src/app/api/copilotkit/route.ts", "utf8");
-    expect(route).toContain("streamText");
-    expect(route).toContain("createUIMessageStreamResponse");
-    // Chat pane uses the streaming hook
+    // AG-UI streaming via CopilotKit runtime — not AI SDK streamText
+    expect(route).toContain("copilotRuntimeNextJSAppRouterEndpoint");
+    expect(route).toContain("handleRequest");
+    // Chat pane uses the atlas5 chat hook
     const pane = readFileSync("src/components/atlas5/chat-pane.tsx", "utf8");
     expect(pane).toContain("useAtlas5Chat");
     // Hook is wired to /api/copilotkit
     const hook = readFileSync("src/hooks/use-atlas5-chat.ts", "utf8");
     expect(hook).toContain("/api/copilotkit");
-    expect(hook).toContain("useChat");
   });
 
   it("useCoAgent state updates surface_state.json on agent switch", async () => {
@@ -555,16 +559,25 @@ describe("D7 — Brief artifact panel", () => {
     expect(src).toContain("setArtifact");
   });
 
-  it("/api/copilotkit route emits atlas5_artifact data annotation", async () => {
+  it("/api/copilotkit route registers all four agent endpoints", async () => {
+    // In the AG-UI / CopilotKit pattern, structured artifact data travels as LangGraph
+    // state deltas (not manually emitted data annotations). The route's job is to
+    // proxy the AG-UI SSE stream from the Python service to the browser — the Python
+    // agents set state["artifact_block"] which ag_ui_langgraph forwards as a state_delta
+    // event, and useCoAgent / use-atlas5-chat.ts deserialises it into the Zustand store.
     const { readFileSync } = await import("node:fs");
     const src = readFileSync("src/app/api/copilotkit/route.ts", "utf8");
-    // Must emit structured data annotation
-    expect(src).toContain("atlas5_artifact");
-    expect(src).toContain('type: "data"');
-    // Routes for all four agents
-    expect(src).toContain("ATLAS");
-    expect(src).toContain("CICERONE");
-    expect(src).toContain("HYVE");
+    // All four agent names registered in CopilotRuntime
+    expect(src).toContain('"atlas"');
+    expect(src).toContain('"jarvis"');
+    expect(src).toContain('"cicerone"');
+    expect(src).toContain('"hyve"');
+    // Proxy via HttpAgent (AG-UI transport)
+    expect(src).toContain("HttpAgent");
+    // Endpoint paths point to Python service
+    expect(src).toContain("/atlas");
+    expect(src).toContain("/cicerone");
+    expect(src).toContain("/hyve");
   });
 
   it("NPV card shows HMT STPR discount rate in brief view", async () => {
@@ -790,14 +803,14 @@ describe("D8 — CICERONE + HYVE agents", () => {
     const src = readFileSync("agents/cicerone/graph.py", "utf8");
     // transferability_score typed 0-100
     expect(src).toContain("transferability_score");
-    // Returns an int
+    // Returns a CiceroneResponse
     expect(src).toContain("CiceroneResponse");
     // Score is extracted from LLM response
     expect(src).toContain("assess_transferability");
-    // Server wired
+    // Server wired — path is /cicerone (registered via add_langgraph_fastapi_endpoint)
     const server = readFileSync("agents/server.py", "utf8");
-    expect(server).toContain("/agents/cicerone");
-    expect(server).toContain("run_cicerone");
+    expect(server).toContain('path="/cicerone"');
+    expect(server).toContain("cicerone_graph");
   });
 
   it("CICERONE evidence_gaps[].status in [HAVE, PARTIAL, MISSING]", async () => {
@@ -826,10 +839,10 @@ describe("D8 — CICERONE + HYVE agents", () => {
     // verify_hive_citations must check hive.articles in DB
     expect(src).toContain("verify_hive");
     expect(src).toContain("hive.articles");
-    // Server wired
+    // Server wired — path is /hyve (registered via add_langgraph_fastapi_endpoint)
     const server = readFileSync("agents/server.py", "utf8");
-    expect(server).toContain("/agents/hyve");
-    expect(server).toContain("run_hyve");
+    expect(server).toContain('path="/hyve"');
+    expect(server).toContain("hyve_graph");
   });
 
   it("HYVE transport_mode is defined", async () => {
@@ -929,10 +942,16 @@ describe("D10 — Eval harness consolidation", () => {
   it("all four agent endpoints wired in agents/server.py", async () => {
     const { readFileSync } = await import("node:fs");
     const srv = readFileSync("agents/server.py", "utf8");
-    expect(srv).toContain("/agents/jarvis");
-    expect(srv).toContain("/agents/atlas");
-    expect(srv).toContain("/agents/cicerone");
-    expect(srv).toContain("/agents/hyve");
+    // Each agent registered via add_langgraph_fastapi_endpoint with its own path
+    expect(srv).toContain('path="/jarvis"');
+    expect(srv).toContain('path="/atlas"');
+    expect(srv).toContain('path="/cicerone"');
+    expect(srv).toContain('path="/hyve"');
+    // Each has its own LangGraphAgent + compiled graph
+    expect(srv).toContain("jarvis_graph");
+    expect(srv).toContain("atlas_graph");
+    expect(srv).toContain("cicerone_graph");
+    expect(srv).toContain("hyve_graph");
   });
 
   it("Playwright spec files exist for D7 and D9", async () => {
@@ -1429,5 +1448,369 @@ describe("External Evidence Router — Commit 2 implementation", () => {
     // Sub-check 4: confidence_tier must not exceed coverage.suggested_confidence_tier
     expect(src).toContain("suggested_confidence_tier");
     expect(src).toContain("evidence_coverage");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Routing and Gap Verification — T1-1 through T1-13
+//
+// RESULT KEY:
+//   PASS          — assertion holds against current code
+//   EXPECTED_FAIL — documents a known gap; test is intentionally failing
+//   SKIP          — cannot be automated without infra not yet built
+//
+// Run: npm run eval:tier1
+// These tests are the baseline snapshot from 2026-06-01 audit.
+// EXPECTED_FAIL tests must be converted to PASS as gaps are fixed.
+// ---------------------------------------------------------------------------
+describe("Routing and Gap Verification — T1 baseline (2026-06-01)", () => {
+  // ── T1-1: Intent classifier returns valid recipe ID [PASS] ────────────────
+  it("[T1-1] select_recipe() returns a known recipe ID [UNIT — PASS]", async () => {
+    // visual_recipe_director.py: select_recipe(query) must return one of the 7 known IDs.
+    // Source check — the valid IDs are declared in the file.
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync("agents/visual_recipe_director.py", "utf8");
+    const VALID_RECIPES = [
+      "brief_five_case",
+      "cpc_evidence_gaps",
+      "cpc_capability_assessment",
+      "cpc_market_alignment",
+      "cpc_opportunity_fit",
+      "cpc_portfolio_comparison",
+      "cpc_funding_flow",
+    ];
+    for (const id of VALID_RECIPES) {
+      expect(src, `visual_recipe_director.py must declare ${id}`).toContain(
+        `"${id}"`,
+      );
+    }
+    // select_recipe function is defined
+    expect(src).toContain("def select_recipe(");
+    // Returns a string (not an object)
+    expect(src).toContain("return ");
+  });
+
+  // ── T1-2: Citation verifier against static fixture [UNIT — PASS] ─────────
+  it("[T1-2] golden_output.md citation IDs are valid UUIDs [UNIT — PASS]", async () => {
+    // Extracts citation IDs from eval/golden_output.md (static fixture — no live agent needed).
+    // At baseline: extract manually, verify UUID format.
+    // Full DB verification (G3 grader) requires POSTGRES_URL at runtime.
+    const { readFileSync } = await import("node:fs");
+    const golden = readFileSync("eval/golden_output.md", "utf8");
+    // UUID regex
+    const uuidRe =
+      /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+    const uuids = golden.match(uuidRe) ?? [];
+    expect(
+      uuids.length,
+      "golden_output.md must contain at least 4 citation UUIDs",
+    ).toBeGreaterThanOrEqual(4);
+    for (const id of uuids) {
+      expect(id, `${id} must be lower-case UUID`).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+      );
+    }
+    // G3 (DB verification) is in tier2_generator.py and requires POSTGRES_URL.
+    // That grader is PASS at baseline (confirmed via golden_output.md).
+  });
+
+  // ── T1-3: CPC-inward routing flag [UNIT — PASS] ──────────────────────────
+  it("[T1-3] is_cpc_inward() regex patterns fire correctly [UNIT — PASS]", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync("agents/visual_recipe_director.py", "utf8");
+    // is_cpc_inward function exists
+    expect(src).toContain("def is_cpc_inward(");
+    // Has regex-based pattern matching
+    expect(src).toContain("re.");
+    // Patterns that should trigger CPC-inward
+    for (const term of ["CPC", "catapult", "capability", "portfolio"]) {
+      expect(src, `is_cpc_inward must handle "${term}" pattern`).toContain(
+        term.toLowerCase(),
+      );
+    }
+    // atlas/graph.py reads is_cpc_inward from state and branches
+    const graph = readFileSync("agents/atlas/graph.py", "utf8");
+    expect(graph).toContain("is_cpc_inward");
+    expect(graph).toContain("_build_cpc_inward_assessment");
+  });
+
+  // ── T1-4: _cap_tier accessible at module scope [EXPECTED_FAIL — Gap C] ───
+  it(
+    "[T1-4] _cap_tier is defined at module scope in atlas/graph.py [EXPECTED_FAIL — Gap C]",
+    async () => {
+      // Gap C: _cap_tier is a NESTED function inside build_five_case (~line 1108).
+      // When Gap A is fixed, CICERONE and routing nodes will need it at module scope.
+      // This test documents the gap. It should PASS after Gap C is fixed.
+      const { readFileSync } = await import("node:fs");
+      const src = readFileSync("agents/atlas/graph.py", "utf8");
+
+      // The function must exist
+      expect(src).toContain("def _cap_tier(");
+
+      // EXPECTED_FAIL: _cap_tier must NOT be indented (module-level def has no leading spaces).
+      // Currently it IS indented (nested inside build_five_case).
+      // After the fix: `def _cap_tier(` appears at column 0.
+      const lines = src.split("\n");
+      const capLine = lines.find((l) => l.includes("def _cap_tier("));
+      expect(
+        capLine,
+        "_cap_tier must be defined at module scope (no leading indent)",
+      ).toMatch(/^def _cap_tier\(/);
+    },
+  );
+
+  // ── T1-5: Five Case sections in ATLAS output TypedDict [PASS] ────────────
+  it("[T1-5] FiveCaseModel TypedDict declares all five sections [UNIT — PASS]", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync("agents/atlas/graph.py", "utf8");
+    for (const section of [
+      "strategic",
+      "economic",
+      "commercial",
+      "financial",
+      "management",
+    ]) {
+      expect(
+        src,
+        `graph.py must declare ${section} section`,
+      ).toContain(section);
+    }
+    expect(src).toContain("five_case_model");
+    expect(src).toContain("build_five_case");
+  });
+
+  // ── T1-6: CICERONE import smoke test [EXPECTED_FAIL — Gap B] ─────────────
+  it(
+    "[T1-6] CICERONE imports search_corpus_projects (not deprecated search_projects) [EXPECTED_FAIL — Gap B]",
+    async () => {
+      // Gap B: agents/cicerone/graph.py:36 imports 'search_projects' which does not
+      // exist in mcp_client.py. The correct export is 'search_corpus_projects'.
+      // This causes a silent ImportError at server startup.
+      const { readFileSync } = await import("node:fs");
+      const cicerone = readFileSync("agents/cicerone/graph.py", "utf8");
+
+      // EXPECTED_FAIL: currently imports the wrong name
+      expect(
+        cicerone,
+        "CICERONE must import search_corpus_projects (not search_projects)",
+      ).toContain("search_corpus_projects");
+
+      // Verify the correct name exists in mcp_client
+      const mcp = readFileSync("agents/mcp_client.py", "utf8");
+      expect(mcp).toContain("def search_corpus_projects(");
+      expect(mcp).not.toContain("def search_projects("); // old name must not exist
+    },
+  );
+
+  // ── T1-7: search_hive exists in mcp_client [PASS] ────────────────────────
+  it("[T1-7] search_hive exported from mcp_client.py [UNIT — PASS]", async () => {
+    const { readFileSync } = await import("node:fs");
+    const mcp = readFileSync("agents/mcp_client.py", "utf8");
+    // search_hive is exported (HYVE uses it)
+    expect(mcp).toContain("def search_hive(");
+    // HYVE imports it correctly
+    const hyve = readFileSync("agents/hyve/graph.py", "utf8");
+    expect(hyve).toContain("from agents.mcp_client import search_hive");
+  });
+
+  // ── T1-8: target_recipe drives dispatch in build_five_case [EXPECTED_FAIL — Gap A] ──
+  it(
+    "[T1-8] build_five_case dispatches on target_recipe for outward queries [EXPECTED_FAIL — Gap A]",
+    async () => {
+      // Gap A: target_recipe is set by select_recipe_intent node but never used in
+      // build_five_case for outward queries. All outward queries run the Five Case path.
+      const { readFileSync } = await import("node:fs");
+      const src = readFileSync("agents/atlas/graph.py", "utf8");
+
+      // target_recipe is SET in select_recipe_intent
+      expect(src).toContain("target_recipe");
+
+      // EXPECTED_FAIL: build_five_case must branch on target_recipe for outward queries.
+      // Currently it does NOT — the condition only checks is_cpc_inward.
+      // After the fix: something like `if target_recipe == "cpc_evidence_gaps":` appears.
+      expect(
+        src,
+        'build_five_case must dispatch on target_recipe (e.g. if target_recipe == "cpc_evidence_gaps":)',
+      ).toContain('target_recipe == "cpc_evidence_gaps"');
+    },
+  );
+
+  // ── T1-9: CICERONE uses current tool name [EXPECTED_FAIL — Gap B] ────────
+  it(
+    "[T1-9] agents/cicerone/graph.py does NOT contain deprecated 'search_projects' import [EXPECTED_FAIL — Gap B]",
+    async () => {
+      // Gap B: line 36 of cicerone/graph.py has `from agents.mcp_client import search_projects`
+      // The correct name is search_corpus_projects.
+      const { readFileSync } = await import("node:fs");
+      const src = readFileSync("agents/cicerone/graph.py", "utf8");
+
+      // EXPECTED_FAIL: this currently fails because the deprecated name IS present
+      expect(
+        src,
+        "CICERONE must not import deprecated 'search_projects'",
+      ).not.toContain("from agents.mcp_client import search_projects");
+    },
+  );
+
+  // ── T1-10: _cap_tier module-scope reachability [EXPECTED_FAIL — Gap C] ───
+  it(
+    "[T1-10] _cap_tier is defined before build_five_case in atlas/graph.py [EXPECTED_FAIL — Gap C]",
+    async () => {
+      // Gap C: _cap_tier is nested INSIDE build_five_case.
+      // After the fix it should appear as a module-level function before build_five_case.
+      const { readFileSync } = await import("node:fs");
+      const src = readFileSync("agents/atlas/graph.py", "utf8");
+
+      const capPos = src.indexOf("def _cap_tier(");
+      const buildPos = src.indexOf("def build_five_case(");
+
+      expect(capPos, "_cap_tier must be defined in the file").toBeGreaterThan(
+        -1,
+      );
+      expect(
+        buildPos,
+        "build_five_case must be defined in the file",
+      ).toBeGreaterThan(-1);
+
+      // EXPECTED_FAIL: currently _cap_tier is INSIDE build_five_case (capPos > buildPos)
+      // After fix: _cap_tier appears before build_five_case (capPos < buildPos)
+      expect(
+        capPos,
+        "_cap_tier must be defined BEFORE build_five_case (module scope)",
+      ).toBeLessThan(buildPos);
+    },
+  );
+
+  // ── T1-11: Orient/Connect/Diagnose/Defend prompt paths [EXPECTED_FAIL — Gap D] ──
+  it(
+    "[T1-11] build_five_case has Orient/Connect/Diagnose/Act/Defend routing [EXPECTED_FAIL — Gap D]",
+    async () => {
+      // Gap D: no five-mode prompt paths exist. After fix, build_five_case (or a
+      // successor node) should contain conditions or prompt fragments for each mode.
+      const { readFileSync } = await import("node:fs");
+      const src = readFileSync("agents/atlas/graph.py", "utf8");
+
+      // EXPECTED_FAIL: none of these appear in graph.py yet
+      for (const mode of ["Orient", "Connect", "Diagnose", "Act", "Defend"]) {
+        expect(
+          src,
+          `graph.py must contain prompt path for outcome mode: ${mode}`,
+        ).toContain(mode);
+      }
+    },
+  );
+
+  // ── T1-12: Python agent queries internal CPC tables [EXPECTED_FAIL — Gap F] ──
+  it(
+    "[T1-12] At least one Python agent queries atlas.passports or atlas.evidence_containers [EXPECTED_FAIL — Gap F]",
+    async () => {
+      // Gap F: no Python agent queries the internal CPC data tables.
+      // passport/matching.ts is TypeScript-only.
+      // After fix: a new agent node or mcp_client tool queries atlas.passports.
+      const { readFileSync } = await import("node:fs");
+      const mcp = readFileSync("agents/mcp_client.py", "utf8");
+
+      // EXPECTED_FAIL: neither table is referenced in mcp_client
+      expect(
+        mcp,
+        "mcp_client must expose a tool querying atlas.passports or atlas.evidence_containers",
+      ).toMatch(/atlas\.passports|atlas\.evidence_containers/);
+    },
+  );
+
+  // ── T1-13: Decision 2 — Passport constructed from query context [SKIP] ───
+  it.skip(
+    "[T1-13] Passport is assembled from query context via atlas.passports (Decision 2) [SKIP — requires Gap F fix]",
+    () => {
+      // Cannot be automated until Gap F is fixed:
+      //   - Python agent must query atlas.passports
+      //   - Requirement Spec object class must be defined
+      //   - Atlas Match step must exist
+      // When implemented, test should:
+      //   1. POST a query referencing a known entity ("CPC" or "Network Rail")
+      //   2. Assert response includes a passport_id from atlas.passports
+      //   3. Assert passport_claims[] are populated from atlas.passport_claims
+    },
+  );
+
+  // ── T1-14: Cold Act — confidence ceiling on zero corpus ─────────────────────
+  it(
+    "[T1-14] Act mode (Five Case) enforces Speculative when corpus returns 0 results [UNIT — PASS]",
+    async () => {
+      // Decision 5: when journey path is Act (build_five_case fallthrough) and
+      // corpus_citations is empty with no external evidence, confidence_tier must be
+      // capped at Speculative. Verified by checking the explicit guard in the Act path.
+      const { readFileSync } = await import("node:fs");
+      const src = readFileSync("agents/atlas/graph.py", "utf8");
+      // Check the specific Act-path ceiling: zero corpus + zero external → Speculative
+      expect(
+        src,
+        "Act path must contain: if not safe_citations and not has_external",
+      ).toContain("if not safe_citations and not has_external:");
+      expect(
+        src,
+        "Act path must call _cap_tier(tier, \"Speculative\") for the cold-Act case",
+      ).toContain('_cap_tier(tier, "Speculative")');
+    },
+  );
+
+  // ── T1-15: CPC-Inward source filter [EXPECTED_FAIL — Decision 3] ─────────
+  it(
+    "[T1-15] CPC-inward queries filter corpus results to CPC-authored projects only [EXPECTED_FAIL — Decision 3]",
+    async () => {
+      // Decision 3: CPC-inward queries must only consider CPC-authored/CPC-led projects.
+      // Currently _build_cpc_inward_assessment passes no lead_org filter.
+      const { readFileSync } = await import("node:fs");
+      const src = readFileSync("agents/atlas/graph.py", "utf8");
+      // EXPECTED_FAIL: no source filter on inward path yet.
+      expect(
+        src,
+        "CPC-inward path must filter results to CPC-authored projects",
+      ).toMatch(/cpc_inward.*lead_org|lead_org.*cpc|filter.*cpc|cpc.*filter/is);
+    },
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Non-regression anchor — run after every change
+// ---------------------------------------------------------------------------
+describe("Non-regression anchor — Golden A14 must not regress", () => {
+  it("G1–G7 graders are all defined in tier2_generator.py", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync("eval/tier2_generator.py", "utf8");
+    for (const grader of [
+      "check_schema",
+      "decision_spine_present",
+      "verify_citation_ids",
+      "check_confidence_ceiling",
+      "check_tool_call_coverage",
+      "check_external_routing",
+      "check_confidence_discipline",
+    ]) {
+      expect(src, `${grader} must be defined in tier2_generator.py`).toContain(
+        `def ${grader}(`,
+      );
+    }
+  });
+
+  it("GOLDEN_PASS_THRESHOLD is 7 (all 7 graders must pass)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync("eval/tier2_generator.py", "utf8");
+    expect(src).toContain("GOLDEN_PASS_THRESHOLD = 7");
+  });
+
+  it("golden_output.md records last run result", async () => {
+    const { existsSync, readFileSync } = await import("node:fs");
+    expect(existsSync("eval/golden_output.md")).toBe(true);
+    const src = readFileSync("eval/golden_output.md", "utf8");
+    // Must record a PASS result for the A14 query
+    expect(src).toContain("PASS");
+    expect(src).toContain("A14");
+    // Must have at least 4 PASS graders
+    const passCount = (src.match(/✓ PASS/g) ?? []).length;
+    expect(
+      passCount,
+      "golden_output.md must record at least 4 PASS graders",
+    ).toBeGreaterThanOrEqual(4);
   });
 });

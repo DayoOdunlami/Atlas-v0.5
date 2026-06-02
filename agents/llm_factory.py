@@ -17,7 +17,7 @@ import os
 from langchain_core.language_models import BaseChatModel
 
 
-def get_llm(max_tokens: int = 4096) -> BaseChatModel:
+def get_llm(max_tokens: int = 4096, streaming: bool = True) -> BaseChatModel:
     provider = os.environ.get("MODEL_PROVIDER", "anthropic").lower()
     model_name = os.environ.get("MODEL_NAME", "claude-sonnet-4-6")
 
@@ -26,6 +26,7 @@ def get_llm(max_tokens: int = 4096) -> BaseChatModel:
         return ChatOpenAI(
             model=model_name,
             max_tokens=max_tokens,
+            streaming=streaming,
             api_key=os.environ["OPENAI_API_KEY"],
         )
 
@@ -35,4 +36,5 @@ def get_llm(max_tokens: int = 4096) -> BaseChatModel:
         model=model_name,
         api_key=os.environ["ANTHROPIC_API_KEY"],
         max_tokens=max_tokens,
+        streaming=streaming,
     )

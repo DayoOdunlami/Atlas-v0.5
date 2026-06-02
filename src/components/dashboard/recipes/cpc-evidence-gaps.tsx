@@ -202,6 +202,8 @@ export function CpcEvidenceGapsRecipe({ artifact }: Props) {
   const claims = artifact.cpc_claims ?? [];
   const portfolio = artifact.cpc_portfolio ?? [];
   const summary = artifact.sections?.["Summary"] ?? "";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const entryFrictionTags: string[] = (artifact as any).entry_friction_tags ?? [];
 
   // Gap severity counts
   const highCount = gaps.filter((g) => g.severity === "high").length;
@@ -394,6 +396,25 @@ export function CpcEvidenceGapsRecipe({ artifact }: Props) {
         {gaps.length > 0 && (
           <div className="border-t border-border pt-4">
             <EnrichmentActions gaps={gaps} />
+          </div>
+        )}
+
+        {/* Entry friction tags (from Diagnose mode) */}
+        {entryFrictionTags.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Entry Friction
+            </h3>
+            <div className="flex flex-wrap gap-1.5">
+              {entryFrictionTags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[10px] font-medium text-amber-700"
+                >
+                  {tag.replace(/_/g, " ")}
+                </span>
+              ))}
+            </div>
           </div>
         )}
 

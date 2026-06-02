@@ -24,8 +24,10 @@ const AGENT_BASE = (
 ).replace(/\/$/, "");
 
 // CopilotRuntime — routes to the right AG-UI agent by name
-// JARVIS  → /jarvis  (corpus explorer — evidence search + citation verification)
-// ATLAS   → /atlas   (Green Book strategist — Five Case Model + NPV)
+// JARVIS   → /jarvis    (corpus explorer — evidence search + citation verification)
+// ATLAS    → /atlas     (Green Book strategist — Five Case Model + NPV)
+// CICERONE → /cicerone  (cross-sector transfer — transferability score + HAVE/PARTIAL/MISSING gaps)
+// HYVE     → /hyve      (climate adaptation — HIVE case studies + transport mode classification)
 const agentRuntime = new CopilotRuntime({
   agents: {
     jarvis: new HttpAgent({
@@ -33,6 +35,12 @@ const agentRuntime = new CopilotRuntime({
     }),
     atlas: new HttpAgent({
       url: `${AGENT_BASE}/atlas`,
+    }),
+    cicerone: new HttpAgent({
+      url: `${AGENT_BASE}/cicerone`,
+    }),
+    hyve: new HttpAgent({
+      url: `${AGENT_BASE}/hyve`,
     }),
   },
 });

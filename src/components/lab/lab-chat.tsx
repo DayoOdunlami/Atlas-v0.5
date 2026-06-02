@@ -320,6 +320,7 @@ export function LabChat({
             <PanelDAtlas
               messages={displayMessages}
               isLoading={isLoading}
+              onChipSelect={handleSend}
             />
           </div>
         )}
