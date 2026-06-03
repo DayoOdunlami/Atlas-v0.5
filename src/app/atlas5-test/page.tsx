@@ -10,7 +10,7 @@
  * data-testid="atlas5-test-root" — required by Playwright suite.
  */
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { ChatPane } from "@/components/atlas5/chat-pane";
 import { ArtifactPane } from "@/components/atlas5/artifact-pane";
@@ -41,7 +41,9 @@ export default function Atlas5TestPage() {
       data-testid="atlas5-test-root"
       className="flex h-screen bg-background"
     >
-      <FixtureLoader />
+      <Suspense fallback={null}>
+        <FixtureLoader />
+      </Suspense>
       {/* Chat pane — shows cold session entry when no thread_id + no messages */}
       <div className="w-80 shrink-0 border-r border-border">
         <ChatPane />

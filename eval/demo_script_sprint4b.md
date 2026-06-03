@@ -6,9 +6,16 @@
 ## Setup
 
 ```bash
-pnpm run dev
-# If thread list empty / stream fails, also run LangGraph CLI on :2024
-python -m langgraph_cli dev
+pnpm install
+# agents venv (first time): cd agents && uv venv .venv && uv pip install -r requirements.txt
+
+# Terminal 1 — LangGraph (required for /)
+cd agents && langgraph dev --port 2024 --no-browser
+
+# Terminal 2 — UI + optional FastAPI agents
+export LANGGRAPH_API_URL=http://localhost:2024
+pnpm run dev:ui
+# or full stack: pnpm run dev  # UI :3005 + uvicorn :8000
 ```
 
 Optional weak-signal scout:

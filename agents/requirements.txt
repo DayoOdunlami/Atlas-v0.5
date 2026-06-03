@@ -46,3 +46,4 @@ ag_ui_protocol>=0.1.18
 # --- Dev / test ---
 pytest>=8.2.0
 pytest-asyncio>=0.23.0
+langgraph-cli[inmem]>=0.4.0
