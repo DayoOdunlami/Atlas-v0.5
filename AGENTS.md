@@ -57,3 +57,32 @@
 ## Architecture Overview
 
 - Next.js app hosts CopilotKit UI and API route; Python agent performs ADK/Gemini orchestration. `npm run dev` runs both together.
+
+## Cursor Cloud specific instructions
+
+Atlas 5 uses **pnpm** (not npm) and the LangGraph stack under `agents/` (legacy `agent/` ADK template is unused).
+
+### Services and ports
+
+| Service | Port | Start command |
+|---------|------|---------------|
+| Next.js UI | 3005 | `pnpm run dev:ui` or included in `pnpm run dev` |
+| Python FastAPI agents | 8000 | `pnpm run dev:agents` or included in `pnpm run dev` |
+| LangGraph dev server | 2024 | `cd agents && source .venv/bin/activate && langgraph dev --port 2024 --no-browser` |
+
+- **`pnpm run dev`** starts UI + FastAPI only. For the primary `/` workspace (assistant-ui + LangGraph), also run LangGraph on **2024**, or use the **`/dev`** dashboard to start Agents/LangGraph from the UI.
+- Health checks: `curl http://localhost:8000/health`, `curl http://localhost:2024/ok`.
+
+### Environment
+
+Copy `.env.example` → `.env.local` at repo root. Live agent/corpus flows need `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `POSTGRES_URL`, and `SUPABASE_SERVICE_KEY` in addition to the public Supabase vars. Without those keys the UI and health endpoints still start; chat queries will fail at runtime.
+
+### Verification commands (no servers required)
+
+- Offline agent tests: `pnpm run eval:sprint5`
+- Production build: `pnpm run build` (skips typecheck/lint by default)
+- Typecheck: `pnpm run check-types` (known pre-existing TS errors in passport/auth modules)
+
+### Lint note
+
+`pnpm run lint` (`next lint`) may prompt interactively if ESLint is not configured; use `pnpm run build` or offline eval tests to verify the toolchain instead.
