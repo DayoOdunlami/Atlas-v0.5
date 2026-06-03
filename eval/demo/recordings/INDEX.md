@@ -2,7 +2,7 @@
 
 **Recording status:** BLOCKED — see [BLOCKED.md](./BLOCKED.md).
 
-No `.mp4` / `.png` files exist yet. Cloud Agent Secrets (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `POSTGRES_URL`) were not available in the 2026-06-03 recording run. After secrets are configured, run `pnpm run demo:record`.
+No `.mp4` / `.png` files exist yet. Cloud Agent Secrets (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `POSTGRES_URL`) were not injected on 2026-06-03; VM stack (LangGraph :2024, Next.js :3005, `artifact-pane`) was verified healthy. After secrets are configured, run `pnpm run demo:record`.
 
 ## Planned deliverables
 
