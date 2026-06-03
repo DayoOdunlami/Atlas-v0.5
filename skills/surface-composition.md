@@ -59,19 +59,38 @@ Requirements:
 
 ---
 
-## Chat vs artifact split
+## Chat vs artifact split (lane-aware — Sprint 4)
 
-**Chat message (left panel):**
-- Repeat the headline only
-- One line: "{N} verified sources · {tier} · see artifact →"
-- Optional: one suggested follow-up action
-- Max 80 words total
+Chat and artifact are **complementary**, not duplicates. Routing picks the lane:
 
-**Artifact (right panel):**
-- Full waterfall assembly
-- All depth lives here
+### Clarify lane
+User asks about the current artifact (NPV, a gap, a comparison, definitions).
+- **Chat:** full conversational answer — prose, bullets, simple tables allowed
+- **Artifact:** unchanged (prior artifact stays on screen)
 
-Never put the full gap matrix or Five Case sections in the chat stream.
+### Refine lane
+User asks to patch the artifact ("add key players", "sharpen headline").
+- **Chat:** short acknowledgment + pointer to artifact
+- **Artifact:** patched in place via `artifact_delta` / section merge
+
+### Analyze lane
+New decision, new recipe, or cold session.
+- **Chat:** verdict headline + source count + tier + pointer to artifact
+- **Artifact:** full waterfall assembly
+
+Do not dump gap matrices or Five Case sections into chat on analyze turns.
+Do not cap clarify answers artificially — clarity beats brevity for follow-ups.
+
+### Future: pin to artifact
+Chat may offer prose worth keeping. Schema stub: `artifact.appendix[]` for pinned blocks
+from chat (UI backlog — not required for analyze/clarify/refine lanes).
+
+---
+
+## Chat vs artifact split (legacy note)
+
+Previously: chat capped at ~80 words for all turns. That guardrail applied only to
+**analyze** turns to prevent JSON dumps and duplicate matrices.
 
 ---
 
@@ -93,7 +112,7 @@ Maximum 3 visual blocks per response.
 
 ### Orient
 - headline → terrain verdict
-- dominant: domain_heatmap OR knowledge_graph (not both unless ≥8 sources)
+- dominant: domain_heatmap OR knowledge_graph (not both unless ≥8 sources; graph from ≥4 citations)
 - supporting: key players, CPC position (if lens=CPC)
 - action: "Diagnose fit →" or "Find opportunities →"
 

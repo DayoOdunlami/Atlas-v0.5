@@ -7,8 +7,9 @@
  * 3. Exposes window.__atlas5_surface_state for debugging
  *
  * Mode (added D9):
- *   'chat'   — default two-pane layout (chat + artifact)
- *   'canvas' — tldraw full-screen mode (chat + artifact hidden)
+ *   'chat'     — default two-pane layout (chat + artifact)
+ *   'canvas'   — tldraw full-screen mode (chat + artifact hidden)
+ *   'showcase' — demo layout: full-width visuals, minimal chrome
  */
 "use client";
 

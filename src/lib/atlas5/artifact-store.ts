@@ -95,6 +95,9 @@ export interface ArtifactBlock {
   /** One-sentence verdict — Principle 1 waterfall, always first in UI */
   headline?: string;
 
+  /** 2–3 sentences: why the headline is true (Principle 1 step 2) */
+  insight_card?: string;
+
   /** Structured gap rows for Diagnose — mirrors gap_matrix block data */
   gap_rows?: Array<{
     criterion: string;
@@ -103,6 +106,34 @@ export interface ArtifactBlock {
     fit: string;
     evidence_strength?: string;
     action?: string;
+  }>;
+
+  /** Progressive build stage — search | build | complete (Sprint 4) */
+  runStage?: "search" | "build" | "complete";
+
+  /** Orient domain matrix data — populated by graph on orient recipes */
+  orient_domains?: Array<{
+    domain: string;
+    evidence_count: number;
+    cpc_projects?: number;
+    open_calls?: number;
+    maturity?: "low" | "medium" | "high";
+  }>;
+
+  /** CPC position card — parsed from CPC Position section */
+  cpc_position?: {
+    summary: string;
+    strongest_domain?: string | null;
+    whitespace_domain?: string | null;
+  };
+
+  /** Pinned chat prose for future "Add to artifact" (Sprint 4 stub) */
+  appendix?: Array<{
+    id: string;
+    title: string;
+    content: string;
+    source?: "chat" | "user";
+    pinned_at?: string;
   }>;
 
   // ── ATLAS evidence routing gaps ────────────────────────────────────────
@@ -135,6 +166,36 @@ export interface ArtifactBlock {
 
   // ── Common ─────────────────────────────────────────────────────────────
   confidence_tier: ConfidenceTier;
+  /** Post-verify tier cap when citations insufficient (Sprint 4B) */
+  citation_guard?: {
+    status: "pass" | "warn" | "fail";
+    original_tier?: string;
+    final_tier?: string;
+    citation_count?: number;
+    reason?: string;
+  };
+  artifact_qa?: {
+    status: "pass" | "warn" | "fail";
+    issues?: Array<{
+      severity: "critical" | "major" | "minor";
+      type: string;
+      target_id?: string;
+      message: string;
+      auto_fixable?: boolean;
+    }>;
+    metrics?: {
+      content_score?: number;
+      evidence_score?: number;
+      citation_coverage?: number;
+      claim_support_rate?: number;
+      contradiction_rate?: number;
+    };
+  };
+  falsification?: {
+    status?: string;
+    finding_count?: number;
+    query?: string;
+  };
   analysis?: string;
   /** @deprecated use chart_specs instead */
   chart_spec?: object;
@@ -187,7 +248,7 @@ export const useArtifactStore = create<ArtifactState>((set) => ({
   statusText: undefined,
   reasoningTrace: [],
   setArtifact: (block) => set({ artifact: block, isLoading: false, statusText: undefined }),
-  setPartialArtifact: (block) => set({ artifact: block }), // keeps isLoading + statusText + reasoningTrace
+  setPartialArtifact: (block) => set({ artifact: block, isLoading: true }),
   setDecisionSpine: (spine) => set({ decisionSpine: spine }),
   setEvidenceCoverage: (coverage) => set({ evidenceCoverage: coverage }),
   setLoading: (loading) => set({ isLoading: loading }),
@@ -266,8 +327,12 @@ export function buildArtifactFromAtlas(
     chart_specs: data.chart_specs as Chart[] | undefined,
     visual_blocks: data.visual_blocks as VisualBlock[] | undefined,
     headline: data.headline as string | undefined,
+    insight_card: data.insight_card as string | undefined,
     gap_rows: data.gap_rows as ArtifactBlock["gap_rows"],
     confidence_tier: (data.confidence_tier as ConfidenceTier) ?? "Speculative",
+    citation_guard: data.citation_guard as ArtifactBlock["citation_guard"],
+    artifact_qa: data.artifact_qa as ArtifactBlock["artifact_qa"],
+    falsification: data.falsification as ArtifactBlock["falsification"],
     // Routing gaps from ATLAS evidence gap analysis (lane/provider/tool shape)
     routing_gaps: (data.evidence_gaps as AtlasRoutingGap[] | undefined) ?? [],
     // External citations (populated by Commit 2 external evidence router)
@@ -283,6 +348,18 @@ export function buildArtifactFromAtlas(
   if (defendEvidence) {
     (block as unknown as Record<string, unknown>).defend_evidence = defendEvidence;
   }
+
+  const runStage = data._run_stage as ArtifactBlock["runStage"] | undefined;
+  if (runStage) block.runStage = runStage;
+
+  const orientDomains = data.orient_domains as ArtifactBlock["orient_domains"];
+  if (orientDomains?.length) block.orient_domains = orientDomains;
+
+  const cpcPosition = data.cpc_position as ArtifactBlock["cpc_position"];
+  if (cpcPosition) block.cpc_position = cpcPosition;
+
+  const appendix = data.appendix as ArtifactBlock["appendix"];
+  if (appendix?.length) block.appendix = appendix;
 
   return block;
 }

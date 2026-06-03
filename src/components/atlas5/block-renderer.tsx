@@ -151,13 +151,16 @@ function DomainHeatmapBlock({ block }: { block: VisualBlock }) {
 // knowledge_graph — ECharts force-directed graph
 // ---------------------------------------------------------------------------
 
-function KnowledgeGraphBlock({ block }: { block: VisualBlock }) {
+function KnowledgeGraphBlock({ block, showcase = false }: { block: VisualBlock; showcase?: boolean }) {
   const d = block.data as KnowledgeGraphData;
   if (!d?.nodes?.length) return null;
 
+  const nodeCount = d.nodes.length;
+  const repulsion = Math.min(420, 140 + nodeCount * 22);
+
   const nodes: GraphNode[] = d.nodes.map((n) => ({
     id: n.id,
-    name: n.label,
+    name: n.label.length > 28 ? `${n.label.slice(0, 26)}…` : n.label,
     category: n.group,
     value: n.value,
   }));
@@ -171,8 +174,12 @@ function KnowledgeGraphBlock({ block }: { block: VisualBlock }) {
   return (
     <BlockShell title={block.title}>
       <EChartsChart
-        option={buildEChartGraphOption(nodes, edges, { repulsion: 180 })}
-        style={{ height: "240px", width: "100%" }}
+        option={buildEChartGraphOption(nodes, edges, {
+          repulsion,
+          labelMinSize: showcase ? 12 : 10,
+          hideLabelsUntilHover: nodeCount > 6,
+        })}
+        style={{ height: showcase ? "420px" : "360px", width: "100%" }}
       />
     </BlockShell>
   );
@@ -522,14 +529,16 @@ function AreaLineBlock({ block }: { block: VisualBlock }) {
 export function BlockRenderer({
   block,
   className,
+  showcase = false,
 }: {
   block: VisualBlock;
   className?: string;
+  showcase?: boolean;
 }) {
   const inner = (() => {
     switch (block.type) {
       case "domain_heatmap":     return <DomainHeatmapBlock block={block} />;
-      case "knowledge_graph":    return <KnowledgeGraphBlock block={block} />;
+      case "knowledge_graph":    return <KnowledgeGraphBlock block={block} showcase={showcase} />;
       case "options_comparison": return <OptionsComparisonBlock block={block} />;
       case "evidence_bar":       return <EvidenceBarBlock block={block} />;
       case "radar":              return <RadarBlock block={block} />;
@@ -554,19 +563,21 @@ export function BlockRenderer({
 export function BlocksView({
   blocks,
   verdict,
+  showcase = false,
 }: {
   blocks: VisualBlock[];
   verdict?: string;
+  showcase?: boolean;
 }) {
   if (!blocks.length && !verdict) return null;
 
   return (
-    <div className="space-y-3">
+    <div className={cn("space-y-3", showcase && "space-y-5")}>
       {verdict && (
         <p className="text-sm font-semibold text-foreground leading-snug px-1">{verdict}</p>
       )}
       {blocks.map((block, i) => (
-        <BlockRenderer key={`${block.type}-${i}`} block={block} />
+        <BlockRenderer key={`${block.type}-${i}`} block={block} showcase={showcase} />
       ))}
     </div>
   );

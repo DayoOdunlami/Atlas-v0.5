@@ -597,51 +597,73 @@ def _evidence_heatmap(citations: list[dict[str, Any]], tier: str) -> dict[str, A
 
 # FUNDING FLOW SANKEY -------------------------------------------------------
 
-def _funding_flow_sankey(citations: list[dict[str, Any]]) -> dict[str, Any] | None:
+def _build_sankey_flows(citations: list[dict[str, Any]]) -> list[dict[str, Any]] | None:
     """
-    Sankey: funder → evidence type flow.
+    Build sankey flow rows: funder/org → evidence-type target.
 
-    Only generated when live_call citations with real funder values are present.
-    An organisation-based Sankey on project-only citations is circular and misleading
-    (all nodes would be "CPC Corpus → R&D Projects") so we return None in that case
-    and let the caller fall back to the evidence quality pie instead.
+    Works with live calls (funder), corpus projects (organisation), and
+    CPC internal rows — so Connect runs are not blocked when live_calls = 0.
     """
-    live_calls_with_funders = [
-        c for c in citations
-        if c.get("source_type") == "live_call" and c.get("funder")
-    ]
-    if len(live_calls_with_funders) < 2:
-        return None
-
     flow: dict[tuple[str, str], int] = {}
 
-    # Live calls: funder → "Live Funding Calls"
-    for c in live_calls_with_funders:
-        funder = str(c.get("funder", "Unknown Funder"))[:30]
-        flow[(funder, "Live Funding Calls")] = flow.get((funder, "Live Funding Calls"), 0) + 1
-
-    # Projects: organisation → "R&D Projects" (enriches the graph when present)
     for c in citations:
-        if c.get("source_type") == "project" and c.get("organisation"):
-            org = str(c.get("organisation", ""))[:30]
-            flow[(org, "R&D Projects")] = flow.get((org, "R&D Projects"), 0) + 1
+        st = c.get("source_type") or "project"
+        if st == "live_call":
+            funder = str(c.get("funder") or "Unknown funder").strip()[:30]
+            if funder:
+                key = (funder, "Live funding calls")
+                flow[key] = flow.get(key, 0) + 1
+        elif st == "project":
+            org = str(
+                c.get("organisation") or c.get("lead_org_name") or ""
+            ).strip()[:30]
+            if org:
+                key = (org, "Corpus projects")
+                flow[key] = flow.get(key, 0) + 1
+        elif st in ("cpc_internal", "cpc_claim"):
+            bu = str(
+                c.get("business_unit") or c.get("organisation") or "CPC internal"
+            ).strip()[:30]
+            key = (bu, "CPC capability evidence")
+            flow[key] = flow.get(key, 0) + 1
 
-    if len(flow) < 3:
+    if len(flow) < 3 or sum(flow.values()) < 3:
         return None
 
-    data = [
+    return [
         {"source": src, "target": tgt, "value": cnt}
-        for (src, tgt), cnt in flow.items()
+        for (src, tgt), cnt in sorted(flow.items(), key=lambda x: -x[1])
     ]
-    n_funders = len(live_calls_with_funders)
+
+
+def _funding_flow_sankey(citations: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """
+    Sankey chart_spec (legacy chart_specs path).
+
+    Only generated when enough funder/org → type flows exist.
+    """
+    flows = _build_sankey_flows(citations)
+    if not flows:
+        return None
+
+    n_funders = sum(
+        1 for c in citations
+        if c.get("source_type") == "live_call" and c.get("funder")
+    )
+    insight = (
+        f"{n_funders} funder{'s' if n_funders != 1 else ''} map to your evidence profile — "
+        "follow the thickest flows to prioritise bid activity."
+        if n_funders
+        else "Organisation and evidence-type flows — follow the thickest paths for bid priority."
+    )
     return {
         "type": "sankey",
         "title": "Evidence Flow - Funder to Type",
         "source": "source",
         "target": "target",
         "value": "value",
-        "data": data,
-        "insight": f"{n_funders} funder{'s' if n_funders > 1 else ''} map to your evidence profile — follow the thickest flows to prioritise bid activity.",
+        "data": flows,
+        "insight": insight,
     }
 
 
@@ -835,6 +857,39 @@ def build_chart_specs(
 # Rules mirror skills/data-visualization.md > Default Visual Per Surface Intent.
 # ---------------------------------------------------------------------------
 
+# Orient: show heatmap + graph together only when corpus is rich (≥8 sources)
+_ORIENT_RICH_CORPUS = 8
+# Knowledge graph: lowered from 6 → 4 citations (Sprint 3)
+_ORIENT_GRAPH_MIN_CITATIONS = 4
+
+
+def _enrich_citations(
+    verified: list[dict[str, Any]],
+    raw_search_results: list[dict[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    """Merge raw search metadata (source_type, funder) into verified citations."""
+    if not raw_search_results:
+        return verified
+    by_id = {str(r["id"]): r for r in raw_search_results if r.get("id")}
+    enriched: list[dict[str, Any]] = []
+    for c in verified:
+        base = by_id.get(str(c.get("id")), {})
+        merged = {**base, **c}
+        merged["organisation"] = (
+            c.get("organisation")
+            or base.get("organisation")
+            or base.get("lead_org_name")
+            or ""
+        )
+        merged["source_type"] = c.get("source_type") or base.get("source_type") or "project"
+        if base.get("funder"):
+            merged["funder"] = base.get("funder")
+        if base.get("business_unit"):
+            merged["business_unit"] = base.get("business_unit")
+        enriched.append(merged)
+    return enriched
+
+
 def _vb_domain_heatmap(verified: list[dict[str, Any]]) -> dict[str, Any] | None:
     """Group verified citations by organisation → domain_heatmap block."""
     counts: dict[str, int] = {}
@@ -870,15 +925,15 @@ def _vb_domain_heatmap(verified: list[dict[str, Any]]) -> dict[str, Any] | None:
 
 
 def _vb_knowledge_graph(verified: list[dict[str, Any]]) -> dict[str, Any] | None:
-    """Build knowledge_graph block from citation co-funder relationships."""
-    if len(verified) < 4:
+    """Build knowledge_graph block from citation org/funder ↔ project links."""
+    if len(verified) < 3:
         return None
 
     nodes: list[dict[str, Any]] = []
     edges: list[dict[str, Any]] = []
     org_to_node: dict[str, str] = {}
 
-    for i, c in enumerate(verified[:10]):
+    for i, c in enumerate(verified[:12]):
         node_id = f"p{i}"
         title = (c.get("title") or "")[:40]
         nodes.append({
@@ -887,21 +942,51 @@ def _vb_knowledge_graph(verified: list[dict[str, Any]]) -> dict[str, Any] | None
             "group": "project",
             "value": max(3, int(float(c.get("score", 0.5)) * 10)),
         })
-        org = (c.get("organisation") or c.get("publisher") or "").strip()
+        org = (
+            c.get("organisation")
+            or c.get("funder")
+            or c.get("publisher")
+            or c.get("business_unit")
+            or ""
+        ).strip()
         if org and org not in org_to_node:
             org_node_id = f"o{len(org_to_node)}"
             org_to_node[org] = org_node_id
-            nodes.append({"id": org_node_id, "label": org[:30], "group": "funder", "value": 6})
+            nodes.append({
+                "id": org_node_id,
+                "label": org[:30],
+                "group": "funder",
+                "value": 6,
+            })
         if org and org in org_to_node:
             edges.append({"source": org_to_node[org], "target": node_id, "weight": 0.7})
 
-    if len(edges) < 3:
+    if len(edges) < 2:
         return None
 
     return {
         "type": "knowledge_graph",
-        "title": "Project and organisation relationships",
+        "title": "Who connects to what in this evidence set",
         "data": {"nodes": nodes, "edges": edges},
+        "source_count": len(verified),
+    }
+
+
+def _vb_sankey(verified: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Sankey visual block — funding / org → evidence-type flows."""
+    flows = _build_sankey_flows(verified)
+    if not flows:
+        return None
+    n_live = sum(1 for c in verified if c.get("source_type") == "live_call")
+    title = (
+        "Funding flows into live opportunities"
+        if n_live >= 2
+        else "Evidence flows across organisations and types"
+    )
+    return {
+        "type": "sankey",
+        "title": title,
+        "data": {"flows": flows},
         "source_count": len(verified),
     }
 
@@ -1011,6 +1096,7 @@ def build_visual_blocks(
     discount_rate: float,
     evidence_gaps: list[dict[str, Any]],
     section_scores: dict[str, int] | None = None,
+    raw_search_results: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     """
     Art Director — deterministic visual block selection.
@@ -1020,6 +1106,7 @@ def build_visual_blocks(
     No LLM call — pure data-shape inspection.
     """
     blocks: list[dict[str, Any]] = []
+    cites = _enrich_citations(verified, raw_search_results)
 
     if recipe_id in ("brief_five_case", "act"):
         if any(k in sections for k in _FIVE_CASE_AXES[:3]):
@@ -1028,16 +1115,19 @@ def build_visual_blocks(
             blocks.append(_vb_npv_waterfall(npv_value, discount_rate))
 
     elif recipe_id == "orient":
-        heatmap = _vb_domain_heatmap(verified)
+        heatmap = _vb_domain_heatmap(cites)
         if heatmap:
             blocks.append(heatmap)
-        # Add knowledge graph only when corpus is rich enough for cluster structure
-        if len(verified) >= 6:
-            graph = _vb_knowledge_graph(verified)
+        # Graph at ≥4 citations; both heatmap + graph only when corpus is rich (≥8)
+        show_graph = len(cites) >= _ORIENT_GRAPH_MIN_CITATIONS
+        if heatmap and len(cites) < _ORIENT_RICH_CORPUS:
+            show_graph = False
+        if show_graph:
+            graph = _vb_knowledge_graph(cites)
             if graph:
                 blocks.append(graph)
         if not blocks:
-            bar = _vb_evidence_bar(verified)
+            bar = _vb_evidence_bar(cites)
             if bar:
                 blocks.append(bar)
 
@@ -1045,31 +1135,38 @@ def build_visual_blocks(
         gap_block = _vb_gap_matrix(evidence_gaps)
         if gap_block:
             blocks.append(gap_block)
-        bar = _vb_evidence_bar(verified)
+        bar = _vb_evidence_bar(cites)
         if bar:
             blocks.append(bar)
 
     elif recipe_id in ("defend", "cpc_defend"):
-        bar = _vb_evidence_bar(verified)
+        bar = _vb_evidence_bar(cites)
         if bar:
             blocks.append(bar)
 
     elif recipe_id in ("connect", "cpc_opportunity_fit", "cpc_market_alignment", "cpc_funding_flow"):
-        bar = _vb_evidence_bar(verified)
+        sankey = _vb_sankey(cites)
+        if sankey:
+            blocks.append(sankey)
+        bar = _vb_evidence_bar(cites)
         if bar:
             blocks.append(bar)
 
     elif recipe_id in ("cpc_capability_assessment", "cpc_portfolio_comparison"):
-        heatmap = _vb_domain_heatmap(verified)
+        heatmap = _vb_domain_heatmap(cites)
         if heatmap:
             blocks.append(heatmap)
+        elif len(cites) >= _ORIENT_GRAPH_MIN_CITATIONS:
+            graph = _vb_knowledge_graph(cites)
+            if graph:
+                blocks.append(graph)
         else:
-            bar = _vb_evidence_bar(verified)
+            bar = _vb_evidence_bar(cites)
             if bar:
                 blocks.append(bar)
 
     else:
-        bar = _vb_evidence_bar(verified)
+        bar = _vb_evidence_bar(cites)
         if bar:
             blocks.append(bar)
 

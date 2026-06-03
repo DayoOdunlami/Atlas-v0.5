@@ -18,6 +18,7 @@ import Markdown from "react-markdown";
 import type { ArtifactBlock } from "@/lib/atlas5/artifact-store";
 import { cn } from "@/lib/utils";
 import { getConfidenceStyles } from "@/lib/atlas5/confidence-styles";
+import { buildActEscalationPrompt, useEscalationStore } from "@/lib/atlas5/escalation";
 import { ClaimStateBadge } from "@/components/atlas5/claim-state-badge";
 import {
   SurfaceHeadline,
@@ -54,6 +55,19 @@ function parseGapRows(artifact: ArtifactBlock): GapRow[] {
       fit: r.fit as GapRow["fit"],
       evidence_strength: r.evidence_strength as GapRow["evidence_strength"],
       action: r.action,
+    }));
+  }
+
+  // Structural routing_gaps from search_corpus (always show even with 0 citations)
+  const routingGaps = artifact.routing_gaps ?? [];
+  if (routingGaps.length > 0) {
+    return routingGaps.map((g) => ({
+      criterion: g.topic || "Evidence gap",
+      response: g.reason || g.recommended_action || "",
+      fit: g.severity === "high" ? "Gap" : g.severity === "medium" ? "Partial" : "Met",
+      evidence_strength: g.severity === "high" ? "None" : "Weak",
+      claim_state: g.severity === "high" ? "unknown" : "inferred",
+      action: g.recommended_action,
     }));
   }
 
@@ -289,11 +303,12 @@ function RecommendedMoveCard({
 // Main component
 // ---------------------------------------------------------------------------
 
-export function DiagnoseSurface({ artifact }: { artifact: ArtifactBlock }) {
+export function DiagnoseSurface({ artifact, compact = false }: { artifact: ArtifactBlock; compact?: boolean }) {
   const sections  = artifact.sections ?? {};
   const citations = artifact.corpus_citations ?? [];
   const styles    = getConfidenceStyles(artifact.confidence_tier);
   const gapRows   = parseGapRows(artifact);
+  const requestEscalation = useEscalationStore((s) => s.requestEscalation);
   const frictionTags = ((artifact as unknown as Record<string, unknown>).entry_friction_tags as string[]) ?? [];
   const hasBlockGapMatrix = artifact.visual_blocks?.some((b) => b.type === "gap_matrix");
 
@@ -310,6 +325,28 @@ export function DiagnoseSurface({ artifact }: { artifact: ArtifactBlock }) {
     "Recommended Move", "Entry Friction", "Key Assumption",
   ]);
   const extraSections = Object.entries(sections).filter(([k]) => !KNOWN_SECTIONS.has(k));
+
+  if (compact) {
+    return (
+      <div className="flex justify-end" data-testid="diagnose-compact-actions">
+        <button
+          type="button"
+          className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-colors dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800"
+          data-testid="diagnose-escalate-act"
+          onClick={() =>
+            requestEscalation(
+              buildActEscalationPrompt(
+                artifact.headline ?? sections["Headline"] ?? "",
+                "diagnose",
+              ),
+            )
+          }
+        >
+          Build Five Case for this <ArrowRight className="size-3" />
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className={cn("space-y-0", styles.container)} data-testid="recipe-diagnose">
@@ -331,6 +368,19 @@ export function DiagnoseSurface({ artifact }: { artifact: ArtifactBlock }) {
       </div>
 
       <div className="p-4 space-y-4">
+        {citations.length <= 1 && gapRows.length === 0 && (
+          <div
+            data-testid="diagnose-evidence-limited"
+            className="rounded-lg border border-amber-200/80 bg-amber-50/60 dark:border-amber-900/50 dark:bg-amber-950/20 px-3 py-2.5"
+          >
+            <p className="text-xs font-medium text-amber-900 dark:text-amber-200">
+              Diagnosis limited — {artifact.confidence_tier} tier
+            </p>
+            <p className="text-[11px] text-amber-800/90 dark:text-amber-300/90 mt-1">
+              Few corpus hits for this capability question. Gaps below reflect available evidence only.
+            </p>
+          </div>
+        )}
 
         {/* 1. Bold verdict — headline rendered at RecipeView level when set; repeat only if local */}
         {headlineText && !artifact.headline && (
@@ -382,8 +432,8 @@ export function DiagnoseSurface({ artifact }: { artifact: ArtifactBlock }) {
           </SurfaceSection>
         )}
 
-        {/* 6. Evidence strip — collapsed; full list at RecipeView level */}
-        {citations.length > 0 && (
+        {/* 6. Evidence strip — skip when many citations (RecipeView shows collapsed list) */}
+        {citations.length > 0 && citations.length < 8 && (
           <SurfaceSection
             title={`${citations.length} verified sources`}
             preview={`${citations.filter((c) => c.claim_state === "stated").length} stated · ${citations.filter((c) => c.claim_state === "inferred").length} inferred`}
@@ -417,7 +467,15 @@ export function DiagnoseSurface({ artifact }: { artifact: ArtifactBlock }) {
           <button
             type="button"
             className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-colors dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800"
-            onClick={() => console.info("[STUB] Build Five Case from Diagnose")}
+            data-testid="diagnose-escalate-act"
+            onClick={() =>
+              requestEscalation(
+                buildActEscalationPrompt(
+                  artifact.headline ?? sections["Headline"] ?? "",
+                  "diagnose",
+                ),
+              )
+            }
           >
             Build Five Case for this <ArrowRight className="size-3" />
           </button>

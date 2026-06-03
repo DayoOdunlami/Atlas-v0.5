@@ -24,8 +24,9 @@ export type LensId = "CPC" | "Atlas" | "Ecosystem" | "Funder" | "Mode";
  * Surface render mode.
  * - chat: two-pane layout (chat + artifact) — default
  * - canvas: tldraw full-screen, chat + artifact panes hidden
+ * - showcase: artifact pane demo layout (full-width visuals, minimal chrome)
  */
-export type SurfaceMode = "chat" | "canvas";
+export type SurfaceMode = "chat" | "canvas" | "showcase";
 
 /**
  * SurfaceState is written to sessionStorage under the key "surface_state.json"

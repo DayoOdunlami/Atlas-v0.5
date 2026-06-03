@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 import uuid
 from pathlib import Path
@@ -65,8 +66,17 @@ from agents.mcp_client import (
     search_cpc_internal,      # Gap F: CPC internal evidence_containers + claims
     detect_evidence_gaps,     # Structured gap classification — retrieval/corpus/landscape
 )
-from agents.external_search import search_govuk, search_exa  # External Evidence Router
+from agents.external_search import search_govuk, search_exa, search_tavily  # External Evidence Router
+from agents.atlas.citation_guard import apply_citation_guard
+from agents.atlas.artifact_qa import run_artifact_qa
+from agents.atlas.falsification import run_falsification_lane
 from mcps.cpc_corpus.queries import get_project as _verify_project
+from agents.citation_helpers import (
+    CITABLE_SOURCE_TYPES,
+    filter_llm_citations,
+    inject_citation_fallback,
+    suggested_citations_block,
+)
 # Shared base utilities — use these for extraction and intent, never re-implement
 from agents.base import extract_latest_query, is_conversational
 from agents.visual_recipe_director import (
@@ -100,6 +110,32 @@ def _load_surface_composition_skill() -> dict[str, str] | None:
     except Exception:
         pass
     return None
+
+
+def _load_golden_example_skill(recipe: str) -> dict[str, str] | None:
+    """Load mode-specific golden example for LLM composition (Sprint 3)."""
+    mapping = {
+        "orient": "golden-orient.md",
+        "cpc_capability_assessment": "golden-orient.md",
+        "cpc_market_alignment": "golden-orient.md",
+        "diagnose": "golden-diagnose.md",
+        "cpc_evidence_gaps": "golden-diagnose.md",
+        "act": "golden-act.md",
+        "brief_five_case": "golden-act.md",
+        "connect": "golden-connect.md",
+        "cpc_opportunity_fit": "golden-connect.md",
+    }
+    filename = mapping.get(recipe)
+    if not filename:
+        return None
+    try:
+        path = _Path(__file__).resolve().parent.parent.parent / "skills" / filename
+        if path.exists():
+            return {"name": filename.replace(".md", ""), "content": path.read_text(encoding="utf-8")}
+    except Exception:
+        pass
+    return None
+
 
 _DATA_VIZ_SKILL: dict[str, str] | None = _load_data_viz_skill()
 _SURFACE_COMPOSITION_SKILL: dict[str, str] | None = _load_surface_composition_skill()
@@ -248,6 +284,13 @@ class AtlasState(TypedDict):
     target_recipe: str                       # primary recipe ID selected before corpus search
     target_secondary_recipes: list[str]      # secondary recipe IDs for composite artifact panels
     section_scores: dict[str, int]           # LLM self-assessed evidence strength per Five Case section
+    # Session memory — persisted across turns via LangGraph checkpoint (not reset in extract_query)
+    last_recipe: str
+    last_headline: str
+    session_has_diagnose: bool
+    # Turn routing (Sprint 4): clarify | refine | analyze
+    turn_intent: str
+    last_artifact_block: dict[str, Any] | None
 
 
 # ---------------------------------------------------------------------------
@@ -255,6 +298,10 @@ class AtlasState(TypedDict):
 # ---------------------------------------------------------------------------
 
 _MAX_CITATIONS = 8
+_CITATION_PROMPT_RULE = (
+    'All corpus_citation.id values MUST come from items with source_type '
+    '"project", "live_call", "cpc_internal", or "cpc_claim" in results. NEVER fabricate IDs.'
+)
 
 # Confidence tier ordering — module scope so CICERONE and future routing nodes
 # can import and use _cap_tier without depending on build_five_case internals.
@@ -356,6 +403,240 @@ def _route_after_intent(state: AtlasState) -> str:
     return END if state.get("_is_conversational") else "select_recipe_intent"
 
 
+# ---------------------------------------------------------------------------
+# Turn routing — clarify / refine / analyze (Sprint 4)
+# ---------------------------------------------------------------------------
+
+_CLARIFY_PATTERNS = (
+    r"^what('s| is| are)\b",
+    r"^explain\b",
+    r"^how (does|do|is|are|can|was|were)\b",
+    r"^why (does|do|is|are)\b",
+    r"^define\b",
+    r"\bwhat('s| is) (npv|stpr|green book)\b",
+    r"\bhow (was|is) .*(calculated|computed|derived)\b",
+    r"^can you explain\b",
+    r"^tell me (more )?about\b",
+    r"^what does .+ mean\b",
+    r"^which (is|are) better\b",
+    r"\bcompare .+ (vs|versus|or)\b",
+)
+
+_REFINE_PATTERNS = (
+    r"\badd\b",
+    r"\binclude\b",
+    r"\bupdate\b",
+    r"\bsharpen\b",
+    r"\bexpand\b",
+    r"\bfocus on\b",
+    r"\bstrengthen\b",
+    r"\bimprove\b",
+    r"\bmake the headline\b",
+    r"\badd key players\b",
+    r"\brefine\b",
+    r"\bpatch\b",
+    r"\bintegrate\b",
+    r"\bemphasize\b",
+    r"\bde-emphasize\b",
+)
+
+
+def _classify_turn_heuristic(query: str, has_prior_artifact: bool) -> str:
+    """Fast turn-lane classifier — no LLM."""
+    if not has_prior_artifact:
+        return "analyze"
+    q = query.strip().lower()
+    if not q:
+        return "analyze"
+    if any(re.search(p, q) for p in _REFINE_PATTERNS):
+        return "refine"
+    if any(re.search(p, q) for p in _CLARIFY_PATTERNS):
+        return "clarify"
+    # Short follow-up questions without new domain scope → clarify
+    if len(q.split()) <= 14 and "?" in q:
+        return "clarify"
+    return "analyze"
+
+
+def classify_turn_intent(state: AtlasState) -> dict:
+    """
+    Node 0a: Route follow-up turns to clarify / refine / analyze lanes.
+    Requires last_artifact_block from prior turn (set in extract_query).
+    """
+    query = (state.get("query") or "").strip()
+    prior = state.get("last_artifact_block")
+    has_prior = bool(prior and isinstance(prior, dict) and prior.get("sections"))
+    intent = _classify_turn_heuristic(query, has_prior)
+    if intent in ("clarify", "refine") and not has_prior:
+        intent = "analyze"
+
+    thought = (
+        f"Turn lane: {intent}. "
+        + ("Prior artifact available — may skip full pipeline." if has_prior else "New analysis — full pipeline.")
+    )
+    return {
+        "turn_intent": intent,
+        "reasoning_trace": state.get("reasoning_trace", []) + [{
+            "node": "classify_turn_intent",
+            "thought": thought,
+            "tool_calls": [],
+            "status": "ok",
+        }],
+    }
+
+
+def _route_after_turn_intent(state: AtlasState) -> str:
+    intent = state.get("turn_intent", "analyze")
+    if intent == "clarify":
+        return "handle_clarify"
+    if intent == "refine":
+        return "handle_refine"
+    return "reset_analyze_state"
+
+
+def reset_analyze_state(state: AtlasState) -> dict:
+    """Clear per-turn working state before a full analyze pipeline run."""
+    return {
+        "sections": {},
+        "five_case_model": {k.split(" ")[0].lower(): "" for k in FIVE_CASE_KEYS},
+        "corpus_citations": [],
+        "decision_spine": None,
+        "artifact_block": None,
+        "charts": [],
+        "evidence_gaps": [],
+        "external_search_results": [],
+        "npv_value": None,
+        "optimism_bias": None,
+        "tool_calls": [],
+        "reasoning_trace": state.get("reasoning_trace", []),
+        "analysis": "",
+        "_is_conversational": False,
+        "is_cpc_inward": False,
+        "target_recipe": "brief_five_case",
+        "target_secondary_recipes": [],
+        "section_scores": {},
+    }
+
+
+def handle_clarify(state: AtlasState) -> dict:
+    """Clarify lane — conversational answer from prior artifact; artifact unchanged."""
+    query = state.get("query", "")
+    prior = state.get("last_artifact_block") or {}
+
+    prior_summary = json.dumps({
+        "recipe": prior.get("recipe"),
+        "headline": prior.get("headline"),
+        "insight_card": prior.get("insight_card"),
+        "confidence_tier": prior.get("confidence_tier"),
+        "sections": prior.get("sections"),
+        "corpus_citations": (prior.get("corpus_citations") or [])[:6],
+    }, indent=2)[:12000]
+
+    system = """You are ATLAS, CPC's decision intelligence analyst.
+
+The user is asking a follow-up about the artifact already on screen.
+Answer clearly in markdown prose. You may use bullets, short tables, and formulas.
+Explain NPV, gaps, comparisons, and definitions when asked.
+Do NOT output JSON. Do NOT regenerate the full artifact.
+Reference the prior artifact when helpful."""
+
+    try:
+        llm = _llm_internal()
+        response = llm.invoke([
+            SystemMessage(content=system),
+            HumanMessage(content=f"Prior artifact:\n{prior_summary}\n\nUser question: {query}"),
+        ])
+        content = str(response.content).strip()
+    except Exception as e:
+        content = f"I couldn't answer that follow-up: {e}"
+
+    return {
+        "messages": [AIMessage(content=content, id=str(uuid.uuid4()))],
+        "artifact_block": prior if prior else None,
+        "confidence_tier": prior.get("confidence_tier", "Speculative"),
+        "_is_conversational": True,
+        "reasoning_trace": state.get("reasoning_trace", []) + [{
+            "node": "handle_clarify",
+            "thought": "Answered follow-up from prior artifact — clarify lane.",
+            "tool_calls": [],
+            "status": "ok",
+        }],
+    }
+
+
+def handle_refine(state: AtlasState) -> dict:
+    """Refine lane — patch prior artifact via LLM delta; short chat ack."""
+    query = state.get("query", "")
+    prior = dict(state.get("last_artifact_block") or {})
+    if not prior:
+        return {"turn_intent": "analyze"}
+
+    prior_json = json.dumps({
+        "headline": prior.get("headline"),
+        "insight_card": prior.get("insight_card"),
+        "sections": prior.get("sections"),
+        "recipe": prior.get("recipe"),
+    }, indent=2)[:10000]
+
+    system = """You are ATLAS. The user wants to refine an existing artifact.
+Return JSON ONLY:
+{
+  "headline": "optional updated headline",
+  "insight_card": "optional updated insight card",
+  "sections_patch": {"Section Name": "updated content"},
+  "acknowledgment": "one sentence for chat"
+}
+Only include fields that should change."""
+
+    try:
+        llm = _llm_internal()
+        response = llm.invoke([
+            SystemMessage(content=system),
+            HumanMessage(content=f"Current artifact:\n{prior_json}\n\nRefinement request: {query}"),
+        ])
+        content = response.content
+        if "```json" in content:
+            content = content.split("```json")[1].split("```")[0]
+        elif "```" in content:
+            content = content.split("```")[1].split("```")[0]
+        patch = json.loads(content.strip())
+    except Exception as e:
+        return {
+            "messages": [AIMessage(
+                content=f"I couldn't refine the artifact: {e}. Try rephrasing or run a new analysis.",
+                id=str(uuid.uuid4()),
+            )],
+            "artifact_block": prior,
+            "_is_conversational": True,
+        }
+
+    if patch.get("headline"):
+        prior["headline"] = str(patch["headline"]).strip()
+    if patch.get("insight_card"):
+        prior["insight_card"] = str(patch["insight_card"]).strip()
+    sections = dict(prior.get("sections") or {})
+    for k, v in (patch.get("sections_patch") or {}).items():
+        if v:
+            sections[str(k)] = str(v)
+    prior["sections"] = sections
+    ack = str(patch.get("acknowledgment") or "Updated in artifact →").strip()
+    chat = f"{ack}\n\n_see artifact →_"
+
+    return {
+        "messages": [AIMessage(content=chat, id=str(uuid.uuid4()))],
+        "artifact_block": prior,
+        "last_artifact_block": prior,
+        "last_headline": prior.get("headline") or state.get("last_headline", ""),
+        "_is_conversational": True,
+        "reasoning_trace": state.get("reasoning_trace", []) + [{
+            "node": "handle_refine",
+            "thought": "Patched prior artifact — refine lane.",
+            "tool_calls": [],
+            "status": "ok",
+        }],
+    }
+
+
 def select_recipe_intent(state: AtlasState) -> dict:
     """
     Node 0c: Classify query intent and select target recipe(s) BEFORE corpus search.
@@ -386,6 +667,9 @@ def select_recipe_intent(state: AtlasState) -> dict:
         s.get("name") == "surface-composition" for s in existing_skills
     ):
         existing_skills = existing_skills + [_SURFACE_COMPOSITION_SKILL]
+    golden = _load_golden_example_skill(primary_recipe)
+    if golden and not any(s.get("name") == golden["name"] for s in existing_skills):
+        existing_skills = existing_skills + [golden]
     ctx["active_skills"] = existing_skills
 
     _BUILD_PATHS: dict[str, str] = {
@@ -406,6 +690,17 @@ def select_recipe_intent(state: AtlasState) -> dict:
     build_path = _BUILD_PATHS.get(primary_recipe, f"Mode: {primary_recipe}")
 
     is_compound = len(secondary_recipes) > 0
+
+    # Turn-2 escalation — carry prior artifact context into Act / Diagnose / Connect
+    prior_recipe = state.get("last_recipe") or ""
+    prior_headline = state.get("last_headline") or ""
+    if prior_headline and primary_recipe in ("act", "brief_five_case", "diagnose", "connect"):
+        ctx["prior_turn"] = {
+            "recipe": prior_recipe,
+            "headline": prior_headline,
+            "session_has_diagnose": bool(state.get("session_has_diagnose")),
+        }
+
     return {
         "context_packet": ctx,
         "is_cpc_inward": inward,
@@ -620,6 +915,7 @@ def search_corpus(state: AtlasState) -> AtlasState:
         "status": "error" if state.get("error") else "ok",
     }]
 
+    state["artifact_block"] = _build_partial_artifact(state, "search")
     return state
 
 
@@ -716,10 +1012,34 @@ def external_evidence_search(state: AtlasState) -> AtlasState:
                     "triggered_by": "evidence_gap",
                 })
 
+    scout_on = os.getenv("ATLAS_EXTERNAL_SCOUT_V1", "").strip().lower() in ("1", "true", "yes")
+    corpus_hits = len(state.get("raw_search_results") or [])
+    landscape_gap = any(g.get("type") == "landscape_gap" for g in gaps)
+    if scout_on and (corpus_hits < 3 or landscape_gap):
+        search_q = state.get("query", "")
+        try:
+            tavily_results = search_tavily(search_q, limit=8)
+            external_results.extend(tavily_results)
+            tool_calls.append({
+                "tool": "tavily_search",
+                "args": {"query": search_q, "limit": 8},
+                "result_count": len(tavily_results),
+                "triggered_by": "external_scout_v1",
+                "corpus_hits": corpus_hits,
+            })
+        except Exception as exc:
+            tool_calls.append({
+                "tool": "tavily_search",
+                "args": {"query": search_q},
+                "error": str(exc),
+                "triggered_by": "external_scout_v1",
+            })
+
     state["external_search_results"] = external_results
     state["tool_calls"] = tool_calls
 
-    ext_tools = [tc["tool"] for tc in tool_calls if tc.get("tool") in ("govuk_search", "exa_search") and not tc.get("skipped")]
+    _EXT_TOOLS = ("govuk_search", "exa_search", "tavily_search")
+    ext_tools = [tc["tool"] for tc in tool_calls if tc.get("tool") in _EXT_TOOLS and not tc.get("skipped")]
     skipped = [tc["tool"] for tc in tool_calls if tc.get("skipped")]
     if ext_tools or skipped:
         thought = (
@@ -733,7 +1053,7 @@ def external_evidence_search(state: AtlasState) -> AtlasState:
         "thought": thought,
         "tool_calls": [
             {"tool": tc["tool"], "result_count": tc.get("result_count", 0), "status": "skipped" if tc.get("skipped") else ("error" if "error" in tc else "ok")}
-            for tc in tool_calls if tc.get("tool") in ("govuk_search", "exa_search")
+            for tc in tool_calls if tc.get("tool") in _EXT_TOOLS
         ],
         "status": "ok",
     }]
@@ -978,6 +1298,7 @@ def _build_orient_report(state: AtlasState) -> AtlasState:
     results_json = json.dumps(state["raw_search_results"], indent=2, default=_json_default)
     query = state["query"]
     recipe = state.get("target_recipe", "cpc_capability_assessment")
+    suggested = suggested_citations_block(state["raw_search_results"])
 
     system = f"""You are ATLAS in Orient mode, the terrain-surfacing agent for Connected Places Catapult.
 
@@ -985,7 +1306,7 @@ Your task is to help the user understand the relevant landscape for their decisi
 a business case. Focus on: what exists, who is doing it, where CPC sits, and what signals matter.
 
 MANDATORY RULES:
-1. All corpus_citation.id values MUST come from items with source_type "project" or "live_call" in results.
+1. {_CITATION_PROMPT_RULE}
 2. NEVER fabricate project IDs.
 3. Orient reports surface terrain — they do not recommend a single course of action.
 4. Assign confidence_tier per evidence-triage skill: Speculative (no corpus hits), Indicative (1-2),
@@ -1000,6 +1321,9 @@ MANDATORY RULES:
 
 CORPUS SEARCH RESULTS:
 {results_json}
+
+SUGGESTED CITATIONS (prefer these IDs when relevant):
+{suggested}
 
 Respond in JSON ONLY:
 {{
@@ -1037,7 +1361,9 @@ Respond in JSON ONLY:
     }}
   ],
   "confidence_tier": "Speculative|Indicative|Supported|Robust",
-  "analysis": "One-paragraph orientation summary."
+  "headline": "One-sentence terrain verdict (max 30 words). Required.",
+  "insight_card": "2-3 sentences: why the headline is true. Required. No bullet lists.",
+  "analysis": "Optional extra context — prefer insight_card for the waterfall."
 }}"""
 
     try:
@@ -1053,8 +1379,7 @@ Respond in JSON ONLY:
             content = content.split("```")[1].split("```")[0]
         parsed = json.loads(content.strip())
 
-        if parsed.get("headline"):
-            state["_headline"] = str(parsed.get("headline", "")).strip()  # type: ignore[attr-defined]
+        _parse_insight_fields(state, parsed)
 
         raw_sections = parsed.get("sections", {})
         state["sections"] = raw_sections
@@ -1063,14 +1388,12 @@ Respond in JSON ONLY:
         state["discount_rate"] = HMT_STPR
         state["optimism_bias"] = None
         state["section_scores"] = {}
-        state["analysis"] = parsed.get("analysis", "")
+        if not state.get("_insight_card") and parsed.get("analysis"):  # type: ignore[attr-defined]
+            state["analysis"] = parsed.get("analysis", "")
 
         # Citations — verify against corpus
         raw_cites = parsed.get("corpus_citations", [])
-        safe_citations = [
-            c for c in raw_cites
-            if isinstance(c, dict) and c.get("id") and _verify_project(c["id"])
-        ]
+        safe_citations = filter_llm_citations(raw_cites, state["raw_search_results"])
         state["corpus_citations"] = safe_citations
 
         # Confidence tier
@@ -1144,6 +1467,7 @@ def _build_connect_report(state: AtlasState) -> AtlasState:
     results_json = json.dumps(state["raw_search_results"], indent=2, default=_json_default)
     query = state["query"]
     recipe = state.get("target_recipe", "cpc_opportunity_fit")
+    suggested = suggested_citations_block(state["raw_search_results"])
 
     recipe_focus = {
         "cpc_opportunity_fit": "Focus on how well this opportunity fits CPC's current capabilities and portfolio.",
@@ -1157,7 +1481,7 @@ Your task is to find credible, explainable routes to opportunities the user woul
 Every connection must be explicable — not black-box similarity suggestions.
 
 MANDATORY RULES:
-1. All corpus_citation.id values MUST come from source_type "project" or "live_call" items.
+1. {_CITATION_PROMPT_RULE}
 2. NEVER fabricate IDs.
 3. Connect reports map routes — every route has a rationale.
 4. Confidence_tier follows evidence-triage skill rules.
@@ -1170,6 +1494,9 @@ MANDATORY RULES:
 
 CORPUS SEARCH RESULTS:
 {results_json}
+
+SUGGESTED CITATIONS (prefer these IDs when relevant):
+{suggested}
 
 Respond in JSON ONLY:
 {{
@@ -1232,10 +1559,7 @@ Respond in JSON ONLY:
         state["analysis"] = parsed.get("analysis", "")
 
         raw_cites = parsed.get("corpus_citations", [])
-        safe_citations = [
-            c for c in raw_cites
-            if isinstance(c, dict) and c.get("id") and _verify_project(c["id"])
-        ]
+        safe_citations = filter_llm_citations(raw_cites, state["raw_search_results"])
         state["corpus_citations"] = safe_citations
 
         tier = parsed.get("confidence_tier", "Speculative")
@@ -1319,6 +1643,15 @@ def _build_diagnose_report(state: AtlasState) -> AtlasState:
     gaps_json = json.dumps(structural_gaps, indent=2) if structural_gaps else "[]"
     external_results = state.get("external_search_results", [])
     external_json = json.dumps(external_results, indent=2) if external_results else "[]"
+    suggested = suggested_citations_block(state["raw_search_results"])
+
+    passport_ctx = None
+    try:
+        from agents.passport_loader import load_passport_for_query
+        passport_ctx = load_passport_for_query(query)
+    except Exception:
+        passport_ctx = None
+    passport_json = json.dumps(passport_ctx, indent=2, default=str) if passport_ctx else "null"
 
     system = f"""You are ATLAS in Diagnose mode, the evidence gap and value translation agent for Connected Places Catapult.
 
@@ -1352,7 +1685,7 @@ REPORT STRUCTURE — you must produce ALL eight sections:
    what evidence would change the conclusion
 
 MANDATORY RULES:
-1. All corpus_citation.id values MUST come from source_type "project" or "live_call" in results.
+1. {_CITATION_PROMPT_RULE}
 2. NEVER fabricate IDs.
 3. confidence_tier must reflect the evidence quality for THIS gap analysis, not the
    entity's general quality.
@@ -1366,7 +1699,8 @@ MANDATORY RULES:
 
 {skills_text}
 
-Note: Entity Passport data is not yet available in Phase 1. Infer all entity claims and capabilities from the query context and corpus evidence only. Do not fabricate passport fields.
+ENTITY PASSPORT (when matched — use for Fit Analysis rows; infer only if null):
+{passport_json}
 
 STRUCTURAL EVIDENCE GAPS (pre-detected):
 {gaps_json}
@@ -1374,8 +1708,11 @@ STRUCTURAL EVIDENCE GAPS (pre-detected):
 EXTERNAL EVIDENCE (context only — do NOT put URLs in corpus_citations):
 {external_json}
 
-CORPUS SEARCH RESULTS (only use IDs from source_type project/live_call in corpus_citations):
+CORPUS SEARCH RESULTS:
 {results_json}
+
+SUGGESTED CITATIONS (prefer these IDs when relevant):
+{suggested}
 
 Respond in JSON ONLY:
 {{
@@ -1421,8 +1758,9 @@ Respond in JSON ONLY:
     "maturity": "stated"
   }},
   "confidence_tier": "Speculative|Indicative|Supported|Robust",
-  "analysis": "One-paragraph gap analysis summary: what the most critical gap is and why.",
-  "headline": "One-sentence verdict: the primary action recommendation in plain English (max 30 words). Required."
+  "headline": "One-sentence verdict: apply / reposition / evidence-build (max 30 words). Required.",
+  "insight_card": "2-3 sentences: why the headline is true. Required.",
+  "analysis": "Optional extra context — prefer insight_card."
 }}"""
 
     try:
@@ -1438,8 +1776,7 @@ Respond in JSON ONLY:
             content = content.split("```")[1].split("```")[0]
         parsed = json.loads(content.strip())
 
-        if parsed.get("headline"):
-            state["_headline"] = str(parsed.get("headline", "")).strip()  # type: ignore[attr-defined]
+        _parse_insight_fields(state, parsed)
 
         # Sections (8-section Diagnose report — no Five Case keys)
         raw_sections = parsed.get("sections", {})
@@ -1456,11 +1793,10 @@ Respond in JSON ONLY:
 
         # Citations
         raw_cites = parsed.get("corpus_citations", [])
-        safe_citations = [
-            c for c in raw_cites
-            if isinstance(c, dict) and c.get("id") and _verify_project(c["id"])
-        ]
+        safe_citations = filter_llm_citations(raw_cites, state["raw_search_results"])
         state["corpus_citations"] = safe_citations
+        if passport_ctx:
+            state["_passport_id"] = passport_ctx.get("passport_id")  # type: ignore[typeddict-unknown-key]
         has_external = bool(state.get("external_search_results"))
 
         # Confidence ceiling — same rules as Act path
@@ -1701,10 +2037,7 @@ Respond in JSON ONLY:
         state["analysis"] = parsed.get("analysis", "")
 
         raw_cites = parsed.get("corpus_citations", [])
-        safe_citations = [
-            c for c in raw_cites
-            if isinstance(c, dict) and c.get("id") and _verify_project(c["id"])
-        ]
+        safe_citations = filter_llm_citations(raw_cites, state["raw_search_results"])
         state["corpus_citations"] = safe_citations
 
         tier = parsed.get("confidence_tier", "Speculative")
@@ -1946,6 +2279,8 @@ Respond in JSON ONLY — no markdown, no explanation. Format:
     }}
   ],
   "confidence_tier": "Speculative|Indicative|Supported|Robust",
+  "headline": "One-sentence invest/defer/reject verdict (max 30 words). Required.",
+  "insight_card": "2-3 sentences: why the headline is true. Required.",
   "section_scores": {{
     "Strategic Case": 72,
     "Economic Case": 45,
@@ -1968,6 +2303,8 @@ Respond in JSON ONLY — no markdown, no explanation. Format:
         elif "```" in content:
             content = content.split("```")[1].split("```")[0]
         parsed = json.loads(content.strip())
+
+        _parse_insight_fields(state, parsed)
 
         # Enforce discount_rate lock
         parsed["discount_rate"] = HMT_STPR
@@ -1992,32 +2329,21 @@ Respond in JSON ONLY — no markdown, no explanation. Format:
         state["discount_rate"] = HMT_STPR
         state["optimism_bias"] = parsed.get("optimism_bias")
 
-        # --- Citations (only project/live_call IDs — knowledge_docs are context-only) ---
-        # knowledge_doc items have chunk_id/document_id, not id; they are not in
-        # atlas.projects so verify_citations would drop them. Include them in the
-        # context_json (for LLM prose) but not in the citable ID map.
-        valid_id_to_sim: dict[str, float] = {
-            r["id"]: float(r.get("similarity") or 0.0)
-            for r in state["raw_search_results"]
-            if r.get("id") and r.get("source_type") in ("project", "live_call")
-        }
-        safe_citations: list[CorpusCitation] = []
-        for c in parsed.get("corpus_citations", []):
-            cid = c.get("id", "")
-            if cid in valid_id_to_sim:
-                safe_citations.append({
-                    "id": cid,
-                    "title": c.get("title", ""),
-                    "organisation": c.get("organisation", ""),
-                    "relevance_note": c.get("relevance_note", ""),
-                    "score": float(c.get("score") or valid_id_to_sim[cid]),
-                })
+        # --- Citations (citable source types only — knowledge_docs are context-only) ---
+        safe_citations = filter_llm_citations(
+            parsed.get("corpus_citations", []),
+            state["raw_search_results"],
+        )
         state["corpus_citations"] = safe_citations
 
         # --- Confidence tier (with ceiling enforcement) ---
         tier = parsed.get("confidence_tier", "Speculative")
         valid_tiers = {"Speculative", "Indicative", "Supported", "Robust"}
         tier = tier if tier in valid_tiers else "Speculative"
+
+        # Decision 5 — cold Act ceiling: first-turn Act without prior Diagnose → max Indicative
+        if state.get("target_recipe") in ("act", "brief_five_case") and not state.get("session_has_diagnose"):
+            tier = _cap_tier(tier, "Indicative")
 
         # Confidence ceiling rules — enforced in code, not just LLM prompt:
         #   1. Exa-only (no corpus citations, external results present) → max Supported
@@ -2283,6 +2609,42 @@ def _extract_headline(state: AtlasState) -> str:
     return ""
 
 
+def _extract_insight_card(state: AtlasState) -> str:
+    """2–3 sentence 'because' card — Principle 1 waterfall step 2."""
+    import re
+
+    explicit = state.get("_insight_card")  # type: ignore[attr-defined]
+    if isinstance(explicit, str) and explicit.strip():
+        return explicit.strip()[:480]
+
+    headline = _extract_headline(state)
+    analysis = str(state.get("analysis") or "").strip()
+    if analysis:
+        if headline and analysis.lower().startswith(headline.lower()[: min(40, len(headline))]):
+            analysis = analysis[len(headline) :].strip(" .")
+        sentences = re.split(r"(?<=[.!?])\s+", analysis)
+        body = " ".join(s.strip() for s in sentences[:3] if s.strip())
+        if len(body) > 30 and body.lower() != headline.lower():
+            return body[:480]
+
+    spine = state.get("decision_spine") or {}
+    rec = str(spine.get("recommendation") or "").strip()
+    if rec and len(rec) > 30 and rec.lower() != headline.lower():
+        return rec[:480]
+
+    return ""
+
+
+def _parse_insight_fields(state: AtlasState, parsed: dict[str, Any]) -> None:
+    """Set headline + insight_card from LLM JSON."""
+    if parsed.get("headline"):
+        state["_headline"] = str(parsed.get("headline", "")).strip()  # type: ignore[attr-defined]
+    if parsed.get("insight_card"):
+        state["_insight_card"] = str(parsed.get("insight_card", "")).strip()  # type: ignore[attr-defined]
+    elif parsed.get("analysis"):
+        state["analysis"] = str(parsed.get("analysis", ""))
+
+
 def _build_gap_rows(state: AtlasState) -> list[dict[str, Any]]:
     """Structured gap rows for Diagnose surface + gap_matrix block."""
     rows: list[dict[str, Any]] = []
@@ -2302,6 +2664,124 @@ def _build_gap_rows(state: AtlasState) -> list[dict[str, Any]]:
     return rows
 
 
+def _extract_orient_domains(
+    raw_results: list[dict[str, Any]],
+    verified: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    """Build orient_domains[] for OrientSurface from search / citation results."""
+    domain_counts: dict[str, dict[str, Any]] = {}
+    for r in list(raw_results) + list(verified or []):
+        domain = (
+            r.get("business_unit")
+            or r.get("theme")
+            or r.get("domain")
+            or r.get("transport_mode")
+            or "General"
+        )
+        domain = str(domain).strip() or "General"
+        if domain not in domain_counts:
+            domain_counts[domain] = {
+                "domain": domain,
+                "evidence_count": 0,
+                "cpc_projects": 0,
+                "open_calls": 0,
+            }
+        domain_counts[domain]["evidence_count"] += 1
+        if r.get("source_type") == "live_call":
+            domain_counts[domain]["open_calls"] += 1
+        else:
+            domain_counts[domain]["cpc_projects"] += 1
+    return sorted(domain_counts.values(), key=lambda d: -d["evidence_count"])[:8]
+
+
+def _extract_cpc_position(sections: dict[str, str]) -> dict[str, Any] | None:
+    """Parse CPC Position section into structured card payload."""
+    text = sections.get("CPC Position") or sections.get("cpc_position") or ""
+    text = str(text).strip()
+    if not text or text.startswith("["):
+        return None
+    strongest = ""
+    whitespace = ""
+    for line in text.split("\n"):
+        low = line.lower()
+        if "strongest" in low and not strongest:
+            strongest = line.split(":", 1)[-1].strip()[:80]
+        if "whitespace" in low and not whitespace:
+            whitespace = line.split(":", 1)[-1].strip()[:80]
+    return {
+        "summary": text[:600],
+        "strongest_domain": strongest or None,
+        "whitespace_domain": whitespace or None,
+    }
+
+
+def _build_partial_artifact(state: AtlasState, stage: str) -> dict[str, Any]:
+    """Progressive artifact_block for live UI assembly (Sprint 4 Track B)."""
+    recipe = state.get("target_recipe", "orient")
+    tier = state.get("confidence_tier", "Speculative")
+    block: dict[str, Any] = {
+        "type": "brief",
+        "recipe": recipe,
+        "_run_stage": stage,
+        "confidence_tier": tier,
+        "sections": dict(state.get("sections") or {}),
+        "appendix": [],
+    }
+    raw = state.get("raw_search_results", [])
+    if stage == "search":
+        block["corpus_citations"] = [
+            {
+                "id": str(r.get("id", "")),
+                "title": str(r.get("title", "")),
+                "organisation": str(r.get("organisation") or r.get("publisher") or ""),
+                "score": float(r.get("score", 0) or 0),
+            }
+            for r in raw[:8]
+            if r.get("id")
+        ]
+    if stage in ("build", "complete"):
+        headline = _extract_headline(state)
+        if headline:
+            block["headline"] = headline
+        insight = _extract_insight_card(state)
+        if insight:
+            block["insight_card"] = insight
+        block["decision_spine"] = state.get("decision_spine")
+        block["gap_rows"] = _build_gap_rows(state)
+    return block
+
+
+def emit_build_partial(state: AtlasState) -> dict:
+    """Node 2a: Push build-stage partial artifact to the UI."""
+    return {"artifact_block": _build_partial_artifact(state, "build")}
+
+
+
+def falsification_lane(state: AtlasState) -> AtlasState:
+    """Sprint 5 — disconfirming search before citation verify (flag-gated)."""
+    result = run_falsification_lane(
+        query=state.get("query", ""),
+        headline=_extract_headline(state),
+        confidence_tier=state.get("confidence_tier", "Speculative"),
+    )
+    cap = result.get("tier_cap_recommended")
+    if cap:
+        state["confidence_tier"] = _cap_tier(
+            state.get("confidence_tier", "Speculative"),
+            cap,
+        )
+    state["falsification_result"] = result  # type: ignore[attr-defined]
+    state["reasoning_trace"] = state.get("reasoning_trace", []) + [{
+        "node": "falsification_lane",
+        "thought": (
+            f"Falsification {result.get('status')}: "
+            f"{result.get('finding_count', 0)} disconfirming source(s) reviewed."
+        ),
+        "status": "ok" if result.get("status") != "error" else "error",
+    }]
+    return state
+
+
 def verify_citations(state: AtlasState) -> AtlasState:
     """
     Node 3: Verify every corpus_citation.id against atlas.projects.
@@ -2310,12 +2790,13 @@ def verify_citations(state: AtlasState) -> AtlasState:
     """
     verified: list[CorpusCitation] = []
     verification_log: list[dict] = []
-    raw_ids = {
-        str(r.get("id")) for r in state.get("raw_search_results", [])
-        if r.get("id")
-    }
+    raw_results = state.get("raw_search_results", [])
+    raw_ids = {str(r.get("id")) for r in raw_results if r.get("id")}
 
-    for citation in state["corpus_citations"]:
+    # Re-filter LLM citations against search results before DB verify
+    pre_filtered = filter_llm_citations(state.get("corpus_citations", []), raw_results)
+
+    for citation in pre_filtered:
         cid = citation.get("id", "")
         if not cid:
             continue
@@ -2348,6 +2829,13 @@ def verify_citations(state: AtlasState) -> AtlasState:
         except Exception as exc:
             verification_log.append({"id": cid, "verified": False, "reason": str(exc)})
 
+    # Fallback: inject top search hits when LLM omitted all citations
+    verified = inject_citation_fallback(verified, raw_results)
+    if len(verified) > len(verification_log):
+        for c in verified:
+            if not any(v.get("id") == c.get("id") for v in verification_log):
+                verification_log.append({"id": c.get("id"), "verified": True, "source": "fallback_inject"})
+
     state["corpus_citations"] = verified
     removed = len(verification_log) - len(verified)
     state["tool_calls"] = state.get("tool_calls", []) + [{
@@ -2355,21 +2843,43 @@ def verify_citations(state: AtlasState) -> AtlasState:
         "args": {"count": len(state["corpus_citations"])},
         "result": verification_log,
     }]
+
+    tier = state.get("confidence_tier", "Speculative")
+    query = state.get("query", "")
+    headline_raw = _extract_headline(state)
+    guard_result = apply_citation_guard(
+        confidence_tier=tier,
+        citation_count=len(verified),
+        headline=headline_raw,
+    )
+    tier = guard_result["confidence_tier"]
+    state["confidence_tier"] = tier
+    if guard_result.get("headline_adjusted") and guard_result.get("headline"):
+        sections = dict(state.get("sections") or {})
+        for key in ("Executive Summary", "Strategic Case", "Landscape Overview", "Overview"):
+            if key in sections and headline_raw in sections[key]:
+                sections[key] = sections[key].replace(headline_raw, guard_result["headline"], 1)
+                break
+        state["sections"] = sections
+    citation_guard_payload = guard_result["citation_guard"]
+
     state["reasoning_trace"] = state.get("reasoning_trace", []) + [{
         "node": "verify_citations",
         "thought": (
             f"Verified {len(verified)} citation{'s' if len(verified) != 1 else ''} against atlas.projects. "
             + (f"{removed} removed (not found in DB)." if removed else "All citations confirmed.")
+            + (
+                f" Citation guard: {citation_guard_payload.get('status')} "
+                f"({citation_guard_payload.get('original_tier')} → {citation_guard_payload.get('final_tier')})."
+                if citation_guard_payload.get("status") != "pass"
+                else ""
+            )
         ),
         "tool_calls": [{"tool": "verify_project", "checked": len(verification_log), "passed": len(verified), "removed": removed}],
         "status": "ok",
     }]
 
     # Build artifact_block — this syncs to useCoAgent and drives ArtifactPanel in the UI.
-    # Mirrors the ArtifactBlock TypeScript type in src/lib/types.ts.
-    tier = state.get("confidence_tier", "Speculative")
-    query = state.get("query", "")
-
     # --- Visual Recipe Director ---
     # Recipe was selected by select_recipe_intent (query-phase) and confirmed by
     # select_visual_recipe (post-LLM). Pass recipe_override so we don't re-classify.
@@ -2396,15 +2906,18 @@ def verify_citations(state: AtlasState) -> AtlasState:
         discount_rate=state.get("discount_rate") or 0.035,
         evidence_gaps=state.get("evidence_gaps", []),
         section_scores=state.get("section_scores") or {},
+        raw_search_results=state.get("raw_search_results", []),
     )
 
     # CPC-inward fields — populated by _build_cpc_inward_assessment if applicable
     artifact_block: dict[str, Any] = {
         "type": "brief",
         "recipe": recipe_id,
-        "headline": _extract_headline(state),
+        "headline": guard_result.get("headline") or headline_raw,
+        "insight_card": _extract_insight_card(state),
         "gap_rows": _build_gap_rows(state),
         "confidence_tier": tier,
+        "citation_guard": citation_guard_payload,
         "sections": state.get("sections", {}),
         "corpus_citations": [
             {
@@ -2423,7 +2936,29 @@ def verify_citations(state: AtlasState) -> AtlasState:
         # Decision spine and analysis — surfaced in the ArtifactPanel
         "decision_spine": state.get("decision_spine"),
         "analysis": state.get("analysis", ""),
+        "_run_stage": "complete",
+        "appendix": [],
     }
+    ext_cites = state.get("external_search_results") or []
+    if ext_cites:
+        artifact_block["external_citations"] = ext_cites
+    # Orient structured fields for OrientSurface
+    if recipe_id in (
+        "orient", "cpc_capability_assessment", "cpc_market_alignment",
+    ):
+        orient_domains = _extract_orient_domains(
+            state.get("raw_search_results", []),
+            list(verified),
+        )
+        if orient_domains:
+            artifact_block["orient_domains"] = orient_domains
+        cpc_pos = _extract_cpc_position(state.get("sections") or {})
+        if cpc_pos:
+            artifact_block["cpc_position"] = cpc_pos
+    if state.get("_passport_id"):  # type: ignore[attr-defined]
+        artifact_block["passport_id"] = state.get("_passport_id")  # type: ignore[attr-defined]
+    if state.get("evidence_gaps"):
+        artifact_block["evidence_gaps"] = state.get("evidence_gaps", [])
     # Forward CPC-inward intelligence fields when present
     if state.get("is_cpc_inward"):
         artifact_block["cpc_claims"] = state.get("_cpc_claims") or []          # type: ignore[attr-defined]
@@ -2445,7 +2980,26 @@ def verify_citations(state: AtlasState) -> AtlasState:
         if panels:
             artifact_block["panels"] = panels
 
+    fals = state.get("falsification_result") or {}  # type: ignore[attr-defined]
+    if fals and fals.get("enabled"):
+        artifact_block["falsification"] = {
+            "status": fals.get("status"),
+            "finding_count": fals.get("finding_count", 0),
+            "query": fals.get("query"),
+        }
+    qa = run_artifact_qa(artifact_block)
+    if fals.get("finding_count", 0) > 0:
+        qa["metrics"]["contradiction_rate"] = round(
+            min(1.0, fals["finding_count"] / 5.0), 2
+        )
+    artifact_block["artifact_qa"] = qa
+
     state["artifact_block"] = artifact_block
+    # Session memory for turn-2 escalation (persisted via checkpoint)
+    state["last_recipe"] = recipe_id
+    state["last_headline"] = _extract_headline(state)
+    if recipe_id in ("diagnose", "cpc_evidence_gaps"):
+        state["session_has_diagnose"] = True
     # Also populate state.charts → syncs to AgentState.charts → Charts component
     state["charts"] = [c for c in chart_specs if c.get("data")]
 
@@ -2453,20 +3007,22 @@ def verify_citations(state: AtlasState) -> AtlasState:
     # "values" stream event (onValues handler in MyRuntimeProvider). No tool-call
     # message is emitted; this avoids large JSON code blocks streaming in the chat thread.
 
-    # Emit the Five Case decision spine + analysis as an AIMessage for AG-UI streaming.
-    # The add_messages reducer appends this to the existing messages list.
+    # Chat slim-down (Principle 1): headline + source count → artifact holds detail
     spine = state.get("decision_spine") or {}
-    analysis = state.get("analysis", "")
+    headline = _extract_headline(state)
     tier = state.get("confidence_tier", "Speculative")
-    decision_text = spine.get("recommendation", "") or spine.get("decision", "") or analysis
-    if decision_text:
-        citation_count = len(verified)
-        ai_content = (
-            f"{decision_text}\n\n"
-            f"**Confidence:** {tier} | "
-            f"**Citations:** {citation_count} verified projects | "
-            f"**Discount rate:** {state.get('discount_rate', 0.035):.1%}"
-        )
+    citation_count = len(verified)
+    ai_parts = [headline or spine.get("decision", "") or "Analysis complete."]
+    ai_parts.append(f"\n\n{citation_count} verified sources · {tier} · see artifact →")
+    cold_act = (
+        recipe_id in ("act", "brief_five_case")
+        and not state.get("session_has_diagnose")
+        and state.get("target_recipe") in ("act", "brief_five_case")
+    )
+    if cold_act:
+        ai_parts.append("\n\n_Run Diagnose first to lift confidence above Indicative._")
+    ai_content = "".join(ai_parts)
+    if ai_content.strip():
         state["messages"] = state.get("messages", []) + [
             AIMessage(content=ai_content, id=str(uuid.uuid4()))
         ]
@@ -2492,28 +3048,12 @@ def _extract_query_atlas(state: AtlasState) -> dict:
     query = extract_latest_query(state)
     if not query:
         return {}
-    return {
-        "query": query,
-        # Reset per-turn working state so prior checkpoint doesn't bleed through
-        "sections": {},
-        "five_case_model": {k.split(" ")[0].lower(): "" for k in FIVE_CASE_KEYS},
-        "corpus_citations": [],
-        "decision_spine": None,
-        "artifact_block": None,
-        "charts": [],
-        "evidence_gaps": [],
-        "external_search_results": [],
-        "npv_value": None,
-        "optimism_bias": None,
-        "tool_calls": [],
-        "reasoning_trace": [],
-        "analysis": "",
-        "_is_conversational": False,
-        "is_cpc_inward": False,
-        "target_recipe": "brief_five_case",
-        "target_secondary_recipes": [],
-        "section_scores": {},
-    }
+    updates: dict[str, Any] = {"query": query}
+    # Preserve prior artifact for clarify/refine turn routing
+    prior_ab = state.get("artifact_block")
+    if prior_ab and isinstance(prior_ab, dict) and prior_ab.get("sections"):
+        updates["last_artifact_block"] = prior_ab
+    return updates
 
 
 def build_atlas_graph() -> StateGraph:
@@ -2521,6 +3061,11 @@ def build_atlas_graph() -> StateGraph:
 
     # Node 0: AG-UI query extraction (no-op on REST path)
     graph.add_node("extract_query", _extract_query_atlas)
+    # Sprint 4 — turn lanes: clarify / refine / analyze
+    graph.add_node("classify_turn_intent", classify_turn_intent)
+    graph.add_node("reset_analyze_state", reset_analyze_state)
+    graph.add_node("handle_clarify", handle_clarify)
+    graph.add_node("handle_refine", handle_refine)
     # Node 0b: Intent gate — greetings / meta queries skip the 35-second pipeline
     graph.add_node("classify_intent", classify_intent)
     # Node 0c: Recipe intent selection — runs BEFORE corpus search so build_five_case
@@ -2530,12 +3075,26 @@ def build_atlas_graph() -> StateGraph:
     # Node 1b: External Evidence Router — only fires when gaps call for it
     graph.add_node("external_evidence_search", external_evidence_search)
     graph.add_node("build_five_case", build_five_case)
+    graph.add_node("emit_build_partial", emit_build_partial)
     # Node 2b: Visual recipe confirmation — post-LLM, records decision in reasoning_trace
     graph.add_node("select_visual_recipe", select_visual_recipe)
+    graph.add_node("falsification_lane", falsification_lane)
     graph.add_node("verify_citations", verify_citations)
 
     graph.set_entry_point("extract_query")
-    graph.add_edge("extract_query", "classify_intent")
+    graph.add_edge("extract_query", "classify_turn_intent")
+    graph.add_conditional_edges(
+        "classify_turn_intent",
+        _route_after_turn_intent,
+        {
+            "handle_clarify": "handle_clarify",
+            "handle_refine": "handle_refine",
+            "reset_analyze_state": "reset_analyze_state",
+        },
+    )
+    graph.add_edge("handle_clarify", END)
+    graph.add_edge("handle_refine", END)
+    graph.add_edge("reset_analyze_state", "classify_intent")
     # Conditional: conversational → END immediately; business query → recipe intent selection
     graph.add_conditional_edges(
         "classify_intent",
@@ -2545,8 +3104,10 @@ def build_atlas_graph() -> StateGraph:
     graph.add_edge("select_recipe_intent", "search_corpus")
     graph.add_edge("search_corpus", "external_evidence_search")
     graph.add_edge("external_evidence_search", "build_five_case")
-    graph.add_edge("build_five_case", "select_visual_recipe")
-    graph.add_edge("select_visual_recipe", "verify_citations")
+    graph.add_edge("build_five_case", "emit_build_partial")
+    graph.add_edge("emit_build_partial", "select_visual_recipe")
+    graph.add_edge("select_visual_recipe", "falsification_lane")
+    graph.add_edge("falsification_lane", "verify_citations")
     graph.add_edge("verify_citations", END)
 
     # When running under LangGraph Platform (langgraph dev / LangGraph Cloud),
@@ -2610,6 +3171,12 @@ def run_atlas(
         "target_recipe": "brief_five_case",
         "target_secondary_recipes": [],
         "section_scores": {},
+        "last_recipe": "",
+        "last_headline": "",
+        "session_has_diagnose": False,
+        "turn_intent": "analyze",
+        "last_artifact_block": None,
+        "reasoning_trace": [],
     }
 
     final_state = atlas_graph.invoke(

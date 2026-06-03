@@ -5,6 +5,7 @@ import {
 } from "@/components/attachment";
 import { MarkdownText } from "@/components/markdown-text";
 import { useArtifactStore } from "@/lib/atlas5/artifact-store";
+import { RunProgress } from "@/components/atlas5/run-progress";
 import {
   Reasoning,
   ReasoningContent,
@@ -141,57 +142,11 @@ const ThinkingIndicator: FC = () => {
   const { isLoading, reasoningTrace } = useArtifactStore();
   const active = isRunning || isLoading;
 
-  if (!active) return null;
-
-  // Show last 4 steps: earlier ones faded + struck through, current one pulsing
-  const steps = reasoningTrace.slice(-4);
+  if (!active && reasoningTrace.length === 0) return null;
 
   return (
-    <div className="px-1 pb-2 space-y-1" aria-live="polite" aria-label="Agent thinking">
-      {steps.length > 0 ? (
-        steps.map((step, i) => {
-          const isActive = i === steps.length - 1;
-          return (
-            <div key={i} className="flex items-start gap-2">
-              <span
-                className={[
-                  "mt-[5px] size-1.5 rounded-full shrink-0 transition-colors",
-                  isActive
-                    ? "bg-indigo-400 animate-pulse"
-                    : "bg-emerald-400",
-                ].join(" ")}
-              />
-              <p
-                className={[
-                  "text-[11px] leading-snug transition-opacity",
-                  isActive
-                    ? "text-foreground opacity-100"
-                    : "text-muted-foreground opacity-40 line-through",
-                ].join(" ")}
-              >
-                {step.thought}
-                {!isActive && step.evidence_count != null && (
-                  <span className="ml-1 not-italic opacity-70">({step.evidence_count})</span>
-                )}
-              </p>
-            </div>
-          );
-        })
-      ) : (
-        /* Pre-trace fallback: bouncing dots */
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-0.5">
-            {[0, 1, 2].map((i) => (
-              <span
-                key={i}
-                className="block size-1.5 rounded-full bg-indigo-400 animate-bounce"
-                style={{ animationDelay: `${i * 150}ms` }}
-              />
-            ))}
-          </div>
-          <p className="text-xs text-muted-foreground">Connecting to agent…</p>
-        </div>
-      )}
+    <div className="px-1 pb-2" aria-live="polite" aria-label="Agent thinking">
+      <RunProgress steps={reasoningTrace} active={active} />
     </div>
   );
 };

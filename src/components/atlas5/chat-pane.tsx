@@ -20,6 +20,7 @@ import { type FormEvent, useEffect, useRef, useState } from "react";
 
 import { useAtlas5Chat } from "@/hooks/use-atlas5-chat";
 import { useSurfaceGateway } from "@/lib/atlas5/surface-gateway";
+import { useEscalationStore } from "@/lib/atlas5/escalation";
 
 // ---------------------------------------------------------------------------
 // Cold session entry chips (Principle 5 — surfaces are workspaces)
@@ -78,6 +79,16 @@ export function ChatPane() {
   // AI SDK v5 removed input/setInput from useChat — manage locally
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const pendingMessage = useEscalationStore((s) => s.pendingMessage);
+  const clearPending = useEscalationStore((s) => s.clearPending);
+  const isStreaming = status === "streaming";
+
+  // Escalation actions from artifact surfaces → turn-2 chat message
+  useEffect(() => {
+    if (!pendingMessage || isStreaming) return;
+    sendMessage({ role: "user", parts: [{ type: "text", text: pendingMessage }] });
+    clearPending();
+  }, [pendingMessage, isStreaming, sendMessage, clearPending]);
 
   // Cold session: show entry chips when thread_id is null and no messages
   const isColdSession = !surface.thread_id && messages.length === 0;
@@ -86,8 +97,6 @@ export function ChatPane() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
-  const isStreaming = status === "streaming";
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();

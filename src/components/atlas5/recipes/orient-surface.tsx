@@ -15,12 +15,15 @@ import { useState } from "react";
 import type { ArtifactBlock } from "@/lib/atlas5/artifact-store";
 import { cn } from "@/lib/utils";
 import { getConfidenceStyles } from "@/lib/atlas5/confidence-styles";
+import { buildConnectEscalationPrompt, useEscalationStore } from "@/lib/atlas5/escalation";
 import { ClaimStateBadge } from "@/components/atlas5/claim-state-badge";
 import {
   SurfaceHeadline,
   EvidenceCountStrip,
   TIER_BADGE,
+  SurfaceSection,
 } from "./surface-primitives";
+import { Markdown } from "@/components/chat/layout/markdown";
 import { EChartsChart } from "@/components/lab/echarts-chart";
 import { ArrowRight, MapPin } from "lucide-react";
 import type { EChartsOption } from "echarts";
@@ -218,33 +221,64 @@ function TopEvidence({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Main component
-// ---------------------------------------------------------------------------
+// Orient supporting sections — collapsed when visual blocks carry the exhibit
+const ORIENT_SECTION_KEYS = [
+  "Landscape Overview",
+  "What Exists",
+  "Key Players",
+  "CPC Position",
+  "Market Signals",
+  "Evidence Gaps",
+] as const;
 
 interface Props {
   artifact: ArtifactBlock;
 }
 
-export function OrientSurface({ artifact }: Props) {
+export function OrientSurface({ artifact, compact = false }: Props & { compact?: boolean }) {
   const sections = artifact.sections ?? {};
   const citations = artifact.corpus_citations ?? [];
   const styles = getConfidenceStyles(artifact.confidence_tier);
+  const requestEscalation = useEscalationStore((s) => s.requestEscalation);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const extra = artifact as any;
-  const domains: DomainData[] = extra.orient_domains ?? [];
-  const cpcPosition = extra.cpc_position;
+  const domains: DomainData[] = extra.orient_domains ?? artifact.orient_domains ?? [];
+  const cpcPosition = extra.cpc_position ?? artifact.cpc_position;
 
-  const headlineText = sections["Headline"] ?? sections[Object.keys(sections)[0]];
+  const headlineText =
+    artifact.headline ||
+    sections["Headline"] ||
+    sections["Verdict"] ||
+    undefined;
 
-  const showHeatmap = domains.length >= 3;
+  const visualBlocks = artifact.visual_blocks ?? [];
+  const hasVisualBlocks = visualBlocks.length > 0;
+  const hasBlockHeatmap = visualBlocks.some(
+    (b) => b.type === "domain_heatmap" || b.type === "heatmap",
+  );
+
+  const showHeatmap = domains.length >= 3 && !hasBlockHeatmap;
 
   const handleFindOpportunities = () => {
-    // [FRONTEND] — switch recipe to 'connect', passing current terrain as context
-    console.info("[FRONTEND] Find opportunities — switch to CONNECT surface");
-    window.alert("[Demo] Connect surface navigation wired at surface gateway level.");
+    requestEscalation(buildConnectEscalationPrompt(headlineText));
   };
+
+  if (compact) {
+    return (
+      <div className="flex justify-end" data-testid="orient-compact-actions">
+        <button
+          type="button"
+          onClick={handleFindOpportunities}
+          data-testid="orient-find-opportunities"
+          className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-colors dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800"
+        >
+          Find opportunities
+          <ArrowRight className="size-3" />
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -268,14 +302,30 @@ export function OrientSurface({ artifact }: Props) {
       </div>
 
       <div className="p-4 space-y-5">
-        {/* 1. Headline — answer first */}
-        <SurfaceHeadline
-          text={headlineText ?? "Innovation landscape overview in progress."}
-          tier={artifact.confidence_tier}
-          label="terrain summary"
-        />
+        {citations.length <= 1 && (
+          <div
+            data-testid="orient-evidence-limited"
+            className="rounded-lg border border-amber-200/80 bg-amber-50/60 dark:border-amber-900/50 dark:bg-amber-950/20 px-3 py-2.5"
+          >
+            <p className="text-xs font-medium text-amber-900 dark:text-amber-200">
+              Evidence limited — {artifact.confidence_tier} tier
+            </p>
+            <p className="text-[11px] text-amber-800/90 dark:text-amber-300/90 mt-1 leading-relaxed">
+              Internal corpus coverage is thin. External web sources (if scout enabled) appear in
+              the trust rail — not as verified CPC citations.
+            </p>
+          </div>
+        )}
+        {/* 1. Headline — rendered at RecipeView when artifact.headline set */}
+        {!artifact.headline && (
+          <SurfaceHeadline
+            text={headlineText ?? "Innovation landscape overview in progress."}
+            tier={artifact.confidence_tier}
+            label="terrain summary"
+          />
+        )}
 
-        {/* 2. Domain heatmap */}
+        {/* 2. Domain heatmap — skip when BlocksView already shows heatmap */}
         {showHeatmap && (
           <div data-testid="orient-domain-heatmap" className="space-y-1.5">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -290,13 +340,34 @@ export function OrientSurface({ artifact }: Props) {
           </div>
         )}
 
-        {/* 3. Top evidence */}
-        <TopEvidence citations={citations} styles={styles} />
+        {/* 3. Top evidence — skip when visual blocks carry the exhibit */}
+        {!hasVisualBlocks && <TopEvidence citations={citations} styles={styles} />}
 
-        {/* 4. CPC position */}
+        {/* 4. CPC position — structured card or section fallback */}
         <CpcPositionCard position={cpcPosition} styles={styles} />
 
-        {/* 5. Escalation */}
+        {/* 5. Supporting sections — especially when visual blocks dedupe heatmap/evidence */}
+        {ORIENT_SECTION_KEYS.map((key) => {
+          const content = sections[key];
+          if (!content || String(content).startsWith("[")) return null;
+          if (key === "CPC Position" && cpcPosition) return null;
+          const preview = String(content).slice(0, 72).trim() + (String(content).length > 72 ? "…" : "");
+          return (
+            <SurfaceSection
+              key={key}
+              title={key}
+              preview={preview}
+              defaultOpen={false}
+              testId={`orient-section-${key.toLowerCase().replace(/\s+/g, "-")}`}
+            >
+              <div className="text-xs text-muted-foreground leading-relaxed prose prose-xs prose-slate dark:prose-invert max-w-none">
+                <Markdown content={String(content)} />
+              </div>
+            </SurfaceSection>
+          );
+        })}
+
+        {/* 6. Escalation */}
         <div className="flex items-center justify-end">
           <button
             type="button"

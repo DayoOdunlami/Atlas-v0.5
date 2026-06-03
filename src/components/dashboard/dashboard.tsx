@@ -1,20 +1,24 @@
 /**
  * Main dashboard layout.
  * - Syncs agent state from CopilotKit (useCoAgent)
- * - Exposes active agent + lens to the LLM via useCopilotReadable
- *   so the Python graph knows which mode it should be in
+ * - Bridges reasoning_trace + progressive artifact_block → ArtifactStore
  */
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useCoAgent, useCopilotReadable, useCoAgentStateRender } from "@copilotkit/react-core";
 import { AgentState, initialState } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useChartActions, useSearchActions } from "@/components/chat/actions";
 import { SurfaceSwitcher } from "@/components/dashboard/layout/surface-switcher";
 import { useSurfaceGateway, useSurfaceStore } from "@/lib/atlas5/surface-gateway";
-import { useArtifactStore, buildArtifactFromAtlas } from "@/lib/atlas5/artifact-store";
+import {
+  useArtifactStore,
+  buildArtifactFromAtlas,
+  type ReasoningStep,
+} from "@/lib/atlas5/artifact-store";
 import { ArtifactPane } from "@/components/atlas5/artifact-pane";
+import { RunProgress } from "@/components/atlas5/run-progress";
 import type { AgentId } from "@/lib/atlas5/types";
 
 /** Same mapping as CopilotKitProvider — must stay in sync with agents/server.py. */
@@ -55,10 +59,40 @@ const LENS_DESCRIPTIONS: Record<string, string> = {
   Mode: "Focus on transport mode-specific evidence (rail, road, active travel, freight, etc.).",
 };
 
+function syncArtifactFromCoagent(
+  raw: Record<string, unknown>,
+  handlers: {
+    setArtifact: ReturnType<typeof useArtifactStore.getState>["setArtifact"];
+    setPartialArtifact: ReturnType<typeof useArtifactStore.getState>["setPartialArtifact"];
+    setLoading: ReturnType<typeof useArtifactStore.getState>["setLoading"];
+  },
+) {
+  const stage = raw._run_stage as string | undefined;
+  const built = buildArtifactFromAtlas(raw);
+  const hasSections = raw.sections && Object.keys(raw.sections as object).length > 0;
+  const hasCitations = Array.isArray(raw.corpus_citations) && raw.corpus_citations.length > 0;
+  const hasHeadline = Boolean(raw.headline || raw.insight_card);
+
+  if (stage === "complete" || (raw.visual_blocks && (raw.visual_blocks as unknown[]).length > 0)) {
+    handlers.setArtifact(built);
+    return;
+  }
+  if (stage === "search" && hasCitations) {
+    handlers.setPartialArtifact(built);
+    handlers.setLoading(true);
+    return;
+  }
+  if (stage === "build" && (hasSections || hasHeadline)) {
+    handlers.setPartialArtifact(built);
+    handlers.setLoading(true);
+    return;
+  }
+  if (hasSections) {
+    handlers.setArtifact(built);
+  }
+}
+
 export function MainLayout({ className }: { className?: string }) {
-  // Derive the coagent name from the active agent in the surface store.
-  // This must match the CopilotKitProvider AGENT_NAME mapping so that
-  // <CopilotKit agent={X}> and useCoAgent({ name: X }) are always in sync.
   const activeCoagentName = useSurfaceStore(
     (s) => COAGENT_NAME[s.surface.active_agent] ?? "atlas",
   );
@@ -70,7 +104,6 @@ export function MainLayout({ className }: { className?: string }) {
 
   const { surface } = useSurfaceGateway();
 
-  // Inject active agent + lens context into the LLM's readable context
   const agentHint = AGENT_DESCRIPTIONS[surface.active_agent] ?? AGENT_DESCRIPTIONS.ATLAS;
   const lensHint = LENS_DESCRIPTIONS[surface.active_lens] ?? LENS_DESCRIPTIONS.CPC;
 
@@ -79,47 +112,76 @@ export function MainLayout({ className }: { className?: string }) {
     value: `${agentHint} ${lensHint}`,
   });
 
-  // Suppress CopilotKit's default raw-JSON state render in the chat panel.
-  // Without this, CopilotKit renders a ```json code block for every STATE_SNAPSHOT.
-  // We render the output through the structured artifact panel instead.
-  // reasoning_trace is written by each graph node — show the last entry's thought
-  // as a plain-English status message while the agent runs.
+  const {
+    setArtifact,
+    setPartialArtifact,
+    setLoading,
+    startRun,
+    setReasoningTrace,
+    setStatusText,
+    reasoningTrace,
+  } = useArtifactStore();
+
+  const runStartedRef = useRef(false);
+
   useCoAgentStateRender({
     name: activeCoagentName,
     render: ({ status, state: agentState }) => {
-      if (status === "inProgress") {
-        const trace = (agentState as Record<string, unknown>)?.reasoning_trace;
-        const entries = Array.isArray(trace) ? trace as Array<Record<string, unknown>> : [];
-        const last = entries.length > 0 ? entries[entries.length - 1] : null;
-        const thought = last?.thought as string | undefined;
-        return (
-          <div className="text-sm text-muted-foreground px-3 py-2 animate-pulse">
-            {thought ? thought : "Analysing evidence…"}
-          </div>
-        );
-      }
-      return null;
+      if (status !== "inProgress") return null;
+      const trace = (agentState as Record<string, unknown>)?.reasoning_trace;
+      const steps = Array.isArray(trace) ? (trace as ReasoningStep[]) : reasoningTrace;
+      return (
+        <div className="px-2 py-1">
+          <RunProgress steps={steps} active compact />
+        </div>
+      );
     },
   });
 
-  // Setup tool rendering and front-end tools
   useChartActions({ state, setState });
   useSearchActions();
 
-  // Bridge coagent artifact_block → shared ArtifactStore so ArtifactPane can render it
-  const { setArtifact, startRun } = useArtifactStore();
-
   useEffect(() => {
-    const ab = (state as Record<string, unknown> | undefined)?.artifact_block;
-    if (ab && typeof ab === "object" && !Array.isArray(ab)) {
-      const raw = ab as Record<string, unknown>;
-      if (raw.sections && Object.keys(raw.sections as object).length > 0) {
-        setArtifact(buildArtifactFromAtlas(raw));
+    const agentState = state as Record<string, unknown> | undefined;
+    if (!agentState) return;
+
+    const trace = agentState.reasoning_trace;
+    if (Array.isArray(trace) && trace.length > 0) {
+      setReasoningTrace(trace as ReasoningStep[]);
+      const last = trace[trace.length - 1] as Record<string, unknown>;
+      if (typeof last.thought === "string") {
+        setStatusText(last.thought);
       }
-    } else if (ab === null || ab === undefined) {
-      // Only call startRun when the agent is actively running
+      const pipelineNodes = new Set([
+        "reset_analyze_state",
+        "select_recipe_intent",
+        "search_corpus",
+        "build_five_case",
+      ]);
+      const isPipeline = trace.some(
+        (t: Record<string, unknown>) => pipelineNodes.has(String(t.node ?? "")),
+      );
+      if (isPipeline && !runStartedRef.current) {
+        startRun();
+        runStartedRef.current = true;
+      }
+    } else {
+      runStartedRef.current = false;
     }
-  }, [(state as Record<string, unknown> | undefined)?.artifact_block, setArtifact]);
+
+    const ab = agentState.artifact_block;
+    if (ab && typeof ab === "object" && !Array.isArray(ab)) {
+      syncArtifactFromCoagent(ab as Record<string, unknown>, {
+        setArtifact,
+        setPartialArtifact,
+        setLoading,
+      });
+      const stage = (ab as Record<string, unknown>)._run_stage;
+      if (stage === "complete") {
+        runStartedRef.current = false;
+      }
+    }
+  }, [state, setArtifact, setPartialArtifact, setLoading, startRun, setReasoningTrace, setStatusText]);
 
   return (
     <div className={cn("h-full flex flex-col overflow-hidden bg-muted/5", className)}>

@@ -80,6 +80,36 @@ export function SurfaceHeadline({
 }
 
 // ---------------------------------------------------------------------------
+// InsightCard — 2–3 sentence "because" (Principle 1 waterfall step 2)
+// ---------------------------------------------------------------------------
+
+export function InsightCard({
+  text,
+  tier,
+  showcase = false,
+}: {
+  text: string;
+  tier: ConfidenceTier;
+  showcase?: boolean;
+}) {
+  if (!text.trim()) return null;
+  return (
+    <div
+      className={cn(
+        "rounded-lg border bg-muted/30 px-4 py-3",
+        TIER_BORDER_L[tier].replace("border-l-", "border-"),
+        showcase ? "text-base leading-relaxed" : "text-sm leading-relaxed",
+      )}
+      data-testid="insight-card"
+    >
+      <p className={cn("text-foreground/90", showcase ? "font-normal" : "text-sm")}>
+        {text}
+      </p>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // SurfaceSection — accordion with optional preview text
 // ---------------------------------------------------------------------------
 

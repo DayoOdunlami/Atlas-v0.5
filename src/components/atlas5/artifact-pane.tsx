@@ -22,12 +22,16 @@ import {
   type EvidenceGap,
   useArtifactStore,
 } from "@/lib/atlas5/artifact-store";
+import { ArtifactQAPanel } from "@/components/atlas5/artifact-qa-panel";
+import { RunProgress } from "@/components/atlas5/run-progress";
+import { cn } from "@/lib/utils";
 import type {
   ConfidenceTier,
   CorpusCitation,
   HiveCitation,
   RecipeType,
 } from "@/lib/atlas5/types";
+import { getConfidenceStyles } from "@/lib/atlas5/confidence-styles";
 import { useSurfaceGateway } from "@/lib/atlas5/surface-gateway";
 import {
   BriefFiveCaseRecipe,
@@ -42,7 +46,7 @@ import {
 import { TrustRail } from "@/components/atlas5/trust-rail";
 import { DecisionSpineCard } from "@/components/atlas5/decision-spine";
 import { BlocksView } from "@/components/atlas5/block-renderer";
-import { SurfaceHeadline } from "@/components/atlas5/recipes/surface-primitives";
+import { SurfaceHeadline, InsightCard } from "@/components/atlas5/recipes/surface-primitives";
 import type { VisualBlock } from "@/lib/atlas5/types";
 
 // ---------------------------------------------------------------------------
@@ -71,6 +75,28 @@ const GAP_ICONS: Record<string, string> = {
   PARTIAL: "~",
   MISSING: "✗",
 };
+
+function CitationGuardBadge({
+  guard,
+}: {
+  guard: NonNullable<ArtifactBlock["citation_guard"]>;
+}) {
+  if (guard.status === "pass") return null;
+  return (
+    <span
+      data-testid="citation-guard-badge"
+      title={guard.reason}
+      className={cn(
+        "inline-flex max-w-[200px] truncate items-center rounded-full px-2 py-0.5 text-[10px] font-medium",
+        guard.status === "fail"
+          ? "bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-300"
+          : "bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200",
+      )}
+    >
+      Evidence: {guard.citation_count ?? 0} · {guard.final_tier ?? guard.original_tier}
+    </span>
+  );
+}
 
 function ConfidenceBadge({ tier }: { tier: string }) {
   return (
@@ -387,12 +413,18 @@ function detectRecipe(artifact: ArtifactBlock): RecipeType | null {
 function RecipeView({
   artifact,
   decisionSpine,
+  showcase = false,
 }: {
   artifact: ArtifactBlock;
   decisionSpine: import("@/lib/atlas5/types").DecisionSpine | null;
+  showcase?: boolean;
 }) {
   const recipe = detectRecipe(artifact);
   if (!recipe) return null; // caller falls back to legacy views
+
+  const displayBlocks = artifact.visual_blocks ?? [];
+  const hasVisualBlocks = displayBlocks.length > 0;
+  const compact = showcase && hasVisualBlocks;
 
   // Route recipe ID → surface component
   const surface = (() => {
@@ -407,7 +439,7 @@ function RecipeView({
       // DIAGNOSE — gap analysis
       case "diagnose":
       case "cpc_evidence_gaps":
-        return <DiagnoseSurface artifact={artifact} />;
+        return <DiagnoseSurface artifact={artifact} compact={compact} />;
       // Stats / scenario
       case "stats_dashboard":
         return <StatsDashboardRecipe artifact={artifact} />;
@@ -417,13 +449,13 @@ function RecipeView({
       case "orient":
       case "cpc_capability_assessment":
       case "cpc_market_alignment":
-        return <OrientSurface artifact={artifact} />;
+        return <OrientSurface artifact={artifact} compact={compact} />;
       // CONNECT — opportunity fit / portfolio comparison / funding flow
       case "connect":
       case "cpc_opportunity_fit":
       case "cpc_portfolio_comparison":
       case "cpc_funding_flow":
-        return <ConnectSurface artifact={artifact} />;
+        return <ConnectSurface artifact={artifact} compact={compact} />;
       // DEFEND
       case "defend":
       case "cpc_defend":
@@ -440,44 +472,76 @@ function RecipeView({
     decisionSpine?.decision ||
     undefined;
 
-  const displayBlocks = artifact.visual_blocks ?? [];
-  const hasVisualBlocks = displayBlocks.length > 0;
+  const insightText =
+    artifact.insight_card ||
+    (artifact.analysis && artifact.analysis.length > 30 ? artifact.analysis : undefined);
+
+  const confidenceStyles = getConfidenceStyles(artifact.confidence_tier);
+
+  // Showcase: full-width visuals, hide redundant surface body when blocks present
+  const hideSurfaceBody = compact;
 
   return (
-    <div className="space-y-4" data-testid="recipe-view">
+    <div
+      className={cn(
+        showcase ? "space-y-6 p-2" : "space-y-4 rounded-xl border border-border p-1",
+        confidenceStyles.container,
+        !showcase && confidenceStyles.border,
+      )}
+      data-testid={showcase ? "recipe-view-showcase" : "recipe-view"}
+    >
       {/* Principle 1 — headline first, always */}
       {headlineText && (
         <SurfaceHeadline
           text={headlineText}
           tier={artifact.confidence_tier}
           label={recipe.replace(/_/g, " ")}
+          className={showcase ? "text-lg" : undefined}
+        />
+      )}
+
+      {/* Insight card — why the headline is true */}
+      {insightText && (
+        <InsightCard
+          text={insightText}
+          tier={artifact.confidence_tier}
+          showcase={showcase}
         />
       )}
 
       {/* Decision spine — only when no dedicated headline field */}
-      {decisionSpine && !artifact.headline && (
+      {decisionSpine && !artifact.headline && !insightText && (
         <DecisionSpineCard spine={decisionSpine} />
       )}
 
       {/* Dominant visuals — before surface body (Principle 1 waterfall) */}
       {hasVisualBlocks && (
-        <BlocksView blocks={displayBlocks} />
+        <BlocksView blocks={displayBlocks} showcase={showcase} />
       )}
 
-      {/* Mode surface — primary prose sections + actions */}
+      {/* Mode surface — collapsed in showcase when blocks carry the exhibit */}
+      {!hideSurfaceBody && (
       <div className={hasVisualBlocks ? "grid grid-cols-1 gap-4" : "grid grid-cols-1 lg:grid-cols-3 gap-4"}>
         <div className={hasVisualBlocks ? "rounded-xl border border-border bg-card overflow-hidden" : "lg:col-span-2 rounded-xl border border-border bg-card overflow-hidden"}>
           {surface}
         </div>
-        {!hasVisualBlocks && (
+        {!hasVisualBlocks && !showcase && (
           <div className="lg:col-span-1">
             <TrustRail artifact={artifact} />
           </div>
         )}
       </div>
+      )}
+
+      {/* Showcase: actions-only strip when surface body hidden */}
+      {hideSurfaceBody && (
+        <div className="flex justify-end pt-2" data-testid="showcase-actions">
+          {surface}
+        </div>
+      )}
 
       {/* Inline citations — collapsed strip last (Principle 1) */}
-      {artifact.corpus_citations && artifact.corpus_citations.length > 0 && (
+      {artifact.corpus_citations && artifact.corpus_citations.length > 0 && !showcase && (
         <details className="rounded-xl border border-border bg-card overflow-hidden group">
           <summary className="px-3 py-2 border-b border-border bg-muted/20 cursor-pointer list-none flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
@@ -751,8 +815,9 @@ function SaveBriefButton({
 }
 
 export function ArtifactPane() {
-  const { surface } = useSurfaceGateway();
-  const { artifact, decisionSpine, isLoading, statusText, setArtifact, setDecisionSpine } = useArtifactStore();
+  const { surface, setMode } = useSurfaceGateway();
+  const isShowcase = surface.mode === "showcase";
+  const { artifact, decisionSpine, isLoading, statusText, reasoningTrace, setArtifact, setDecisionSpine } = useArtifactStore();
 
   // ── Brief persistence ───────────────────────────────────────────────────
   // Auto-load: when a thread_id is set and the pane is empty, fetch the most
@@ -850,6 +915,9 @@ export function ArtifactPane() {
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          {artifact?.citation_guard && (
+            <CitationGuardBadge guard={artifact.citation_guard} />
+          )}
           {artifact && <ConfidenceBadge tier={artifact.confidence_tier} />}
           <span className="text-xs text-muted-foreground">
             {surface.active_lens} lens
@@ -859,14 +927,47 @@ export function ArtifactPane() {
             decisionSpine={decisionSpine}
             surface={surface}
           />
+          <button
+            type="button"
+            onClick={() => setMode(isShowcase ? "chat" : "showcase")}
+            data-testid="showcase-mode-toggle"
+            className={cn(
+              "h-7 rounded-md px-3 text-xs font-medium transition-colors",
+              isShowcase
+                ? "bg-indigo-100 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300"
+                : "bg-muted/60 text-muted-foreground hover:bg-muted",
+            )}
+            title="Toggle demo showcase layout"
+          >
+            {isShowcase ? "Workspace" : "Showcase"}
+          </button>
         </div>
       </div>
 
       {/* ----------------------------------------------------------------
           Content
       ---------------------------------------------------------------- */}
-      {/* Verifying banner — shows when partial artifact is displayed but citations are still being verified */}
-      {isLoading && artifact && (
+      {/* Live run progress + progressive build banner */}
+      {(isLoading || reasoningTrace.length > 0) && (
+        <div className="shrink-0 px-4 py-2 border-b border-border bg-muted/10 space-y-2">
+          <RunProgress steps={reasoningTrace} active={isLoading} />
+          {isLoading && artifact?.runStage && artifact.runStage !== "complete" && (
+            <p className="text-[10px] text-muted-foreground">
+              Building artifact
+              {artifact.runStage === "search" && artifact.corpus_citations?.length
+                ? ` · ${artifact.corpus_citations.length} sources found`
+                : ""}
+              {artifact.runStage === "build" && artifact.headline
+                ? " · headline ready"
+                : ""}
+              …
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Verifying banner — legacy status line when loading without RunProgress steps */}
+      {isLoading && artifact && reasoningTrace.length === 0 && (
         <div className="shrink-0 flex items-center gap-2 px-4 py-1.5 bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200/60 dark:border-amber-800/40">
           <span className="size-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
           <p className="text-[11px] text-amber-700 dark:text-amber-300 font-medium truncate">
@@ -875,14 +976,21 @@ export function ArtifactPane() {
         </div>
       )}
 
+      {artifact?.artifact_qa && !isLoading && (
+        <ArtifactQAPanel artifact={artifact} />
+      )}
+
       <div className="flex-1 overflow-y-auto p-4">
         {isLoading && !artifact ? (
-          <LoadingSkeleton statusText={statusText} />
+          <div className="space-y-3">
+            <RunProgress steps={reasoningTrace} active />
+            <LoadingSkeleton statusText={statusText} />
+          </div>
         ) : !artifact ? (
           <EmptyState activeAgent={surface.active_agent} />
         ) : detectRecipe(artifact) !== null ? (
           // Recipe router: explicit recipe or inferred from Title Case sections / type
-          <RecipeView artifact={artifact} decisionSpine={decisionSpine} />
+          <RecipeView artifact={artifact} decisionSpine={decisionSpine} showcase={isShowcase} />
         ) : artifact.type === "brief" ? (
           // Legacy fallback: lowercase section keys from pre-recipe agents
           <BriefView artifact={artifact} />

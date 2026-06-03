@@ -13,6 +13,7 @@
 import type { ArtifactBlock } from "@/lib/atlas5/artifact-store";
 import { cn } from "@/lib/utils";
 import { getConfidenceStyles } from "@/lib/atlas5/confidence-styles";
+import { buildDiagnoseEscalationPrompt, useEscalationStore } from "@/lib/atlas5/escalation";
 import { ClaimStateBadge } from "@/components/atlas5/claim-state-badge";
 import {
   SurfaceHeadline,
@@ -78,7 +79,7 @@ function OpportunityCardItem({
 }: {
   card: OpportunityCard;
   styles: ReturnType<typeof getConfidenceStyles>;
-  onDiagnose: (id: string) => void;
+  onDiagnose: (id: string, title?: string) => void;
 }) {
   const fitStyle = FIT_BAND_STYLE[card.fit_band] ?? FIT_BAND_STYLE.Weak;
 
@@ -153,7 +154,7 @@ function OpportunityCardItem({
       {/* Diagnose fit action */}
       <button
         type="button"
-        onClick={() => onDiagnose(card.id)}
+        onClick={() => onDiagnose(card.id, card.title)}
         data-testid={`connect-diagnose-${card.id}`}
         className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-200 transition-colors"
       >
@@ -219,23 +220,41 @@ interface Props {
   artifact: ArtifactBlock;
 }
 
-export function ConnectSurface({ artifact }: Props) {
+export function ConnectSurface({ artifact, compact = false }: Props & { compact?: boolean }) {
   const sections = artifact.sections ?? {};
   const citations = artifact.corpus_citations ?? [];
   const styles = getConfidenceStyles(artifact.confidence_tier);
+  const requestEscalation = useEscalationStore((s) => s.requestEscalation);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const extra = artifact as any;
   const opportunities: OpportunityCard[] = extra.connect_opportunities ?? [];
   const bridge: SectorBridge | undefined = extra.connect_bridge;
 
-  const headlineText = sections["Headline"];
+  const headlineText = artifact.headline ?? sections["Headline"];
 
-  const handleDiagnose = (id: string) => {
-    // [FRONTEND] — switch recipe to 'diagnose', pass opportunity id as context
-    console.info("[FRONTEND] Diagnose fit for opportunity:", id);
-    window.alert(`[Demo] Diagnose surface for ${id} — wired at surface gateway level.`);
+  const handleDiagnose = (id: string, title?: string) => {
+    requestEscalation(
+      buildDiagnoseEscalationPrompt(title ?? id, headlineText),
+    );
   };
+
+  if (compact) {
+    const first = opportunities[0];
+    return (
+      <div className="flex justify-end gap-2" data-testid="connect-compact-actions">
+        {first && (
+          <button
+            type="button"
+            onClick={() => handleDiagnose(first.id, first.title)}
+            className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-colors dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800"
+          >
+            Diagnose fit <ArrowRight className="size-3" />
+          </button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div

@@ -265,3 +265,67 @@ def search_exa(
         ", ".join({r["recommended_provider"] for r in results}),
     )
     return results
+
+
+# ---------------------------------------------------------------------------
+# Tavily search (external scout — Sprint 4B)
+# ---------------------------------------------------------------------------
+
+TAVILY_SEARCH_URL = "https://api.tavily.com/search"
+TAVILY_DEFAULT_LIMIT = 8
+
+
+def search_tavily(
+    query: str,
+    limit: int = TAVILY_DEFAULT_LIMIT,
+) -> list[dict[str, Any]]:
+    """
+    Broad web scout via Tavily (requires TAVILY_API_KEY).
+
+    Only called when ATLAS_EXTERNAL_SCOUT_V1 is enabled and corpus is thin or
+    landscape/market gaps are present. Results are external candidates only.
+    """
+    api_key = os.getenv("TAVILY_API_KEY", "").strip()
+    if not api_key:
+        logger.warning("tavily_search skipped: TAVILY_API_KEY not set")
+        return []
+
+    limit = min(int(limit), 12)
+    try:
+        resp = httpx.post(
+            TAVILY_SEARCH_URL,
+            json={
+                "api_key": api_key,
+                "query": query,
+                "max_results": limit,
+                "search_depth": "basic",
+                "include_answer": False,
+            },
+            timeout=15.0,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as exc:
+        logger.warning("tavily_search failed: %s", exc)
+        return []
+
+    results: list[dict[str, Any]] = []
+    for r in data.get("results", [])[:limit]:
+        url = (r.get("url") or "").strip()
+        title = (r.get("title") or "").strip()
+        if not url or not title:
+            continue
+        results.append({
+            "source_type": "tavily_result",
+            "url": url,
+            "title": title,
+            "snippet": (r.get("content") or "")[:400],
+            "recommended_provider": _infer_exa_provider(url),
+            "retrieval_tool": "tavily_search",
+            "citation_status": "candidate",
+            "score": r.get("score"),
+            "published_date": None,
+        })
+
+    logger.info("tavily_search '%s' → %d results", query[:60], len(results))
+    return results

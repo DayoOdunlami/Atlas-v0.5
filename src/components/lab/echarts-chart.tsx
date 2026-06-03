@@ -617,11 +617,19 @@ const GRAPH_CATEGORY_SIZE: Record<GraphNodeCategory, number> = {
 export function buildEChartGraphOption(
   nodes: GraphNode[],
   edges: GraphEdge[],
-  opts?: { title?: string; repulsion?: number; gravity?: number },
+  opts?: {
+    title?: string;
+    repulsion?: number;
+    gravity?: number;
+    labelMinSize?: number;
+    hideLabelsUntilHover?: boolean;
+  },
 ): EChartsOption {
   const categories = (["theme", "project", "funder", "document", "concept"] as GraphNodeCategory[]).map(
     (cat) => ({ name: cat, itemStyle: { color: GRAPH_CATEGORY_COLORS[cat] } }),
   );
+  const hideLabels = opts?.hideLabelsUntilHover ?? nodes.length > 8;
+  const fontSize = opts?.labelMinSize ?? 10;
 
   return {
     backgroundColor: "transparent",
@@ -653,10 +661,13 @@ export function buildEChartGraphOption(
           category: categories.findIndex((c) => c.name === n.category),
           symbolSize: (n.value ?? 1) * 4 + GRAPH_CATEGORY_SIZE[n.category],
           label: {
-            show: true,
+            show: !hideLabels,
             color: "#f8fafc",
-            fontSize: 10,
-            formatter: (p: unknown) => (p as { data: { name: string } }).data.name,
+            fontSize,
+            formatter: (p: unknown) => {
+              const name = (p as { data: { name: string } }).data.name;
+              return name.length > 22 ? `${name.slice(0, 20)}…` : name;
+            },
           },
           itemStyle: { color: GRAPH_CATEGORY_COLORS[n.category], opacity: 0.9 },
         })),
@@ -664,17 +675,19 @@ export function buildEChartGraphOption(
           source: e.source,
           target: e.target,
           label: e.label ? { show: false, formatter: e.label, color: "#94a3b8", fontSize: 9 } : undefined,
-          lineStyle: { color: "#4b5563", width: 1, opacity: 0.6, curveness: 0.1 },
+          lineStyle: { color: "#4b5563", width: 1, opacity: 0.5, curveness: 0.15 },
         })),
         categories,
         force: {
-          repulsion: opts?.repulsion ?? 120,
-          gravity: opts?.gravity ?? 0.08,
-          edgeLength: [60, 140],
+          repulsion: opts?.repulsion ?? 160,
+          gravity: opts?.gravity ?? 0.06,
+          edgeLength: [80, 180],
+          friction: 0.35,
           layoutAnimation: true,
         },
         emphasis: {
           focus: "adjacency",
+          label: { show: true, fontSize: fontSize + 1, fontWeight: "bold" },
           lineStyle: { width: 2, opacity: 1, color: "#94a3b8" },
         },
         edgeSymbol: ["none", "arrow"],

@@ -24,6 +24,12 @@ export type CpkMessage =
 // ---------------------------------------------------------------------------
 
 export const NODE_LABELS: Record<string, string> = {
+  // ATLAS — turn routing (Sprint 4)
+  classify_turn_intent:     "Routing turn",
+  reset_analyze_state:      "Preparing analysis",
+  handle_clarify:           "Answering follow-up",
+  handle_refine:            "Refining artifact",
+  emit_build_partial:       "Assembling artifact",
   // ATLAS
   extract_query:            "Extracting query intent",
   classify_intent:          "Classifying intent",

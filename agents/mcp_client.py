@@ -316,10 +316,29 @@ def search_cpc_internal(query: str, limit: int = 10) -> dict[str, Any]:
         query: Search query (e.g. 'autonomous systems capability', 'rail innovation')
         limit: Max results per table (default 10)
     """
-    containers = queries.search_cpc_evidence_containers(query, limit=min(int(limit), 15))
-    claims = queries.search_cpc_claims(query, limit=min(int(limit), 10))
+    per_table = min(int(limit), 15)
+    containers: list[dict[str, Any]] = []
+    claims: list[dict[str, Any]] = []
+    errors: list[str] = []
+
+    try:
+        containers = queries.search_cpc_evidence_containers(query, limit=per_table)
+    except Exception as exc:
+        errors.append(f"evidence_containers: {exc}")
+
+    try:
+        claims = queries.search_cpc_claims(query, limit=min(int(limit), 10))
+    except Exception as exc:
+        errors.append(f"claims: {exc}")
+
     combined = containers + claims
-    return {"results": combined, "coverage": evidence_coverage_summary(combined)}
+    result: dict[str, Any] = {
+        "results": combined,
+        "coverage": evidence_coverage_summary(combined),
+    }
+    if errors:
+        result["errors"] = errors
+    return result
 
 
 @tool
