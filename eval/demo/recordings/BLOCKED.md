@@ -1,75 +1,66 @@
 # Surface demo recordings — BLOCKED
 
-**Status:** Recording cannot proceed in this environment. No video or screenshot artifacts were produced.
+**Status:** Recording cannot proceed. No video or screenshot artifacts were produced.
+
+**Last attempt:** 2026-06-03 (cloud agent `cursor/demo-recordings-d938`)
+
+## Root cause
+
+**Cursor Cloud Agent Secrets were not injected into this VM.**
+
+- `CLOUD_AGENT_INJECTED_SECRET_NAMES` is empty
+- `printenv` shows no `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `POSTGRES_URL`
+- `node eval/demo/check-prereqs.mjs` exits **1** with:
+
+```
+Missing or placeholder demo prerequisites: ANTHROPIC_API_KEY, OPENAI_API_KEY, POSTGRES_URL
+```
 
 ## Missing prerequisites
 
-The following must be set in **cloud agent Secrets** or **`.env.local`** at the repo root (and loaded by LangGraph via `agents/langgraph.json` → `../.env.local`):
-
 | Variable | Required | Status |
 |----------|----------|--------|
-| `ANTHROPIC_API_KEY` | Yes — graph LLM turns | **MISSING** |
+| `ANTHROPIC_API_KEY` | Yes — graph LLM turns | **MISSING** (not in Cloud Agent Secrets) |
 | `OPENAI_API_KEY` | Yes — CPC corpus semantic search | **MISSING** |
 | `POSTGRES_URL` | Yes — CPC corpus (pgvector) | **MISSING** |
-| `LANGGRAPH_API_URL` | Yes — must be `http://localhost:2024` when using local LangGraph | **MISSING** |
+| `LANGGRAPH_API_URL` | Yes — `http://localhost:2024` for local LangGraph | OK in `.env.local` template |
 
-Also missing: `.env.local` file (not present in workspace).
+Optional (bonus clip only): `TAVILY_API_KEY`, `ATLAS_EXTERNAL_SCOUT_V1=true`, `EXA_API_KEY`, Supabase service key.
 
-### How to unblock (dev only — never commit `.env.local`)
+## VM readiness (completed)
 
-Create `/workspace/.env.local` (already gitignored via `.env*`) with real values:
+These steps succeeded without secrets:
 
-```
-ANTHROPIC_API_KEY=sk-ant-...
-OPENAI_API_KEY=sk-...
-POSTGRES_URL=postgresql://...
-LANGGRAPH_API_URL=http://localhost:2024
-```
+| Step | Result |
+|------|--------|
+| `pnpm install` | OK |
+| `cd agents && uv venv .venv && uv pip install -r requirements.txt` | OK |
+| `npx playwright install chromium` | OK |
+| `langgraph dev --port 2024 --no-browser` | Graphs load (`atlas`, `jarvis`, `cicerone`, `hyve`) |
+| `pnpm run demo:record` | **Not run** — blocked by `check-prereqs.mjs` |
 
-Optional: `TAVILY_API_KEY`, `ATLAS_EXTERNAL_SCOUT_V1=true`
+## How to unblock
 
-Inject the same keys into **Cursor cloud agent Secrets** for remote recording runs.
-
-Verify: `node eval/demo/check-prereqs.mjs`
-
-## Optional (weak-signal bonus only)
-
-| Variable | Purpose |
-|----------|---------|
-| `TAVILY_API_KEY` | External scout for GPS-denied weak-signals query |
-| `ATLAS_EXTERNAL_SCOUT_V1=true` | Enable scout lane |
-
-## Stack (run locally after secrets are set)
+1. In **Cursor → Cloud Agent → Secrets**, add:
+   - `ANTHROPIC_API_KEY`
+   - `OPENAI_API_KEY`
+   - `POSTGRES_URL` (Supabase pooler URL for project `afysgjiczzptubonbuxs`)
+2. Re-run this agent (or locally create `.env.local` at repo root — never commit).
+3. Verify: `node eval/demo/check-prereqs.mjs` → exit **0**
+4. Start stack and record:
 
 ```bash
-pnpm install
-cd agents && uv venv .venv && uv pip install -r requirements.txt
+# Terminal A
+cd agents && source .venv/bin/activate && langgraph dev --port 2024 --no-browser
 
-# Terminal 1
-cd agents && langgraph dev --port 2024 --no-browser
-
-# Terminal 2
+# Terminal B
 export LANGGRAPH_API_URL=http://localhost:2024
 pnpm run dev:ui
-```
 
-Open http://localhost:3005/
-
-## Record when unblocked
-
-```bash
-pnpm add -D @playwright/test   # if not already installed
-npx playwright install chromium
+# Terminal C (after http://localhost:3005/ shows artifact-pane)
 pnpm run demo:record
 ```
 
-Outputs expected under `eval/demo/recordings/`:
-
-- `01-orient.mp4` + `01-orient.png` … `07-refine-key-players.mp4`
-- `INDEX.md` with surface, query, recipe, tier, citation count, pass/fail
-
-Spec: `eval/demo/record-surface-demo.spec.ts`
-
 ## Do not substitute
 
-Offline eval suites (`pnpm eval:sprint5`, contract tests without `--live`) are **not** acceptable replacements for this deliverable.
+Offline eval (`pnpm eval:sprint5`, contract tests without `--live`) is **not** an acceptable replacement for this deliverable.

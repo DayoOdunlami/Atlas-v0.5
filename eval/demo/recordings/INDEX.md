@@ -2,7 +2,7 @@
 
 **Recording status:** BLOCKED — see [BLOCKED.md](./BLOCKED.md).
 
-No `.mp4` / `.png` files exist yet. Configure secrets and run `pnpm run demo:record` locally or in a cloud agent with secrets injected.
+No `.mp4` / `.png` files exist yet. Cloud Agent Secrets (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `POSTGRES_URL`) were not available in the 2026-06-03 recording run. After secrets are configured, run `pnpm run demo:record`.
 
 ## Planned deliverables
 
