@@ -52,6 +52,7 @@ export const RecipeTypeSchema = z.enum([
   "diagnose",
   "act",
   "defend",
+  "organisation_profile",
 ]);
 
 export const SourceTypeSchema = z.enum([

@@ -265,6 +265,27 @@ test.describe("Fixture API — sprint surface contract checks", () => {
     expect(body.type).toBe("evidence");
     expect(body.recipe_detected).toBe("defend");
   });
+
+  test("organisation_profile fixture is schema-valid and can_render=true", async ({
+    request,
+  }) => {
+    const body = await validateFixtureApi(request, "organisation_profile");
+    expect(body.type).toBe("brief");
+    expect(body.recipe_detected).toBe("organisation_profile");
+    expect(body.sections_count).toBeGreaterThanOrEqual(2);
+  });
+});
+
+test.describe("organisation_profile — render", () => {
+  test.beforeEach(async ({ page }) => {
+    await gotoFixture(page, "organisation_profile");
+  });
+
+  test("organisation profile surface is mounted", async ({ page }) => {
+    await expect(
+      page.locator('[data-testid="organisation-profile-surface"]'),
+    ).toBeVisible();
+  });
 });
 
 // ---------------------------------------------------------------------------

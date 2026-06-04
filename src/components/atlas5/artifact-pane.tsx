@@ -42,6 +42,7 @@ import {
   ConnectSurface,
   DefendSurface,
   DiagnoseSurface,
+  OrganisationProfileSurface,
 } from "@/components/atlas5/recipes";
 import { TrustRail } from "@/components/atlas5/trust-rail";
 import { DecisionSpineCard } from "@/components/atlas5/decision-spine";
@@ -460,6 +461,8 @@ function RecipeView({
       case "defend":
       case "cpc_defend":
         return <DefendSurface artifact={artifact} />;
+      case "organisation_profile":
+        return <OrganisationProfileSurface artifact={artifact} compact={compact} />;
       default:
         return null;
     }
