@@ -8,6 +8,8 @@
 import Link from "next/link";
 import { BLOCK_VOCABULARY, getReadyBlocks, type VisualBlock } from "@/lib/atlas5/block-vocabulary";
 import { BlockRenderer } from "@/components/atlas5/block-renderer";
+import { EntityProfileSurface } from "@/components/atlas5/recipes/entity-profile-surface";
+import { ENTITY_PROFILE_CONFIGS } from "@/lib/atlas5/entity-profile-fixtures";
 import { cn } from "@/lib/utils";
 
 function emptyDataForType(type: string): unknown {
@@ -38,6 +40,8 @@ function emptyDataForType(type: string): unknown {
       return { nodes: [], edges: [] };
     case "evidence_aware_swot":
       return { strengths: [], weaknesses: [], opportunities: [], threats: [] };
+    case "entity_profile":
+      return { identity: { name: "—" }, claim_groups: [] };
     default:
       return {};
   }
@@ -115,6 +119,51 @@ export default function BlockGalleryPage() {
       </header>
 
       <main className="mx-auto max-w-6xl p-4 space-y-8">
+        {/* EntityProfile primitive — three noun configs (Connect the Moat, Phase 2) */}
+        <section className="space-y-3" data-testid="entity-profile-gallery">
+          <div className="flex items-baseline justify-between gap-4">
+            <h2 className="text-sm font-semibold">EntityProfile primitive — noun surfaces</h2>
+            <p className="text-[11px] text-muted-foreground font-mono">
+              passport · swot · organisation — claim state on every row
+            </p>
+          </div>
+          {ENTITY_PROFILE_CONFIGS.map((cfg) => (
+            <div key={cfg.key} className="space-y-2">
+              <p className="text-xs text-muted-foreground">{cfg.title}</p>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div
+                  data-testid={`entity-profile-${cfg.key}-golden`}
+                  className="rounded-lg border border-border bg-card overflow-hidden"
+                >
+                  <div className="flex items-center justify-between border-b bg-muted/20 px-3 py-2">
+                    <p className="text-xs font-semibold">{cfg.title}</p>
+                    <span className="text-[10px] font-medium px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-800 border-emerald-200">
+                      golden
+                    </span>
+                  </div>
+                  <div className="p-3">
+                    <EntityProfileSurface {...cfg.golden} />
+                  </div>
+                </div>
+                <div
+                  data-testid={`entity-profile-${cfg.key}-empty`}
+                  className="rounded-lg border border-border bg-card overflow-hidden"
+                >
+                  <div className="flex items-center justify-between border-b bg-muted/20 px-3 py-2">
+                    <p className="text-xs font-semibold">{cfg.title}</p>
+                    <span className="text-[10px] font-medium px-2 py-0.5 rounded-full border bg-amber-50 text-amber-800 border-amber-200">
+                      empty
+                    </span>
+                  </div>
+                  <div className="p-3">
+                    <EntityProfileSurface {...cfg.empty} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </section>
+
         {ready.map((entry) => (
           <section key={entry.type} className="space-y-3">
             <p className="text-sm text-muted-foreground">{entry.when_to_use}</p>

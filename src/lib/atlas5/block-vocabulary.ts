@@ -19,7 +19,7 @@
  *   skills/data-visualization.md > Block Selection section.
  */
 
-import type { ClaimState } from "./types";
+import type { ClaimState, ConfidenceTier } from "./types";
 
 // ---------------------------------------------------------------------------
 // Core interfaces
@@ -150,10 +150,40 @@ export interface StakeholderMapData {
 }
 
 export interface EvidenceAwareSwotData {
-  strengths: Array<{ text: string; claim_state: ClaimState }>;
-  weaknesses: Array<{ text: string; claim_state: ClaimState }>;
-  opportunities: Array<{ text: string; claim_state: ClaimState }>;
-  threats: Array<{ text: string; claim_state: ClaimState }>;
+  strengths: Array<{ text: string; claim_state: ClaimState; confidence_reason?: string }>;
+  weaknesses: Array<{ text: string; claim_state: ClaimState; confidence_reason?: string }>;
+  opportunities: Array<{ text: string; claim_state: ClaimState; confidence_reason?: string }>;
+  threats: Array<{ text: string; claim_state: ClaimState; confidence_reason?: string }>;
+}
+
+/**
+ * entity_profile — the object-layer noun surface (passport / organisation).
+ * Grouped claim rows, each carrying a ClaimStateBadge and the confidence_reason
+ * as a muted subtitle. The moat rule: every row carries its claim_state.
+ */
+export interface EntityProfileClaim {
+  text: string;
+  claim_state: ClaimState;
+  /** Muted subtitle — why this claim has the state it does (e.g. "self-reported"). */
+  confidence_reason?: string;
+}
+
+export interface EntityProfileGroup {
+  /** Claim domain — capability | certification | evidence | performance | ... */
+  domain: string;
+  claims: EntityProfileClaim[];
+}
+
+export interface EntityProfileData {
+  identity: {
+    name: string;
+    /** Owner org, TRL, sector route — one-line context under the name. */
+    subtitle?: string;
+    confidence_tier?: ConfidenceTier;
+    /** Drives the on-top block + escalation set in EntityProfileSurface. */
+    subject_type?: "passport" | "organisation" | "swot";
+  };
+  claim_groups: EntityProfileGroup[];
 }
 
 // ---------------------------------------------------------------------------
@@ -499,6 +529,64 @@ export const BLOCK_VOCABULARY: BlockVocabularyEntry[] = [
         { text: "Union resistance to automation narrative", claim_state: "contested" },
       ],
     } satisfies EvidenceAwareSwotData,
+  },
+
+  {
+    type: "entity_profile",
+    label: "Entity Profile",
+    status: "ready",
+    when_to_use:
+      "Noun-surface for a single entity (passport or organisation) — grouped claim rows, each carrying a claim state and its confidence_reason. The object-layer bridge to Connect/Diagnose.",
+    required_fields: ["identity", "claim_groups"],
+    min_data_points: 1,
+    library: "Custom",
+    intent_triggers: ["evidence_panel", "organisation_profile"],
+    conflicts_with: [],
+    example_data: {
+      identity: {
+        name: "GoShuttle X1",
+        subtitle: "GoShuttle Ltd · TRL 6 · Automotive → Public transport",
+        confidence_tier: "Indicative",
+        subject_type: "passport",
+      },
+      claim_groups: [
+        {
+          domain: "capability",
+          claims: [
+            {
+              text: "Operates autonomously in GPS-denied suburban routes",
+              claim_state: "inferred",
+              confidence_reason: "Self-reported by the entity — not independently verified",
+            },
+            {
+              text: "Carries combined passenger + light-goods payloads",
+              claim_state: "stated",
+              confidence_reason: "Independently verified in trial report",
+            },
+          ],
+        },
+        {
+          domain: "certification",
+          claims: [
+            {
+              text: "ISO 26262 ASIL-B functional safety",
+              claim_state: "stated",
+              confidence_reason: "Certificate on file",
+            },
+          ],
+        },
+        {
+          domain: "evidence",
+          claims: [
+            {
+              text: "12-week Greenwich pilot, 1,400 autonomous km",
+              claim_state: "inferred",
+              confidence_reason: "AI-inferred from documents — pending source confirmation",
+            },
+          ],
+        },
+      ],
+    } satisfies EntityProfileData,
   },
 
   // ── EXPERIMENTAL ─────────────────────────────────────────────────────────
