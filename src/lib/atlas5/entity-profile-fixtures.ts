@@ -29,8 +29,8 @@ const PASSPORT_GROUPS: EntityProfileData["claim_groups"] = [
       },
       {
         text: "Carries combined passenger and light-goods payloads in one run",
-        claim_state: "stated",
-        confidence_reason: "Independently verified in the Greenwich trial report",
+        claim_state: "inferred",
+        confidence_reason: "Self-reported by the entity — not independently verified",
       },
     ],
   },
@@ -39,8 +39,8 @@ const PASSPORT_GROUPS: EntityProfileData["claim_groups"] = [
     claims: [
       {
         text: "ISO 26262 ASIL-B functional safety compliance",
-        claim_state: "stated",
-        confidence_reason: "Certificate on file and checked",
+        claim_state: "inferred",
+        confidence_reason: "Self-reported by the entity — not independently verified",
       },
       {
         text: "PAS 1881 assured operation framework adopted",
@@ -54,8 +54,8 @@ const PASSPORT_GROUPS: EntityProfileData["claim_groups"] = [
     claims: [
       {
         text: "12-week pilot covering 1,400 autonomous kilometres",
-        claim_state: "stated",
-        confidence_reason: "Logged in the trial telemetry dataset",
+        claim_state: "inferred",
+        confidence_reason: "Self-reported by the entity — not independently verified",
       },
     ],
   },
