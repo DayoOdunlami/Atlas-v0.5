@@ -142,3 +142,10 @@ Hands-off Cloud Agent presetup (briefs, gate templates, copy-paste orchestrator 
 - `eval/sprint5/README.md` — how to run unattended
 - `eval/sprint5/ORCHESTRATOR.md` — rules + **Cloud Agent prompt block**
 - `pnpm eval:sprint5:gates` — validate gate markdown verdicts
+
+## UI reference pack (surfaces + blocks export)
+
+Shareable codemap and one-file bundle for external design review:
+
+- `eval/ui-reference-pack/README.md`
+- `pnpm bundle:surfaces` → `eval/ATLAS-SURFACES-BUNDLE.md`
