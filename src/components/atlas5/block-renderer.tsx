@@ -25,7 +25,10 @@ import type {
   ScatterData,
   BarData,
   AreaLineData,
+  StakeholderMapData,
+  EvidenceAwareSwotData,
 } from "@/lib/atlas5/block-vocabulary";
+import type { ClaimState } from "@/lib/atlas5/types";
 import {
   EChartsChart,
   buildRadarOption,
@@ -523,6 +526,124 @@ function AreaLineBlock({ block }: { block: VisualBlock }) {
 }
 
 // ---------------------------------------------------------------------------
+// stakeholder_map — role / influence network (custom table + links)
+// ---------------------------------------------------------------------------
+
+function StakeholderMapBlock({ block }: { block: VisualBlock }) {
+  const d = block.data as StakeholderMapData;
+  const nodes = d?.nodes ?? [];
+  const edges = d?.edges ?? [];
+  if (!nodes.length) return null;
+
+  const influenceColor = (inf?: string) => {
+    if (inf === "high") return "text-emerald-700 bg-emerald-50 border-emerald-200";
+    if (inf === "medium") return "text-amber-800 bg-amber-50 border-amber-200";
+    return "text-slate-600 bg-slate-50 border-slate-200";
+  };
+
+  return (
+    <BlockShell title={block.title}>
+      <div className="space-y-3">
+        <div className="grid gap-2 sm:grid-cols-2">
+          {nodes.map((n) => (
+            <div
+              key={n.id}
+              className="rounded-md border border-border px-2 py-1.5 text-xs"
+            >
+              <p className="font-semibold text-foreground">{n.label}</p>
+              {n.role && <p className="text-muted-foreground">{n.role}</p>}
+              {n.influence && (
+                <span
+                  className={cn(
+                    "mt-1 inline-block rounded-full border px-1.5 py-0.5 text-[10px] font-medium",
+                    influenceColor(n.influence),
+                  )}
+                >
+                  {n.influence} influence
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+        {edges.length > 0 && (
+          <ul className="text-[10px] text-muted-foreground space-y-0.5 border-t pt-2">
+            {edges.map((e, i) => {
+              const src = nodes.find((n) => n.id === e.source)?.label ?? e.source;
+              const tgt = nodes.find((n) => n.id === e.target)?.label ?? e.target;
+              return (
+                <li key={i}>
+                  {src} → {tgt}
+                  {e.relationship ? ` (${e.relationship})` : ""}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </BlockShell>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// evidence_aware_swot — quadrants with claim_state badges
+// ---------------------------------------------------------------------------
+
+const SWOT_KEYS = [
+  ["strengths", "Strengths", "border-emerald-200 bg-emerald-50/30"],
+  ["weaknesses", "Weaknesses", "border-rose-200 bg-rose-50/30"],
+  ["opportunities", "Opportunities", "border-sky-200 bg-sky-50/30"],
+  ["threats", "Threats", "border-amber-200 bg-amber-50/30"],
+] as const;
+
+function SwotQuadrant({
+  title,
+  items,
+  className,
+}: {
+  title: string;
+  items: Array<{ text: string; claim_state: ClaimState }>;
+  className: string;
+}) {
+  return (
+    <div className={cn("rounded-md border p-2", className)}>
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
+        {title}
+      </p>
+      <ul className="space-y-1.5">
+        {items.map((item, i) => (
+          <li key={i} className="text-xs text-foreground leading-snug flex gap-1.5 items-start">
+            <span className="flex-1">{item.text}</span>
+            <ClaimStateBadge state={item.claim_state} className="shrink-0" />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function EvidenceAwareSwotBlock({ block }: { block: VisualBlock }) {
+  const d = block.data as EvidenceAwareSwotData;
+  const total =
+    (d?.strengths?.length ?? 0) +
+    (d?.weaknesses?.length ?? 0) +
+    (d?.opportunities?.length ?? 0) +
+    (d?.threats?.length ?? 0);
+  if (!total) return null;
+
+  return (
+    <BlockShell title={block.title}>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {SWOT_KEYS.map(([key, label, cls]) => {
+          const items = (d?.[key] ?? []) as Array<{ text: string; claim_state: ClaimState }>;
+          if (!items.length) return null;
+          return <SwotQuadrant key={key} title={label} items={items} className={cls} />;
+        })}
+      </div>
+    </BlockShell>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main dispatcher
 // ---------------------------------------------------------------------------
 
@@ -548,6 +669,8 @@ export function BlockRenderer({
       case "scatter":            return <ScatterBlock block={block} />;
       case "bar":                return <BarBlock block={block} />;
       case "area_line":          return <AreaLineBlock block={block} />;
+      case "stakeholder_map":    return <StakeholderMapBlock block={block} />;
+      case "evidence_aware_swot": return <EvidenceAwareSwotBlock block={block} />;
       default:                   return null;
     }
   })();

@@ -718,6 +718,47 @@ export const FIXTURE_DEFEND_SPINE: DecisionSpine = {
 };
 
 // ---------------------------------------------------------------------------
+// Sprint 5 — object-layer visual blocks (lab / tier1)
+// ---------------------------------------------------------------------------
+
+export const FIXTURE_STAKEHOLDER_MAP_BLOCK = {
+  type: "stakeholder_map",
+  title: "A14 autonomous freight — stakeholder network",
+  data: {
+    nodes: [
+      { id: "cpc", label: "Connected Places Catapult", role: "Programme lead", influence: "high" },
+      { id: "dft", label: "DfT CCAV", role: "Regulator", influence: "high" },
+      { id: "nh", label: "National Highways", role: "Infrastructure", influence: "medium" },
+      { id: "fleet", label: "Fleet operators", role: "Trial participants", influence: "medium" },
+    ],
+    edges: [
+      { source: "dft", target: "cpc", relationship: "funds" },
+      { source: "cpc", target: "fleet", relationship: "commissions" },
+      { source: "nh", target: "cpc", relationship: "permits corridor" },
+    ],
+  },
+};
+
+export const FIXTURE_EVIDENCE_AWARE_SWOT_BLOCK = {
+  type: "evidence_aware_swot",
+  title: "CPC strategic position — evidence-aware SWOT",
+  data: {
+    strengths: [
+      { text: "National connected-mobility convening role", claim_state: "stated" as const },
+    ],
+    weaknesses: [
+      { text: "Thin open-road HGV trial precedent in corpus", claim_state: "stated" as const },
+    ],
+    opportunities: [
+      { text: "A14 regulatory sandbox alignment", claim_state: "inferred" as const },
+    ],
+    threats: [
+      { text: "Workforce automation narrative risk", claim_state: "contested" as const },
+    ],
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Named map — used by fixture API route
 // ---------------------------------------------------------------------------
 

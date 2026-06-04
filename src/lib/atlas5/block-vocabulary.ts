@@ -139,6 +139,23 @@ export interface AreaLineData {
   type?: "area" | "line";
 }
 
+export interface StakeholderMapData {
+  nodes: Array<{
+    id: string;
+    label: string;
+    role?: string;
+    influence?: "high" | "medium" | "low";
+  }>;
+  edges: Array<{ source: string; target: string; relationship?: string }>;
+}
+
+export interface EvidenceAwareSwotData {
+  strengths: Array<{ text: string; claim_state: ClaimState }>;
+  weaknesses: Array<{ text: string; claim_state: ClaimState }>;
+  opportunities: Array<{ text: string; claim_state: ClaimState }>;
+  threats: Array<{ text: string; claim_state: ClaimState }>;
+}
+
 // ---------------------------------------------------------------------------
 // Vocabulary registry
 // ---------------------------------------------------------------------------
@@ -426,6 +443,62 @@ export const BLOCK_VOCABULARY: BlockVocabularyEntry[] = [
       y: "count",
       type: "area",
     } satisfies AreaLineData,
+  },
+
+  {
+    type: "stakeholder_map",
+    label: "Stakeholder Map",
+    status: "ready",
+    when_to_use:
+      "Programme or policy question where power, influence, and relationships between actors are the finding — ≥3 stakeholders with explicit links.",
+    required_fields: ["nodes", "edges"],
+    min_data_points: 3,
+    library: "Custom",
+    intent_triggers: ["organisation_profile"],
+    conflicts_with: ["knowledge_graph"],
+    example_data: {
+      nodes: [
+        { id: "cpc", label: "Connected Places Catapult", role: "Delivery partner", influence: "high" },
+        { id: "dft", label: "DfT CCAV", role: "Regulator / funder", influence: "high" },
+        { id: "oem", label: "OEM consortium", role: "Technology provider", influence: "medium" },
+        { id: "lga", label: "Local highways authority", role: "Infrastructure", influence: "medium" },
+        { id: "union", label: "Freight unions", role: "Workforce", influence: "low" },
+      ],
+      edges: [
+        { source: "dft", target: "cpc", relationship: "funds" },
+        { source: "cpc", target: "oem", relationship: "commissions" },
+        { source: "cpc", target: "lga", relationship: "coordinates" },
+        { source: "union", target: "oem", relationship: "challenges" },
+      ],
+    } satisfies StakeholderMapData,
+  },
+
+  {
+    type: "evidence_aware_swot",
+    label: "Evidence-Aware SWOT",
+    status: "ready",
+    when_to_use:
+      "Strategic position for an entity or programme where each quadrant item must carry epistemic state (stated / inferred / unknown / contested).",
+    required_fields: ["strengths", "weaknesses", "opportunities", "threats"],
+    min_data_points: 4,
+    library: "Custom",
+    intent_triggers: ["organisation_profile", "orient"],
+    conflicts_with: [],
+    example_data: {
+      strengths: [
+        { text: "National freight innovation convening power", claim_state: "stated" },
+        { text: "Cross-modal evidence corpus density", claim_state: "inferred" },
+      ],
+      weaknesses: [
+        { text: "Limited open-road HGV trial precedent in corpus", claim_state: "stated" },
+      ],
+      opportunities: [
+        { text: "A14 corridor regulatory sandbox window", claim_state: "inferred" },
+      ],
+      threats: [
+        { text: "Union resistance to automation narrative", claim_state: "contested" },
+      ],
+    } satisfies EvidenceAwareSwotData,
   },
 
   // ── EXPERIMENTAL ─────────────────────────────────────────────────────────

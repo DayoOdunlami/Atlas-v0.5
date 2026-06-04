@@ -11,7 +11,9 @@
 
 ### S5a — Vocabulary & lab (no `graph.py`)
 
-- Add `EvidenceState` type (TS + document Python mirror in comments/fixtures).
+- Add `EvidenceState` type in `src/lib/atlas5/types.ts`:
+  `{ text: string; claim_state: ClaimState; rationale?: string; source_id?: string }`
+  (Python mirror: same `claim_state` strings in visual block payloads.)
 - Promote or add block types: `stakeholder_map`, `evidence_aware_swot` (fixtures + `BLOCK_VOCABULARY` + `BlockRenderer` + Python `build_visual_blocks` stubs if needed for lab only).
 - Pages: `/lab/objects`, `/lab/stakeholder-maps` (golden + empty, mirror `/lab/blocks` pattern).
 - Skills: extend `skills/data-visualization.md`, add `skills/object-routing.md` (draft).

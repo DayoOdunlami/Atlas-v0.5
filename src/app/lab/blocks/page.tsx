@@ -34,6 +34,10 @@ function emptyDataForType(type: string): unknown {
       return { items: [] };
     case "area_line":
       return { points: [], x: "x", y: "y" };
+    case "stakeholder_map":
+      return { nodes: [], edges: [] };
+    case "evidence_aware_swot":
+      return { strengths: [], weaknesses: [], opportunities: [], threats: [] };
     default:
       return {};
   }
