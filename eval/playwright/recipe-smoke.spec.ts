@@ -12,7 +12,7 @@
  *
  * Run:
  *   pnpm eval:tier1:e2e --grep "recipe-smoke"
- *   npx playwright test eval/playwright/recipe-smoke.spec.ts --config playwright.atlas5.config.ts
+ *   npx playwright test eval/playwright/recipe-smoke.spec.ts --config eval/playwright/playwright.atlas5.config.mjs
  *
  * These tests are intentionally:
  *   - Headless only (no visual screenshots — see Tier 3 for that)

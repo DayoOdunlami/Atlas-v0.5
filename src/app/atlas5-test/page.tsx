@@ -14,6 +14,7 @@ import { Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { ChatPane } from "@/components/atlas5/chat-pane";
 import { ArtifactPane } from "@/components/atlas5/artifact-pane";
+import { CoAgentArtifactBridge } from "@/components/atlas5/coagent-artifact-bridge";
 import { useArtifactStore } from "@/lib/atlas5/artifact-store";
 import type { ArtifactBlock } from "@/lib/atlas5/artifact-store";
 
@@ -44,6 +45,7 @@ export default function Atlas5TestPage() {
       <Suspense fallback={null}>
         <FixtureLoader />
       </Suspense>
+      <CoAgentArtifactBridge />
       {/* Chat pane — shows cold session entry when no thread_id + no messages */}
       <div className="w-80 shrink-0 border-r border-border">
         <ChatPane />

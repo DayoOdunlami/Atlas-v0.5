@@ -75,6 +75,7 @@ from agents.citation_helpers import (
     CITABLE_SOURCE_TYPES,
     filter_llm_citations,
     inject_citation_fallback,
+    result_score,
     suggested_citations_block,
 )
 # Shared base utilities — use these for extraction and intent, never re-implement
@@ -284,6 +285,14 @@ class AtlasState(TypedDict):
     is_cpc_inward: bool                      # True = CPC capability/evidence query (inward-facing)
     target_recipe: str                       # primary recipe ID selected before corpus search
     target_secondary_recipes: list[str]      # secondary recipe IDs for composite artifact panels
+    # Object routing (Sprint 5 + Connect the Moat). Declared so they survive the
+    # node-to-node state merge — LangGraph drops keys not in the schema.
+    object_route: dict[str, Any] | None      # {recipe, object_kind, visual_block_type?} or None
+    _object_kind: str                        # passport | organisation | stakeholder_map
+    _object_not_found: bool                  # honest not-found marker (no fabricated fallback)
+    _passport_id: str | None                 # resolved passport UUID (forwarded to artifact_block)
+    _passport_ctx: dict[str, Any] | None     # full resolved passport context (Phase 3 SWOT source)
+    _entity_profile: dict[str, Any] | None   # EntityProfile payload (Phase 3 live wiring)
     section_scores: dict[str, int]           # LLM self-assessed evidence strength per Five Case section
     # Session memory — persisted across turns via LangGraph checkpoint (not reset in extract_query)
     last_recipe: str
@@ -301,7 +310,11 @@ class AtlasState(TypedDict):
 _MAX_CITATIONS = 8
 _CITATION_PROMPT_RULE = (
     'All corpus_citation.id values MUST come from items with source_type '
-    '"project", "live_call", "cpc_internal", or "cpc_claim" in results. NEVER fabricate IDs.'
+    '"project", "live_call", "cpc_internal", or "cpc_claim" in results. NEVER fabricate IDs. '
+    'Every corpus_citation MUST include a "claim_state": tag each cited source '
+    '"stated" when it DIRECTLY supports the claim, "inferred" when it is adjacent/'
+    'analogous evidence, or "unknown" when relevance is weak. Be honest — do not mark '
+    'everything "stated".'
 )
 
 # Confidence tier ordering — module scope so CICERONE and future routing nodes
@@ -1356,7 +1369,7 @@ Respond in JSON ONLY:
   }},
   "corpus_citations": [
     {{"id": "<from results>", "title": "...", "organisation": "...",
-      "relevance_note": "...", "score": 0.00}}
+      "relevance_note": "...", "score": 0.00, "claim_state": "stated|inferred|unknown"}}
   ],
   "evidence_gaps": [
     {{
@@ -1529,7 +1542,7 @@ Respond in JSON ONLY:
   }},
   "corpus_citations": [
     {{"id": "<from results>", "title": "...", "organisation": "...",
-      "relevance_note": "...", "score": 0.00}}
+      "relevance_note": "...", "score": 0.00, "claim_state": "stated|inferred|unknown"}}
   ],
   "evidence_gaps": [
     {{
@@ -1747,7 +1760,7 @@ Respond in JSON ONLY:
   }},
   "corpus_citations": [
     {{"id": "<from results>", "title": "...", "organisation": "...",
-      "relevance_note": "...", "score": 0.00}}
+      "relevance_note": "...", "score": 0.00, "claim_state": "stated|inferred|unknown"}}
   ],
   "evidence_gaps": [
     {{
@@ -1999,7 +2012,7 @@ Respond in JSON ONLY:
   }},
   "corpus_citations": [
     {{"id": "<from results>", "title": "...", "organisation": "...",
-      "relevance_note": "...", "score": 0.00}}
+      "relevance_note": "...", "score": 0.00, "claim_state": "stated|inferred|unknown"}}
   ],
   "evidence_gaps": [
     {{
@@ -2096,6 +2109,480 @@ Respond in JSON ONLY:
     return state
 
 
+# ---------------------------------------------------------------------------
+# Object-route handlers (Sprint: Connect the Moat — Fix 3)
+# Passport / organisation requests resolve a REAL entity and never fall through
+# to the Five Case LLM. Phase 1 = honest plumbing; Phase 3 layers on the
+# entity_profile artefact + evidence-aware SWOT.
+# ---------------------------------------------------------------------------
+
+# Passport confidence_tier (ai_inferred | self_reported | verified) → artefact
+# ClaimState. Chosen for honesty/distinguishability: only independently verified
+# claims read as "stated"; self-reported and AI-inferred claims read "inferred"
+# (with an explicit rationale) so a self-reported strength is never dressed up as
+# fact. Missing tier → "unknown".
+_PASSPORT_TIER_TO_CLAIM_STATE: dict[str, str] = {
+    "verified": "stated",
+    "self_reported": "inferred",
+    "ai_inferred": "inferred",
+}
+
+_PASSPORT_TIER_LABEL: dict[str, str] = {
+    "verified": "Independently verified",
+    "self_reported": "Self-reported by the entity — not independently verified",
+    "ai_inferred": "AI-inferred from documents — not independently verified",
+}
+
+# Routing/filler words stripped to recover the entity label from a noun request.
+_OBJECT_QUERY_NOISE = re.compile(
+    r"\b(show|me|the|a|an|for|of|open|please|give|get|view|entity|profile|"
+    r"passport|organisation|organization|as|stakeholder|map|who|are|swot|"
+    r"stakeholders?|this|that|supplier|company|firm)\b",
+    re.I,
+)
+
+
+def passport_tier_to_claim_state(tier: str | None) -> str:
+    return _PASSPORT_TIER_TO_CLAIM_STATE.get((tier or "").strip().lower(), "unknown")
+
+
+def _extract_entity_label(query: str) -> str:
+    """Best-effort entity name from an object-route query (display only)."""
+    cleaned = _OBJECT_QUERY_NOISE.sub(" ", query or "")
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" .,?!")
+    return cleaned or "this entity"
+
+
+def _passport_confidence_tier(claims: list[dict[str, Any]]) -> str:
+    """Map the spread of passport claim tiers to a 4-tier artefact confidence."""
+    tiers = {(c.get("confidence_tier") or "").lower() for c in claims}
+    if "verified" in tiers:
+        return "Supported"
+    if tiers & {"self_reported", "ai_inferred"}:
+        return "Indicative"
+    return "Speculative"
+
+
+def _passport_claim_to_entity(c: dict[str, Any]) -> dict[str, Any]:
+    """Map one passport_claim row → an EntityProfile claim with honest state."""
+    if c.get("conflict_flag"):
+        claim_state = "contested"
+    else:
+        claim_state = passport_tier_to_claim_state(c.get("confidence_tier"))
+    reason = c.get("confidence_reason") or _PASSPORT_TIER_LABEL.get(
+        (c.get("confidence_tier") or "").lower(), "Provenance unknown"
+    )
+    if c.get("conditions"):
+        reason = f"{reason} (conditions: {c['conditions']})"
+    return {
+        "text": c.get("text") or "",
+        "claim_state": claim_state,
+        "confidence_reason": reason,
+    }
+
+
+def _passport_claim_groups(passport: dict[str, Any]) -> list[dict[str, Any]]:
+    """Group passport claims by domain for the entity_profile block."""
+    by_domain: dict[str, list[dict[str, Any]]] = {}
+    for c in passport.get("claims") or []:
+        by_domain.setdefault(c.get("domain") or "other", []).append(_passport_claim_to_entity(c))
+    return [{"domain": d, "claims": rows} for d, rows in by_domain.items() if rows]
+
+
+def _passport_identity(passport: dict[str, Any], tier: str) -> dict[str, Any]:
+    bits: list[str] = []
+    if passport.get("owner_org"):
+        bits.append(passport["owner_org"])
+    if passport.get("trl_level") is not None:
+        bits.append(f"TRL {passport['trl_level']}")
+    if passport.get("sector_origin") or passport.get("sector_target"):
+        bits.append(f"{passport.get('sector_origin') or '?'} → {passport.get('sector_target') or '?'}")
+    return {
+        "name": passport.get("title") or passport.get("project_name") or "Entity",
+        "subtitle": " · ".join(bits) or None,
+        "confidence_tier": tier,
+    }
+
+
+def _build_swot_from_sources(
+    passport: dict[str, Any], matches: list[dict[str, Any]]
+) -> dict[str, list[dict[str, Any]]]:
+    """
+    Evidence-aware SWOT: strengths/weaknesses from passport_claims, opportunities/
+    threats from matcher output. Claim states flow from the source rows — never
+    invented. Honest empties when a quadrant has no grounded source.
+    """
+    claims = passport.get("claims") or []
+    strengths: list[dict[str, Any]] = []
+    weaknesses: list[dict[str, Any]] = []
+
+    for c in claims:
+        ent = _passport_claim_to_entity(c)
+        role = (c.get("role") or "").lower()
+        # Weakness = something the entity REQUIRES/is CONSTRAINED by, or whose
+        # evidence is missing/conflicting. A conditional capability stays a
+        # strength (the condition is surfaced in its confidence_reason).
+        is_weak = (
+            role in ("requires", "constrains")
+            or ent["claim_state"] in ("unknown", "contested")
+        )
+        (weaknesses if is_weak else strengths).append(ent)
+
+    opportunities: list[dict[str, Any]] = []
+    threats: list[dict[str, Any]] = []
+    seen_opp: set[str] = set()
+    seen_threat: set[str] = set()
+    # Matches are already ranked by the matcher — each is an opportunity (adjacency,
+    # hence 'inferred', never 'stated'). Dedup by label so near-identical calls collapse.
+    for m in matches:
+        score = m.get("match_score")
+        label = (m.get("match_summary") or (
+            f"Aligns with {m['project_title']}" if m.get("project_title") else "Corpus opportunity"
+        ))[:200]
+        reason_bits = []
+        if score is not None:
+            reason_bits.append(f"Matcher score {score:.2f}")
+        if m.get("gap_value_estimate") is not None:
+            reason_bits.append(f"gap value ≈ £{m['gap_value_estimate']:.0f}")
+        reason = "; ".join(reason_bits) or "Matcher-derived — not a direct claim"
+        key = label.lower()
+        if key not in seen_opp:
+            seen_opp.add(key)
+            opportunities.append({"text": label, "claim_state": "inferred", "confidence_reason": reason})
+        # Gaps from the match → threats (unknown: no evidence yet)
+        gaps = m.get("gaps")
+        gap_items: list[str] = []
+        if isinstance(gaps, list):
+            gap_items = [str(g.get("text") if isinstance(g, dict) else g) for g in gaps][:2]
+        elif isinstance(gaps, dict):
+            gap_items = [str(v) for v in gaps.values()][:2]
+        for g in gap_items:
+            gk = (g or "").strip().lower()
+            if gk and gk not in ("none", "null") and gk not in seen_threat:
+                seen_threat.add(gk)
+                threats.append({
+                    "text": g[:200],
+                    "claim_state": "unknown",
+                    "confidence_reason": "Gap flagged by matcher — no supporting evidence yet",
+                })
+
+    return {
+        "strengths": strengths[:6],
+        "weaknesses": weaknesses[:6],
+        "opportunities": opportunities[:6],
+        "threats": threats[:6],
+    }
+
+
+def _build_passport_response(state: AtlasState, query: str) -> AtlasState:
+    """Resolve a passport via corpus entity resolution; honest not-found otherwise."""
+    # Resolve on the cleaned entity label, not the raw query — routing words
+    # ("show", "passport", "for") would otherwise pollute the loader's LIKE pattern.
+    entity_label = _extract_entity_label(query)
+    try:
+        from agents.passport_loader import load_passport_for_query
+        passport = load_passport_for_query(entity_label) or load_passport_for_query(query)
+    except Exception:
+        passport = None
+
+    # Passport is the source of record — not atlas.projects. Don't let the
+    # corpus fallback inject unrelated project citations into a passport view.
+    state["target_recipe"] = "evidence_panel"
+    state["corpus_citations"] = []
+    state["_object_kind"] = "passport"  # type: ignore[typeddict-unknown-key]
+
+    if not passport:
+        entity = _extract_entity_label(query)
+        state["sections"] = {
+            "Passport": (
+                f"No passport found for **{entity}**.\n\n"
+                "Upload a capability passport (document or spoken description) to generate "
+                "a grounded entity profile with claim states, or run an analyse query to "
+                "search the corpus for related evidence instead."
+            ),
+        }
+        state["confidence_tier"] = "Speculative"
+        state["decision_spine"] = {
+            "decision": f"No passport on file for {entity}.",
+            "recommendation": "Upload a passport, or describe the entity's evidence, to create one.",
+            "confidence_tier": "Speculative",
+            "key_assumption": "The entity name was parsed correctly from the request.",
+            "next_action": "Use the passport intake to upload evidence, then re-ask.",
+        }
+        state["_object_not_found"] = True  # type: ignore[typeddict-unknown-key]
+        state["reasoning_trace"] = state.get("reasoning_trace", []) + [{
+            "node": "build_five_case",
+            "thought": (
+                f"Object route = passport. No passport resolved for '{entity}'. "
+                "Returned honest not-found (no Five Case fallback)."
+            ),
+            "status": "ok",
+        }]
+        return state
+
+    state["_passport_id"] = passport.get("passport_id")  # type: ignore[typeddict-unknown-key]
+    state["_passport_ctx"] = passport  # type: ignore[typeddict-unknown-key]
+    claims = passport.get("claims") or []
+
+    # Phase 3: entity_profile payload — the live EntityProfile surface (passport config).
+    tier = _passport_confidence_tier(claims)
+    state["_entity_profile"] = {  # type: ignore[typeddict-unknown-key]
+        "subject_type": "passport",
+        "identity": _passport_identity(passport, tier),
+        "claim_groups": _passport_claim_groups(passport),
+        "escalations": [
+            {"label": "Find opportunities", "target": "connect"},
+            {"label": "Diagnose gaps", "target": "diagnose"},
+        ],
+    }
+
+    identity_bits = [
+        f"**{passport.get('title') or passport.get('project_name') or 'Entity'}**",
+    ]
+    if passport.get("owner_org"):
+        identity_bits.append(f"Owner: {passport['owner_org']}")
+    if passport.get("trl_level") is not None:
+        identity_bits.append(f"TRL {passport['trl_level']}")
+    if passport.get("sector_origin") or passport.get("sector_target"):
+        identity_bits.append(
+            f"Sector: {passport.get('sector_origin') or '?'} → {passport.get('sector_target') or '?'}"
+        )
+
+    # Group claims by domain, each row annotated with its honesty state.
+    by_domain: dict[str, list[dict[str, Any]]] = {}
+    for c in claims:
+        by_domain.setdefault(c.get("domain") or "other", []).append(c)
+
+    claim_lines: list[str] = []
+    for domain, rows in by_domain.items():
+        claim_lines.append(f"**{domain.title()}**")
+        for c in rows:
+            ctier = (c.get("confidence_tier") or "").lower()
+            state_label = passport_tier_to_claim_state(ctier)
+            note = c.get("confidence_reason") or _PASSPORT_TIER_LABEL.get(ctier, "Unknown provenance")
+            claim_lines.append(f"- [{state_label}] {c.get('text', '')} — _{note}_")
+
+    sections = {
+        "Entity Passport": " · ".join(identity_bits)
+        + (f"\n\n{passport.get('summary')}" if passport.get("summary") else ""),
+    }
+    if claim_lines:
+        sections["Claims"] = "\n".join(claim_lines)
+
+    state["sections"] = sections
+    state["confidence_tier"] = tier
+    state["decision_spine"] = {
+        "decision": f"Passport resolved for {sections['Entity Passport'].split(' · ')[0].strip('*')}.",
+        "recommendation": "Review claims by domain; escalate to Connect (find opportunities) or Diagnose (gaps).",
+        "confidence_tier": state["confidence_tier"],
+        "key_assumption": "Passport claims reflect current entity capability.",
+        "next_action": "Run a Connect query to match this entity to live opportunities.",
+    }
+    state["reasoning_trace"] = state.get("reasoning_trace", []) + [{
+        "node": "build_five_case",
+        "thought": (
+            f"Object route = passport. Resolved passport {passport.get('passport_id')} "
+            f"with {len(claims)} claim(s). Returned passport data (no Five Case fallback)."
+        ),
+        "status": "ok",
+    }]
+    return state
+
+
+def _build_organisation_response(state: AtlasState, query: str) -> AtlasState:
+    """
+    Phase 1 organisation handler: honest corpus-evidence profile, never Five Case.
+    Phase 3 upgrades this to a full entity_profile artefact.
+    """
+    entity = _extract_entity_label(query)
+    raw = state.get("raw_search_results", [])
+    citable = [
+        r for r in raw
+        if r.get("id") and r.get("source_type") in ("project", "live_call", "cpc_internal", "cpc_claim")
+    ][:8]
+
+    state["target_recipe"] = "organisation_profile"
+    state["_object_kind"] = "organisation"  # type: ignore[typeddict-unknown-key]
+
+    if not citable:
+        state["sections"] = {
+            "Organisation Profile": (
+                f"No corpus evidence resolved for **{entity}**. "
+                "Refine the name or upload evidence to build a grounded organisation profile."
+            ),
+        }
+        state["confidence_tier"] = "Speculative"
+        state["corpus_citations"] = []
+        state["_object_not_found"] = True  # type: ignore[typeddict-unknown-key]
+    else:
+        lines = [f"- {(r.get('title') or r.get('description') or '')[:120]}" for r in citable]
+        state["sections"] = {
+            "Organisation Profile": (
+                f"Corpus evidence associated with **{entity}**:\n\n" + "\n".join(lines)
+            ),
+        }
+        state["confidence_tier"] = "Indicative"
+        # Let verify_citations carry these through with claim_state (Fix 1/2).
+        state["corpus_citations"] = [
+            {
+                "id": str(r["id"]),
+                "title": r.get("title") or r.get("description") or "",
+                "organisation": r.get("organisation") or r.get("lead_org_name") or "",
+                "relevance_note": "Corpus evidence linked to the organisation",
+                "score": float(result_score(r)),
+                "claim_state": "inferred",
+                "source_type": r.get("source_type", "project"),
+            }
+            for r in citable
+        ]
+        # Phase 3: entity_profile (organisation config) — same skeleton, corpus data.
+        # Each corpus hit is an inferred 'evidence' claim (adjacency, not a direct claim).
+        state["_entity_profile"] = {  # type: ignore[typeddict-unknown-key]
+            "subject_type": "organisation",
+            "identity": {
+                "name": entity,
+                "subtitle": "Corpus-derived organisation profile",
+                "confidence_tier": "Indicative",
+            },
+            "claim_groups": [{
+                "domain": "evidence",
+                "claims": [
+                    {
+                        "text": (r.get("title") or r.get("description") or "")[:200],
+                        "claim_state": "inferred",
+                        "confidence_reason": "Corpus evidence linked to the organisation — adjacency, not a direct claim",
+                    }
+                    for r in citable
+                ],
+            }],
+            "escalations": [
+                {"label": "Find opportunities", "target": "connect"},
+                {"label": "Diagnose gaps", "target": "diagnose"},
+            ],
+        }
+
+    state["decision_spine"] = {
+        "decision": f"Organisation profile for {entity} built from corpus evidence.",
+        "recommendation": "Review linked evidence; escalate to Connect or Diagnose for deeper analysis.",
+        "confidence_tier": state["confidence_tier"],
+        "key_assumption": "Corpus hits are correctly attributed to this organisation.",
+        "next_action": "Run a Connect query to map opportunities for this organisation.",
+    }
+    state["reasoning_trace"] = state.get("reasoning_trace", []) + [{
+        "node": "build_five_case",
+        "thought": (
+            f"Object route = organisation. Built profile for '{entity}' from "
+            f"{len(citable)} corpus hit(s) (no Five Case fallback)."
+        ),
+        "status": "ok",
+    }]
+    return state
+
+
+def _build_swot_response(state: AtlasState, query: str) -> AtlasState:
+    """
+    Phase 3: evidence-aware SWOT for an entity — strengths/weaknesses from real
+    passport_claims, opportunities/threats from real matches. Honest not-found
+    when no passport resolves (never a Five Case fallback).
+    """
+    entity_label = _extract_entity_label(query)
+    try:
+        from agents.passport_loader import load_passport_for_query, load_matches_for_passport
+        passport = load_passport_for_query(entity_label) or load_passport_for_query(query)
+    except Exception:
+        passport = None
+
+    state["target_recipe"] = "evidence_panel"
+    state["corpus_citations"] = []
+    state["_object_kind"] = "swot"  # type: ignore[typeddict-unknown-key]
+
+    if not passport:
+        state["sections"] = {
+            "SWOT": (
+                f"No passport found for **{entity_label}**, so an evidence-aware SWOT "
+                "cannot be grounded. Upload a passport to derive strengths/weaknesses "
+                "from its claims and opportunities/threats from matches."
+            ),
+        }
+        state["confidence_tier"] = "Speculative"
+        state["decision_spine"] = {
+            "decision": f"No passport on file for {entity_label}.",
+            "recommendation": "Upload a passport to ground the SWOT.",
+            "confidence_tier": "Speculative",
+            "key_assumption": "The entity name was parsed correctly.",
+            "next_action": "Upload a passport, then re-ask for the SWOT.",
+        }
+        state["_object_not_found"] = True  # type: ignore[typeddict-unknown-key]
+        return state
+
+    pid = passport.get("passport_id")
+    try:
+        matches = load_matches_for_passport(pid) if pid else []
+    except Exception:
+        matches = []
+
+    swot = _build_swot_from_sources(passport, matches)
+    claims = passport.get("claims") or []
+    tier = _passport_confidence_tier(claims)
+    name = passport.get("title") or passport.get("project_name") or entity_label
+
+    state["_passport_id"] = pid  # type: ignore[typeddict-unknown-key]
+    state["_passport_ctx"] = passport  # type: ignore[typeddict-unknown-key]
+    state["_entity_profile"] = {  # type: ignore[typeddict-unknown-key]
+        "subject_type": "swot",
+        "identity": {
+            "name": f"{name} — Strategic Position",
+            "subtitle": "Evidence-aware SWOT · strengths from passport, opportunities from matches",
+            "confidence_tier": tier,
+        },
+        "swot": swot,
+        "escalations": [
+            {"label": "Find opportunities", "target": "connect"},
+            {"label": "Defend position", "target": "defend"},
+        ],
+    }
+
+    # Honest sections mirror for non-EntityProfile consumers / eval.
+    def _fmt(items: list[dict[str, Any]]) -> str:
+        return "\n".join(f"- [{i['claim_state']}] {i['text']}" for i in items) or "- (none grounded)"
+
+    state["sections"] = {
+        "Strengths": _fmt(swot["strengths"]),
+        "Weaknesses": _fmt(swot["weaknesses"]),
+        "Opportunities": _fmt(swot["opportunities"]),
+        "Threats": _fmt(swot["threats"]),
+    }
+    state["confidence_tier"] = tier
+    state["decision_spine"] = {
+        "decision": f"Evidence-aware SWOT built for {name}.",
+        "recommendation": "Strengths are passport-grounded; opportunities are matcher-derived (inferred).",
+        "confidence_tier": tier,
+        "key_assumption": "Passport claims and matches are current.",
+        "next_action": "Run Connect to pursue the highest-scoring opportunities.",
+    }
+    state["reasoning_trace"] = state.get("reasoning_trace", []) + [{
+        "node": "build_five_case",
+        "thought": (
+            f"Object route = swot. Built evidence-aware SWOT for passport {pid} "
+            f"from {len(claims)} claim(s) and {len(matches)} match(es) (no Five Case fallback)."
+        ),
+        "status": "ok",
+    }]
+    return state
+
+
+def _build_object_route_response(state: AtlasState, object_route: dict[str, Any]) -> AtlasState:
+    """Dispatch object-routed requests to a real entity handler (Fix 3 / Phase 3)."""
+    kind = (object_route.get("object_kind") or "").lower()
+    query = state.get("query", "")
+    if kind == "swot":
+        return _build_swot_response(state, query)
+    if kind == "passport":
+        return _build_passport_response(state, query)
+    # organisation / stakeholder_map
+    return _build_organisation_response(state, query)
+
+
 def build_five_case(state: AtlasState) -> AtlasState:
     """
     Node 2: Use claude-sonnet-4-6 to draft the Five Case Model brief.
@@ -2109,6 +2596,13 @@ def build_five_case(state: AtlasState) -> AtlasState:
 
     Returns title-case sections + decision_spine for the eval graders.
     """
+    # Fix 3 (Connect the Moat): object-routed passport / organisation requests must
+    # NOT fall through to the Five Case LLM. Resolve a real entity and return its
+    # data (or an honest not-found) — never a fabricated Five Case brief.
+    object_route = state.get("object_route")  # type: ignore[attr-defined]
+    if object_route:
+        return _build_object_route_response(state, object_route)
+
     # CPC-inward queries use a different LLM prompt and output schema.
     # Recipe was selected in select_recipe_intent; trust it, don't re-classify.
     if state.get("is_cpc_inward"):
@@ -2178,7 +2672,10 @@ MANDATORY RULES:
 7. optimism_bias is a number (percentage, e.g. 0.15 for 15%).
 8. Assign confidence_tier per the evidence-triage skill rules. With 3+ source types in the
    results, "Supported" is appropriate if projects and policy evidence both corroborate.
-9. Each corpus_citation MUST include a "score" field copied from the search result similarity.
+9. Each corpus_citation MUST include a "score" field copied from the search result similarity,
+   AND a "claim_state" field: "stated" if the source directly supports the cited claim,
+   "inferred" if it is adjacent/analogous, "unknown" if relevance is weak. Be honest —
+   a mixed-relevance result set should produce a spread of states, not all "stated".
 10. decision_spine MUST include all five fields: decision, recommendation, confidence_tier,
     key_assumption, next_action. Be specific — no generic filler.
 11. EVIDENCE GAPS: Do not hide weak evidence in prose. Identify every specific evidence gap
@@ -2274,7 +2771,7 @@ Respond in JSON ONLY — no markdown, no explanation. Format:
   "optimism_bias": 0.44,
   "corpus_citations": [
     {{"id": "<from results>", "title": "...", "organisation": "...",
-      "relevance_note": "...", "score": 0.00}}
+      "relevance_note": "...", "score": 0.00, "claim_state": "stated|inferred|unknown"}}
   ],
   "evidence_gaps": [
     {{
@@ -2747,6 +3244,10 @@ def _build_partial_artifact(state: AtlasState, stage: str) -> dict[str, Any]:
                 "title": str(r.get("title", "")),
                 "organisation": str(r.get("organisation") or r.get("publisher") or ""),
                 "score": float(r.get("score", 0) or 0),
+                # Partial (pre-verify) hits are unconfirmed against the claim — mark
+                # inferred so the moat rule (never render a claim without its state)
+                # holds even in streaming partials.
+                "claim_state": "inferred",
             }
             for r in raw[:8]
             if r.get("id")
@@ -2794,6 +3295,27 @@ def falsification_lane(state: AtlasState) -> AtlasState:
     return state
 
 
+def _project_citation_with_state(c: dict[str, Any]) -> dict[str, Any]:
+    """
+    Build a final artefact corpus_citation that ALWAYS carries a claim_state.
+
+    The moat is honesty: a citation must never reach the UI without its epistemic
+    state. If an upstream path somehow omitted it, default conservatively to
+    "inferred" (cited-but-adjacent) rather than implying a direct ("stated") source.
+    """
+    out: dict[str, Any] = {
+        "id": c.get("id", ""),
+        "title": c.get("title", ""),
+        "organisation": c.get("organisation", ""),
+        "score": c.get("score", 0.0),
+        "claim_state": c.get("claim_state") or "inferred",
+    }
+    rationale = c.get("claim_rationale") or c.get("relevance_note")
+    if rationale:
+        out["claim_rationale"] = rationale
+    return out
+
+
 def verify_citations(state: AtlasState) -> AtlasState:
     """
     Node 3: Verify every corpus_citation.id against atlas.projects.
@@ -2814,7 +3336,7 @@ def verify_citations(state: AtlasState) -> AtlasState:
             continue
         try:
             if citation.get("source_type") in ("cpc_internal", "cpc_claim") and cid in raw_ids:
-                verified.append({
+                cpc_verified: CorpusCitation = {
                     "id": cid,
                     "title": citation.get("title", ""),
                     "organisation": citation.get("organisation", "Connected Places Catapult"),
@@ -2822,27 +3344,39 @@ def verify_citations(state: AtlasState) -> AtlasState:
                     "score": citation.get("score", 0.0),
                     "claim_state": citation.get("claim_state", "stated"),
                     "source_type": citation.get("source_type"),
-                })
+                }
+                if citation.get("claim_rationale"):
+                    cpc_verified["claim_rationale"] = citation["claim_rationale"]
+                verified.append(cpc_verified)
                 verification_log.append({"id": cid, "verified": True, "source": "cpc_internal"})
                 continue
 
             project = _verify_project(cid)
             if project:
-                verified.append({
+                verified_entry: CorpusCitation = {
                     "id": cid,
                     "title": project.get("title") or citation.get("title", ""),
                     "organisation": project.get("organisation") or citation.get("organisation", ""),
                     "relevance_note": citation.get("relevance_note", ""),
                     "score": citation.get("score", 0.0),
-                })
+                    # Fix 2: preserve the grounded claim_state assigned upstream so it
+                    # survives DB verification (default "inferred" — adjacent, not direct).
+                    "claim_state": citation.get("claim_state", "inferred"),
+                }
+                if citation.get("claim_rationale"):
+                    verified_entry["claim_rationale"] = citation["claim_rationale"]
+                verified.append(verified_entry)
                 verification_log.append({"id": cid, "verified": True})
             else:
                 verification_log.append({"id": cid, "verified": False, "reason": "not found in atlas.projects"})
         except Exception as exc:
             verification_log.append({"id": cid, "verified": False, "reason": str(exc)})
 
-    # Fallback: inject top search hits when LLM omitted all citations
-    verified = inject_citation_fallback(verified, raw_results)
+    # Fallback: inject top search hits when LLM omitted all citations.
+    # Skip for object-routed entity views (passport/organisation) — a passport is
+    # its own source of record; injecting unrelated corpus hits would be dishonest.
+    if not state.get("object_route"):  # type: ignore[attr-defined]
+        verified = inject_citation_fallback(verified, raw_results)
     if len(verified) > len(verification_log):
         for c in verified:
             if not any(v.get("id") == c.get("id") for v in verification_log):
@@ -2931,13 +3465,12 @@ def verify_citations(state: AtlasState) -> AtlasState:
         "confidence_tier": tier,
         "citation_guard": citation_guard_payload,
         "sections": state.get("sections", {}),
+        # Fix 1 (Connect the Moat): carry claim_state (+ claim_rationale where
+        # present) through to the final artefact citations. Previously this rebuild
+        # dropped them, so the ClaimStateBadge only ever fired on fixtures.
+        # The one rule: never render a claim without its claim_state.
         "corpus_citations": [
-            {
-                "id": c.get("id", ""),
-                "title": c.get("title", ""),
-                "organisation": c.get("organisation", ""),
-                "score": c.get("score", 0.0),
-            }
+            _project_citation_with_state(c)
             for c in verified
         ],
         "npv_value": state.get("npv_value"),
@@ -2969,6 +3502,10 @@ def verify_citations(state: AtlasState) -> AtlasState:
             artifact_block["cpc_position"] = cpc_pos
     if state.get("_passport_id"):  # type: ignore[attr-defined]
         artifact_block["passport_id"] = state.get("_passport_id")  # type: ignore[attr-defined]
+    # Phase 3: attach the EntityProfile payload so the approved primitive renders
+    # live from real data (passport/organisation/swot) through the existing pane.
+    if state.get("_entity_profile"):  # type: ignore[attr-defined]
+        artifact_block["entity_profile"] = state.get("_entity_profile")  # type: ignore[attr-defined]
     if state.get("evidence_gaps"):
         artifact_block["evidence_gaps"] = state.get("evidence_gaps", [])
     # Forward CPC-inward intelligence fields when present

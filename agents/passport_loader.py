@@ -62,7 +62,8 @@ def load_passport_for_query(query: str, limit: int = 1) -> Optional[dict[str, An
     pid = str(passport["id"])
     claims = _query(
         """
-        SELECT claim_domain, claim_text, confidence_tier, claim_role
+        SELECT id, claim_domain, claim_text, confidence_tier, claim_role,
+               conditions, confidence_reason, source_excerpt, conflict_flag
         FROM atlas.passport_claims
         WHERE passport_id = %s::uuid AND rejected IS NOT TRUE
         ORDER BY confidence_tier DESC, claim_domain
@@ -82,11 +83,56 @@ def load_passport_for_query(query: str, limit: int = 1) -> Optional[dict[str, An
         "summary": (passport.get("summary") or passport.get("project_description") or "")[:800],
         "claims": [
             {
+                "id": str(c.get("id")) if c.get("id") else None,
                 "domain": c.get("claim_domain"),
                 "text": (c.get("claim_text") or "")[:200],
                 "confidence_tier": c.get("confidence_tier"),
                 "role": c.get("claim_role"),
+                "conditions": c.get("conditions"),
+                "confidence_reason": c.get("confidence_reason"),
+                "source_excerpt": c.get("source_excerpt"),
+                "conflict_flag": bool(c.get("conflict_flag")),
             }
             for c in claims
         ],
     }
+
+
+def load_matches_for_passport(passport_id: str, limit: int = 8) -> list[dict[str, Any]]:
+    """
+    Load matcher output (atlas.matches) for a passport — the source of SWOT
+    opportunities (high-scoring matches) and threats (gaps / weak matches).
+    Returns [] on any failure (honest empty, never fabricated).
+    """
+    if not passport_id:
+        return []
+    try:
+        rows = _query(
+            """
+            SELECT m.id, m.match_score, m.match_summary, m.gaps,
+                   m.gap_value_estimate, m.match_type,
+                   p.title AS project_title
+            FROM atlas.matches m
+            LEFT JOIN atlas.projects p ON p.id = m.project_id
+            WHERE m.passport_id = %s::uuid
+            ORDER BY m.match_score DESC NULLS LAST
+            LIMIT %s
+            """,
+            (passport_id, min(int(limit), 20)),
+        )
+    except Exception:
+        return []
+    out: list[dict[str, Any]] = []
+    for r in rows:
+        out.append({
+            "id": str(r.get("id")) if r.get("id") else None,
+            "match_score": float(r["match_score"]) if r.get("match_score") is not None else None,
+            "match_summary": r.get("match_summary"),
+            "project_title": r.get("project_title"),
+            "gaps": r.get("gaps"),
+            "gap_value_estimate": (
+                float(r["gap_value_estimate"]) if r.get("gap_value_estimate") is not None else None
+            ),
+            "match_type": r.get("match_type"),
+        })
+    return out

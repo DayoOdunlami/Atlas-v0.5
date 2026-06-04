@@ -16,6 +16,25 @@ _CITATION_RULE = (
     '"project", "live_call", "cpc_internal", or "cpc_claim" in results.'
 )
 
+# Artefact-level epistemic states the LLM may assign per citation (Principle 3).
+# "contested" is a valid ClaimState but is not LLM-assignable per-citation here —
+# it is reserved for code paths that detect conflicting sources.
+_ASSIGNABLE_CLAIM_STATES = frozenset({"stated", "inferred", "unknown"})
+
+
+def normalise_claim_state(value: Any, *, default: str = "inferred") -> str:
+    """
+    Validate an LLM-supplied claim_state to an assignable value.
+
+    Never trusts the model blindly: anything outside stated|inferred|unknown
+    falls back to a conservative default ("inferred" = adjacent, not direct).
+    """
+    if isinstance(value, str):
+        v = value.strip().lower()
+        if v in _ASSIGNABLE_CLAIM_STATES:
+            return v
+    return default
+
 
 def result_score(r: dict[str, Any]) -> float:
     for key in ("similarity", "score"):
@@ -86,25 +105,37 @@ def filter_llm_citations(
         st = row.get("source_type") or c.get("source_type") or "project"
 
         if st in ("cpc_internal", "cpc_claim"):
-            safe.append({
+            cpc_entry = {
                 "id": cid,
                 "title": c.get("title") or row.get("title") or "",
                 "organisation": c.get("organisation") or row.get("organisation") or "Connected Places Catapult",
                 "relevance_note": c.get("relevance_note", ""),
                 "score": float(c.get("score") or result_score(row)),
-                "claim_state": c.get("claim_state", "stated"),
+                # CPC-internal rows default to "stated" (curated), but still validate.
+                "claim_state": normalise_claim_state(c.get("claim_state"), default="stated"),
                 "source_type": st,
                 "source_label": row.get("source_label") or f"CPC internal — {st}",
-            })
+            }
+            if c.get("claim_rationale"):
+                cpc_entry["claim_rationale"] = c["claim_rationale"]
+            safe.append(cpc_entry)
         elif st in ("project", "live_call") and _verify_project(cid):
-            safe.append({
+            entry = {
                 "id": cid,
                 "title": c.get("title") or row.get("title") or "",
                 "organisation": c.get("organisation") or row.get("lead_org_name") or row.get("organisation") or "",
                 "relevance_note": c.get("relevance_note", ""),
                 "score": float(c.get("score") or result_score(row)),
+                # Fix 2: carry the model's grounded claim_state for project/live_call
+                # citations (was previously dropped, leaving the badge fixture-only).
+                # Default to "inferred" — a cited-but-adjacent source is not "stated".
+                "claim_state": normalise_claim_state(c.get("claim_state")),
                 "source_type": st,
-            })
+            }
+            rationale = c.get("claim_rationale") or c.get("relevance_note")
+            if rationale:
+                entry["claim_rationale"] = rationale
+            safe.append(entry)
     return safe
 
 
@@ -143,6 +174,7 @@ def inject_citation_fallback(
             "relevance_note": "Auto-suggested from corpus search (LLM omitted citation)",
             "score": score,
             "claim_state": "inferred",
+            "claim_rationale": "Adjacent corpus hit injected because the model returned no citation — not a direct source for the claim.",
             "source_type": st,
             "source_label": r.get("source_label"),
         })

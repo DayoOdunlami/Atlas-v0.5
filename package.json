@@ -10,6 +10,8 @@
     "start": "next start",
     "lint": "next lint",
     "eval:tier1": "vitest run --config eval/vitest.atlas5.config.ts",
+    "eval:e2e:claim-state": "playwright test eval/playwright/claim-state-live.spec.ts --config eval/playwright/playwright.atlas5.config.mjs",
+    "eval:tier1:e2e": "playwright test eval/playwright/recipe-smoke.spec.ts --config eval/playwright/playwright.atlas5.config.mjs",
     "eval:parity": "node scripts/python-bin.mjs eval/test_parity_gate.py",
     "eval:parity:live": "node scripts/python-bin.mjs eval/test_parity_gate.py --live",
     "eval:contract": "node scripts/python-bin.mjs eval/test_artifact_contract_live.py",

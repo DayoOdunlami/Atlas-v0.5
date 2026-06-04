@@ -30,6 +30,9 @@ CASES_ENABLED = [
     ("Passport for Acme Mobility Ltd", "evidence_panel", "passport"),
     ("Open passport for entity 42", "evidence_panel", "passport"),
     ("Show me the passport for this supplier", "evidence_panel", "passport"),
+    ("Show me the GoShuttle passport", "evidence_panel", "passport"),
+    ("give me a SWOT for GoShuttle X1", "evidence_panel", "swot"),
+    ("SWOT analysis of Acme Mobility", "evidence_panel", "swot"),
 ]
 
 CASES_DISABLED = [

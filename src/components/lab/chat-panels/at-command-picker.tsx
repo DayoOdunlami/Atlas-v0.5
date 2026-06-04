@@ -196,6 +196,7 @@ export function LabInput({
 
         <div className="rounded-xl border bg-card shadow-sm px-3 py-2 flex items-end gap-2">
           <Textarea
+            data-testid="chat-input"
             value={text}
             onChange={(e) => handleChange(e.target.value)}
             placeholder="Ask for anything — type @ to switch agent or lens"
@@ -219,6 +220,7 @@ export function LabInput({
             </Button>
           ) : (
             <Button
+              data-testid="chat-send-button"
               size="icon"
               variant="ghost"
               disabled={!canSend}

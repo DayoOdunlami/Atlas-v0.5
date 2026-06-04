@@ -147,7 +147,23 @@ Library: Custom
 ### `evidence_aware_swot`
 Use when: strategic position for an entity where each SWOT item must carry
 `claim_state` (stated | inferred | unknown | contested).
-Required: `{ strengths, weaknesses, opportunities, threats }` — each item `{ text, claim_state }`
+Required: `{ strengths, weaknesses, opportunities, threats }` — each item
+`{ text, claim_state, confidence_reason? }`. Self-reported strengths MUST be
+labelled via `confidence_reason`. Every cell carries a claim state.
+Library: Custom
+
+### `entity_profile`
+Use when: a noun-surface for a single entity — a **passport** or an
+**organisation** — where grouped claim rows are the finding. The object-layer
+bridge from a noun ("passport for X") to the verb lanes (Connect / Diagnose).
+Required: `{ identity: { name, subtitle?, confidence_tier?, subject_type? },
+claim_groups: [{ domain, claims: [{ text, claim_state, confidence_reason? }] }] }`
+Minimum 1 claim. Every row carries a `ClaimStateBadge` and shows its
+`confidence_reason` as a muted subtitle — never render a claim without its state.
+Rendered standalone via `EntityProfileSurface` (identity header → grouped claim
+rows / SWOT quadrants → escalation buttons). `subject_type`:
+`passport` and `organisation` use this block; `swot` puts `evidence_aware_swot`
+on top of the same skeleton.
 Library: Custom
 
 ---

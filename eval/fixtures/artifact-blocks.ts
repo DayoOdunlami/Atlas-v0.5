@@ -803,6 +803,115 @@ export const FIXTURE_ORGANISATION_PROFILE: ArtifactBlock = {
 } as unknown as ArtifactBlock;
 
 // ---------------------------------------------------------------------------
+// EntityProfile (Connect the Moat — Phase 3 live wiring shape)
+// These mirror the entity_profile payload the Python object-route handlers emit,
+// so /atlas5-test renders the EntityProfileSurface through the real ArtifactPane.
+// ---------------------------------------------------------------------------
+
+export const FIXTURE_ENTITY_PROFILE_PASSPORT: ArtifactBlock = {
+  type: "evidence",
+  recipe: "evidence_panel",
+  confidence_tier: "Indicative",
+  headline: "GoShuttle X1 — passport",
+  passport_id: "00000000-0000-4000-8000-0000000000aa",
+  entity_profile: {
+    subject_type: "passport",
+    identity: {
+      name: "GoShuttle X1",
+      subtitle: "GoShuttle Ltd · TRL 6 · Automotive → Public transport",
+      confidence_tier: "Indicative",
+    },
+    claim_groups: [
+      {
+        domain: "capability",
+        claims: [
+          { text: "Operates autonomously on GPS-denied suburban routes", claim_state: "inferred", confidence_reason: "Self-reported by the entity — not independently verified" },
+          { text: "Carries combined passenger and light-goods payloads", claim_state: "stated", confidence_reason: "Independently verified in the trial report" },
+        ],
+      },
+      {
+        domain: "certification",
+        claims: [
+          { text: "ISO 26262 ASIL-B functional safety", claim_state: "stated", confidence_reason: "Certificate on file" },
+        ],
+      },
+      {
+        domain: "performance",
+        claims: [
+          { text: "Mean time between disengagements > 350 km", claim_state: "unknown", confidence_reason: "No supporting evidence found in the corpus" },
+        ],
+      },
+    ],
+    escalations: [
+      { label: "Find opportunities", target: "connect" },
+      { label: "Diagnose gaps", target: "diagnose" },
+    ],
+  },
+} as unknown as ArtifactBlock;
+
+export const FIXTURE_ENTITY_PROFILE_SWOT: ArtifactBlock = {
+  type: "evidence",
+  recipe: "evidence_panel",
+  confidence_tier: "Indicative",
+  headline: "GoShuttle X1 — evidence-aware SWOT",
+  passport_id: "00000000-0000-4000-8000-0000000000aa",
+  entity_profile: {
+    subject_type: "swot",
+    identity: {
+      name: "GoShuttle X1 — Strategic Position",
+      subtitle: "Strengths from passport · opportunities from matches",
+      confidence_tier: "Indicative",
+    },
+    swot: {
+      strengths: [
+        { text: "Proven combined passenger + goods autonomy", claim_state: "stated", confidence_reason: "Verified in trial report" },
+      ],
+      weaknesses: [
+        { text: "Disengagement rate unproven at scale", claim_state: "unknown", confidence_reason: "No evidence found" },
+      ],
+      opportunities: [
+        { text: "Open Horizon Europe call matching the innovation", claim_state: "inferred", confidence_reason: "Matcher score 0.48" },
+      ],
+      threats: [
+        { text: "Union resistance to automation narrative", claim_state: "contested", confidence_reason: "Sources conflict on workforce impact" },
+      ],
+    },
+    escalations: [
+      { label: "Find opportunities", target: "connect" },
+      { label: "Defend position", target: "defend" },
+    ],
+  },
+} as unknown as ArtifactBlock;
+
+export const FIXTURE_ENTITY_PROFILE_ORGANISATION: ArtifactBlock = {
+  type: "brief",
+  recipe: "organisation_profile",
+  confidence_tier: "Supported",
+  headline: "Connected Places Catapult — organisation profile",
+  entity_profile: {
+    subject_type: "organisation",
+    identity: {
+      name: "Connected Places Catapult",
+      subtitle: "Corpus-derived organisation profile",
+      confidence_tier: "Supported",
+    },
+    claim_groups: [
+      {
+        domain: "evidence",
+        claims: [
+          { text: "8 verified CAV projects across 3 business units", claim_state: "stated", confidence_reason: "Counted from verified atlas.projects rows" },
+          { text: "Cross-modal corpus density spanning rail, road and air", claim_state: "inferred", confidence_reason: "Derived from corpus density — not an explicit claim" },
+        ],
+      },
+    ],
+    escalations: [
+      { label: "Find opportunities", target: "connect" },
+      { label: "Diagnose gaps", target: "diagnose" },
+    ],
+  },
+} as unknown as ArtifactBlock;
+
+// ---------------------------------------------------------------------------
 // Named map — used by fixture API route
 // ---------------------------------------------------------------------------
 
@@ -816,6 +925,9 @@ export const FIXTURE_MAP = {
   connect: FIXTURE_CONNECT,
   defend: FIXTURE_DEFEND,
   organisation_profile: FIXTURE_ORGANISATION_PROFILE,
+  entity_profile_passport: FIXTURE_ENTITY_PROFILE_PASSPORT,
+  entity_profile_swot: FIXTURE_ENTITY_PROFILE_SWOT,
+  entity_profile_organisation: FIXTURE_ENTITY_PROFILE_ORGANISATION,
 } as const;
 
 export type FixtureName = keyof typeof FIXTURE_MAP;

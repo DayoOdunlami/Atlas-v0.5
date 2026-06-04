@@ -8,15 +8,34 @@
  * Atlas 5 uses Supabase for auth — no separate better-auth instance needed.
  */
 
+import { cookies } from "next/headers";
+
 import { createAdminClient } from "@/lib/supabase/server";
 
 // ── Session ───────────────────────────────────────────────────────────────────
+
+const E2E_USER = {
+  id: "e2e-test-user",
+  email: "e2e@innovation-atlas.local",
+  role: "user",
+} as const;
 
 /**
  * getSession — returns the Supabase user session for the current request,
  * or null if unauthenticated.
  */
 export const getSession = async () => {
+  if (process.env.ALLOW_E2E_AUTH_COOKIE === "true") {
+    try {
+      const jar = await cookies();
+      if (jar.get("atlas_e2e_auth")?.value === "1") {
+        return { user: { ...E2E_USER } };
+      }
+    } catch {
+      // ignore — fall through to Supabase
+    }
+  }
+
   try {
     const supabase = await createAdminClient();
     const { data: { user }, error } = await supabase.auth.getUser();

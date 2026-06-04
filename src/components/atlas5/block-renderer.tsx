@@ -27,6 +27,7 @@ import type {
   AreaLineData,
   StakeholderMapData,
   EvidenceAwareSwotData,
+  EntityProfileData,
 } from "@/lib/atlas5/block-vocabulary";
 import type { ClaimState } from "@/lib/atlas5/types";
 import {
@@ -601,7 +602,7 @@ function SwotQuadrant({
   className,
 }: {
   title: string;
-  items: Array<{ text: string; claim_state: ClaimState }>;
+  items: Array<{ text: string; claim_state: ClaimState; confidence_reason?: string }>;
   className: string;
 }) {
   return (
@@ -611,9 +612,20 @@ function SwotQuadrant({
       </p>
       <ul className="space-y-1.5">
         {items.map((item, i) => (
-          <li key={i} className="text-xs text-foreground leading-snug flex gap-1.5 items-start">
-            <span className="flex-1">{item.text}</span>
-            <ClaimStateBadge state={item.claim_state} className="shrink-0" />
+          <li key={i} className="text-xs text-foreground leading-snug">
+            <div className="flex gap-1.5 items-start">
+              <span className="flex-1">{item.text}</span>
+              <ClaimStateBadge
+                state={item.claim_state}
+                rationale={item.confidence_reason}
+                className="shrink-0"
+              />
+            </div>
+            {item.confidence_reason && (
+              <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug italic">
+                {item.confidence_reason}
+              </p>
+            )}
           </li>
         ))}
       </ul>
@@ -634,10 +646,61 @@ function EvidenceAwareSwotBlock({ block }: { block: VisualBlock }) {
     <BlockShell title={block.title}>
       <div className="grid gap-2 sm:grid-cols-2">
         {SWOT_KEYS.map(([key, label, cls]) => {
-          const items = (d?.[key] ?? []) as Array<{ text: string; claim_state: ClaimState }>;
+          const items = (d?.[key] ?? []) as Array<{ text: string; claim_state: ClaimState; confidence_reason?: string }>;
           if (!items.length) return null;
           return <SwotQuadrant key={key} title={label} items={items} className={cls} />;
         })}
+      </div>
+    </BlockShell>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// entity_profile — grouped claim rows, each with claim_state + confidence_reason
+// ---------------------------------------------------------------------------
+
+function EntityProfileBlock({ block }: { block: VisualBlock }) {
+  const d = block.data as EntityProfileData;
+  const groups = d?.claim_groups ?? [];
+  const hasClaims = groups.some((g) => (g.claims?.length ?? 0) > 0);
+  if (!hasClaims) return null;
+
+  return (
+    <BlockShell title={block.title}>
+      <div className="space-y-3">
+        {groups.map((group) =>
+          group.claims?.length ? (
+            <div key={group.domain}>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
+                {group.domain}
+              </p>
+              <ul className="space-y-2">
+                {group.claims.map((claim, i) => (
+                  <li
+                    key={i}
+                    className="flex items-start gap-2"
+                    data-testid="entity-profile-claim"
+                  >
+                    <ClaimStateBadge
+                      state={claim.claim_state}
+                      rationale={claim.confidence_reason}
+                      showLabel={false}
+                      className="shrink-0 mt-0.5"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-foreground leading-snug">{claim.text}</p>
+                      {claim.confidence_reason && (
+                        <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug italic">
+                          {claim.confidence_reason}
+                        </p>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null,
+        )}
       </div>
     </BlockShell>
   );
@@ -671,6 +734,7 @@ export function BlockRenderer({
       case "area_line":          return <AreaLineBlock block={block} />;
       case "stakeholder_map":    return <StakeholderMapBlock block={block} />;
       case "evidence_aware_swot": return <EvidenceAwareSwotBlock block={block} />;
+      case "entity_profile":     return <EntityProfileBlock block={block} />;
       default:                   return null;
     }
   })();

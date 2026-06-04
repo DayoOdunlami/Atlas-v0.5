@@ -47,6 +47,7 @@ import {
 import { TrustRail } from "@/components/atlas5/trust-rail";
 import { DecisionSpineCard } from "@/components/atlas5/decision-spine";
 import { BlocksView } from "@/components/atlas5/block-renderer";
+import { EntityProfileSurface } from "@/components/atlas5/recipes/entity-profile-surface";
 import { SurfaceHeadline, InsightCard } from "@/components/atlas5/recipes/surface-primitives";
 import type { VisualBlock } from "@/lib/atlas5/types";
 
@@ -422,6 +423,37 @@ function RecipeView({
 }) {
   const recipe = detectRecipe(artifact);
   if (!recipe) return null; // caller falls back to legacy views
+
+  // Object layer (Connect the Moat, Phase 3): when the agent emits an
+  // entity_profile payload, render the approved EntityProfileSurface primitive
+  // live — never the Five Case / generic surface.
+  if (artifact.entity_profile) {
+    const ep = artifact.entity_profile;
+    return (
+      <div
+        className={cn(
+          showcase ? "space-y-6 p-2" : "space-y-4 rounded-xl border border-border p-1",
+        )}
+        data-testid="recipe-view-entity-profile"
+      >
+        {artifact.headline && (
+          <SurfaceHeadline
+            text={artifact.headline}
+            tier={artifact.confidence_tier}
+            label={ep.subject_type}
+          />
+        )}
+        <EntityProfileSurface
+          subject_type={ep.subject_type}
+          identity={ep.identity}
+          claim_groups={ep.claim_groups}
+          swot={ep.swot}
+          escalations={ep.escalations}
+          compact={showcase}
+        />
+      </div>
+    );
+  }
 
   const displayBlocks = artifact.visual_blocks ?? [];
   const hasVisualBlocks = displayBlocks.length > 0;
