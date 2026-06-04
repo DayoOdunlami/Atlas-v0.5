@@ -79,6 +79,7 @@ from agents.citation_helpers import (
 )
 # Shared base utilities — use these for extraction and intent, never re-implement
 from agents.base import extract_latest_query, is_conversational
+from agents.object_routing import apply_object_recipe_override
 from agents.visual_recipe_director import (
     build_chart_specs as _build_chart_specs,
     build_visual_blocks as _build_visual_blocks,
@@ -654,6 +655,9 @@ def select_recipe_intent(state: AtlasState) -> dict:
     inward = _is_cpc_inward(query)
     intent = _classify_intent_vrd(query)
     primary_recipe, secondary_recipes = _select_recipes_vrd(query)
+    primary_recipe, secondary_recipes, object_route = apply_object_recipe_override(
+        query, primary_recipe, secondary_recipes,
+    )
 
     # Inject data-visualization skill so every content-generation LLM call
     # has art-director guidance in context — loaded once at module level.
@@ -686,6 +690,7 @@ def select_recipe_intent(state: AtlasState) -> dict:
         "cpc_portfolio_comparison": "CPC portfolio comparison",
         "cpc_funding_flow": "CPC funding flow",
         "cpc_defend": "CPC defend",
+        "organisation_profile": "Organisation profile (object layer)",
     }
     build_path = _BUILD_PATHS.get(primary_recipe, f"Mode: {primary_recipe}")
 
@@ -701,23 +706,30 @@ def select_recipe_intent(state: AtlasState) -> dict:
             "session_has_diagnose": bool(state.get("session_has_diagnose")),
         }
 
-    return {
+    trace_thought = (
+        f"Intent: '{intent}'. CPC-inward: {inward}. "
+        f"Primary recipe: '{primary_recipe}'. "
+        + (f"Secondary recipes: {secondary_recipes}. Composite artifact." if is_compound else "Single-recipe artifact.")
+        + f" Build path: {build_path}."
+    )
+    if object_route:
+        trace_thought += f" Object route: {object_route}."
+
+    out: dict[str, Any] = {
         "context_packet": ctx,
         "is_cpc_inward": inward,
         "target_recipe": primary_recipe,
         "target_secondary_recipes": secondary_recipes,
         "reasoning_trace": state.get("reasoning_trace", []) + [{
             "node": "select_recipe_intent",
-            "thought": (
-                f"Intent: '{intent}'. CPC-inward: {inward}. "
-                f"Primary recipe: '{primary_recipe}'. "
-                + (f"Secondary recipes: {secondary_recipes}. Composite artifact." if is_compound else "Single-recipe artifact.")
-                + f" Build path: {build_path}."
-            ),
+            "thought": trace_thought,
             "tool_calls": [],
             "status": "ok",
         }],
     }
+    if object_route:
+        out["object_route"] = object_route
+    return out
 
 
 def select_visual_recipe(state: AtlasState) -> dict:

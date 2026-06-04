@@ -991,6 +991,69 @@ def _vb_sankey(verified: list[dict[str, Any]]) -> dict[str, Any] | None:
     }
 
 
+def _vb_stakeholder_map(verified: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Top organisations / funders from citations → stakeholder_map block."""
+    nodes: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for c in sorted(verified, key=lambda x: x.get("score", 0), reverse=True):
+        org = (c.get("organisation") or c.get("title") or "").strip()
+        if not org or org.lower() in seen:
+            continue
+        seen.add(org.lower())
+        nid = f"n{len(nodes)}"
+        nodes.append({
+            "id": nid,
+            "label": org[:48],
+            "role": (c.get("source_type") or "corpus")[:24],
+            "influence": "high" if len(nodes) < 2 else "medium",
+        })
+        if len(nodes) >= 5:
+            break
+    if len(nodes) < 3:
+        return None
+    edges = []
+    for i in range(len(nodes) - 1):
+        edges.append({
+            "source": nodes[i]["id"],
+            "target": nodes[i + 1]["id"],
+            "relationship": "linked",
+        })
+    return {
+        "type": "stakeholder_map",
+        "title": "Stakeholder network from corpus evidence",
+        "data": {"nodes": nodes, "edges": edges},
+        "source_count": len(verified),
+    }
+
+
+def _vb_evidence_aware_swot(verified: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Lightweight SWOT from citation strength — lab / object-route stub."""
+    if len(verified) < 2:
+        return None
+    top = sorted(verified, key=lambda x: x.get("score", 0), reverse=True)[:3]
+    strengths = [
+        {"text": (c.get("title") or "Corpus source")[:80], "claim_state": c.get("claim_state", "stated")}
+        for c in top[:2]
+    ]
+    weaknesses = [
+        {
+            "text": "Adjacent evidence only — no direct programme precedent",
+            "claim_state": "inferred",
+        },
+    ]
+    return {
+        "type": "evidence_aware_swot",
+        "title": "Evidence-aware strategic position",
+        "data": {
+            "strengths": strengths,
+            "weaknesses": weaknesses,
+            "opportunities": [{"text": "Corpus enrichment could lift tier", "claim_state": "inferred"}],
+            "threats": [{"text": "Thin coverage on niche topics", "claim_state": "unknown"}],
+        },
+        "source_count": len(verified),
+    }
+
+
 def _vb_evidence_bar(verified: list[dict[str, Any]], max_items: int = 8) -> dict[str, Any] | None:
     """Top-scored verified citations → evidence_bar block."""
     items = []
@@ -1161,6 +1224,18 @@ def build_visual_blocks(
             if graph:
                 blocks.append(graph)
         else:
+            bar = _vb_evidence_bar(cites)
+            if bar:
+                blocks.append(bar)
+
+    elif recipe_id == "organisation_profile":
+        sm = _vb_stakeholder_map(cites)
+        if sm:
+            blocks.append(sm)
+        swot = _vb_evidence_aware_swot(cites)
+        if swot:
+            blocks.append(swot)
+        if not blocks:
             bar = _vb_evidence_bar(cites)
             if bar:
                 blocks.append(bar)
