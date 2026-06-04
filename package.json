@@ -15,6 +15,7 @@
     "eval:contract": "node scripts/python-bin.mjs eval/test_artifact_contract_live.py",
     "eval:contract:live": "node scripts/python-bin.mjs eval/test_artifact_contract_live.py --live",
     "eval:sprint5": "node scripts/python-bin.mjs agents/test_citation_guard.py && node scripts/python-bin.mjs agents/test_turn_intent.py && node scripts/python-bin.mjs agents/test_artifact_qa.py && node scripts/python-bin.mjs agents/test_falsification.py && node scripts/python-bin.mjs eval/test_artifact_contract_live.py",
+    "eval:sprint5:gates": "node eval/sprint5/scripts/check-sprint5-gates.mjs",
     "eval:horsemen": "node scripts/python-bin.mjs eval/test_four_horsemen.py",
     "demo:check": "node eval/demo/check-prereqs.mjs",
     "demo:record": "node eval/demo/check-prereqs.mjs && playwright test --config eval/demo/playwright.demo.config.ts",

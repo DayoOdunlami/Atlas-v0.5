@@ -132,3 +132,13 @@ Golden query → Python agent → ArtifactBlock JSON → Three graders:
 - No `SUPABASE_SERVICE_KEY` in any file in `eval/`
 - Fixtures contain **synthetic UUIDs** — not verified against Supabase
 - Real agent citations must pass the citation grader (Tier 3) before being considered valid
+
+---
+
+## Sprint 5 — Object layer orchestrator
+
+Hands-off Cloud Agent presetup (briefs, gate templates, copy-paste orchestrator prompt):
+
+- `eval/sprint5/README.md` — how to run unattended
+- `eval/sprint5/ORCHESTRATOR.md` — rules + **Cloud Agent prompt block**
+- `pnpm eval:sprint5:gates` — validate gate markdown verdicts
