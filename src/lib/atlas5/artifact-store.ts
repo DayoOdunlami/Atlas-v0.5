@@ -47,8 +47,19 @@ import type {
   RecipeType,
   VisualBlock,
 } from "./types";
+import type { EntityProfileData, EvidenceAwareSwotData } from "./block-vocabulary";
 
 export type { VisualBlock };
+
+// EntityProfile payload — emitted by the Python object-route handlers (Phase 3).
+// Renders the approved EntityProfileSurface primitive live from real data.
+export interface EntityProfilePayload {
+  subject_type: "passport" | "organisation" | "swot";
+  identity: { name: string; subtitle?: string; confidence_tier?: ConfidenceTier };
+  claim_groups?: EntityProfileData["claim_groups"];
+  swot?: EvidenceAwareSwotData;
+  escalations?: Array<{ label: string; target: "connect" | "diagnose" | "defend" }>;
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -200,6 +211,12 @@ export interface ArtifactBlock {
   /** @deprecated use chart_specs instead */
   chart_spec?: object;
 
+  // ── Object layer (Connect the Moat, Phase 3) ───────────────────────────
+  // EntityProfile payload — passport / organisation / swot noun surfaces.
+  entity_profile?: EntityProfilePayload;
+  /** Resolved passport UUID for object-routed passport/swot requests. */
+  passport_id?: string;
+
   // ── Provenance ─────────────────────────────────────────────────────────
   agent?: string;
   timestamp?: string;
@@ -340,6 +357,9 @@ export function buildArtifactFromAtlas(
       (data.external_citations as ExternalCitation[] | undefined) ?? [],
     // Diagnose mode (cpc_evidence_gaps)
     entry_friction_tags: data.entry_friction_tags as string[] | undefined,
+    // Object layer (Phase 3) — EntityProfile payload + resolved passport id
+    entity_profile: data.entity_profile as EntityProfilePayload | undefined,
+    passport_id: data.passport_id as string | undefined,
     agent: "ATLAS",
     timestamp: new Date().toISOString(),
   };

@@ -292,6 +292,7 @@ class AtlasState(TypedDict):
     _object_not_found: bool                  # honest not-found marker (no fabricated fallback)
     _passport_id: str | None                 # resolved passport UUID (forwarded to artifact_block)
     _passport_ctx: dict[str, Any] | None     # full resolved passport context (Phase 3 SWOT source)
+    _entity_profile: dict[str, Any] | None   # EntityProfile payload (Phase 3 live wiring)
     section_scores: dict[str, int]           # LLM self-assessed evidence strength per Five Case section
     # Session memory — persisted across turns via LangGraph checkpoint (not reset in extract_query)
     last_recipe: str
@@ -2135,7 +2136,7 @@ _PASSPORT_TIER_LABEL: dict[str, str] = {
 # Routing/filler words stripped to recover the entity label from a noun request.
 _OBJECT_QUERY_NOISE = re.compile(
     r"\b(show|me|the|a|an|for|of|open|please|give|get|view|entity|profile|"
-    r"passport|organisation|organization|as|stakeholder|map|who|are|"
+    r"passport|organisation|organization|as|stakeholder|map|who|are|swot|"
     r"stakeholders?|this|that|supplier|company|firm)\b",
     re.I,
 )
@@ -2160,6 +2161,117 @@ def _passport_confidence_tier(claims: list[dict[str, Any]]) -> str:
     if tiers & {"self_reported", "ai_inferred"}:
         return "Indicative"
     return "Speculative"
+
+
+def _passport_claim_to_entity(c: dict[str, Any]) -> dict[str, Any]:
+    """Map one passport_claim row → an EntityProfile claim with honest state."""
+    if c.get("conflict_flag"):
+        claim_state = "contested"
+    else:
+        claim_state = passport_tier_to_claim_state(c.get("confidence_tier"))
+    reason = c.get("confidence_reason") or _PASSPORT_TIER_LABEL.get(
+        (c.get("confidence_tier") or "").lower(), "Provenance unknown"
+    )
+    if c.get("conditions"):
+        reason = f"{reason} (conditions: {c['conditions']})"
+    return {
+        "text": c.get("text") or "",
+        "claim_state": claim_state,
+        "confidence_reason": reason,
+    }
+
+
+def _passport_claim_groups(passport: dict[str, Any]) -> list[dict[str, Any]]:
+    """Group passport claims by domain for the entity_profile block."""
+    by_domain: dict[str, list[dict[str, Any]]] = {}
+    for c in passport.get("claims") or []:
+        by_domain.setdefault(c.get("domain") or "other", []).append(_passport_claim_to_entity(c))
+    return [{"domain": d, "claims": rows} for d, rows in by_domain.items() if rows]
+
+
+def _passport_identity(passport: dict[str, Any], tier: str) -> dict[str, Any]:
+    bits: list[str] = []
+    if passport.get("owner_org"):
+        bits.append(passport["owner_org"])
+    if passport.get("trl_level") is not None:
+        bits.append(f"TRL {passport['trl_level']}")
+    if passport.get("sector_origin") or passport.get("sector_target"):
+        bits.append(f"{passport.get('sector_origin') or '?'} → {passport.get('sector_target') or '?'}")
+    return {
+        "name": passport.get("title") or passport.get("project_name") or "Entity",
+        "subtitle": " · ".join(bits) or None,
+        "confidence_tier": tier,
+    }
+
+
+def _build_swot_from_sources(
+    passport: dict[str, Any], matches: list[dict[str, Any]]
+) -> dict[str, list[dict[str, Any]]]:
+    """
+    Evidence-aware SWOT: strengths/weaknesses from passport_claims, opportunities/
+    threats from matcher output. Claim states flow from the source rows — never
+    invented. Honest empties when a quadrant has no grounded source.
+    """
+    claims = passport.get("claims") or []
+    strengths: list[dict[str, Any]] = []
+    weaknesses: list[dict[str, Any]] = []
+
+    for c in claims:
+        ent = _passport_claim_to_entity(c)
+        role = (c.get("role") or "").lower()
+        # Weakness = something the entity REQUIRES/is CONSTRAINED by, or whose
+        # evidence is missing/conflicting. A conditional capability stays a
+        # strength (the condition is surfaced in its confidence_reason).
+        is_weak = (
+            role in ("requires", "constrains")
+            or ent["claim_state"] in ("unknown", "contested")
+        )
+        (weaknesses if is_weak else strengths).append(ent)
+
+    opportunities: list[dict[str, Any]] = []
+    threats: list[dict[str, Any]] = []
+    seen_opp: set[str] = set()
+    seen_threat: set[str] = set()
+    # Matches are already ranked by the matcher — each is an opportunity (adjacency,
+    # hence 'inferred', never 'stated'). Dedup by label so near-identical calls collapse.
+    for m in matches:
+        score = m.get("match_score")
+        label = (m.get("match_summary") or (
+            f"Aligns with {m['project_title']}" if m.get("project_title") else "Corpus opportunity"
+        ))[:200]
+        reason_bits = []
+        if score is not None:
+            reason_bits.append(f"Matcher score {score:.2f}")
+        if m.get("gap_value_estimate") is not None:
+            reason_bits.append(f"gap value ≈ £{m['gap_value_estimate']:.0f}")
+        reason = "; ".join(reason_bits) or "Matcher-derived — not a direct claim"
+        key = label.lower()
+        if key not in seen_opp:
+            seen_opp.add(key)
+            opportunities.append({"text": label, "claim_state": "inferred", "confidence_reason": reason})
+        # Gaps from the match → threats (unknown: no evidence yet)
+        gaps = m.get("gaps")
+        gap_items: list[str] = []
+        if isinstance(gaps, list):
+            gap_items = [str(g.get("text") if isinstance(g, dict) else g) for g in gaps][:2]
+        elif isinstance(gaps, dict):
+            gap_items = [str(v) for v in gaps.values()][:2]
+        for g in gap_items:
+            gk = (g or "").strip().lower()
+            if gk and gk not in ("none", "null") and gk not in seen_threat:
+                seen_threat.add(gk)
+                threats.append({
+                    "text": g[:200],
+                    "claim_state": "unknown",
+                    "confidence_reason": "Gap flagged by matcher — no supporting evidence yet",
+                })
+
+    return {
+        "strengths": strengths[:6],
+        "weaknesses": weaknesses[:6],
+        "opportunities": opportunities[:6],
+        "threats": threats[:6],
+    }
 
 
 def _build_passport_response(state: AtlasState, query: str) -> AtlasState:
@@ -2211,6 +2323,19 @@ def _build_passport_response(state: AtlasState, query: str) -> AtlasState:
     state["_passport_id"] = passport.get("passport_id")  # type: ignore[typeddict-unknown-key]
     state["_passport_ctx"] = passport  # type: ignore[typeddict-unknown-key]
     claims = passport.get("claims") or []
+
+    # Phase 3: entity_profile payload — the live EntityProfile surface (passport config).
+    tier = _passport_confidence_tier(claims)
+    state["_entity_profile"] = {  # type: ignore[typeddict-unknown-key]
+        "subject_type": "passport",
+        "identity": _passport_identity(passport, tier),
+        "claim_groups": _passport_claim_groups(passport),
+        "escalations": [
+            {"label": "Find opportunities", "target": "connect"},
+            {"label": "Diagnose gaps", "target": "diagnose"},
+        ],
+    }
+
     identity_bits = [
         f"**{passport.get('title') or passport.get('project_name') or 'Entity'}**",
     ]
@@ -2232,9 +2357,9 @@ def _build_passport_response(state: AtlasState, query: str) -> AtlasState:
     for domain, rows in by_domain.items():
         claim_lines.append(f"**{domain.title()}**")
         for c in rows:
-            tier = (c.get("confidence_tier") or "").lower()
-            state_label = passport_tier_to_claim_state(tier)
-            note = _PASSPORT_TIER_LABEL.get(tier, "Unknown provenance")
+            ctier = (c.get("confidence_tier") or "").lower()
+            state_label = passport_tier_to_claim_state(ctier)
+            note = c.get("confidence_reason") or _PASSPORT_TIER_LABEL.get(ctier, "Unknown provenance")
             claim_lines.append(f"- [{state_label}] {c.get('text', '')} — _{note}_")
 
     sections = {
@@ -2245,7 +2370,7 @@ def _build_passport_response(state: AtlasState, query: str) -> AtlasState:
         sections["Claims"] = "\n".join(claim_lines)
 
     state["sections"] = sections
-    state["confidence_tier"] = _passport_confidence_tier(claims)
+    state["confidence_tier"] = tier
     state["decision_spine"] = {
         "decision": f"Passport resolved for {sections['Entity Passport'].split(' · ')[0].strip('*')}.",
         "recommendation": "Review claims by domain; escalate to Connect (find opportunities) or Diagnose (gaps).",
@@ -2310,6 +2435,31 @@ def _build_organisation_response(state: AtlasState, query: str) -> AtlasState:
             }
             for r in citable
         ]
+        # Phase 3: entity_profile (organisation config) — same skeleton, corpus data.
+        # Each corpus hit is an inferred 'evidence' claim (adjacency, not a direct claim).
+        state["_entity_profile"] = {  # type: ignore[typeddict-unknown-key]
+            "subject_type": "organisation",
+            "identity": {
+                "name": entity,
+                "subtitle": "Corpus-derived organisation profile",
+                "confidence_tier": "Indicative",
+            },
+            "claim_groups": [{
+                "domain": "evidence",
+                "claims": [
+                    {
+                        "text": (r.get("title") or r.get("description") or "")[:200],
+                        "claim_state": "inferred",
+                        "confidence_reason": "Corpus evidence linked to the organisation — adjacency, not a direct claim",
+                    }
+                    for r in citable
+                ],
+            }],
+            "escalations": [
+                {"label": "Find opportunities", "target": "connect"},
+                {"label": "Diagnose gaps", "target": "diagnose"},
+            ],
+        }
 
     state["decision_spine"] = {
         "decision": f"Organisation profile for {entity} built from corpus evidence.",
@@ -2329,10 +2479,104 @@ def _build_organisation_response(state: AtlasState, query: str) -> AtlasState:
     return state
 
 
+def _build_swot_response(state: AtlasState, query: str) -> AtlasState:
+    """
+    Phase 3: evidence-aware SWOT for an entity — strengths/weaknesses from real
+    passport_claims, opportunities/threats from real matches. Honest not-found
+    when no passport resolves (never a Five Case fallback).
+    """
+    entity_label = _extract_entity_label(query)
+    try:
+        from agents.passport_loader import load_passport_for_query, load_matches_for_passport
+        passport = load_passport_for_query(entity_label) or load_passport_for_query(query)
+    except Exception:
+        passport = None
+
+    state["target_recipe"] = "evidence_panel"
+    state["corpus_citations"] = []
+    state["_object_kind"] = "swot"  # type: ignore[typeddict-unknown-key]
+
+    if not passport:
+        state["sections"] = {
+            "SWOT": (
+                f"No passport found for **{entity_label}**, so an evidence-aware SWOT "
+                "cannot be grounded. Upload a passport to derive strengths/weaknesses "
+                "from its claims and opportunities/threats from matches."
+            ),
+        }
+        state["confidence_tier"] = "Speculative"
+        state["decision_spine"] = {
+            "decision": f"No passport on file for {entity_label}.",
+            "recommendation": "Upload a passport to ground the SWOT.",
+            "confidence_tier": "Speculative",
+            "key_assumption": "The entity name was parsed correctly.",
+            "next_action": "Upload a passport, then re-ask for the SWOT.",
+        }
+        state["_object_not_found"] = True  # type: ignore[typeddict-unknown-key]
+        return state
+
+    pid = passport.get("passport_id")
+    try:
+        matches = load_matches_for_passport(pid) if pid else []
+    except Exception:
+        matches = []
+
+    swot = _build_swot_from_sources(passport, matches)
+    claims = passport.get("claims") or []
+    tier = _passport_confidence_tier(claims)
+    name = passport.get("title") or passport.get("project_name") or entity_label
+
+    state["_passport_id"] = pid  # type: ignore[typeddict-unknown-key]
+    state["_passport_ctx"] = passport  # type: ignore[typeddict-unknown-key]
+    state["_entity_profile"] = {  # type: ignore[typeddict-unknown-key]
+        "subject_type": "swot",
+        "identity": {
+            "name": f"{name} — Strategic Position",
+            "subtitle": "Evidence-aware SWOT · strengths from passport, opportunities from matches",
+            "confidence_tier": tier,
+        },
+        "swot": swot,
+        "escalations": [
+            {"label": "Find opportunities", "target": "connect"},
+            {"label": "Defend position", "target": "defend"},
+        ],
+    }
+
+    # Honest sections mirror for non-EntityProfile consumers / eval.
+    def _fmt(items: list[dict[str, Any]]) -> str:
+        return "\n".join(f"- [{i['claim_state']}] {i['text']}" for i in items) or "- (none grounded)"
+
+    state["sections"] = {
+        "Strengths": _fmt(swot["strengths"]),
+        "Weaknesses": _fmt(swot["weaknesses"]),
+        "Opportunities": _fmt(swot["opportunities"]),
+        "Threats": _fmt(swot["threats"]),
+    }
+    state["confidence_tier"] = tier
+    state["decision_spine"] = {
+        "decision": f"Evidence-aware SWOT built for {name}.",
+        "recommendation": "Strengths are passport-grounded; opportunities are matcher-derived (inferred).",
+        "confidence_tier": tier,
+        "key_assumption": "Passport claims and matches are current.",
+        "next_action": "Run Connect to pursue the highest-scoring opportunities.",
+    }
+    state["reasoning_trace"] = state.get("reasoning_trace", []) + [{
+        "node": "build_five_case",
+        "thought": (
+            f"Object route = swot. Built evidence-aware SWOT for passport {pid} "
+            f"from {len(claims)} claim(s) and {len(matches)} match(es) (no Five Case fallback)."
+        ),
+        "status": "ok",
+    }]
+    return state
+
+
 def _build_object_route_response(state: AtlasState, object_route: dict[str, Any]) -> AtlasState:
-    """Dispatch object-routed requests to a real entity handler (Fix 3)."""
+    """Dispatch object-routed requests to a real entity handler (Fix 3 / Phase 3)."""
     kind = (object_route.get("object_kind") or "").lower()
     query = state.get("query", "")
+    if kind == "swot":
+        return _build_swot_response(state, query)
     if kind == "passport":
         return _build_passport_response(state, query)
     # organisation / stakeholder_map
@@ -3258,6 +3502,10 @@ def verify_citations(state: AtlasState) -> AtlasState:
             artifact_block["cpc_position"] = cpc_pos
     if state.get("_passport_id"):  # type: ignore[attr-defined]
         artifact_block["passport_id"] = state.get("_passport_id")  # type: ignore[attr-defined]
+    # Phase 3: attach the EntityProfile payload so the approved primitive renders
+    # live from real data (passport/organisation/swot) through the existing pane.
+    if state.get("_entity_profile"):  # type: ignore[attr-defined]
+        artifact_block["entity_profile"] = state.get("_entity_profile")  # type: ignore[attr-defined]
     if state.get("evidence_gaps"):
         artifact_block["evidence_gaps"] = state.get("evidence_gaps", [])
     # Forward CPC-inward intelligence fields when present

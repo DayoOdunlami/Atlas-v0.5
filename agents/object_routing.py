@@ -26,10 +26,12 @@ _STAKEHOLDER_MAP = re.compile(
     r"map\s+(?:the\s+)?stakeholders|stakeholders?\s+for\s+this\s+programme",
     re.I,
 )
-_PASSPORT = re.compile(
-    r"passport\s+for|open\s+passport|entity\s+passport|show\s+(?:me\s+)?(?:the\s+)?passport",
-    re.I,
-)
+# Any passport mention is a noun-surface request (router is flag-gated and the
+# analyse-control guard below already excludes strategic-brief phrasing).
+_PASSPORT = re.compile(r"\bpassport\b", re.I)
+
+# Evidence-aware SWOT for an entity — routes to the EntityProfile swot config.
+_SWOT = re.compile(r"\bswot\b", re.I)
 
 # Horsemen / strategic analyse controls — must not object-route
 _ANALYZE_CONTROL = re.compile(
@@ -48,6 +50,9 @@ def resolve_object_route(query: str) -> dict[str, str] | None:
     q = (query or "").strip()
     if not q or _ANALYZE_CONTROL.search(q):
         return None
+    # SWOT for a named entity — checked before passport so "SWOT for X" wins.
+    if _SWOT.search(q):
+        return {"recipe": "evidence_panel", "object_kind": "swot", "visual_block_type": "entity_profile"}
     if _ORG_PROFILE.search(q):
         return {"recipe": "organisation_profile", "object_kind": "organisation"}
     if _STAKEHOLDER_MAP.search(q):
@@ -57,7 +62,7 @@ def resolve_object_route(query: str) -> dict[str, str] | None:
             "visual_block_type": "stakeholder_map",
         }
     if _PASSPORT.search(q):
-        return {"recipe": "evidence_panel", "object_kind": "passport"}
+        return {"recipe": "evidence_panel", "object_kind": "passport", "visual_block_type": "entity_profile"}
     return None
 
 

@@ -209,5 +209,6 @@ export async function GET(request: NextRequest) {
     // Include the decision spine fixture for reference (not wired to store here)
     decision_spine_available: !!FIXTURE_DECISION_SPINE,
     fixture,
+    artifact: fixture, // alias for test page backward compatibility
   });
 }
