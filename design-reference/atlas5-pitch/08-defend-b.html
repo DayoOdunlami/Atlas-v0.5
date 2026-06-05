@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Defend — Direction B | Atlas v5 pitch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="pitch-page">
+  <header class="pitch-topbar" style="justify-content:space-between">
+    <span class="pitch-topbar__brand">ATLAS v5</span>
+    <span>CONFIDENCE TIER</span>
+    <span class="confidence-pill confidence-pill--indicative" style="margin:0">Indicative</span>
+    <a href="index.html" class="nav-back" style="color:#cbd5e1">← Index</a>
+    <button type="button" class="theme-toggle" id="theme-toggle">Dark mode</button>
+  </header>
+
+  <main class="pitch-body">
+    <header class="pitch-header">
+      <div>
+        <h1 class="pitch-header__title">Defend Package — Direction B</h1>
+        <p class="pitch-header__subtitle">A hearing dossier that triages evidence into defendable, challengeable, and undefensible lines.</p>
+      </div>
+    </header>
+
+    <div class="recommendation-panel">
+      <strong>🛡 RECOMMENDATION</strong>
+      <p style="margin:0.35rem 0 0">Enter as <strong>supporting test infrastructure partner</strong>; defer lead-bid ambition until commercial-path evidence exists.</p>
+      <p style="margin:0.25rem 0 0;font-size:0.78rem;color:var(--text-muted)"><strong>Basis:</strong> Strong technical foundation; commercial pathway unproven.</p>
+    </div>
+
+    <div class="defend-b-layout">
+      <aside class="card dossier-sidebar">
+        <div class="card__head">Dossier overview</div>
+        <div class="card__body">
+          <dl><dt>Package</dt><dd>UK CAV Test Infrastructure</dd></dl>
+          <dl><dt>Owner</dt><dd>Atlas Program Team</dd></dl>
+          <dl><dt>Prepared</dt><dd>19 May 2025</dd></dl>
+          <dl><dt>For</dt><dd>DfT Review Panel</dd></dl>
+          <dl><dt>Purpose</dt><dd>Evidence triage for hearing</dd></dl>
+          <hr style="border:none;border-top:1px solid var(--border)" />
+          <strong style="font-size:0.72rem;text-transform:uppercase">Evidence state legend</strong>
+          <p style="font-size:0.72rem;margin:0.35rem 0"><span class="badge badge--ev-verified">Verified</span> — Independently verified with proof.</p>
+          <p style="font-size:0.72rem;margin:0.35rem 0"><span class="badge badge--ev-credible">Credible</span> — Corroborated; reasonable assurance.</p>
+          <p style="font-size:0.72rem;margin:0.35rem 0"><span class="badge badge--ev-partial">Partial</span> — Some evidence; material gaps.</p>
+          <p style="font-size:0.72rem;margin:0.35rem 0"><span class="badge badge--ev-unsub">Unsubstantiated</span> — Claimed but not supported.</p>
+          <p style="font-size:0.72rem;margin:0.35rem 0"><span class="badge badge--unknown">Unknown</span> — No evidence found.</p>
+          <div class="surface-confidence-box" style="margin-top:1rem;padding:0.75rem;border:1px solid var(--border);border-radius:var(--radius)">
+            <strong style="color:var(--tier-ind)">INDICATIVE</strong>
+            <p style="margin:0.25rem 0 0;font-size:0.72rem">Evidence is mixed with material gaps that affect overall confidence.</p>
+          </div>
+        </div>
+      </aside>
+
+      <div>
+        <div class="triage-grid">
+          <article class="triage-card">
+            <div class="triage-card__head triage-card__head--defend">✓ Defendable</div>
+            <div class="triage-card__body">
+              <p style="margin:0 0 0.5rem;font-size:0.68rem;text-transform:uppercase;color:var(--text-muted)">Strong evidence · DfT hearing standard</p>
+              <strong>Verified test infrastructure</strong>
+              <p style="margin:0.35rem 0"><em>Claim:</em> We operate secure, instrumented test infrastructure for CAV development.</p>
+              <span class="badge badge--verified">Verified</span>
+              <p style="margin:0.5rem 0 0"><strong>Key evidence</strong></p>
+              <ul style="margin:0;padding-left:1rem;font-size:0.72rem">
+                <li>Independent audit (SGS) — Feb 2025</li>
+                <li>Site accreditation certificate</li>
+                <li>8 verified testbed project records</li>
+              </ul>
+              <p style="margin:0.5rem 0 0;font-size:0.72rem"><strong>Why defendable:</strong> Independently verified controls; complete and current.</p>
+            </div>
+          </article>
+          <article class="triage-card">
+            <div class="triage-card__head triage-card__head--challenge">− Challenged</div>
+            <div class="triage-card__body">
+              <p style="margin:0 0 0.5rem;font-size:0.68rem;text-transform:uppercase;color:var(--text-muted)">Gaps require challenge &amp; response</p>
+              <strong>Self-reported urban running</strong>
+              <p style="margin:0.35rem 0"><em>Claim:</em> Extensive urban running in mixed traffic (~1,400km incident-free).</p>
+              <span class="badge badge--self-reported">Self-reported</span> <span class="badge badge--ev-partial">Partial</span>
+              <p style="margin:0.5rem 0 0;font-size:0.72rem"><strong>Prepared response:</strong> Summarise scope, geofence, and incident definitions; position as test-partner evidence.</p>
+              <p style="margin:0.35rem 0 0"><strong>Evidence needed:</strong> Route list, dates, conditions, independent corroboration.</p>
+            </div>
+          </article>
+          <article class="triage-card">
+            <div class="triage-card__head triage-card__head--not">✕ Not yet defensible</div>
+            <div class="triage-card__body">
+              <p style="margin:0 0 0.5rem;font-size:0.68rem;text-transform:uppercase;color:var(--text-muted)">Cannot be defended at this time</p>
+              <strong>Commercial-deployment pathway</strong>
+              <p style="margin:0.35rem 0"><em>Claim:</em> Clear pathway to commercial deployment at scale.</p>
+              <span class="badge badge--unknown">Unknown</span>
+              <p style="margin:0.5rem 0 0"><strong>Evidence found:</strong> No evidence found.</p>
+              <p style="margin:0.35rem 0 0"><strong>What's missing:</strong></p>
+              <ul style="margin:0;padding-left:1rem;font-size:0.72rem">
+                <li>Customer / operator commitments</li>
+                <li>Business model and GTM plan</li>
+              </ul>
+            </div>
+          </article>
+        </div>
+
+        <h3 style="font-size:0.85rem;margin:0 0 0.5rem">Objection–response matrix</h3>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Reviewer objection</th>
+                <th>Why it matters</th>
+                <th>Our response</th>
+                <th class="col-narrow">Priority</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>How do we know your infrastructure data is secure and reliable?</td>
+                <td style="font-size:0.75rem">Data integrity underpins all safety claims in the call.</td>
+                <td style="font-size:0.75rem">Independent audit (SGS) confirms controls; accreditation on file.</td>
+                <td><span class="priority-dot priority-dot--high"></span>High</td>
+              </tr>
+              <tr>
+                <td>Urban trial evidence does not prove open-road capability.</td>
+                <td style="font-size:0.75rem">Call expects public-road demonstration evidence.</td>
+                <td style="font-size:0.75rem">Acknowledge ODD limits; offer partner role and planned open-road work with lead bidder.</td>
+                <td><span class="priority-dot priority-dot--high"></span>High</td>
+              </tr>
+              <tr>
+                <td>What is your route to commercial deployment?</td>
+                <td style="font-size:0.75rem">£30m call requires credible route to market.</td>
+                <td style="font-size:0.75rem">Do not overclaim — flag gap; focus on facility value to consortium.</td>
+                <td><span class="priority-dot priority-dot--high"></span>High</td>
+              </tr>
+              <tr>
+                <td>Why should CPC lead rather than partner?</td>
+                <td style="font-size:0.75rem">Panel assesses consortium leadership credibility.</td>
+                <td style="font-size:0.75rem">Recommend test-partner positioning; cite 8 verified projects as facility proof.</td>
+                <td><span class="priority-dot priority-dot--med"></span>Medium</td>
+              </tr>
+              <tr>
+                <td>Is self-reported running independently verified?</td>
+                <td style="font-size:0.75rem">Self-reported vs verified distinction affects confidence tier.</td>
+                <td style="font-size:0.75rem">Clearly label self-reported; commit to verification timeline.</td>
+                <td><span class="priority-dot priority-dot--med"></span>Medium</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="grid-2" style="margin-top:1rem">
+          <div class="card card__body">
+            <strong>Key takeaways</strong>
+            <ul style="margin:0.5rem 0 0;padding-left:1.1rem;font-size:0.78rem">
+              <li>✓ Defend facility and verified testbed execution</li>
+              <li>− Challenge and reframe urban running claim</li>
+              <li>✕ Do not defend commercial pathway today</li>
+            </ul>
+          </div>
+          <div class="card card__body">
+            <strong>Next actions</strong>
+            <ul style="margin:0.5rem 0 0;padding-left:1.1rem;font-size:0.78rem;list-style:none">
+              <li>📅 30 May 2025 — Complete objection brief for panel</li>
+              <li>📅 w/c 2 June 2025 — Partner discussions with lead bidder</li>
+              <li>📅 June 2025 — Open-road evidence plan</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="pitch-note">ATLAS v5 | DEFEND PACKAGE — DIRECTION B | Hearing dossier</p>
+  </main>
+
+  <footer class="pitch-footer-guard">
+    <strong>Pitch reference only</strong> — not production styling. Final build is flat token-based React.
+  </footer>
+  <script src="theme.js"></script>
+</body>
+</html>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Value Translation — Direction A | Atlas v5 pitch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="pitch-page">
+  <header class="pitch-topbar">
+    <span class="pitch-topbar__brand">ATLAS v5</span>
+    <a href="index.html" class="nav-back" style="color:#cbd5e1">← All directions</a>
+    <button type="button" class="theme-toggle" id="theme-toggle">Dark mode</button>
+  </header>
+
+  <main class="pitch-body">
+    <header class="pitch-header">
+      <div>
+        <h1 class="pitch-header__title">Value Translation — Direction A</h1>
+        <p class="pitch-header__subtitle">Three transfer lanes that show what evidence travels, what must be reframed, and what does not credibly transfer.</p>
+      </div>
+      <span class="confidence-pill confidence-pill--indicative">● Overall confidence: Indicative</span>
+    </header>
+
+    <div class="lanes-layout">
+      <div class="context-card">
+        <div class="context-card__badge">Source context</div>
+        <div class="context-card__img">Urban testbed scene</div>
+        <div class="context-card__body">
+          <strong>Controlled urban CAV testbed</strong>
+          <p style="margin:0.25rem 0;font-size:0.72rem">📍 UK urban · Mixed traffic</p>
+          <ul style="margin:0.5rem 0 0;padding-left:1rem;font-size:0.72rem">
+            <li>Structured urban environment</li>
+            <li>Geofenced &amp; instrumented</li>
+            <li>Regulatory sandbox oversight</li>
+          </ul>
+        </div>
+      </div>
+
+      <div>
+        <div class="lane lane--travels">
+          <div class="lane__head">✓ Travels as-is — Evidence is portable with minimal change.</div>
+          <div class="lane-claim">
+            <span class="badge badge--verified">Verified</span>
+            <strong>Test infrastructure across 8 verified projects</strong>
+            <div class="evidence-dots"><span class="on-r">R</span><span class="on-v">V</span><span>Q</span><span>C</span><span>U</span></div>
+            <p style="margin:0.25rem 0 0;font-size:0.72rem">Multiple deployments on instrumented urban testbeds with project records.</p>
+          </div>
+        </div>
+        <div class="lane lane--reframe">
+          <div class="lane__head">↻ Needs reframing — Evidence has value but requires translation.</div>
+          <div class="lane-claim">
+            <span class="badge badge--self-reported">Self-reported</span>
+            <strong>~1,400km incident-free urban running</strong>
+            <div class="evidence-dots"><span class="on-r">R</span><span class="on-v">V</span><span class="on-q">Q</span><span>C</span><span>U</span></div>
+            <p style="margin:0.25rem 0 0;font-size:0.72rem">Urban, geofenced, ODD-limited. Incident definitions not directly comparable to open-road.</p>
+          </div>
+        </div>
+        <div class="lane lane--not">
+          <div class="lane__head">✕ Not credible here — Does not credibly transfer in this context.</div>
+          <div class="lane-claim">
+            <span class="badge badge--unknown">Unknown</span>
+            <strong>Commercial deployment pathway</strong>
+            <div class="evidence-dots"><span>R</span><span>V</span><span>Q</span><span>C</span><span class="on-u">U</span></div>
+            <p style="margin:0.25rem 0 0;font-size:0.72rem">No open-road market or regulatory evidence — explicit gap.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="context-card">
+        <div class="context-card__badge">Target context</div>
+        <div class="context-card__img context-card__img--rural">Open-road / rural scene</div>
+        <div class="context-card__body">
+          <strong>Open-road / rural self-driving development</strong>
+          <p style="margin:0.25rem 0;font-size:0.72rem">📍 UK rural &amp; open road · Broader ODD</p>
+          <ul style="margin:0.5rem 0 0;padding-left:1rem;font-size:0.72rem">
+            <li>Unstructured &amp; long-range</li>
+            <li>Higher speed &amp; variable weather</li>
+            <li>Public road regulatory regime</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <p style="font-size:0.72rem;color:var(--text-muted);margin:0.75rem 0">Legend: R=Reported · V=Verified · Q=Qualified · C=Corroborated · U=Unknown · Solid line = direct transfer · Dashed = no credible transfer</p>
+
+    <h3 style="font-size:0.85rem;margin:1rem 0 0.5rem">Rationale table</h3>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Claim (example)</th>
+            <th>Source of claim</th>
+            <th>Lands in lane</th>
+            <th>Why this lane?</th>
+            <th>What would change the conclusion?</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Test infrastructure across 8 verified projects</td>
+            <td>Project documentation (verified)</td>
+            <td><span class="badge badge--lane-travels">Travels as-is</span></td>
+            <td>Infrastructure capability is largely context-agnostic.</td>
+            <td>Material facility gaps in target geography.</td>
+          </tr>
+          <tr>
+            <td>~1,400km incident-free urban running</td>
+            <td>Operational reports (self-reported)</td>
+            <td><span class="badge badge--lane-reframe">Needs reframing</span></td>
+            <td>ODD, hazard mix, and exposure differ from open-road/rural.</td>
+            <td>Independent open-road trial data with comparable metrics.</td>
+          </tr>
+          <tr>
+            <td>Commercial deployment pathway</td>
+            <td>Strategy decks (no corpus evidence)</td>
+            <td><span class="badge badge--lane-not">Not credible here</span></td>
+            <td>No evidence for market, regulatory, or commercial scale in target context.</td>
+            <td>Executed contracts, GTM plan, regulatory approvals on file.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="font-size:0.8rem;text-transform:uppercase;margin:1rem 0 0.5rem">Next moves</h3>
+    <div class="next-moves">
+      <div class="next-moves__card">🔍 <strong>Gather open-road evidence</strong><br />Commission or partner for rural ODD trials.</div>
+      <div class="next-moves__card">🤝 <strong>Partner with lead bidder</strong><br />Support role on Innovate UK facility call.</div>
+      <div class="next-moves__card">📋 <strong>Build defend pack</strong><br />Triage defendable vs challenged lines.</div>
+    </div>
+    <p class="pitch-note">Pitch-only: photo chips and lane connectors; core layout is flat-buildable.</p>
+  </main>
+
+  <footer class="pitch-footer-guard">
+    <strong>Pitch reference only</strong> — not production styling. Final build is flat token-based React.
+  </footer>
+  <script src="theme.js"></script>
+</body>
+</html>

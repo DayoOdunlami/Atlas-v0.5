@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Claim Atom — Direction A | Atlas v5 pitch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="pitch-page">
+  <header class="pitch-topbar">
+    <span class="pitch-topbar__brand">ATLAS v5</span>
+    <a href="index.html" class="nav-back" style="color:#cbd5e1">← All directions</a>
+    <button type="button" class="theme-toggle" id="theme-toggle">Dark mode</button>
+  </header>
+
+  <main class="pitch-body">
+    <header class="pitch-header">
+      <div>
+        <p style="margin:0;font-size:0.8rem;color:var(--text-muted)">Enterprise Decision Platform</p>
+        <h1 class="pitch-header__title">Claim Atom — Direction A</h1>
+        <p class="pitch-header__subtitle">Ledger card that makes trust legible before detail.</p>
+      </div>
+      <div class="pitch-header__actions tier-rail-wrap">
+        <div class="tier-rail-wrap__label">Confidence tier (surface-wide)</div>
+        <div class="tier-rail" role="list">
+          <span class="tier-rail__item"><span class="tier-rail__dot"></span>Speculative</span>
+          <span class="tier-rail__item"><span class="tier-rail__dot"></span>Indicative</span>
+          <span class="tier-rail__item is-active"><span class="tier-rail__dot"></span>Supported</span>
+          <span class="tier-rail__item"><span class="tier-rail__dot"></span>Robust</span>
+        </div>
+        <p class="tier-rail__active-label">This surface is currently: <strong>Supported</strong></p>
+      </div>
+    </header>
+
+    <div class="grid-2-1">
+      <section class="card card--depth hero-claim">
+        <div class="hero-claim__top">
+          <span class="hero-claim__num">1</span>
+          <p class="hero-claim__assertion">CPC has proven CAV test infrastructure across 8 projects.</p>
+          <span class="badge badge--verified"><span class="badge__icon">✓</span> Verified</span>
+        </div>
+        <div class="hero-claim__grid">
+          <div>
+            <div class="hero-claim__cell-label">Evidence state</div>
+            <strong>Verified</strong>
+            <p style="margin:0.25rem 0 0;font-size:0.78rem;color:var(--text-muted)">Direct, independently verified evidence.</p>
+          </div>
+          <div>
+            <div class="hero-claim__cell-label">Source</div>
+            <p style="margin:0;font-size:0.8rem">Project records and testbed documentation.</p>
+            <a href="#">View sources (6) ↗</a>
+          </div>
+          <div>
+            <div class="hero-claim__cell-label">Rationale</div>
+            <p style="margin:0;font-size:0.8rem">Multiple independently checked projects demonstrate repeatable facility capability.</p>
+          </div>
+          <div>
+            <div class="hero-claim__cell-label">Provenance</div>
+            <p style="margin:0;font-size:0.78rem">14 May 2025 · Analyst Team · Transport Innovation</p>
+            <a href="#">View lineage ↗</a>
+          </div>
+        </div>
+        <div class="hero-claim__meta">
+          <span>ID: CLM-0001 | Created: 14 May 2025 | Updated: 15 May 2025 | Owner: Transport Innovation Team</span>
+          <span>☆ · ⋮</span>
+        </div>
+      </section>
+
+      <aside>
+        <h3 style="margin:0 0 0.5rem;font-size:0.85rem">Adjacent claims (mini list)</h3>
+        <div class="mini-claim">
+          <span class="mini-claim__num">2</span>
+          <div>
+            <div class="mini-claim__text">~1,400km incident-free urban trial running. <span class="badge badge--self-reported"><span class="badge__icon">👤</span> Self-reported</span></div>
+            <div class="mini-claim__sub">Source: CPC Trial Summary · Rationale: Applicant-vouched operational record.</div>
+          </div>
+        </div>
+        <div class="mini-claim">
+          <span class="mini-claim__num">3</span>
+          <div>
+            <div class="mini-claim__text">Commercial-deployment pathway is in place. <span class="badge badge--inferred"><span class="badge__icon">✦</span> Inferred</span></div>
+            <div class="mini-claim__sub">Source: Strategy synthesis · Rationale: Atlas derived from partial signals — not verified.</div>
+          </div>
+        </div>
+        <div class="mini-claim">
+          <span class="mini-claim__num">4</span>
+          <div>
+            <div class="mini-claim__text">CPC trials reduced urban incidents by 25%. <span class="badge badge--unknown"><span class="badge__icon">?</span> Unknown</span></div>
+            <div class="info-callout">No evidence found for this assertion in the current corpus.</div>
+          </div>
+        </div>
+        <div class="mini-claim">
+          <span class="mini-claim__num">5</span>
+          <div>
+            <div class="mini-claim__text">All CAV trials are fully regulatory compliant. <span class="badge badge--contested"><span class="badge__icon">⚖</span> Contested</span></div>
+            <div class="mini-claim__sub">Source: Mixed assessor notes · Rationale: Sources disagree on scope of compliance.</div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <h3 style="font-size:0.85rem;margin:1.25rem 0 0.5rem">Evidence-state legend (five states)</h3>
+    <div class="legend-strip">
+      <div class="legend-item"><span class="badge badge--verified">✓ Verified</span><br />Independently checked.</div>
+      <div class="legend-item"><span class="badge badge--self-reported">👤 Self-reported</span><br />Applicant vouches; unverified.</div>
+      <div class="legend-item"><span class="badge badge--inferred">✦ Inferred</span><br />Atlas derived — distinct from self-reported.</div>
+      <div class="legend-item"><span class="badge badge--unknown">? Unknown</span><br />No evidence — show the gap.</div>
+      <div class="legend-item"><span class="badge badge--contested">⚖ Contested</span><br />Sources disagree.</div>
+    </div>
+
+    <h3 style="font-size:0.85rem;margin:1rem 0 0.5rem">How to read a claim atom</h3>
+    <div class="how-to-read">
+      <div class="how-to-read__item"><div class="how-to-read__icon">📋</div><strong>Assertion</strong><br />What is claimed</div>
+      <div class="how-to-read__item"><div class="how-to-read__icon">🛡</div><strong>Evidence state</strong><br />Trust level</div>
+      <div class="how-to-read__item"><div class="how-to-read__icon">📄</div><strong>Source</strong><br />Provenance</div>
+      <div class="how-to-read__item"><div class="how-to-read__icon">💬</div><strong>Rationale</strong><br />Why it matters</div>
+    </div>
+    <p class="pitch-note">Pitch-only: micro-depth on hero card; core layout is flat-buildable.</p>
+  </main>
+
+  <footer class="pitch-footer-guard">
+    <strong>Pitch reference only</strong> — not production styling. Final build is flat token-based React.
+  </footer>
+  <script src="theme.js"></script>
+</body>
+</html>
