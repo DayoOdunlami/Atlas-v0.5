@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Match — Direction A | Atlas v5 pitch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="pitch-page">
+  <header class="pitch-topbar">
+    <span class="pitch-topbar__brand">ATLAS v5</span>
+    <a href="index.html" class="nav-back" style="color:#cbd5e1">← All directions</a>
+    <span class="pill pill--direction" style="background:rgba(255,255,255,0.15);color:#fff">Direction A</span>
+    <button type="button" class="theme-toggle" id="theme-toggle">Dark mode</button>
+  </header>
+
+  <main class="pitch-body">
+    <header class="pitch-header">
+      <div>
+        <h1 class="pitch-header__title">Passport × Requirement Spec — Direction A</h1>
+        <p class="pitch-header__subtitle">A dual-pane matchbench that maps supply claims to demand requirements claim-by-claim.</p>
+      </div>
+    </header>
+
+    <div class="matchbench">
+      <section class="match-pane">
+        <h3>🚗 Passport (supply)</h3>
+        <p style="font-weight:700;margin:0 0 0.75rem">CPC — Connected &amp; Autonomous Vehicle Capability</p>
+        <div class="match-claim-card">
+          <div class="match-claim-card__title">Proven test infrastructure</div>
+          <div class="match-claim-card__sub">8 verified CAV testbed projects</div>
+          <span class="badge badge--verified">Verified</span>
+        </div>
+        <div class="match-claim-card">
+          <div class="match-claim-card__title">Open-road demonstration capability</div>
+          <div class="match-claim-card__sub">~1,400km incident-free urban trial evidence</div>
+          <span class="badge badge--self-reported">Self-reported</span>
+        </div>
+        <div class="match-claim-card">
+          <div class="match-claim-card__title">Commercial-deployment pathway</div>
+          <div class="match-claim-card__sub">No commercial deployment evidence on file</div>
+          <span class="badge badge--unknown">Unknown</span>
+        </div>
+      </section>
+
+      <div class="match-fit-col">
+        <span class="badge badge--fit-strong">✓ Strong fit</span>
+        <span class="match-fit-line"></span>
+        <span class="badge badge--fit-partial">◐ Partial fit</span>
+        <span class="match-fit-line"></span>
+        <span class="badge badge--fit-gap">✕ Gap</span>
+      </div>
+
+      <section class="match-pane">
+        <h3>📋 Requirement Spec (demand)</h3>
+        <p style="font-weight:700;margin:0 0 0.75rem">Innovate UK — Testing connected and autonomous vehicles<br /><span style="font-weight:400;color:var(--text-muted)">Up to £30m</span></p>
+        <div class="match-claim-card">
+          <div class="match-claim-card__title">Proven test infrastructure</div>
+          <div class="match-claim-card__sub">Demonstrated, safe and secure test infrastructure.</div>
+        </div>
+        <div class="match-claim-card">
+          <div class="match-claim-card__title">Open-road demonstration capability</div>
+          <div class="match-claim-card__sub">Evidence of capability to demonstrate CAVs on public roads.</div>
+        </div>
+        <div class="match-claim-card">
+          <div class="match-claim-card__title">Commercial-deployment pathway</div>
+          <div class="match-claim-card__sub">Clear route to commercial deployment and route to market.</div>
+        </div>
+      </section>
+
+      <aside class="card">
+        <div class="card__body">
+          <div class="tier-rail-wrap tier-rail--vertical">
+            <div class="tier-rail-wrap__label">Overall confidence</div>
+            <div class="tier-rail">
+              <span class="tier-rail__item">Speculative</span>
+              <span class="tier-rail__item is-active">Indicative</span>
+              <span class="tier-rail__item">Supported</span>
+              <span class="tier-rail__item">Robust</span>
+            </div>
+            <p class="tier-rail__active-label">Surface confidence: <strong style="color:var(--tier-ind)">Indicative</strong></p>
+          </div>
+          <h3 style="font-size:0.82rem;margin:1rem 0 0.5rem">Key risks (separate)</h3>
+          <div class="risk-card">
+            <div class="risk-card__label">Evidence risk <span class="risk-level-tag risk-level-tag--med">Medium</span></div>
+            <p style="margin:0;font-size:0.72rem;color:var(--text-muted)">Material self-reported and missing evidence.</p>
+          </div>
+          <div class="risk-card">
+            <div class="risk-card__label">Fit risk <span class="risk-level-tag risk-level-tag--low">Low</span></div>
+            <p style="margin:0;font-size:0.72rem;color:var(--text-muted)">Core capability aligns with key requirements.</p>
+          </div>
+          <div class="risk-card">
+            <div class="risk-card__label">Entry risk <span class="risk-level-tag risk-level-tag--high">High</span></div>
+            <p style="margin:0;font-size:0.72rem;color:var(--text-muted)">Competitive field; limited lead-bid experience.</p>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="match-legend">
+      <span>● Strong fit</span><span>◐ Partial fit</span><span>✕ Gap</span><span>○ No match</span>
+    </div>
+
+    <div class="banner banner--navy">
+      <span class="banner__icon">🎯</span>
+      <div>
+        <strong>Recommended move: Reposition as a test-partner, don't lead-bid.</strong>
+        <span style="font-size:0.85rem;opacity:0.9">Strong on test infrastructure; partial on open-road evidence; gap on commercial-deployment pathway.</span>
+      </div>
+    </div>
+
+    <h3 style="font-size:0.85rem;margin:0 0 0.5rem">Claims &amp; evidence detail</h3>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="col-narrow">#</th>
+            <th>Assertion (Passport claim)</th>
+            <th>State</th>
+            <th>Source</th>
+            <th>Rationale</th>
+            <th>Supports</th>
+            <th>Fit result</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>8 verified CAV testbed projects</td>
+            <td><span class="badge badge--verified">Verified</span></td>
+            <td>CPC Project Register</td>
+            <td>Repeatable facility capability across diverse geographies.</td>
+            <td>8 project reports; testbed documentation</td>
+            <td><span class="badge badge--fit-strong">Strong fit</span></td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>~1,400km incident-free urban trial running</td>
+            <td><span class="badge badge--self-reported">Self-reported</span></td>
+            <td>CPC Trial Summary</td>
+            <td>Urban, geofenced evidence — not directly comparable to open-road ODD.</td>
+            <td>Operator submission; urban trial summary</td>
+            <td><span class="badge badge--fit-partial">Partial fit</span></td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>Commercial-deployment pathway</td>
+            <td><span class="badge badge--unknown">Unknown</span></td>
+            <td>Atlas Evidence Scan</td>
+            <td>No GTM, customer, or commercial model evidence in corpus.</td>
+            <td>No evidence found</td>
+            <td><span class="badge badge--fit-gap">Gap</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="pitch-note">Pitch-only: micro-depth and thin dividers; core layout is flat-buildable.</p>
+  </main>
+
+  <footer class="pitch-footer-guard">
+    <strong>Pitch reference only</strong> — not production styling. Final build is flat token-based React.
+  </footer>
+  <script src="theme.js"></script>
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Value Translation — Direction B | Atlas v5 pitch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="pitch-page">
+  <header class="pitch-topbar" style="justify-content:space-between">
+    <span class="pitch-topbar__brand">ATLAS v5</span>
+    <span style="font-weight:700">Value Translation — Direction B</span>
+    <span>v5.0</span>
+    <a href="index.html" class="nav-back" style="color:#cbd5e1">← Index</a>
+    <button type="button" class="theme-toggle" id="theme-toggle">Dark mode</button>
+  </header>
+
+  <main class="pitch-body">
+    <p style="margin:0 0 1rem;padding:0.5rem 0.75rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);font-size:0.82rem;color:var(--text-muted)">
+      <strong>Rationale:</strong> A transfer matrix that treats cross-context credibility as a structured decision, not a story.
+    </p>
+
+    <div class="matrix-header">
+      <div class="context-chip">
+        <strong>🏢 Source — Urban CAV Testbed (Passport)</strong>
+        Controlled urban test environment with managed infrastructure and facilities.
+      </div>
+      <span class="matrix-arrow">→</span>
+      <div class="context-chip">
+        <strong>📋 Target — Innovate UK Self-Driving Vehicle Facilities Call</strong>
+        Open-road capability and clear commercial pathway expectations.
+      </div>
+    </div>
+
+    <div class="grid-main-side">
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Passport claims (source)</th>
+              <th>Travels as-is</th>
+              <th>Needs reframing</th>
+              <th>Not credible here</th>
+              <th>Evidence needed</th>
+              <th>Key evidence from passport</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Verified test infrastructure across 8 CAV testbed projects</strong></td>
+              <td><span class="matrix-cell-mark matrix-cell-mark--yes">✓</span></td>
+              <td></td><td></td><td></td>
+              <td style="font-size:0.75rem">Facility inventory · Instrumented corridors · Verification reports</td>
+            </tr>
+            <tr>
+              <td><strong>Self-reported ~1,400km incident-free urban trial running</strong></td>
+              <td></td>
+              <td><span class="matrix-cell-mark matrix-cell-mark--reframe">↻</span></td>
+              <td></td><td></td>
+              <td style="font-size:0.75rem">Trial summaries · Safety case (urban) · No open-road data</td>
+            </tr>
+            <tr>
+              <td><strong>Open-road demonstration capability (partial)</strong></td>
+              <td></td>
+              <td><span class="matrix-cell-mark matrix-cell-mark--reframe">↻</span></td>
+              <td></td><td></td>
+              <td style="font-size:0.75rem">Limited pilots · Geofence constraints · Partial scenario coverage</td>
+            </tr>
+            <tr>
+              <td><strong>Commercial deployment pathway</strong></td>
+              <td></td><td></td>
+              <td><span class="matrix-cell-mark matrix-cell-mark--no">✕</span></td>
+              <td><span class="matrix-cell-mark matrix-cell-mark--ev">?</span></td>
+              <td style="font-size:0.75rem">No GTM plan · No customer/market evidence · No commercial model</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <aside class="card">
+        <div class="card__head">Evidence states</div>
+        <div class="card__body" style="font-size:0.75rem">
+          <p>✓ Travels as-is — Supported</p>
+          <p>↻ Needs reframing — Partially supported</p>
+          <p>✕ Not credible — Unsupported</p>
+          <p>? Evidence needed — Insufficient to assess</p>
+          <hr style="border:none;border-top:1px solid var(--border);margin:0.75rem 0" />
+          <div class="tier-rail-wrap__label">Confidence rail</div>
+          <div class="confidence-rail-h">
+            <span style="font-size:0.65rem">Low</span>
+            <div class="confidence-rail-h__node"></div>
+            <div class="confidence-rail-h__node is-on"><span class="confidence-rail-h__dot"></span></div>
+            <div class="confidence-rail-h__node"></div>
+            <span style="font-size:0.65rem">High</span>
+          </div>
+          <p style="margin:0.5rem 0 0"><strong>CONFIDENCE: SUPPORTED</strong><br /><span style="color:var(--text-muted)">Sufficient evidence across claims to support this view.</span></p>
+        </div>
+      </aside>
+    </div>
+
+    <div class="atlas-view-band">
+      <div>
+        <span style="font-size:0.72rem;text-transform:uppercase;color:var(--text-muted)">Atlas view</span>
+        <strong>Strong infrastructure transfer, weak commercial transfer</strong>
+      </div>
+      <div class="gap-callout">⚠ No evidence found for commercial-deployment pathway</div>
+    </div>
+
+    <div class="banner banner--recommendation">
+      <div>
+        <div style="font-size:0.72rem;text-transform:uppercase;opacity:0.9">Recommendation</div>
+        <strong style="font-size:1.05rem">Partner / support role is more defensible than lead-bid.</strong>
+        <p style="margin:0.35rem 0 0;font-size:0.82rem">🛡 Stronger on facility · 👥 Mitigates commercial gap · 📄 Focus proposal on complementary value</p>
+      </div>
+    </div>
+    <p class="pitch-note">Pitch-only: matrix marks and conclusion band; core layout is flat-buildable.</p>
+  </main>
+
+  <footer class="pitch-footer-guard">
+    <strong>Pitch reference only</strong> — not production styling. Final build is flat token-based React.
+  </footer>
+  <script src="theme.js"></script>
+</body>
+</html>

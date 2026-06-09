@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Claim Atom — Direction B | Atlas v5 pitch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="pitch-page">
+  <header class="pitch-topbar">
+    <span class="pitch-topbar__brand">ATLAS v5</span>
+    <span class="pill pill--direction" style="background:rgba(255,255,255,0.15);color:#fff">Direction B</span>
+    <a href="index.html" class="nav-back" style="color:#cbd5e1">← All directions</a>
+    <button type="button" class="theme-toggle" id="theme-toggle">Dark mode</button>
+  </header>
+
+  <main class="pitch-body">
+    <header class="pitch-header">
+      <div>
+        <h1 class="pitch-header__title">Claim Atom — Direction B</h1>
+        <p class="pitch-header__subtitle">Structured timeline row that treats each claim like an auditable evidence object.</p>
+      </div>
+      <div class="pitch-header__actions tier-rail-wrap">
+        <div class="tier-rail-wrap__label">Surface-wide confidence tier</div>
+        <div class="tier-rail">
+          <span class="tier-rail__item">Speculative</span>
+          <span class="tier-rail__item is-active">Indicative</span>
+          <span class="tier-rail__item">Supported</span>
+          <span class="tier-rail__item">Robust</span>
+        </div>
+        <p class="tier-rail__active-label">Active: <strong style="color:var(--tier-ind)">Indicative</strong></p>
+      </div>
+    </header>
+
+    <div class="grid-main-side">
+      <div>
+        <div class="timeline-row">
+          <div class="trust-rail trust-rail--self-reported">
+            <span>👤</span>
+            Self-reported
+            <div class="dot-meter"><span class="filled"></span><span class="filled"></span><span></span><span></span><span></span></div>
+            Indicative
+          </div>
+          <div class="timeline-col">
+            <div class="timeline-col__label">Assertion / What is claimed</div>
+            <div style="font-size:0.65rem;color:var(--blue);font-weight:700">SAFETY PERFORMANCE</div>
+            <p class="timeline-col__title">~1,400km incident-free urban running</p>
+            <span class="badge badge--self-reported">Applicant-vouched</span>
+          </div>
+          <div class="timeline-col">
+            <div class="timeline-col__label">Source / Where it comes from</div>
+            <p style="margin:0;font-size:0.8rem">urban trial summary / operator submission</p>
+            <p style="margin:0.2rem 0 0;font-size:0.72rem;color:var(--text-muted)">Submitted 12 May 2025</p>
+          </div>
+          <div class="timeline-col">
+            <div class="timeline-col__label">Rationale / Why it matters</div>
+            <p style="margin:0;font-size:0.78rem">Applicant reports strong operational safety record in controlled urban trials; independent verification not yet on file.</p>
+          </div>
+          <div class="timeline-col" style="display:flex;align-items:center">▼</div>
+        </div>
+
+        <h3 style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em;margin:1rem 0 0.5rem">Evidence state variants</h3>
+
+        <div class="timeline-variant">
+          <div class="timeline-variant__bar timeline-variant__bar--verified"></div>
+          <span class="badge badge--verified">Verified</span>
+          <div><strong>8 verified CAV testbed projects</strong><br /><span style="color:var(--text-muted);font-size:0.72rem">Source: TRL independent report · Rationale: Accredited third-party verification.</span></div>
+          <span>›</span>
+        </div>
+        <div class="timeline-variant">
+          <div class="timeline-variant__bar timeline-variant__bar--self-reported"></div>
+          <span class="badge badge--self-reported">Self-reported</span>
+          <div><strong>~1,400km incident-free urban running</strong> (hero row above)</div>
+          <span>›</span>
+        </div>
+        <div class="timeline-variant">
+          <div class="timeline-variant__bar timeline-variant__bar--inferred"></div>
+          <span class="badge badge--inferred">Inferred</span>
+          <div><strong>Distance estimate from telemetry patterns</strong> <span class="badge badge--inferred">System-derived</span><br /><span style="color:var(--text-muted);font-size:0.72rem">Source: Atlas telemetry analysis</span></div>
+          <span>›</span>
+        </div>
+        <div class="timeline-variant">
+          <div class="timeline-variant__bar timeline-variant__bar--unknown"></div>
+          <span class="badge badge--unknown">Unknown</span>
+          <div><strong>Commercial-deployment pathway at scale</strong> <span class="badge badge--unknown">No evidence on file</span><br /><span style="color:var(--text-muted);font-size:0.72rem">Gap: no GTM or customer evidence in corpus.</span></div>
+          <span>›</span>
+        </div>
+        <div class="timeline-variant">
+          <div class="timeline-variant__bar timeline-variant__bar--contested"></div>
+          <span class="badge badge--contested">Contested</span>
+          <div><strong>Platform resistant to remote takeover</strong> <span class="badge badge--contested">Evidence challenged</span><br /><span style="color:var(--text-muted);font-size:0.72rem">Assessor raised secure-boot findings.</span></div>
+          <span>›</span>
+        </div>
+      </div>
+
+      <aside class="card detail-panel">
+        <div class="card__head">Expanded view (this claim)</div>
+        <div class="card__body">
+          <dl class="field"><dt>Claim ID</dt><dd>CLM-25-000842</dd></dl>
+          <dl class="field"><dt>Category</dt><dd>Safety Performance</dd></dl>
+          <dl class="field"><dt>Platform</dt><dd>Atlas Urban (A-U1)</dd></dl>
+          <dl class="field"><dt>Timeframe</dt><dd>Jan–Apr 2025</dd></dl>
+          <dl class="field"><dt>Scope</dt><dd>Closed urban road network trials</dd></dl>
+          <dl class="field"><dt>Metric</dt><dd>Distance driven without incident</dd></dl>
+          <dl class="field"><dt>Attachments</dt><dd><a href="#">Urban_Trial_Summary_v1.2.pdf (1.4 MB) ↗</a></dd></dl>
+          <dl class="field"><dt>Audit trail</dt><dd>Submitted by Operator · 12 May 2025 09:41 ↗</dd></dl>
+          <div class="info-callout">This claim is self-reported by the applicant. Independent verification has not yet been completed.</div>
+        </div>
+        <div class="card__head">How to read these states</div>
+        <div class="card__body" style="font-size:0.75rem">
+          <p><span class="badge badge--verified">Verified</span> — Independently verified.</p>
+          <p><span class="badge badge--self-reported">Self-reported</span> — Applicant-vouched; pending verification.</p>
+          <p><span class="badge badge--inferred">Inferred</span> — Atlas/system derived (not applicant vouch).</p>
+          <p><span class="badge badge--unknown">Unknown</span> — No evidence; gap to address.</p>
+          <p><span class="badge badge--contested">Contested</span> — Conflicting sources.</p>
+        </div>
+      </aside>
+    </div>
+    <p class="pitch-note">Pitch-only: trust rail + dot meter; core layout is flat-buildable.</p>
+  </main>
+
+  <footer class="pitch-footer-guard">
+    <strong>Pitch reference only</strong> — not production styling. Final build is flat token-based React.
+  </footer>
+  <script src="theme.js"></script>
+</body>
+</html>
