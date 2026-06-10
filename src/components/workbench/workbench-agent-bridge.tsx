@@ -34,7 +34,7 @@ interface WorkbenchAgentBridgeProps {
 }
 
 export function WorkbenchAgentBridge({ children }: WorkbenchAgentBridgeProps) {
-  const { model, isLoading, setPendingPatch } = useWorkbench();
+  const { model, isLoading, setPendingPatch, setReasoningSteps } = useWorkbench();
 
   // Build slim model summary for the agent — empty object while loading.
   // The runtime provider is always mounted so threads persist across loads.
@@ -42,14 +42,11 @@ export function WorkbenchAgentBridge({ children }: WorkbenchAgentBridgeProps) {
     model && !isLoading ? buildModelSummary(model) : {};
 
   function handleAgentValues(state: WorkbenchAgentState) {
-    // When agent emits an updated artifact (confirmed model_patch applied on
-    // Python side), sync it back to WorkbenchContext here.
-    // TODO M0.9: call setModel(state.artifact) when patch confirmation panel done.
+    // Sync reasoning trace steps into context so ArtifactCanvas can display
+    // live progress alongside the chat stream.
     const trace = state?.last_output?.reasoning_trace;
-    if (trace?.length) {
-      // reasoning_trace updates are handled by ReasoningTrace component via
-      // the assistant-ui message stream — no explicit state write needed here yet.
-      void trace;
+    if (Array.isArray(trace) && trace.length > 0) {
+      setReasoningSteps(trace);
     }
   }
 

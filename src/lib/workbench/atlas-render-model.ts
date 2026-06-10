@@ -162,6 +162,90 @@ export interface ContextCardContent {
   };
 }
 
+// ---------------------------------------------------------------------------
+// EconomicCaseBlock — Five Case Model (M1.0)
+// Produced by the economic_analysis route when a user asks a value question.
+// The agent emits a ModelPatchProposal containing this block.
+// ---------------------------------------------------------------------------
+
+export type ValueVerdict = "positive" | "neutral" | "negative" | "insufficient_data";
+
+export interface ValueDriver {
+  name: string;
+  description: string;
+  direction: "benefit" | "cost" | "uncertain";
+  /** Qualitative magnitude — used when no quantified value exists */
+  magnitude: "high" | "medium" | "low";
+  /** Quantified value in £ if available */
+  quantified_value?: number;
+  evidence_state: EvidenceState;
+  assumption?: string;
+}
+
+export interface NpvWaterfallItem {
+  label: string;
+  value: number;  // positive = benefit, negative = cost
+  type: "benefit" | "cost" | "npv";
+  evidence_state: EvidenceState;
+}
+
+export interface Assumption {
+  name: string;
+  value: string;
+  sensitivity: "high" | "medium" | "low";  // how much would changing this flip the case?
+  evidence_state: EvidenceState;
+  note?: string;
+}
+
+export interface FiveCaseSectionScore {
+  case: "strategic" | "economic" | "commercial" | "financial" | "management";
+  label: string;
+  score: number;       // 0-1
+  summary: string;
+  evidence_state: EvidenceState;
+}
+
+export interface EconomicCaseContent {
+  /** Top-level verdict on the economic case */
+  verdict: ValueVerdict;
+  verdict_summary: string;
+  confidence_tier: ConfidenceTier;
+  confidence_cap_reason?: string;
+
+  /** Net Present Value at 3.5% STPR — null when data insufficient */
+  npv_value?: number | null;
+  /** Benefit-Cost Ratio — null when data insufficient */
+  bcr?: number | null;
+  discount_rate: number;   // 0.035 = 3.5%
+  appraisal_period_years?: number;
+
+  /** Five Case section scores (0-1 per case) */
+  section_scores: FiveCaseSectionScore[];
+
+  /** Value drivers — always present, quantified when data allows */
+  value_drivers: ValueDriver[];
+
+  /** NPV waterfall items — only when quantified data exists */
+  npv_waterfall?: NpvWaterfallItem[];
+
+  /** Assumptions underpinning the case */
+  assumptions: Assumption[];
+
+  /** What single change would most change the verdict */
+  sensitivity_note: string;
+
+  /** Corpus citations used in the analysis */
+  corpus_citations: Array<{
+    id: string;
+    title: string;
+    organisation: string;
+    score: number;
+  }>;
+
+  /** Skills applied */
+  skills_applied: string[];
+}
+
 export interface EvidenceStateSummaryCounts {
   verified: number;
   "self-reported": number;
@@ -254,6 +338,13 @@ export interface ContextCardBlock extends BaseBlock {
   content: ContextCardContent;
 }
 
+export interface EconomicCaseBlock extends BaseBlock {
+  type: "EconomicCase";
+  /** npv_waterfall when quantified, value_driver_cards when qualitative only */
+  visual: "npv_waterfall" | "value_driver_cards";
+  content: EconomicCaseContent;
+}
+
 export type RenderBlock =
   | RecommendationConfidenceBlock
   | EvidenceStateSummaryBlock
@@ -264,29 +355,16 @@ export type RenderBlock =
   | ObjectionResponseBlock
   | ProvenanceTraceBlock
   | ComparisonMatrixBlock
-  | ContextCardBlock;
+  | ContextCardBlock
+  | EconomicCaseBlock;
   // ---------------------------------------------------------------------------
-  // STAGED — Five Case Model blocks (M1.0)
+  // Five Case Model mapping (M1.0 — EconomicCaseBlock implemented)
   //
-  // When a user asks a value/economic question the workbench agent will:
-  //  1. Run Five Case analysis with the match + passport as context
-  //  2. Emit a model_patch adding EconomicCaseBlock to the artifact
-  //  3. npv_waterfall visual already exists in block-vocabulary.ts
-  //
-  // Data foundation already present:
-  //  - atlas.matches.gap_value_estimate (42/85 rows populated)
-  //  - DecisionSpine.economic_gap_value (slot reserved)
-  //  - npv_waterfall block visual in block-vocabulary.ts (status: ready)
-  //
-  // Mapping:
-  //  Strategic Case  → RecommendationConfidence (EXISTS — no new block needed)
-  //  Economic Case   → EconomicCaseBlock        (needs: type + content + visual)
-  //  Commercial Case → CommercialCaseBlock       (needs: new data + block + visual)
-  //  Financial Case  → FinancialCaseBlock        (needs: new data + block + visual)
-  //  Management Case → ActionPlan (partial fit)  (extend ActionPlanBlock first)
-  //
-  // DO NOT add these block types until the workbench agent's economic_analysis
-  // route is built and the model_patch pattern is proven (post M0.9).
+  //  Strategic Case  → RecommendationConfidence (EXISTS)
+  //  Economic Case   → EconomicCaseBlock        (LIVE — M1.0)
+  //  Commercial Case → CommercialCaseBlock       (STAGED M1.1 — needs new passport data)
+  //  Financial Case  → FinancialCaseBlock        (STAGED M1.1 — needs new passport data)
+  //  Management Case → ActionPlanBlock           (partial fit — extend in M1.1)
   // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------

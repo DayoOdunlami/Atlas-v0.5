@@ -23,15 +23,14 @@ import type { ReasoningStep } from "@/lib/workbench/atlas-render-model";
 
 function StepIcon({ status }: { status: ReasoningStep["status"] }) {
   if (status === "complete") {
-    return <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />;
+    return <CheckCircle2 className="w-4 h-4 text-evidence-verified shrink-0" />;
   }
   if (status === "active") {
-    return <Loader2 className="w-4 h-4 text-indigo-500 shrink-0 animate-spin" />;
+    return <Loader2 className="w-4 h-4 text-accent shrink-0 animate-spin" />;
   }
   if (status === "error") {
-    return <XCircle className="w-4 h-4 text-red-500 shrink-0" />;
+    return <XCircle className="w-4 h-4 text-evidence-contested shrink-0" />;
   }
-  // pending
   return <Circle className="w-4 h-4 text-muted-foreground/40 shrink-0" />;
 }
 
@@ -47,7 +46,7 @@ function StepRow({ step, isLast }: { step: ReasoningStep; isLast: boolean }) {
         <div
           className={cn(
             "absolute left-[7px] top-5 bottom-0 w-px",
-            step.status === "complete" ? "bg-green-200" : "bg-border",
+            step.status === "complete" ? "bg-evidence-verified/30" : "bg-border",
           )}
         />
       )}
@@ -63,9 +62,9 @@ function StepRow({ step, isLast }: { step: ReasoningStep; isLast: boolean }) {
           className={cn(
             "text-xs font-medium leading-snug",
             step.status === "complete" && "text-foreground",
-            step.status === "active" && "text-indigo-600",
+            step.status === "active" && "text-accent",
             step.status === "pending" && "text-muted-foreground/60",
-            step.status === "error" && "text-red-600",
+            step.status === "error" && "text-evidence-contested",
           )}
         >
           {step.label}
@@ -138,9 +137,9 @@ export function ReasoningTrace({
         <Brain
           className={cn(
             "w-3.5 h-3.5 shrink-0",
-            hasActive && "text-indigo-500 animate-pulse",
-            allComplete && "text-green-500",
-            hasError && "text-red-500",
+            hasActive && "text-accent animate-pulse",
+            allComplete && "text-evidence-verified",
+            hasError && "text-evidence-contested",
             !hasActive && !allComplete && !hasError && "text-muted-foreground",
           )}
         />
@@ -149,11 +148,11 @@ export function ReasoningTrace({
         {/* Progress summary */}
         <span className="text-xs text-muted-foreground">
           {hasActive ? (
-            <span className="text-indigo-600 font-medium">Running…</span>
+            <span className="text-accent font-medium">Running…</span>
           ) : hasError ? (
-            <span className="text-red-600 font-medium">Error</span>
+            <span className="text-evidence-contested font-medium">Error</span>
           ) : allComplete ? (
-            <span className="text-green-600 font-medium">Done</span>
+            <span className="text-evidence-verified font-medium">Done</span>
           ) : (
             <span>{completedCount} / {steps.length}</span>
           )}

@@ -25,7 +25,14 @@ export function ArtifactCanvas() {
     isLoading,
     error,
     isDbBacked,
+    reasoningSteps,
   } = useWorkbench();
+
+  // Live agent steps when available; fall back to demo steps so the
+  // trace panel always shows something meaningful in static/demo mode.
+  const traceSteps = reasoningSteps.length > 0 ? reasoningSteps : DEMO_REASONING_STEPS;
+  const traceIsLive = reasoningSteps.length > 0;
+  const traceIsActive = traceIsLive && reasoningSteps.some((s) => s.status === "active");
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
@@ -36,7 +43,7 @@ export function ArtifactCanvas() {
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <span className="text-xs text-muted-foreground">{model.mode} · {model.layout_template}</span>
               <ChevronRight className="w-3 h-3 text-muted-foreground" />
-              <span className="inline-flex items-center rounded border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-xs font-medium text-indigo-700">
+              <span className="inline-flex items-center rounded border border-accent/20 bg-accent/10 px-1.5 py-0.5 text-xs font-medium text-accent">
                 {model.canonical_question_id}
               </span>
             </div>
@@ -52,17 +59,18 @@ export function ArtifactCanvas() {
         </div>
       </div>
 
-      {/* Morph bar */}
+      {/* Morph bar — CQ selector (M1.2) */}
       <div className="flex items-center gap-2 px-5 py-2.5 border-b border-border bg-muted/10 shrink-0 overflow-x-auto">
         {cqIds.map((id: CanonicalQuestionId) => (
           <button
             key={id}
             onClick={() => setCqId(id)}
+            disabled={isLoading}
             className={cn(
-              "px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap",
+              "px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed",
               id === cqId
-                ? "bg-foreground text-background"
-                : "bg-background border border-border text-muted-foreground hover:text-foreground hover:border-foreground/40",
+                ? "bg-primary text-primary-foreground"
+                : "bg-background border border-border text-muted-foreground hover:text-foreground hover:border-primary/40",
             )}
           >
             {CQ_LABELS[id]}
@@ -101,13 +109,21 @@ export function ArtifactCanvas() {
         </div>
       )}
 
-      {/* Reasoning trace — active while loading, collapsed otherwise */}
+      {/* Reasoning trace — expands when agent is running, collapsed at rest */}
       {!error && (
         <div className="px-5 pt-3 shrink-0">
           <ReasoningTrace
-            steps={DEMO_REASONING_STEPS}
-            defaultCollapsed={!(isLoading && isDbBacked)}
-            label={isLoading && isDbBacked ? "Building render model…" : "How this model was built"}
+            steps={traceSteps}
+            defaultCollapsed={!traceIsActive && !(isLoading && isDbBacked)}
+            label={
+              isLoading && isDbBacked
+                ? "Building render model…"
+                : traceIsActive
+                  ? "Agent working…"
+                  : traceIsLive
+                    ? "Last agent reasoning"
+                    : "How this model was built"
+            }
           />
         </div>
       )}

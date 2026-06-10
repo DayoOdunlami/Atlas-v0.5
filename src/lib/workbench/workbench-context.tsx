@@ -20,6 +20,7 @@ import type {
   CanonicalQuestionId,
   RenderModelMap,
   RenderBlock,
+  ReasoningStep,
 } from "./atlas-render-model";
 import type { ModelPatchProposal, ModelPatchOp } from "./workbench-agent-contract";
 import renderModels from "@/data/atlas-v10-render-models.json";
@@ -179,6 +180,11 @@ interface WorkbenchState {
   snapshotOpen: boolean;
   setSnapshotOpen: (v: boolean) => void;
 
+  // Reasoning trace (M1.1)
+  /** Live reasoning steps from the last agent turn — empty between turns */
+  reasoningSteps: ReasoningStep[];
+  setReasoningSteps: (steps: ReasoningStep[]) => void;
+
   // Patch confirmation (M0.9)
   /** Pending model_patch proposal from the agent — null when none in flight */
   pendingPatch: ModelPatchProposal | null;
@@ -223,6 +229,9 @@ export function WorkbenchProvider({
   const [inspectorKey, setInspectorKey] = React.useState<string | null>(null);
   const [snapshotOpen, setSnapshotOpen] = React.useState(false);
   const [messages, setMessages] = React.useState<WorkbenchChatMessage[]>(INITIAL_MESSAGES);
+
+  // Reasoning trace state (M1.1)
+  const [reasoningSteps, setReasoningSteps] = React.useState<ReasoningStep[]>([]);
 
   // Patch confirmation state (M0.9)
   const [pendingPatch, setPendingPatch] = React.useState<ModelPatchProposal | null>(null);
@@ -398,6 +407,8 @@ export function WorkbenchProvider({
         closeInspector,
         snapshotOpen,
         setSnapshotOpen,
+        reasoningSteps,
+        setReasoningSteps,
         pendingPatch,
         setPendingPatch,
         applyPatch,

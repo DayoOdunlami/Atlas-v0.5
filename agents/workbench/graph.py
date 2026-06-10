@@ -63,6 +63,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from pathlib import Path
 from typing import Annotated, Any, Literal
@@ -291,6 +292,15 @@ extract_query = make_extract_query_node({
     "_is_conversational": False,
 })
 
+classify_intent, _route_after_intent = make_classify_intent_node(
+    agent_name="Workbench",
+    agent_description=(
+        "Atlas Workbench assistant — explain match evidence, search the CPC corpus, "
+        "and propose artifact updates for analyst review."
+    ),
+    pipeline_start_node="classify_route",
+)
+
 # ---------------------------------------------------------------------------
 # Node: explain
 # ---------------------------------------------------------------------------
@@ -456,7 +466,6 @@ def propose_node(state: WorkbenchState) -> dict:
     chat_text = response.content
     try:
         # Expect the LLM to embed JSON in a ```json block or as raw JSON
-        import re
         m = re.search(r"```json\s*(\{.*?\})\s*```", response.content, re.DOTALL)
         if not m:
             m = re.search(r"(\{[^{]*\"model_patch\".*\})", response.content, re.DOTALL)
@@ -482,47 +491,273 @@ def propose_node(state: WorkbenchState) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Node: economic_analysis (STAGED — M1.0 placeholder)
+# Node: economic_analysis (M1.0 — Five Case Model)
 # ---------------------------------------------------------------------------
+
+_ECONOMIC_ANALYSIS_SCHEMA = """{
+  "type": "object",
+  "properties": {
+    "chat_response": {"type": "string", "description": "1-3 sentence summary for the chat panel explaining what the analysis found"},
+    "economic_case_block": {
+      "type": "object",
+      "properties": {
+        "id": {"type": "string"},
+        "type": {"const": "EconomicCase"},
+        "visual": {"type": "string", "enum": ["npv_waterfall", "value_driver_cards"]},
+        "state": {"const": "core"},
+        "headline": {"type": "string"},
+        "content": {
+          "type": "object",
+          "required": ["verdict", "verdict_summary", "confidence_tier", "discount_rate",
+                       "section_scores", "value_drivers", "assumptions", "sensitivity_note",
+                       "corpus_citations", "skills_applied"],
+          "properties": {
+            "verdict": {"type": "string", "enum": ["positive", "neutral", "negative", "insufficient_data"]},
+            "verdict_summary": {"type": "string"},
+            "confidence_tier": {"type": "string", "enum": ["Speculative", "Indicative", "Supported", "Robust"]},
+            "confidence_cap_reason": {"type": "string"},
+            "npv_value": {"type": ["number", "null"]},
+            "bcr": {"type": ["number", "null"]},
+            "discount_rate": {"type": "number"},
+            "appraisal_period_years": {"type": "integer"},
+            "section_scores": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["case", "label", "score", "summary", "evidence_state"],
+                "properties": {
+                  "case": {"type": "string", "enum": ["strategic","economic","commercial","financial","management"]},
+                  "label": {"type": "string"},
+                  "score": {"type": "number", "minimum": 0, "maximum": 1},
+                  "summary": {"type": "string"},
+                  "evidence_state": {"type": "string"}
+                }
+              }
+            },
+            "value_drivers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["name","description","direction","magnitude","evidence_state"],
+                "properties": {
+                  "name": {"type": "string"},
+                  "description": {"type": "string"},
+                  "direction": {"type": "string", "enum": ["benefit","cost","uncertain"]},
+                  "magnitude": {"type": "string", "enum": ["high","medium","low"]},
+                  "quantified_value": {"type": "number"},
+                  "evidence_state": {"type": "string"},
+                  "assumption": {"type": "string"}
+                }
+              }
+            },
+            "npv_waterfall": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["label","value","type","evidence_state"],
+                "properties": {
+                  "label": {"type": "string"},
+                  "value": {"type": "number"},
+                  "type": {"type": "string", "enum": ["benefit","cost","npv"]},
+                  "evidence_state": {"type": "string"}
+                }
+              }
+            },
+            "assumptions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["name","value","sensitivity","evidence_state"],
+                "properties": {
+                  "name": {"type": "string"},
+                  "value": {"type": "string"},
+                  "sensitivity": {"type": "string", "enum": ["high","medium","low"]},
+                  "evidence_state": {"type": "string"},
+                  "note": {"type": "string"}
+                }
+              }
+            },
+            "sensitivity_note": {"type": "string"},
+            "corpus_citations": {"type": "array", "items": {"type": "object"}},
+            "skills_applied": {"type": "array", "items": {"type": "string"}}
+          }
+        }
+      },
+      "required": ["id","type","visual","state","headline","content"]
+    }
+  },
+  "required": ["chat_response", "economic_case_block"]
+}"""
+
 
 def economic_analysis_node(state: WorkbenchState) -> dict:
     """
-    STAGED placeholder for M1.0.
+    Five Case economic analysis — M1.0.
 
-    Full implementation will:
-      1. Load green-book.md + evidence-triage.md skills
-      2. Run Five Case Model with match + passport context
-      3. Emit ModelPatchProposal with EconomicCaseBlock (npv_waterfall visual)
-         containing: npv_value (at 3.5% STPR), discount_rate, section_scores, BCR
-      4. Frontend shows EconomicCaseBlock diff → user confirms → patch applied
+    Loads green-book.md + evidence-triage.md skills, runs a structured
+    appraisal using the model_summary as context, and emits a
+    ModelPatchProposal containing EconomicCaseBlock.
 
-    Five Case blocks staged:
-      Economic Case   → EconomicCaseBlock  (needs: type in atlas-render-model.ts)
-      Commercial Case → CommercialCaseBlock (M1.1 — needs new passport fields)
-      Financial Case  → FinancialCaseBlock  (M1.1 — needs new passport fields)
-      Management Case → extend ActionPlanBlock (M1.0)
-      Strategic Case  → already in RecommendationConfidence (no new block needed)
+    The frontend shows the block as an add_block patch diff.
+    User confirms → EconomicCaseBlock appears in the artifact canvas.
     """
+    trace = state.get("reasoning_trace", [])
     model_summary = state.get("model_summary") or {}
-    gap_value = "not yet available in this release"
 
-    trace = [{"label": "Economic analysis route (staged M1.0)", "status": "complete"}]
+    trace.append({"label": "Loading Green Book + evidence-triage skills", "status": "active"})
 
-    chat_response = (
-        "Full Five Case economic analysis is staged for the next release (M1.0).\n\n"
-        "What I can show you now from the current match record:\n"
-        f"- Match score: {model_summary.get('confidence_tier', 'not available')}\n"
-        f"- Gap value estimate: {gap_value}\n\n"
-        "When M1.0 is live, asking 'run economic case' will trigger a Five Case "
-        "analysis (Strategic, Economic, Commercial, Financial, Management) and "
-        "propose an update to this artifact with an NPV waterfall and section scores."
-    )
+    # Load skills
+    green_book    = _load_skill("green-book.md")
+    ev_triage     = _load_skill("evidence-triage.md")
+
+    trace.append({"label": "Searching CPC corpus for economic evidence", "status": "active"})
+
+    # Corpus search for economic / value evidence
+    search_query = (
+        f"economic case value NPV benefits "
+        f"{model_summary.get('source_label', '')} "
+        f"{model_summary.get('target_label', '')}"
+    ).strip()
+    raw_results: list[dict[str, Any]] = []
+    try:
+        raw_results = search_corpus_projects.invoke({"query": search_query, "k": 6})
+        if not isinstance(raw_results, list):
+            raw_results = []
+    except Exception:
+        pass
+
+    verified_citations: list[dict[str, Any]] = []
+    for r in raw_results:
+        proj_id = r.get("id") or r.get("project_id", "")
+        if not proj_id:
+            continue
+        try:
+            proj = _verify_project(proj_id)
+            if proj:
+                verified_citations.append({
+                    "id": proj_id,
+                    "title": r.get("title", proj.get("project_title", "")),
+                    "organisation": r.get("organisation", proj.get("organisation", "")),
+                    "score": float(r.get("similarity", 0)),
+                })
+        except Exception:
+            pass
+
+    trace.append({
+        "label": f"Found {len(verified_citations)} economic evidence items",
+        "status": "active",
+    })
+
+    # Build the model context summary for the prompt
+    ev_counts = model_summary.get("evidence_counts", {})
+    gaps_text = "\n".join(f"  - {g}" for g in model_summary.get("top_gaps", []))
+    citations_text = "\n".join(
+        f"  - [{c['id'][:8]}] {c['title']} ({c['organisation']}) — {int(c['score']*100)}% match"
+        for c in verified_citations
+    ) or "  - No corpus matches found"
+
+    system = f"""You are the Atlas economic analysis engine applying HM Treasury Green Book methodology.
+
+## Green Book Skill
+{green_book[:3000] if green_book else "Apply standard Green Book Five Case Model."}
+
+## Evidence Triage Skill
+{ev_triage[:1500] if ev_triage else "Classify evidence states: verified / self-reported / inferred / unknown / contested."}
+
+## Current match context
+Source: {model_summary.get('source_label', 'Unknown')}
+Target: {model_summary.get('target_label', 'Unknown')}
+Recommendation: {model_summary.get('recommendation', 'N/A')}
+Current confidence: {model_summary.get('confidence_tier', 'Speculative')}
+Confidence cap reason: {model_summary.get('confidence_cap_reason', 'None')}
+
+Evidence summary:
+  Verified: {ev_counts.get('verified', 0)}
+  Self-reported: {ev_counts.get('partial', ev_counts.get('self-reported', 0))}
+  Missing: {ev_counts.get('missing', 0)}
+  Total: {ev_counts.get('total', 0)}
+
+Top gaps:
+{gaps_text or '  - No gaps recorded'}
+
+Corpus citations for economic case:
+{citations_text}
+
+## Instructions
+Produce a Five Case economic analysis for this source→target technology transfer.
+Use Green Book methodology: Five Case Model, 3.5% STPR, optimism bias awareness.
+Given all claims are self-reported, the economic case confidence is capped at Indicative.
+Be honest about data limitations. Do NOT invent quantified NPV figures unless the corpus
+evidence clearly supports them — use value_driver_cards visual instead.
+
+You MUST respond with ONLY valid JSON matching this schema:
+{_ECONOMIC_ANALYSIS_SCHEMA}
+
+Rules:
+- If NPV cannot be quantified, set npv_value=null, bcr=null, visual="value_driver_cards"
+- If NPV can be estimated (corpus evidence present), set visual="npv_waterfall"  
+- confidence_tier must never exceed the current match confidence ({model_summary.get('confidence_tier', 'Speculative')})
+- discount_rate = 0.035 (3.5% STPR)
+- Include all 5 section scores (strategic/economic/commercial/financial/management)
+- Minimum 3 value drivers, minimum 3 assumptions
+- corpus_citations = the verified citations list provided above
+- skills_applied = ["green-book", "evidence-triage"]
+"""
+
+    trace.append({"label": "Running Five Case analysis", "status": "active"})
+    llm = _llm()
+    response = llm.invoke([
+        SystemMessage(content=system),
+        HumanMessage(content=f"Run Five Case economic analysis for this match."),
+    ])
+
+    # Parse the JSON response
+    model_patch = None
+    chat_text   = "Five Case economic analysis complete. Review the proposed block below."
+    try:
+        raw = response.content.strip()
+        # Strip markdown code fences if present
+        if raw.startswith("```"):
+            raw = re.sub(r"^```(?:json)?\s*", "", raw)
+            raw = re.sub(r"\s*```$", "", raw)
+        parsed = json.loads(raw)
+        chat_text = parsed.get("chat_response", chat_text)
+        ec_block  = parsed.get("economic_case_block")
+        if ec_block:
+            # Ensure required fields have defaults
+            ec_block.setdefault("id", f"ec-{model_summary.get('artifact_id','')[:8]}-001")
+            ec_block.setdefault("type", "EconomicCase")
+            ec_block.setdefault("state", "core")
+            content = ec_block.get("content", {})
+            content.setdefault("corpus_citations", verified_citations)
+            content.setdefault("skills_applied", ["green-book", "evidence-triage"])
+            ec_block["content"] = content
+
+            model_patch = {
+                "rationale": (
+                    f"Five Case economic analysis for {model_summary.get('source_label','')}"
+                    f" → {model_summary.get('target_label','')}. "
+                    f"Verdict: {content.get('verdict', 'unknown')}."
+                ),
+                "ops": [{"op": "add_block", "block": ec_block}],
+                "confidence_tier": content.get("confidence_tier", "Indicative"),
+                "corpus_citations": verified_citations,
+            }
+    except Exception as exc:
+        trace.append({"label": f"Parse error: {exc}", "status": "error"})
+        chat_text = (
+            "I completed the Five Case analysis but encountered a formatting issue. "
+            "Here's my assessment: " + response.content[:500]
+        )
+
+    trace.append({"label": "Economic analysis complete", "status": "complete"})
 
     return {
-        "chat_response": chat_response,
+        "chat_response": chat_text,
+        "model_patch": model_patch,
+        "confidence_tier": "Indicative",
         "reasoning_trace": trace,
-        "confidence_tier": state.get("confidence_tier", "Speculative"),
-        "messages": [AIMessage(content=chat_response)],
+        "messages": [AIMessage(content=chat_text)],
     }
 
 
@@ -531,12 +766,46 @@ def economic_analysis_node(state: WorkbenchState) -> dict:
 # ---------------------------------------------------------------------------
 
 def conversational_node(state: WorkbenchState) -> dict:
-    """Handle greetings / meta / off-topic messages instantly."""
+    """Handle greetings, meta, off-topic, and out-of-scope questions."""
+    model_summary = state.get("model_summary") or {}
+    query = state.get("query", "").lower()
+
+    # Detect out-of-scope requests (general DB/corpus browsing, non-workbench)
+    out_of_scope_signals = [
+        "tell me about my db", "what's in the database", "show me all",
+        "list all projects", "what data do you have", "browse corpus",
+        "show everything", "what is in supabase",
+    ]
+    is_out_of_scope = any(sig in query for sig in out_of_scope_signals)
+
+    if is_out_of_scope:
+        scope_msg = (
+            "The Workbench assistant is scoped to this specific match: "
+            f"**{model_summary.get('source_label', 'this passport')} → "
+            f"{model_summary.get('target_label', 'this project')}**.\n\n"
+            "For general corpus browsing, database exploration, or cross-match search, "
+            "use the **JARVIS** agent — it's purpose-built for evidence discovery "
+            "across the full CPC corpus.\n\n"
+            "In the Workbench I can:\n"
+            "- Explain evidence and gaps in this match\n"
+            "- Search the corpus for relevant analogues\n"
+            "- Propose artifact updates for your review\n"
+            "- Run a Five Case economic analysis ('run economic case')"
+        )
+        return {
+            "chat_response": scope_msg,
+            "confidence_tier": "Speculative",
+            "reasoning_trace": [{"label": "Out-of-scope query — redirected to JARVIS", "status": "complete"}],
+            "messages": [AIMessage(content=scope_msg)],
+        }
+
     llm = _llm()
     messages = [
         SystemMessage(content=(
             "You are the Atlas Workbench assistant. "
-            "Respond briefly to this conversational message."
+            "Respond briefly and helpfully to this conversational message. "
+            "If asked what you can do, explain: explain match evidence, search the CPC corpus, "
+            "propose artifact updates, or run a Five Case economic analysis."
         )),
     ] + list(state.get("messages", []))
     response = llm.invoke(messages)
@@ -575,7 +844,7 @@ def build_graph():
 
     # Nodes
     graph.add_node("extract_query", extract_query)
-    graph.add_node("classify_intent", make_classify_intent_node())
+    graph.add_node("classify_intent", classify_intent)
     graph.add_node("classify_route", classify_route)
     graph.add_node("explain", explain_node)
     graph.add_node("search", search_node)
@@ -613,7 +882,9 @@ def build_graph():
     for node in ["explain", "search", "propose", "economic_analysis", "conversational"]:
         graph.add_edge(node, END)
 
-    return graph.compile(checkpointer=MemorySaver())
+    # LangGraph API provides its own persistence; MemorySaver is for direct uvicorn use.
+    _checkpointer = None if "langgraph_api" in sys.modules else MemorySaver()
+    return graph.compile(checkpointer=_checkpointer)
 
 
 # ---------------------------------------------------------------------------

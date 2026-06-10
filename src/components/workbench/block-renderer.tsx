@@ -10,6 +10,7 @@ import { ObjectionResponseBlock } from "./blocks/objection-response-block";
 import { ProvenanceTraceBlock } from "./blocks/provenance-trace-block";
 import { ComparisonMatrixBlock } from "./blocks/comparison-matrix-block";
 import { ContextCardBlock } from "./blocks/context-card-block";
+import { EconomicCaseBlock } from "./blocks/economic-case-block";
 
 interface Props {
   block: RenderBlock;
@@ -66,6 +67,8 @@ export function BlockRenderer({ block, onInspect, loading = false }: Props) {
       return <ComparisonMatrixBlock block={block} />;
     case "ContextCard":
       return <ContextCardBlock block={block} />;
+    case "EconomicCase":
+      return <EconomicCaseBlock block={block} />;
     default:
       return (
         <div className="rounded-lg border border-dashed border-border p-4 text-xs text-muted-foreground">

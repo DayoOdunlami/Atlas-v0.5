@@ -50,7 +50,10 @@ export type VisualId =
   | "stored_match_list"
   | "match_score_bar"
   // ContextCard
-  | "paired_context_cards";
+  | "paired_context_cards"
+  // EconomicCase (Five Case Model — M1.0)
+  | "npv_waterfall"
+  | "value_driver_cards";
 
 // ---------------------------------------------------------------------------
 // Registry entry
@@ -134,6 +137,14 @@ export const VISUAL_REGISTRY: Record<RenderBlock["type"], VisualRegistryEntry> =
     primary: "paired_context_cards",
     alternatives: [],
     description: "Side-by-side source/target context cards.",
+  },
+  EconomicCase: {
+    blockType: "EconomicCase",
+    primary: "npv_waterfall",
+    alternatives: ["value_driver_cards"],
+    description:
+      "Five Case economic analysis. npv_waterfall when quantified data exists; " +
+      "value_driver_cards with assumption ledger when qualitative only.",
   },
 };
 
