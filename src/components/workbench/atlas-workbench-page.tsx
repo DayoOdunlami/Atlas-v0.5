@@ -36,10 +36,15 @@ export function AtlasWorkbenchPage({
       <WorkbenchAgentBridge>
         <SidebarProvider defaultOpen={false}>
           <WorkbenchSidebar />
-          <SidebarInset className="overflow-hidden">
+          {/* h-svh + overflow-hidden pins SidebarInset to the viewport.
+              Without this, min-h-svh lets the inset grow unbounded and
+              inner flex children never get a real height to fill. */}
+          <SidebarInset className="overflow-hidden flex flex-col h-svh">
             <WorkbenchHeader />
-            {/* Content area fills remaining height */}
-            <div className="flex-1 overflow-hidden" style={{ height: "calc(100vh - 41px)" }}>
+            {/* min-h-0 is critical: flex items default to min-height:auto
+                which prevents them from shrinking — they'd push past the
+                viewport instead of clipping. This is the root of the issue. */}
+            <div className="flex-1 min-h-0 overflow-hidden">
               <AtlasShell />
             </div>
           </SidebarInset>

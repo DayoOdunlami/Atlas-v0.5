@@ -511,7 +511,7 @@ async function fetchSiblingMatches(
   const { data } = await sb
     .schema("atlas")
     .from("matches")
-    .select("id, match_type, match_score")
+    .select("id, match_type, match_score, project_id, live_call_id")
     .eq("passport_id", passportId)
     .order("match_score", { ascending: false })
     .limit(25);

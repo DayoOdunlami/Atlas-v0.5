@@ -158,7 +158,7 @@ export function WorkbenchRuntimeProvider({
     load: async (externalId) => {
       const state = await getThreadState(externalId);
       if (onAgentValues && state.values) {
-        onAgentValues(state.values as WorkbenchAgentState);
+        onAgentValues(state.values as unknown as WorkbenchAgentState);
       }
       return {
         messages:
@@ -171,7 +171,8 @@ export function WorkbenchRuntimeProvider({
 
     eventHandlers: {
       onValues: (values: unknown) => {
-        const agentState = values as WorkbenchAgentState;
+        // Double-cast: the LangGraph SDK types values as unknown
+        const agentState = values as unknown as WorkbenchAgentState;
         if (onAgentValues) {
           onAgentValues(agentState);
         }
@@ -202,9 +203,10 @@ export function buildModelSummary(
 
   const topGaps: string[] = [];
   for (const block of model.blocks) {
-    if (block.type === "dimension_gap" && "gaps" in block.content) {
-      const gaps = (block.content as { gaps: Array<{ description: string; severity: string }> }).gaps ?? [];
-      gaps
+    if (block.type === "DimensionGap") {
+      // content is typed as DimensionGapContent which has a gaps array
+      const content = block.content as { gaps?: Array<{ description: string; severity: string }> };
+      (content.gaps ?? [])
         .filter((g) => g.severity === "high" || g.severity === "significant")
         .slice(0, 3)
         .forEach((g) => topGaps.push(g.description));
@@ -213,8 +215,9 @@ export function buildModelSummary(
 
   let evidenceCounts = { verified: 0, partial: 0, missing: 0, total: 0 };
   for (const block of model.blocks) {
-    if (block.type === "evidence_state_summary" && "counts" in block.content) {
-      evidenceCounts = (block.content as { counts: typeof evidenceCounts }).counts;
+    if (block.type === "EvidenceStateSummary") {
+      const content = block.content as unknown as { counts?: typeof evidenceCounts };
+      if (content.counts) evidenceCounts = content.counts;
     }
   }
 
@@ -222,8 +225,8 @@ export function buildModelSummary(
     artifact_id: model.artifact_id,
     match_id: model.source_object?.id ?? "",
     canonical_question_id: model.canonical_question_id,
-    source_label: model.source_object?.label ?? "Unknown",
-    target_label: model.target_object?.label ?? "Unknown",
+    source_label: model.source_object?.title ?? "Unknown",
+    target_label: model.target_object?.title ?? "Unknown",
     recommendation: spine?.recommendation ?? "",
     confidence_tier: spine?.confidence_tier ?? "Speculative",
     confidence_cap_reason: spine?.confidence_cap_reason ?? null,
