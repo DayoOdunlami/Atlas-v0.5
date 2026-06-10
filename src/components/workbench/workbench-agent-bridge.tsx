@@ -11,14 +11,13 @@
  *   WorkbenchProvider (which populates the context) must be an ancestor.
  *   This bridge sits INSIDE WorkbenchProvider and reads the model once it loads.
  *
- * Artifact sync:
- *   onAgentValues receives WorkbenchAgentState from the agent via onValues.
- *   When the agent has confirmed a model_patch, the updated artifact is written
- *   back to WorkbenchContext via setSnapshot (M0.9 — patch confirmation panel).
+ * Patch confirmation (M0.9):
+ *   When the agent takes the "propose" route it emits a ModelPatchProposal.
+ *   handlePatchProposal calls setPendingPatch() which surfaces
+ *   PatchConfirmationPanel.  Confirming calls applyPatch() in context.
  *
- * Five Case / economic_analysis:
- *   onPatchProposal will eventually surface an EconomicCaseBlock diff panel.
- *   STAGED M1.0 — no UI wired yet, proposal is logged to console for now.
+ * Five Case / economic_analysis (M1.0):
+ *   The same flow will carry EconomicCaseBlock ops — no new bridge code needed.
  */
 
 import { useWorkbench } from "@/lib/workbench/workbench-context";
@@ -35,7 +34,7 @@ interface WorkbenchAgentBridgeProps {
 }
 
 export function WorkbenchAgentBridge({ children }: WorkbenchAgentBridgeProps) {
-  const { model, isLoading } = useWorkbench();
+  const { model, isLoading, setPendingPatch } = useWorkbench();
 
   // Build slim model summary for the agent — empty object while loading.
   // The runtime provider is always mounted so threads persist across loads.
@@ -55,14 +54,9 @@ export function WorkbenchAgentBridge({ children }: WorkbenchAgentBridgeProps) {
   }
 
   function handlePatchProposal(patch: ModelPatchProposal) {
-    // STAGED M1.0: Show a confirmation diff panel before applying.
-    // For now, log so we can verify the contract fires correctly.
-    console.info("[WorkbenchAgentBridge] model_patch proposal received:", {
-      rationale: patch.rationale,
-      ops: patch.ops?.length ?? 0,
-      confidence_tier: patch.confidence_tier,
-    });
-    // TODO M0.9: dispatch to patch confirmation panel component
+    // Surface the PatchConfirmationPanel — the user reviews the diff and
+    // either confirms (applyPatch) or dismisses.
+    setPendingPatch(patch);
   }
 
   return (

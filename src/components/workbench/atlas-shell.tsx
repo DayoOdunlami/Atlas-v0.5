@@ -5,6 +5,7 @@ import { ChatPanel } from "./chat-panel";
 import { ArtifactCanvas } from "./artifact-canvas";
 import { InspectorDrawer } from "./inspector-drawer";
 import { SnapshotPreview } from "./snapshot-preview";
+import { PatchConfirmationPanel } from "./patch-confirmation-panel";
 
 export function AtlasShell() {
   const { model, inspectorKey, closeInspector, snapshotOpen, setSnapshotOpen } = useWorkbench();
@@ -34,6 +35,9 @@ export function AtlasShell() {
         onClose={() => setSnapshotOpen(false)}
         model={model}
       />
+
+      {/* Patch confirmation panel (M0.9) — bottom Sheet, shown when agent proposes */}
+      <PatchConfirmationPanel />
     </div>
   );
 }

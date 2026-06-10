@@ -19,7 +19,9 @@ import type {
   AtlasRenderModel,
   CanonicalQuestionId,
   RenderModelMap,
+  RenderBlock,
 } from "./atlas-render-model";
+import type { ModelPatchProposal, ModelPatchOp } from "./workbench-agent-contract";
 import renderModels from "@/data/atlas-v10-render-models.json";
 
 const MODELS = renderModels as RenderModelMap;
@@ -176,6 +178,16 @@ interface WorkbenchState {
   // Snapshot
   snapshotOpen: boolean;
   setSnapshotOpen: (v: boolean) => void;
+
+  // Patch confirmation (M0.9)
+  /** Pending model_patch proposal from the agent — null when none in flight */
+  pendingPatch: ModelPatchProposal | null;
+  /** Set by WorkbenchAgentBridge when the agent emits a propose route output */
+  setPendingPatch: (patch: ModelPatchProposal | null) => void;
+  /** Apply the pending patch to the active model and clear pendingPatch */
+  applyPatch: (patch: ModelPatchProposal) => void;
+  /** Dismiss the pending patch without applying */
+  dismissPatch: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -212,6 +224,12 @@ export function WorkbenchProvider({
   const [snapshotOpen, setSnapshotOpen] = React.useState(false);
   const [messages, setMessages] = React.useState<WorkbenchChatMessage[]>(INITIAL_MESSAGES);
 
+  // Patch confirmation state (M0.9)
+  const [pendingPatch, setPendingPatch] = React.useState<ModelPatchProposal | null>(null);
+  // Overlay model: starts as null, set when a patch is confirmed and applied.
+  // Sits on top of dbModel / static fixture until a new model is fetched.
+  const [patchedModel, setPatchedModel] = React.useState<AtlasRenderModel | null>(null);
+
   // DB-backed model state. When initialMatchId is set, the model is fetched
   // from /api/workbench/render-model; otherwise the static fixture is used.
   const isDbBacked = Boolean(initialMatchId);
@@ -219,12 +237,16 @@ export function WorkbenchProvider({
   const [isLoading, setIsLoading] = React.useState<boolean>(isDbBacked);
   const [error, setError] = React.useState<string | null>(null);
 
-  // Active model: DB model when available, static fixture otherwise.
-  // The fixture also serves as a placeholder while the DB model loads —
-  // consumers should gate display on `isLoading` rather than reading content.
-  const model: AtlasRenderModel = isDbBacked
+  // Active model priority: patched > DB-fetched > static fixture
+  const baseModel: AtlasRenderModel = isDbBacked
     ? (dbModel ?? MODELS[cqId])
     : MODELS[cqId];
+  const model: AtlasRenderModel = patchedModel ?? baseModel;
+
+  // Clear patchedModel when cq or match changes so stale patches don't persist
+  React.useEffect(() => {
+    setPatchedModel(null);
+  }, [cqId, initialMatchId]);
 
   const [session, setSessionState] = React.useState<WorkbenchSession>({
     matchId: initialMatchId ?? null,
@@ -317,6 +339,44 @@ export function WorkbenchProvider({
     setInspectorKey(null);
   }, []);
 
+  // Apply a ModelPatchProposal to the active model.
+  // Supports: add_block, update_block, remove_block, update_spine.
+  const applyPatch = React.useCallback((patch: ModelPatchProposal) => {
+    setPatchedModel((prev) => {
+      const base = prev ?? model;
+      let blocks = [...base.blocks];
+      let spine = { ...base.decision_spine };
+
+      for (const op of patch.ops as ModelPatchOp[]) {
+        if (op.op === "add_block") {
+          const idx = typeof op.at_index === "number" ? op.at_index : blocks.length;
+          blocks = [
+            ...blocks.slice(0, idx),
+            op.block as RenderBlock,
+            ...blocks.slice(idx),
+          ];
+        } else if (op.op === "update_block") {
+          blocks = blocks.map((b) =>
+            b.block_id === op.block_id
+              ? { ...b, ...(op.patch as Partial<RenderBlock>) }
+              : b,
+          );
+        } else if (op.op === "remove_block") {
+          blocks = blocks.filter((b) => b.block_id !== op.block_id);
+        } else if (op.op === "update_spine") {
+          spine = { ...spine, ...(op.patch as typeof spine) };
+        }
+      }
+
+      return { ...base, blocks, decision_spine: spine };
+    });
+    setPendingPatch(null);
+  }, [model]);
+
+  const dismissPatch = React.useCallback(() => {
+    setPendingPatch(null);
+  }, []);
+
   return (
     <WorkbenchContext.Provider
       value={{
@@ -338,6 +398,10 @@ export function WorkbenchProvider({
         closeInspector,
         snapshotOpen,
         setSnapshotOpen,
+        pendingPatch,
+        setPendingPatch,
+        applyPatch,
+        dismissPatch,
       }}
     >
       {children}
