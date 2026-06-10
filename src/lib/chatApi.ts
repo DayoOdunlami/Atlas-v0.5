@@ -89,3 +89,38 @@ export const sendMessage = (params: {
     },
   ) as AsyncGenerator<LangGraphMessagesEvent<LangChainMessage>>;
 };
+
+/**
+ * Workbench-specific sendMessage.
+ * Targets the "workbench" LangGraph graph and injects model_summary + lens
+ * into each run so the agent has context about the current artifact.
+ */
+export const sendWorkbenchMessage = (params: {
+  threadId: string;
+  messages: LangChainMessage[];
+  modelSummary: Record<string, unknown>;
+  lens?: string;
+  config?: LangGraphSendMessageConfig;
+}): AsyncGenerator<LangGraphMessagesEvent<LangChainMessage>> => {
+  const client = createClient();
+  const { checkpointId, ...restConfig } = params.config ?? {};
+
+  return client.runs.stream(
+    params.threadId,
+    "workbench",
+    {
+      input:
+        params.messages.length > 0
+          ? {
+              messages: params.messages,
+              model_summary: params.modelSummary,
+              lens: params.lens ?? "CPC",
+            }
+          : null,
+      config: { configurable: { model_name: "anthropic" } },
+      streamMode: ["messages-tuple", "values", "custom"],
+      ...(checkpointId && { checkpoint_id: checkpointId }),
+      ...restConfig,
+    },
+  ) as AsyncGenerator<LangGraphMessagesEvent<LangChainMessage>>;
+};
