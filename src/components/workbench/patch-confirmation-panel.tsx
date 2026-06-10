@@ -33,6 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, XCircle, Sparkles, FileText } from "lucide-react";
 import { useWorkbench } from "@/lib/workbench/workbench-context";
 import type { ModelPatchOp } from "@/lib/workbench/workbench-agent-contract";
+import { tierClass, toConfidenceTier } from "@/lib/design/tokens";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -108,16 +109,6 @@ function OpRow({ op }: { op: ModelPatchOp }) {
   return null;
 }
 
-// ---------------------------------------------------------------------------
-// Confidence tier colours
-// ---------------------------------------------------------------------------
-
-const TIER_STYLES: Record<string, string> = {
-  Speculative: "bg-slate-50 text-slate-600 border-slate-200",
-  Indicative:  "bg-amber-50 text-amber-700 border-amber-200",
-  Supported:   "bg-blue-50 text-blue-700 border-blue-200",
-  Robust:      "bg-green-50 text-green-700 border-green-200",
-};
 
 // ---------------------------------------------------------------------------
 // PatchConfirmationPanel
@@ -130,7 +121,7 @@ export function PatchConfirmationPanel() {
 
   if (!pendingPatch) return null;
 
-  const tierStyle = TIER_STYLES[pendingPatch.confidence_tier] ?? TIER_STYLES.Speculative;
+  const tierStyle = tierClass(toConfidenceTier(pendingPatch.confidence_tier));
   const opCount = pendingPatch.ops?.length ?? 0;
   const citations = pendingPatch.corpus_citations ?? [];
 

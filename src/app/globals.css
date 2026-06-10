@@ -5,119 +5,304 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ==========================================================================
+   CPC / Atlas 5 Design Token System
+   ==========================================================================
+
+   LAYER 1 — BRAND (shell, navigation, identity)
+     CPC Green   #006E51   primary / selected nav / primary actions
+     Mint        #CCE2DC   secondary / soft panel wash
+     Charcoal    #2E2D2B   body text / headings
+
+   LAYER 2 — SEMANTIC (meaning — trust, risk, state, action)
+     These tokens carry meaning. Do not repurpose them as decoration.
+     Evidence state:  verified → teal  |  partial → amber  |  missing → grey  |  contested → red
+     Confidence tier: Robust → green   |  Supported → blue |  Indicative → amber | Speculative → grey
+     Gap magnitude:   minor → pale amber  →  medium amber  →  orange  →  red blocker
+
+   LAYER 3 — DATA-VIS (chart series, map categories)
+     6-colour categorical palette, colour-blind safe, no overlap with layers 1/2.
+     vis-1 blue · vis-2 teal · vis-3 purple · vis-4 orange · vis-5 rose · vis-6 slate
+   ========================================================================== */
+
 :root {
-  /* Updated to Apple-inspired B2B SaaS color palette */
-  --background: #f8fafc; /* Light gray for overall background */
-  --foreground: #374151; /* Dark gray for primary text */
-  --card: #ffffff; /* Pure white card background */
-  --card-foreground: #374151; /* Dark gray card text */
-  --primary: #374151; /* Primary text color */
-  --primary-foreground: #f8fafc; /* Primary text on dark background */
-  --secondary: #6366f1; /* Blue accent color */
-  --secondary-foreground: #ffffff; /* Secondary text */
-  --muted: #f8fafc; /* Muted background */
-  --muted-foreground: #4b5563; /* Muted text */
-  --accent: #6366f1; /* Blue accent for highlights */
-  --accent-foreground: #ffffff; /* Accent text */
-  --destructive: #be123c; /* Error messages */
-  --destructive-foreground: #ffffff;
-  --border: #e5e7eb; /* Light gray borders */
-  --input: #ffffff; /* Input background */
-  --ring: rgba(99, 102, 241, 0.5); /* Blue focus ring */
-  --chart-1: #6366f1;
-  --chart-2: #10b981;
-  --chart-3: #f59e0b;
-  --chart-4: #ef4444;
-  --chart-5: #8b5cf6;
-  --radius: 0.5rem; /* Subtle corner rounding */
-  --sidebar: #ffffff; /* Sidebar background */
-  --sidebar-foreground: #374151; /* Sidebar text */
-  --sidebar-primary: #f8fafc; /* Sidebar primary background */
-  --sidebar-primary-foreground: #374151; /* Sidebar primary text */
-  --sidebar-accent: #6366f1; /* Sidebar accent */
-  --sidebar-accent-foreground: #ffffff; /* Sidebar accent text */
-  --sidebar-border: #e5e7eb; /* Sidebar border */
-  --sidebar-ring: rgba(99, 102, 241, 0.5); /* Sidebar focus ring */
-  --font-geist: "Geist", sans-serif;
+  /* --- Shadcn shell tokens ------------------------------------------------ */
+  --background:              #f7f9f8;   /* warm near-white, slight green tint  */
+  --foreground:              #2E2D2B;   /* CPC charcoal                        */
+
+  --card:                    #ffffff;
+  --card-foreground:         #2E2D2B;
+
+  --popover:                 #ffffff;
+  --popover-foreground:      #2E2D2B;
+
+  --primary:                 #006E51;   /* CPC green                           */
+  --primary-foreground:      #ffffff;
+
+  --secondary:               #CCE2DC;   /* CPC mint                            */
+  --secondary-foreground:    #006E51;
+
+  --muted:                   #f2f6f5;   /* mint-tinted muted panel             */
+  --muted-foreground:        #6b7280;
+
+  --accent:                  #098BC3;   /* Atlas blue — action / link          */
+  --accent-foreground:       #ffffff;
+
+  --destructive:             #c0392b;
+  --destructive-foreground:  #ffffff;
+
+  --border:                  #e4eeeb;   /* mint-tinted border                  */
+  --input:                   #ffffff;
+  --ring:                    #006E51;   /* CPC green focus ring                */
+
+  --radius:                  0.5rem;
+
+  /* Sidebar */
+  --sidebar:                 #ffffff;
+  --sidebar-foreground:      #2E2D2B;
+  --sidebar-primary:         #006E51;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent:          #f2f6f5;
+  --sidebar-accent-foreground: #006E51;
+  --sidebar-border:          #e4eeeb;
+  --sidebar-ring:            #006E51;
+
+  /* Chart series (data-vis layer — categorical, colour-blind safe) */
+  --chart-1:  #098BC3;   /* Atlas blue                */
+  --chart-2:  #006E51;   /* CPC green                 */
+  --chart-3:  #7c3aed;   /* violet                    */
+  --chart-4:  #ea7317;   /* orange                    */
+  --chart-5:  #c2185b;   /* rose/pink                 */
+  --chart-6:  #64748b;   /* slate                     */
+
+  /* --- Semantic: Evidence state ------------------------------------------ */
+  --evidence-verified:       #1a7a5e;   /* teal-green — confirmed              */
+  --evidence-verified-bg:    #e6f4f1;
+  --evidence-partial:        #d97706;   /* amber — self-reported / partial     */
+  --evidence-partial-bg:     #fef3c7;
+  --evidence-inferred:       #2563eb;   /* blue — model-inferred               */
+  --evidence-inferred-bg:    #eff6ff;
+  --evidence-unknown:        #9ca3af;   /* grey — no data                      */
+  --evidence-unknown-bg:     #f3f4f6;
+  --evidence-contested:      #c0392b;   /* red — disputed / contested claim    */
+  --evidence-contested-bg:   #fef2f2;
+
+  /* --- Semantic: Confidence tier ----------------------------------------- */
+  --tier-speculative:        #9ca3af;   /* grey                                */
+  --tier-speculative-bg:     #f3f4f6;
+  --tier-indicative:         #d97706;   /* amber                               */
+  --tier-indicative-bg:      #fef3c7;
+  --tier-supported:          #2563eb;   /* blue                                */
+  --tier-supported-bg:       #eff6ff;
+  --tier-robust:             #1a7a5e;   /* teal-green                          */
+  --tier-robust-bg:          #e6f4f1;
+
+  /* --- Semantic: Gap magnitude ------------------------------------------- */
+  --gap-minor:               #fbbf24;   /* pale amber — small gap              */
+  --gap-minor-bg:            #fffbeb;
+  --gap-medium:              #d97706;   /* amber — noticeable gap              */
+  --gap-medium-bg:           #fef3c7;
+  --gap-major:               #ea7317;   /* orange — significant gap            */
+  --gap-major-bg:            #fff7ed;
+  --gap-blocker:             #c0392b;   /* red — blocking / contested          */
+  --gap-blocker-bg:          #fef2f2;
+
+  /* --- Semantic: Financial / value (Five Case) --------------------------- */
+  --value-positive:          #1a7a5e;   /* green — positive NPV / benefit      */
+  --value-positive-bg:       #e6f4f1;
+  --value-neutral:           #64748b;   /* slate — neutral / uncertain         */
+  --value-neutral-bg:        #f8fafc;
+  --value-negative:          #c0392b;   /* red — cost / negative value driver  */
+  --value-negative-bg:       #fef2f2;
+  --value-gold:              #b45309;   /* warm gold — headline value figures  */
+  --value-gold-bg:           #fef3c7;
+
+  /* Typography */
+  --font-geist:   "Geist", sans-serif;
   --font-manrope: "Manrope", sans-serif;
 }
 
+/* --- Dark mode ------------------------------------------------------------ */
 .dark {
-  --background: #1f2937;
-  --foreground: #f8fafc;
-  --card: #374151;
-  --card-foreground: #f8fafc;
-  --primary: #6366f1;
-  --primary-foreground: #ffffff;
-  --secondary: #374151;
-  --secondary-foreground: #f8fafc;
-  --muted: #4b5563;
-  --muted-foreground: #9ca3af;
-  --accent: #6366f1;
-  --accent-foreground: #ffffff;
-  --destructive: #be123c;
-  --destructive-foreground: #ffffff;
-  --border: #4b5563;
-  --input: #374151;
-  --ring: rgba(99, 102, 241, 0.5);
-  --chart-1: #6366f1;
-  --chart-2: #10b981;
-  --chart-3: #f59e0b;
-  --chart-4: #ef4444;
-  --chart-5: #8b5cf6;
-  --sidebar: #374151;
-  --sidebar-foreground: #f8fafc;
-  --sidebar-primary: #4b5563;
-  --sidebar-primary-foreground: #f8fafc;
-  --sidebar-accent: #6366f1;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #4b5563;
-  --sidebar-ring: rgba(99, 102, 241, 0.5);
+  --background:              #1a1f1e;   /* very dark warm charcoal             */
+  --foreground:              #f0f7f5;   /* off-white, mint-tinted              */
+
+  --card:                    #222927;
+  --card-foreground:         #f0f7f5;
+
+  --popover:                 #222927;
+  --popover-foreground:      #f0f7f5;
+
+  --primary:                 #00a878;   /* lighter CPC green for dark bg       */
+  --primary-foreground:      #0a1a15;
+
+  --secondary:               #1a3832;   /* dark mint                           */
+  --secondary-foreground:    #a8d5cc;
+
+  --muted:                   #1e2623;
+  --muted-foreground:        #9ca3af;
+
+  --accent:                  #38bdf8;   /* lighter Atlas blue                  */
+  --accent-foreground:       #082032;
+
+  --destructive:             #e74c3c;
+  --destructive-foreground:  #ffffff;
+
+  --border:                  #2a3830;
+  --input:                   #222927;
+  --ring:                    #00a878;
+
+  --sidebar:                 #1a1f1e;
+  --sidebar-foreground:      #f0f7f5;
+  --sidebar-primary:         #00a878;
+  --sidebar-primary-foreground: #0a1a15;
+  --sidebar-accent:          #222927;
+  --sidebar-accent-foreground: #a8d5cc;
+  --sidebar-border:          #2a3830;
+  --sidebar-ring:            #00a878;
+
+  --chart-1:  #38bdf8;
+  --chart-2:  #00a878;
+  --chart-3:  #a78bfa;
+  --chart-4:  #fb923c;
+  --chart-5:  #f472b6;
+  --chart-6:  #94a3b8;
+
+  /* Evidence state — dark adjusted */
+  --evidence-verified:       #34d399;
+  --evidence-verified-bg:    #064e3b;
+  --evidence-partial:        #fbbf24;
+  --evidence-partial-bg:     #451a03;
+  --evidence-inferred:       #60a5fa;
+  --evidence-inferred-bg:    #1e3a5f;
+  --evidence-unknown:        #6b7280;
+  --evidence-unknown-bg:     #1f2937;
+  --evidence-contested:      #f87171;
+  --evidence-contested-bg:   #450a0a;
+
+  /* Confidence tier — dark adjusted */
+  --tier-speculative:        #6b7280;
+  --tier-speculative-bg:     #1f2937;
+  --tier-indicative:         #fbbf24;
+  --tier-indicative-bg:      #451a03;
+  --tier-supported:          #60a5fa;
+  --tier-supported-bg:       #1e3a5f;
+  --tier-robust:             #34d399;
+  --tier-robust-bg:          #064e3b;
+
+  /* Gap magnitude — dark adjusted */
+  --gap-minor:               #fde68a;
+  --gap-minor-bg:            #3a2500;
+  --gap-medium:              #fbbf24;
+  --gap-medium-bg:           #451a03;
+  --gap-major:               #fb923c;
+  --gap-major-bg:            #431407;
+  --gap-blocker:             #f87171;
+  --gap-blocker-bg:          #450a0a;
+
+  /* Value / financial — dark adjusted */
+  --value-positive:          #34d399;
+  --value-positive-bg:       #064e3b;
+  --value-neutral:           #94a3b8;
+  --value-neutral-bg:        #1e293b;
+  --value-negative:          #f87171;
+  --value-negative-bg:       #450a0a;
+  --value-gold:              #fbbf24;
+  --value-gold-bg:           #451a03;
 }
 
+/* --- Tailwind v4 @theme inline — maps CSS vars to utility classes ---------- */
 @theme inline {
-  /* Default to Manrope as app-wide sans font */
-  --font-sans: var(--font-manrope);
-  --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-sans:   var(--font-manrope);
+  --font-serif:  ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
   --font-mono:
     var(--font-geist-mono), ui-monospace, SFMono-Regular, "SF Mono", Monaco,
     Consolas, "Liberation Mono", "Courier New", monospace;
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Shadcn standard */
+  --color-background:              var(--background);
+  --color-foreground:              var(--foreground);
+  --color-card:                    var(--card);
+  --color-card-foreground:         var(--card-foreground);
+  --color-popover:                 var(--popover);
+  --color-popover-foreground:      var(--popover-foreground);
+  --color-primary:                 var(--primary);
+  --color-primary-foreground:      var(--primary-foreground);
+  --color-secondary:               var(--secondary);
+  --color-secondary-foreground:    var(--secondary-foreground);
+  --color-muted:                   var(--muted);
+  --color-muted-foreground:        var(--muted-foreground);
+  --color-accent:                  var(--accent);
+  --color-accent-foreground:       var(--accent-foreground);
+  --color-destructive:             var(--destructive);
+  --color-destructive-foreground:  var(--destructive-foreground);
+  --color-border:                  var(--border);
+  --color-input:                   var(--input);
+  --color-ring:                    var(--ring);
+  --color-chart-1:                 var(--chart-1);
+  --color-chart-2:                 var(--chart-2);
+  --color-chart-3:                 var(--chart-3);
+  --color-chart-4:                 var(--chart-4);
+  --color-chart-5:                 var(--chart-5);
+  --color-chart-6:                 var(--chart-6);
+  --radius-sm:  calc(var(--radius) - 4px);
+  --radius-md:  calc(var(--radius) - 2px);
+  --radius-lg:  var(--radius);
+  --radius-xl:  calc(var(--radius) + 4px);
+  --color-sidebar:                      var(--sidebar);
+  --color-sidebar-foreground:           var(--sidebar-foreground);
+  --color-sidebar-primary:              var(--sidebar-primary);
+  --color-sidebar-primary-foreground:   var(--sidebar-primary-foreground);
+  --color-sidebar-accent:               var(--sidebar-accent);
+  --color-sidebar-accent-foreground:    var(--sidebar-accent-foreground);
+  --color-sidebar-border:               var(--sidebar-border);
+  --color-sidebar-ring:                 var(--sidebar-ring);
+
+  /* Semantic tokens exposed as Tailwind utilities
+     Usage: text-evidence-verified  bg-evidence-verified-bg
+            text-tier-robust        bg-tier-robust-bg
+            text-gap-major          bg-gap-major-bg
+            text-value-positive     bg-value-positive-bg            */
+  --color-evidence-verified:       var(--evidence-verified);
+  --color-evidence-verified-bg:    var(--evidence-verified-bg);
+  --color-evidence-partial:        var(--evidence-partial);
+  --color-evidence-partial-bg:     var(--evidence-partial-bg);
+  --color-evidence-inferred:       var(--evidence-inferred);
+  --color-evidence-inferred-bg:    var(--evidence-inferred-bg);
+  --color-evidence-unknown:        var(--evidence-unknown);
+  --color-evidence-unknown-bg:     var(--evidence-unknown-bg);
+  --color-evidence-contested:      var(--evidence-contested);
+  --color-evidence-contested-bg:   var(--evidence-contested-bg);
+
+  --color-tier-speculative:        var(--tier-speculative);
+  --color-tier-speculative-bg:     var(--tier-speculative-bg);
+  --color-tier-indicative:         var(--tier-indicative);
+  --color-tier-indicative-bg:      var(--tier-indicative-bg);
+  --color-tier-supported:          var(--tier-supported);
+  --color-tier-supported-bg:       var(--tier-supported-bg);
+  --color-tier-robust:             var(--tier-robust);
+  --color-tier-robust-bg:          var(--tier-robust-bg);
+
+  --color-gap-minor:               var(--gap-minor);
+  --color-gap-minor-bg:            var(--gap-minor-bg);
+  --color-gap-medium:              var(--gap-medium);
+  --color-gap-medium-bg:           var(--gap-medium-bg);
+  --color-gap-major:               var(--gap-major);
+  --color-gap-major-bg:            var(--gap-major-bg);
+  --color-gap-blocker:             var(--gap-blocker);
+  --color-gap-blocker-bg:          var(--gap-blocker-bg);
+
+  --color-value-positive:          var(--value-positive);
+  --color-value-positive-bg:       var(--value-positive-bg);
+  --color-value-neutral:           var(--value-neutral);
+  --color-value-neutral-bg:        var(--value-neutral-bg);
+  --color-value-negative:          var(--value-negative);
+  --color-value-negative-bg:       var(--value-negative-bg);
+  --color-value-gold:              var(--value-gold);
+  --color-value-gold-bg:           var(--value-gold-bg);
 }
 
+/* --- Base resets ---------------------------------------------------------- */
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -139,12 +324,8 @@ html {
 }
 
 /*
-  The default border color has changed to `currentcolor` in Tailwind CSS v4,
-  so we've added these compatibility styles to make sure everything still
-  looks the same as it did with Tailwind CSS v3.
-
-  If we ever want to remove these styles, we need to add an explicit border
-  color utility to any element that depends on these defaults.
+  Tailwind CSS v4 compatibility: default border-color changed to `currentColor`.
+  These styles preserve v3 behaviour for elements that relied on the default.
 */
 @layer base {
   *,
