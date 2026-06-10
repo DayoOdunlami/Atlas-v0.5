@@ -29,23 +29,28 @@ import type { AtlasRenderModel, RenderBlock } from "./atlas-render-model";
  * explain         — Read model context, answer with citations. Cheap, fast.
  *                   No corpus search, no model_patch.
  *
- * search          — Corpus search + answer. User explicitly wants evidence.
- *                   No model_patch.
+ * search          — Corpus search + answer. User explicitly wants evidence
+ *                   FOR this specific match (comparators, corroboration).
+ *
+ * explore         — Browse the corpus BEYOND this match. Handles broader
+ *                   questions: "what else is in the corpus on X?",
+ *                   "tell me about this technology", "what other projects...".
+ *                   M1.4 universal interface.
  *
  * propose         — Agent proposes a model_patch to update the artifact.
  *                   Requires user confirmation before the patch is applied.
  *
- * economic_analysis — STAGED (M1.0). Run Five Case Model with match context.
+ * economic_analysis — Run Five Case Model with match context.
  *                   Produces EconomicCaseBlock model_patch with NPV/BCR.
- *                   DO NOT implement until workbench agent model_patch is proven.
  *
  * conversational  — Greetings / meta / off-topic. No tools, instant reply.
  */
 export type WorkbenchRoute =
   | "explain"
   | "search"
+  | "explore"           // M1.4 — corpus-wide exploration
   | "propose"
-  | "economic_analysis" // STAGED — M1.0
+  | "economic_analysis"
   | "conversational";
 
 // ---------------------------------------------------------------------------
@@ -159,7 +164,7 @@ export interface WorkbenchAgentOutput {
   chat_response: string;
 
   /**
-   * Present when route = "search". Ranked corpus citations.
+   * Present when route = "search" | "explore". Ranked corpus citations.
    */
   corpus_citations?: Array<{
     id: string;

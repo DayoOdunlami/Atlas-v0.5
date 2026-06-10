@@ -1,0 +1,2636 @@
+{
+  "cq.match.browse": {
+    "artifact_id": "artifact.fdb9019d-768e-41e4-86c6-981b0fd8974f.cq.match.browse",
+    "model_version": "v1.0-spike",
+    "generated_at": "2026-06-09T14:33:21.804579Z",
+    "canonical_question_id": "cq.match.browse",
+    "layout_template": "Browse Command View",
+    "mode": "Browse-many",
+    "source_object": {
+      "type": "passport",
+      "id": "98648147-f217-42c3-a255-46e3c4e4258c",
+      "title": "GPS-Denied Rail UAS \u2014 Infrastructure Inspection Demo",
+      "summary": "A passport describing GPS-denied UAS rail inspection capability, including UAS flight in tunnels/cuttings, computer vision and LiDAR fusion, obstacle detection and defect identification. The underlying claims are self-reported."
+    },
+    "target_object": {
+      "type": "project",
+      "id": "9528df5f-fd14-4743-967e-2c1b7154d05a",
+      "title": "Real-time AI enabled rail track inspection and analysis [RAPPID] - Resilience Fund Application",
+      "funder": "Innovate UK",
+      "status": "Closed",
+      "funding_amount": 43347.0
+    },
+    "decision_spine": {
+      "recommendation": "Strong thematic match, but not UAS-transfer ready",
+      "decision": "Explore / learn / partner, not direct substitution",
+      "summary": "RAPPID (Resilience Fund) directly addresses AI-enabled real-time rail track defect inspection on the UK Network Rail network, closely mirroring the passport's infrastructure defect identification and rail inspection validation claims. This is the strongest thematic match among project results.",
+      "confidence_tier": "Indicative",
+      "confidence_cap_reason": "Confidence is capped because 10 of 10 passport claims are self-reported and 3 stored gaps are large/significant.",
+      "score": 0.314355838682957,
+      "economic_gap_value": 43347
+    },
+    "blocks": [
+      {
+        "id": "block.match_list",
+        "type": "ComparisonMatrix",
+        "state": "core",
+        "visual": "stored_match_list",
+        "headline": "Selected stored match can open directly into Workbench.",
+        "content": [
+          {
+            "match_id": "fdb9019d-768e-41e4-86c6-981b0fd8974f",
+            "passport": "GPS-Denied Rail UAS \u2014 Infrastructure Inspection Demo",
+            "target": "Real-time AI enabled rail track inspection and analysis [RAPPID] - Resilience Fund Application",
+            "score": 0.314355838682957,
+            "funder": "Innovate UK",
+            "status": "Closed"
+          }
+        ]
+      },
+      {
+        "id": "block.context",
+        "type": "ContextCard",
+        "state": "core",
+        "visual": "paired_context_cards",
+        "headline": "Source passport and target project context.",
+        "content": {
+          "source": {
+            "id": "98648147-f217-42c3-a255-46e3c4e4258c",
+            "title": "GPS-Denied Rail UAS \u2014 Infrastructure Inspection Demo",
+            "summary": "A passport describing GPS-denied UAS rail inspection capability, including UAS flight in tunnels/cuttings, computer vision and LiDAR fusion, obstacle detection and defect identification. The underlying claims are self-reported."
+          },
+          "target": {
+            "id": "9528df5f-fd14-4743-967e-2c1b7154d05a",
+            "title": "Real-time AI enabled rail track inspection and analysis [RAPPID] - Resilience Fund Application",
+            "funder": "Innovate UK",
+            "lead_org": "MONIRAIL LTD",
+            "funding_amount": 43347.0,
+            "status": "Closed",
+            "abstract": "RAPPID uses AI, deep learning and phased-array ultrasonic testing hardware to support real-time rail track defect inspection and analysis. It addresses Network Rail infrastructure inspection constraints and predictive maintenance needs across the UK network."
+          }
+        }
+      }
+    ],
+    "inspector_index": {
+      "claim.bf6c16d6": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.bf6c16d6",
+          "claim_id": "bf6c16d6",
+          "claim_text": "The organisation has conducted a GPS-denied UAS trial on the UK rail network, logging over 847 flight hours in operational tunnels and cuttings.",
+          "domain": "evidence",
+          "role": "asserts",
+          "conditions": "GPS-denied environments including tunnels and cuttings on the UK rail network",
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "Over 847 flight hours logged in operational tunnels and cuttings where GPS signal is unavailable.",
+          "confidence_reason": "Flight hour totals are self-reported and have not been independently verified.",
+          "match_note": "Not evidenced in RAPPID; RAPPID is ground-based UTU inspection.",
+          "evidence_map_verdict": "not mapped",
+          "evidence_map_judgement": "No stored evidence_map entry for this claim."
+        }
+      },
+      "claim.18848f1a": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.18848f1a",
+          "claim_id": "18848f1a",
+          "claim_text": "The navigation system achieved 94.7% accuracy in GPS-denied tunnel environments.",
+          "domain": "performance",
+          "role": "asserts",
+          "conditions": "GPS-denied tunnel environments; metric definition not specified",
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "Our navigation system achieved 94.7% accuracy in GPS-denied tunnel environments.",
+          "confidence_reason": "The specific accuracy metric and measurement methodology have not been independently validated.",
+          "match_note": "Not matched; RAPPID does not address UAS GPS-denied navigation accuracy.",
+          "evidence_map_verdict": "not mapped",
+          "evidence_map_judgement": "No stored evidence_map entry for this claim."
+        }
+      },
+      "claim.556a1cf0": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.556a1cf0",
+          "claim_id": "556a1cf0",
+          "claim_text": "The trial was conducted under NRIL HAZOP review and safety case approval.",
+          "domain": "certification",
+          "role": "asserts",
+          "conditions": null,
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "The trial was conducted under NRIL HAZOP review and safety case approval.",
+          "confidence_reason": "The HAZOP review and safety case approval are self-reported and documents have not been reviewed.",
+          "match_note": "Contextually relevant via Network Rail operational environment, but not explicit for UAS operations.",
+          "evidence_map_verdict": "not mapped",
+          "evidence_map_judgement": "No stored evidence_map entry for this claim."
+        }
+      },
+      "claim.72044537": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.72044537",
+          "claim_id": "72044537",
+          "claim_text": "The UAS navigation system uses computer vision and LiDAR sensor fusion for localisation in GPS-denied environments.",
+          "domain": "capability",
+          "role": "asserts",
+          "conditions": "GPS-denied environments",
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "The system uses computer vision and LiDAR fusion for localisation.",
+          "confidence_reason": "Technical architecture is described without supporting technical documentation or third-party assessment.",
+          "match_note": "No evidence in RAPPID; platform/method gap.",
+          "evidence_map_verdict": "not mapped",
+          "evidence_map_judgement": "No stored evidence_map entry for this claim."
+        }
+      },
+      "claim.70350d4a": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.70350d4a",
+          "claim_id": "70350d4a",
+          "claim_text": "The UAS demonstrated autonomous obstacle detection and avoidance at track level with zero safety incidents across the trial.",
+          "domain": "performance",
+          "role": "asserts",
+          "conditions": "Track-level operations during 14-month trial across three Network Rail managed sites",
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "We demonstrated autonomous obstacle detection and avoidance at track level with zero safety incidents.",
+          "confidence_reason": "Zero safety incidents claim is self-reported without independent safety audit reference.",
+          "match_note": "Only indirectly relevant; not evidenced in RAPPID.",
+          "evidence_map_verdict": "not mapped",
+          "evidence_map_judgement": "No stored evidence_map entry for this claim."
+        }
+      },
+      "claim.f896753c": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.f896753c",
+          "claim_id": "f896753c",
+          "claim_text": "The UAS platform is capable of identifying infrastructure defects including cracks, corrosion, and drainage blockages during inspection missions.",
+          "domain": "capability",
+          "role": "asserts",
+          "conditions": null,
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "The UAS platform is capable of infrastructure inspection \u2014 identifying cracks, corrosion, and drainage blockages.",
+          "confidence_reason": "Capability is asserted without thresholds, false positive/negative rates, or independent criteria.",
+          "match_note": "Strong thematic alignment with RAPPID rail defect detection.",
+          "evidence_map_verdict": "not mapped",
+          "evidence_map_judgement": "No stored evidence_map entry for this claim."
+        }
+      },
+      "claim.e8a7afeb": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.e8a7afeb",
+          "claim_id": "e8a7afeb",
+          "claim_text": "Inspection results from the UAS have been validated against manual inspection records.",
+          "domain": "evidence",
+          "role": "asserts",
+          "conditions": null,
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "results validated against manual inspection records.",
+          "confidence_reason": "Validation scope/methodology not described and no third-party review referenced.",
+          "match_note": "Relevant; RAPPID uses Network Rail UTU data as comparison context.",
+          "evidence_map_verdict": "relevant",
+          "evidence_map_judgement": "Relevant \u2014 RAPPID's inspection results against Network Rail's existing UTU data mirrors the validation against manual inspection records claimed in the passport."
+        }
+      },
+      "claim.13cf451f": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.13cf451f",
+          "claim_id": "13cf451f",
+          "claim_text": "The trial took place across three Network Rail managed sites over a period of 14 months.",
+          "domain": "evidence",
+          "role": "asserts",
+          "conditions": null,
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "Trial took place across three Network Rail managed sites over 14 months.",
+          "confidence_reason": "Sites and duration are self-reported; no independent trial report cited.",
+          "match_note": "Partial; RAPPID involves Network Rail managed infrastructure but not same site structure.",
+          "evidence_map_verdict": "partial",
+          "evidence_map_judgement": "Partial \u2014 RAPPID involves Network Rail managed infrastructure across the UK network, though specific site counts differ."
+        }
+      },
+      "claim.b7ef24d8": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.b7ef24d8",
+          "claim_id": "b7ef24d8",
+          "claim_text": "The technology has reached Technology Readiness Level 6, having been demonstrated in a relevant operational environment.",
+          "domain": "capability",
+          "role": "asserts",
+          "conditions": "Self-assessed TRL 6",
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "The technology is at TRL 6 \u2014 demonstrated in relevant environment.",
+          "confidence_reason": "TRL level is self-assessed without independent TRL review.",
+          "match_note": "Strong thematic match because RAPPID addresses rail defect detection, but method/platform differs.",
+          "evidence_map_verdict": "strong",
+          "evidence_map_judgement": "Strong match \u2014 RAPPID explicitly targets detection of rail track defects, directly aligning with the passport's crack, corrosion, and drainage defect identification claims."
+        }
+      },
+      "claim.637192dd": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.637192dd",
+          "claim_id": "637192dd",
+          "claim_text": "Operating UAS in GPS-denied rail environments requires HAZOP review and safety case approval from Network Rail Infrastructure Limited.",
+          "domain": "regulatory",
+          "role": "requires",
+          "conditions": "UK rail network operational environments",
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "The trial was conducted under NRIL HAZOP review and safety case approval.",
+          "confidence_reason": "Requirement is implied from trial description but not cited to formal regulations.",
+          "match_note": "Contextually relevant through Network Rail operational context.",
+          "evidence_map_verdict": "contextual",
+          "evidence_map_judgement": "Contextually relevant \u2014 Network Rail operational environment implies familiarity with HAZOP and safety case processes."
+        }
+      },
+      "gap.1": {
+        "title": "Missing Evidence",
+        "kind": "gap",
+        "content": {
+          "id": "gap.1",
+          "gap_type": "missing_evidence",
+          "title": "Missing Evidence",
+          "magnitude": "large",
+          "severity": "significant",
+          "description": "RAPPID uses UTU ground-based rail vehicles; no evidence of UAS or aerial platform for GPS-denied navigation using LiDAR/computer vision fusion.",
+          "provenance": "stored",
+          "evidence_state": "inferred",
+          "what_would_change": "Evidence that the target context includes UAS/aerial inspection, or a justified translation from ground-based UTU to UAS operations."
+        }
+      },
+      "gap.2": {
+        "title": "Sector Gap",
+        "kind": "gap",
+        "content": {
+          "id": "gap.2",
+          "gap_type": "sector_gap",
+          "title": "Sector Gap",
+          "magnitude": "large",
+          "severity": "significant",
+          "description": "Inspection method is ground-based ultrasonic testing, not aerial UAS-based inspection in tunnels or cuttings.",
+          "provenance": "stored",
+          "evidence_state": "inferred",
+          "what_would_change": "Evidence that the target context includes UAS/aerial inspection, or a justified translation from ground-based UTU to UAS operations."
+        }
+      },
+      "gap.3": {
+        "title": "Missing Evidence",
+        "kind": "gap",
+        "content": {
+          "id": "gap.3",
+          "gap_type": "missing_evidence",
+          "title": "Missing Evidence",
+          "magnitude": "large",
+          "severity": "significant",
+          "description": "No evidence of GPS-denied operational capability or tunnel/cutting flight hours.",
+          "provenance": "stored",
+          "evidence_state": "inferred",
+          "what_would_change": "Verified GPS-denied tunnel/cutting flight logs, navigation accuracy methodology, or comparable operational evidence."
+        }
+      },
+      "gap.4": {
+        "title": "Certification Gap",
+        "kind": "gap",
+        "content": {
+          "id": "gap.4",
+          "gap_type": "certification_gap",
+          "title": "Certification Gap",
+          "magnitude": "small",
+          "severity": "minor",
+          "description": "HAZOP and safety case alignment is implied by Network Rail context but not explicitly evidenced for UAS operations.",
+          "provenance": "stored",
+          "evidence_state": "inferred",
+          "what_would_change": "Evidence that the target context includes UAS/aerial inspection, or a justified translation from ground-based UTU to UAS operations."
+        }
+      },
+      "evidence_map.13cf451f": {
+        "title": "Evidence map item",
+        "kind": "evidence_map",
+        "content": {
+          "id": "evidence_map.13cf451f",
+          "claim_id": "13cf451f",
+          "claim_text": "The trial took place across three Network Rail managed sites over a period of 14 months.",
+          "verdict": "partial",
+          "judgement": "Partial \u2014 RAPPID involves Network Rail managed infrastructure across the UK network, though specific site counts differ.",
+          "evidence_state": "self-reported",
+          "provenance": "derived",
+          "source_excerpt": "Trial took place across three Network Rail managed sites over 14 months.",
+          "confidence_reason": "Sites and duration are self-reported; no independent trial report cited."
+        }
+      },
+      "evidence_map.637192dd": {
+        "title": "Evidence map item",
+        "kind": "evidence_map",
+        "content": {
+          "id": "evidence_map.637192dd",
+          "claim_id": "637192dd",
+          "claim_text": "Operating UAS in GPS-denied rail environments requires HAZOP review and safety case approval from Network Rail Infrastructure Limited.",
+          "verdict": "contextual",
+          "judgement": "Contextually relevant \u2014 Network Rail operational environment implies familiarity with HAZOP and safety case processes.",
+          "evidence_state": "self-reported",
+          "provenance": "derived",
+          "source_excerpt": "The trial was conducted under NRIL HAZOP review and safety case approval.",
+          "confidence_reason": "Requirement is implied from trial description but not cited to formal regulations."
+        }
+      },
+      "evidence_map.9528df5f": {
+        "title": "Evidence map item",
+        "kind": "evidence_map",
+        "content": {
+          "id": "evidence_map.9528df5f",
+          "claim_id": "9528df5f",
+          "claim_text": "Claim 9528df5f",
+          "verdict": "judgement",
+          "judgement": "RAPPID references Network Rail's operational infrastructure and inspection regimes, providing context for HAZOP and safety case requirements.",
+          "evidence_state": "unknown",
+          "provenance": "derived",
+          "source_excerpt": null,
+          "confidence_reason": "No linked claim record found in fixture."
+        }
+      },
+      "evidence_map.b7ef24d8": {
+        "title": "Evidence map item",
+        "kind": "evidence_map",
+        "content": {
+          "id": "evidence_map.b7ef24d8",
+          "claim_id": "b7ef24d8",
+          "claim_text": "The technology has reached Technology Readiness Level 6, having been demonstrated in a relevant operational environment.",
+          "verdict": "strong",
+          "judgement": "Strong match \u2014 RAPPID explicitly targets detection of rail track defects, directly aligning with the passport's crack, corrosion, and drainage defect identification claims.",
+          "evidence_state": "self-reported",
+          "provenance": "derived",
+          "source_excerpt": "The technology is at TRL 6 \u2014 demonstrated in relevant environment.",
+          "confidence_reason": "TRL level is self-assessed without independent TRL review."
+        }
+      },
+      "evidence_map.e8a7afeb": {
+        "title": "Evidence map item",
+        "kind": "evidence_map",
+        "content": {
+          "id": "evidence_map.e8a7afeb",
+          "claim_id": "e8a7afeb",
+          "claim_text": "Inspection results from the UAS have been validated against manual inspection records.",
+          "verdict": "relevant",
+          "judgement": "Relevant \u2014 RAPPID's inspection results against Network Rail's existing UTU data mirrors the validation against manual inspection records claimed in the passport.",
+          "evidence_state": "self-reported",
+          "provenance": "derived",
+          "source_excerpt": "results validated against manual inspection records.",
+          "confidence_reason": "Validation scope/methodology not described and no third-party review referenced."
+        }
+      },
+      "confidence": {
+        "title": "Confidence cap",
+        "kind": "confidence",
+        "content": {
+          "confidence_tier": "Indicative",
+          "cap_reason": "Confidence is capped because 10 of 10 passport claims are self-reported and 3 stored gaps are large/significant.",
+          "evidence_counts": {
+            "verified": 0,
+            "self-reported": 10,
+            "inferred": 0,
+            "unknown": 0,
+            "contested": 0
+          }
+        }
+      }
+    },
+    "snapshot": {
+      "title": "GPS-Denied Rail UAS \u2014 Infrastructure Inspection Demo \u2192 Real-time AI enabled rail track inspection and analysis [RAPPID] - Resilience Fund Application",
+      "included_blocks": [
+        "block.match_list",
+        "block.context"
+      ],
+      "must_include": [
+        "decision_spine",
+        "confidence_cap_reason",
+        "large_gaps",
+        "claim_evidence_states"
+      ]
+    },
+    "data_quality_notes": [
+      "Stored match has evidence_map and gaps, which are strong inputs for the Workbench.",
+      "All sampled passport claims are self-reported, so confidence remains capped.",
+      "evidence_map is currently a key-value object; a structured array would improve rendering and inspector links.",
+      "gaps are close to usable but should add affected_claim_ids and what_would_change fields."
+    ]
+  },
+  "cq.match.workbench": {
+    "artifact_id": "artifact.fdb9019d-768e-41e4-86c6-981b0fd8974f.cq.match.workbench",
+    "model_version": "v1.0-spike",
+    "generated_at": "2026-06-09T14:33:21.804972Z",
+    "canonical_question_id": "cq.match.workbench",
+    "layout_template": "Workbench Decision Spine",
+    "mode": "Workbench-one",
+    "source_object": {
+      "type": "passport",
+      "id": "98648147-f217-42c3-a255-46e3c4e4258c",
+      "title": "GPS-Denied Rail UAS \u2014 Infrastructure Inspection Demo",
+      "summary": "A passport describing GPS-denied UAS rail inspection capability, including UAS flight in tunnels/cuttings, computer vision and LiDAR fusion, obstacle detection and defect identification. The underlying claims are self-reported."
+    },
+    "target_object": {
+      "type": "project",
+      "id": "9528df5f-fd14-4743-967e-2c1b7154d05a",
+      "title": "Real-time AI enabled rail track inspection and analysis [RAPPID] - Resilience Fund Application",
+      "funder": "Innovate UK",
+      "status": "Closed",
+      "funding_amount": 43347.0
+    },
+    "decision_spine": {
+      "recommendation": "Strong thematic match, but not UAS-transfer ready",
+      "decision": "Explore / learn / partner, not direct substitution",
+      "summary": "RAPPID (Resilience Fund) directly addresses AI-enabled real-time rail track defect inspection on the UK Network Rail network, closely mirroring the passport's infrastructure defect identification and rail inspection validation claims. This is the strongest thematic match among project results.",
+      "confidence_tier": "Indicative",
+      "confidence_cap_reason": "Confidence is capped because 10 of 10 passport claims are self-reported and 3 stored gaps are large/significant.",
+      "score": 0.314355838682957,
+      "economic_gap_value": 43347
+    },
+    "blocks": [
+      {
+        "id": "block.recommendation",
+        "type": "RecommendationConfidence",
+        "state": "core",
+        "visual": "decision_card",
+        "headline": "Strong thematic match, but not UAS-transfer ready",
+        "content": {
+          "decision": "Explore / learn / partner, not direct substitution",
+          "summary": "RAPPID (Resilience Fund) directly addresses AI-enabled real-time rail track defect inspection on the UK Network Rail network, closely mirroring the passport's infrastructure defect identification and rail inspection validation claims. This is the strongest thematic match among project results.",
+          "score": 0.314355838682957,
+          "confidence_tier": "Indicative",
+          "confidence_cap_reason": "Confidence is capped because 10 of 10 passport claims are self-reported and 3 stored gaps are large/significant."
+        }
+      },
+      {
+        "id": "block.evidence_state",
+        "type": "EvidenceStateSummary",
+        "state": "core",
+        "visual": "evidence_state_bar",
+        "headline": "All passport claims in this fixture are self-reported.",
+        "content": {
+          "counts": {
+            "verified": 0,
+            "self-reported": 10,
+            "inferred": 0,
+            "unknown": 0,
+            "contested": 0
+          },
+          "total_claims": 10,
+          "cap_reason": "Confidence is capped because 10 of 10 passport claims are self-reported and 3 stored gaps are large/significant."
+        }
+      },
+      {
+        "id": "block.dimension_gap",
+        "type": "DimensionGap",
+        "state": "core",
+        "visual": "source_target_gap_rows",
+        "headline": "The match is thematic, but platform/method transfer gaps are large.",
+        "content": [
+          {
+            "id": "gap.1",
+            "gap_type": "missing_evidence",
+            "title": "Missing Evidence",
+            "magnitude": "large",
+            "severity": "significant",
+            "description": "RAPPID uses UTU ground-based rail vehicles; no evidence of UAS or aerial platform for GPS-denied navigation using LiDAR/computer vision fusion.",
+            "provenance": "stored",
+            "evidence_state": "inferred",
+            "what_would_change": "Evidence that the target context includes UAS/aerial inspection, or a justified translation from ground-based UTU to UAS operations."
+          },
+          {
+            "id": "gap.2",
+            "gap_type": "sector_gap",
+            "title": "Sector Gap",
+            "magnitude": "large",
+            "severity": "significant",
+            "description": "Inspection method is ground-based ultrasonic testing, not aerial UAS-based inspection in tunnels or cuttings.",
+            "provenance": "stored",
+            "evidence_state": "inferred",
+            "what_would_change": "Evidence that the target context includes UAS/aerial inspection, or a justified translation from ground-based UTU to UAS operations."
+          },
+          {
+            "id": "gap.3",
+            "gap_type": "missing_evidence",
+            "title": "Missing Evidence",
+            "magnitude": "large",
+            "severity": "significant",
+            "description": "No evidence of GPS-denied operational capability or tunnel/cutting flight hours.",
+            "provenance": "stored",
+            "evidence_state": "inferred",
+            "what_would_change": "Verified GPS-denied tunnel/cutting flight logs, navigation accuracy methodology, or comparable operational evidence."
+          },
+          {
+            "id": "gap.4",
+            "gap_type": "certification_gap",
+            "title": "Certification Gap",
+            "magnitude": "small",
+            "severity": "minor",
+            "description": "HAZOP and safety case alignment is implied by Network Rail context but not explicitly evidenced for UAS operations.",
+            "provenance": "stored",
+            "evidence_state": "inferred",
+            "what_would_change": "Evidence that the target context includes UAS/aerial inspection, or a justified translation from ground-based UTU to UAS operations."
+          }
+        ]
+      },
+      {
+        "id": "block.matchbench",
+        "type": "MatchBench",
+        "state": "core",
+        "visual": "evidence_map_table",
+        "headline": "Stored evidence_map explains how claims relate to the target project.",
+        "content": [
+          {
+            "id": "evidence_map.13cf451f",
+            "claim_id": "13cf451f",
+            "claim_text": "The trial took place across three Network Rail managed sites over a period of 14 months.",
+            "verdict": "partial",
+            "judgement": "Partial \u2014 RAPPID involves Network Rail managed infrastructure across the UK network, though specific site counts differ.",
+            "evidence_state": "self-reported",
+            "provenance": "derived",
+            "source_excerpt": "Trial took place across three Network Rail managed sites over 14 months.",
+            "confidence_reason": "Sites and duration are self-reported; no independent trial report cited."
+          },
+          {
+            "id": "evidence_map.637192dd",
+            "claim_id": "637192dd",
+            "claim_text": "Operating UAS in GPS-denied rail environments requires HAZOP review and safety case approval from Network Rail Infrastructure Limited.",
+            "verdict": "contextual",
+            "judgement": "Contextually relevant \u2014 Network Rail operational environment implies familiarity with HAZOP and safety case processes.",
+            "evidence_state": "self-reported",
+            "provenance": "derived",
+            "source_excerpt": "The trial was conducted under NRIL HAZOP review and safety case approval.",
+            "confidence_reason": "Requirement is implied from trial description but not cited to formal regulations."
+          },
+          {
+            "id": "evidence_map.9528df5f",
+            "claim_id": "9528df5f",
+            "claim_text": "Claim 9528df5f",
+            "verdict": "judgement",
+            "judgement": "RAPPID references Network Rail's operational infrastructure and inspection regimes, providing context for HAZOP and safety case requirements.",
+            "evidence_state": "unknown",
+            "provenance": "derived",
+            "source_excerpt": null,
+            "confidence_reason": "No linked claim record found in fixture."
+          },
+          {
+            "id": "evidence_map.b7ef24d8",
+            "claim_id": "b7ef24d8",
+            "claim_text": "The technology has reached Technology Readiness Level 6, having been demonstrated in a relevant operational environment.",
+            "verdict": "strong",
+            "judgement": "Strong match \u2014 RAPPID explicitly targets detection of rail track defects, directly aligning with the passport's crack, corrosion, and drainage defect identification claims.",
+            "evidence_state": "self-reported",
+            "provenance": "derived",
+            "source_excerpt": "The technology is at TRL 6 \u2014 demonstrated in relevant environment.",
+            "confidence_reason": "TRL level is self-assessed without independent TRL review."
+          },
+          {
+            "id": "evidence_map.e8a7afeb",
+            "claim_id": "e8a7afeb",
+            "claim_text": "Inspection results from the UAS have been validated against manual inspection records.",
+            "verdict": "relevant",
+            "judgement": "Relevant \u2014 RAPPID's inspection results against Network Rail's existing UTU data mirrors the validation against manual inspection records claimed in the passport.",
+            "evidence_state": "self-reported",
+            "provenance": "derived",
+            "source_excerpt": "results validated against manual inspection records.",
+            "confidence_reason": "Validation scope/methodology not described and no third-party review referenced."
+          }
+        ]
+      },
+      {
+        "id": "block.claim_ledger",
+        "type": "ClaimLedger",
+        "state": "collapsed",
+        "visual": "claim_audit_ledger",
+        "headline": "Passport claims remain self-reported and need proof under challenge.",
+        "content": [
+          {
+            "id": "claim.bf6c16d6",
+            "claim_id": "bf6c16d6",
+            "claim_text": "The organisation has conducted a GPS-denied UAS trial on the UK rail network, logging over 847 flight hours in operational tunnels and cuttings.",
+            "domain": "evidence",
+            "role": "asserts",
+            "conditions": "GPS-denied environments including tunnels and cuttings on the UK rail network",
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "source_excerpt": "Over 847 flight hours logged in operational tunnels and cuttings where GPS signal is unavailable.",
+            "confidence_reason": "Flight hour totals are self-reported and have not been independently verified.",
+            "match_note": "Not evidenced in RAPPID; RAPPID is ground-based UTU inspection.",
+            "evidence_map_verdict": "not mapped",
+            "evidence_map_judgement": "No stored evidence_map entry for this claim."
+          },
+          {
+            "id": "claim.18848f1a",
+            "claim_id": "18848f1a",
+            "claim_text": "The navigation system achieved 94.7% accuracy in GPS-denied tunnel environments.",
+            "domain": "performance",
+            "role": "asserts",
+            "conditions": "GPS-denied tunnel environments; metric definition not specified",
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "source_excerpt": "Our navigation system achieved 94.7% accuracy in GPS-denied tunnel environments.",
+            "confidence_reason": "The specific accuracy metric and measurement methodology have not been independently validated.",
+            "match_note": "Not matched; RAPPID does not address UAS GPS-denied navigation accuracy.",
+            "evidence_map_verdict": "not mapped",
+            "evidence_map_judgement": "No stored evidence_map entry for this claim."
+          },
+          {
+            "id": "claim.556a1cf0",
+            "claim_id": "556a1cf0",
+            "claim_text": "The trial was conducted under NRIL HAZOP review and safety case approval.",
+            "domain": "certification",
+            "role": "asserts",
+            "conditions": null,
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "source_excerpt": "The trial was conducted under NRIL HAZOP review and safety case approval.",
+            "confidence_reason": "The HAZOP review and safety case approval are self-reported and documents have not been reviewed.",
+            "match_note": "Contextually relevant via Network Rail operational environment, but not explicit for UAS operations.",
+            "evidence_map_verdict": "not mapped",
+            "evidence_map_judgement": "No stored evidence_map entry for this claim."
+          },
+          {
+            "id": "claim.72044537",
+            "claim_id": "72044537",
+            "claim_text": "The UAS navigation system uses computer vision and LiDAR sensor fusion for localisation in GPS-denied environments.",
+            "domain": "capability",
+            "role": "asserts",
+            "conditions": "GPS-denied environments",
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "source_excerpt": "The system uses computer vision and LiDAR fusion for localisation.",
+            "confidence_reason": "Technical architecture is described without supporting technical documentation or third-party assessment.",
+            "match_note": "No evidence in RAPPID; platform/method gap.",
+            "evidence_map_verdict": "not mapped",
+            "evidence_map_judgement": "No stored evidence_map entry for this claim."
+          },
+          {
+            "id": "claim.70350d4a",
+            "claim_id": "70350d4a",
+            "claim_text": "The UAS demonstrated autonomous obstacle detection and avoidance at track level with zero safety incidents across the trial.",
+            "domain": "performance",
+            "role": "asserts",
+            "conditions": "Track-level operations during 14-month trial across three Network Rail managed sites",
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "source_excerpt": "We demonstrated autonomous obstacle detection and avoidance at track level with zero safety incidents.",
+            "confidence_reason": "Zero safety incidents claim is self-reported without independent safety audit reference.",
+            "match_note": "Only indirectly relevant; not evidenced in RAPPID.",
+            "evidence_map_verdict": "not mapped",
+            "evidence_map_judgement": "No stored evidence_map entry for this claim."
+          },
+          {
+            "id": "claim.f896753c",
+            "claim_id": "f896753c",
+            "claim_text": "The UAS platform is capable of identifying infrastructure defects including cracks, corrosion, and drainage blockages during inspection missions.",
+            "domain": "capability",
+            "role": "asserts",
+            "conditions": null,
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "source_excerpt": "The UAS platform is capable of infrastructure inspection \u2014 identifying cracks, corrosion, and drainage blockages.",
+            "confidence_reason": "Capability is asserted without thresholds, false positive/negative rates, or independent criteria.",
+            "match_note": "Strong thematic alignment with RAPPID rail defect detection.",
+            "evidence_map_verdict": "not mapped",
+            "evidence_map_judgement": "No stored evidence_map entry for this claim."
+          },
+          {
+            "id": "claim.e8a7afeb",
+            "claim_id": "e8a7afeb",
+            "claim_text": "Inspection results from the UAS have been validated against manual inspection records.",
+            "domain": "evidence",
+            "role": "asserts",
+            "conditions": null,
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "source_excerpt": "results validated against manual inspection records.",
+            "confidence_reason": "Validation scope/methodology not described and no third-party review referenced.",
+            "match_note": "Relevant; RAPPID uses Network Rail UTU data as comparison context.",
+            "evidence_map_verdict": "relevant",
+            "evidence_map_judgement": "Relevant \u2014 RAPPID's inspection results against Network Rail's existing UTU data mirrors the validation against manual inspection records claimed in the passport."
+          },
+          {
+            "id": "claim.13cf451f",
+            "claim_id": "13cf451f",
+            "claim_text": "The trial took place across three Network Rail managed sites over a period of 14 months.",
+            "domain": "evidence",
+            "role": "asserts",
+            "conditions": null,
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "source_excerpt": "Trial took place across three Network Rail managed sites over 14 months.",
+            "confidence_reason": "Sites and duration are self-reported; no independent trial report cited.",
+            "match_note": "Partial; RAPPID involves Network Rail managed infrastructure but not same site structure.",
+            "evidence_map_verdict": "partial",
+            "evidence_map_judgement": "Partial \u2014 RAPPID involves Network Rail managed infrastructure across the UK network, though specific site counts differ."
+          },
+          {
+            "id": "claim.b7ef24d8",
+            "claim_id": "b7ef24d8",
+            "claim_text": "The technology has reached Technology Readiness Level 6, having been demonstrated in a relevant operational environment.",
+            "domain": "capability",
+            "role": "asserts",
+            "conditions": "Self-assessed TRL 6",
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "source_excerpt": "The technology is at TRL 6 \u2014 demonstrated in relevant environment.",
+            "confidence_reason": "TRL level is self-assessed without independent TRL review.",
+            "match_note": "Strong thematic match because RAPPID addresses rail defect detection, but method/platform differs.",
+            "evidence_map_verdict": "strong",
+            "evidence_map_judgement": "Strong match \u2014 RAPPID explicitly targets detection of rail track defects, directly aligning with the passport's crack, corrosion, and drainage defect identification claims."
+          },
+          {
+            "id": "claim.637192dd",
+            "claim_id": "637192dd",
+            "claim_text": "Operating UAS in GPS-denied rail environments requires HAZOP review and safety case approval from Network Rail Infrastructure Limited.",
+            "domain": "regulatory",
+            "role": "requires",
+            "conditions": "UK rail network operational environments",
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "source_excerpt": "The trial was conducted under NRIL HAZOP review and safety case approval.",
+            "confidence_reason": "Requirement is implied from trial description but not cited to formal regulations.",
+            "match_note": "Contextually relevant through Network Rail operational context.",
+            "evidence_map_verdict": "contextual",
+            "evidence_map_judgement": "Contextually relevant \u2014 Network Rail operational environment implies familiarity with HAZOP and safety case processes."
+          }
+        ]
+      }
+    ],
+    "inspector_index": {
+      "claim.bf6c16d6": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.bf6c16d6",
+          "claim_id": "bf6c16d6",
+          "claim_text": "The organisation has conducted a GPS-denied UAS trial on the UK rail network, logging over 847 flight hours in operational tunnels and cuttings.",
+          "domain": "evidence",
+          "role": "asserts",
+          "conditions": "GPS-denied environments including tunnels and cuttings on the UK rail network",
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "Over 847 flight hours logged in operational tunnels and cuttings where GPS signal is unavailable.",
+          "confidence_reason": "Flight hour totals are self-reported and have not been independently verified.",
+          "match_note": "Not evidenced in RAPPID; RAPPID is ground-based UTU inspection.",
+          "evidence_map_verdict": "not mapped",
+          "evidence_map_judgement": "No stored evidence_map entry for this claim."
+        }
+      },
+      "claim.18848f1a": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.18848f1a",
+          "claim_id": "18848f1a",
+          "claim_text": "The navigation system achieved 94.7% accuracy in GPS-denied tunnel environments.",
+          "domain": "performance",
+          "role": "asserts",
+          "conditions": "GPS-denied tunnel environments; metric definition not specified",
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "Our navigation system achieved 94.7% accuracy in GPS-denied tunnel environments.",
+          "confidence_reason": "The specific accuracy metric and measurement methodology have not been independently validated.",
+          "match_note": "Not matched; RAPPID does not address UAS GPS-denied navigation accuracy.",
+          "evidence_map_verdict": "not mapped",
+          "evidence_map_judgement": "No stored evidence_map entry for this claim."
+        }
+      },
+      "claim.556a1cf0": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.556a1cf0",
+          "claim_id": "556a1cf0",
+          "claim_text": "The trial was conducted under NRIL HAZOP review and safety case approval.",
+          "domain": "certification",
+          "role": "asserts",
+          "conditions": null,
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "The trial was conducted under NRIL HAZOP review and safety case approval.",
+          "confidence_reason": "The HAZOP review and safety case approval are self-reported and documents have not been reviewed.",
+          "match_note": "Contextually relevant via Network Rail operational environment, but not explicit for UAS operations.",
+          "evidence_map_verdict": "not mapped",
+          "evidence_map_judgement": "No stored evidence_map entry for this claim."
+        }
+      },
+      "claim.72044537": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.72044537",
+          "claim_id": "72044537",
+          "claim_text": "The UAS navigation system uses computer vision and LiDAR sensor fusion for localisation in GPS-denied environments.",
+          "domain": "capability",
+          "role": "asserts",
+          "conditions": "GPS-denied environments",
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "The system uses computer vision and LiDAR fusion for localisation.",
+          "confidence_reason": "Technical architecture is described without supporting technical documentation or third-party assessment.",
+          "match_note": "No evidence in RAPPID; platform/method gap.",
+          "evidence_map_verdict": "not mapped",
+          "evidence_map_judgement": "No stored evidence_map entry for this claim."
+        }
+      },
+      "claim.70350d4a": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.70350d4a",
+          "claim_id": "70350d4a",
+          "claim_text": "The UAS demonstrated autonomous obstacle detection and avoidance at track level with zero safety incidents across the trial.",
+          "domain": "performance",
+          "role": "asserts",
+          "conditions": "Track-level operations during 14-month trial across three Network Rail managed sites",
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "We demonstrated autonomous obstacle detection and avoidance at track level with zero safety incidents.",
+          "confidence_reason": "Zero safety incidents claim is self-reported without independent safety audit reference.",
+          "match_note": "Only indirectly relevant; not evidenced in RAPPID.",
+          "evidence_map_verdict": "not mapped",
+          "evidence_map_judgement": "No stored evidence_map entry for this claim."
+        }
+      },
+      "claim.f896753c": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.f896753c",
+          "claim_id": "f896753c",
+          "claim_text": "The UAS platform is capable of identifying infrastructure defects including cracks, corrosion, and drainage blockages during inspection missions.",
+          "domain": "capability",
+          "role": "asserts",
+          "conditions": null,
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "The UAS platform is capable of infrastructure inspection \u2014 identifying cracks, corrosion, and drainage blockages.",
+          "confidence_reason": "Capability is asserted without thresholds, false positive/negative rates, or independent criteria.",
+          "match_note": "Strong thematic alignment with RAPPID rail defect detection.",
+          "evidence_map_verdict": "not mapped",
+          "evidence_map_judgement": "No stored evidence_map entry for this claim."
+        }
+      },
+      "claim.e8a7afeb": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.e8a7afeb",
+          "claim_id": "e8a7afeb",
+          "claim_text": "Inspection results from the UAS have been validated against manual inspection records.",
+          "domain": "evidence",
+          "role": "asserts",
+          "conditions": null,
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "results validated against manual inspection records.",
+          "confidence_reason": "Validation scope/methodology not described and no third-party review referenced.",
+          "match_note": "Relevant; RAPPID uses Network Rail UTU data as comparison context.",
+          "evidence_map_verdict": "relevant",
+          "evidence_map_judgement": "Relevant \u2014 RAPPID's inspection results against Network Rail's existing UTU data mirrors the validation against manual inspection records claimed in the passport."
+        }
+      },
+      "claim.13cf451f": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.13cf451f",
+          "claim_id": "13cf451f",
+          "claim_text": "The trial took place across three Network Rail managed sites over a period of 14 months.",
+          "domain": "evidence",
+          "role": "asserts",
+          "conditions": null,
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "Trial took place across three Network Rail managed sites over 14 months.",
+          "confidence_reason": "Sites and duration are self-reported; no independent trial report cited.",
+          "match_note": "Partial; RAPPID involves Network Rail managed infrastructure but not same site structure.",
+          "evidence_map_verdict": "partial",
+          "evidence_map_judgement": "Partial \u2014 RAPPID involves Network Rail managed infrastructure across the UK network, though specific site counts differ."
+        }
+      },
+      "claim.b7ef24d8": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.b7ef24d8",
+          "claim_id": "b7ef24d8",
+          "claim_text": "The technology has reached Technology Readiness Level 6, having been demonstrated in a relevant operational environment.",
+          "domain": "capability",
+          "role": "asserts",
+          "conditions": "Self-assessed TRL 6",
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "The technology is at TRL 6 \u2014 demonstrated in relevant environment.",
+          "confidence_reason": "TRL level is self-assessed without independent TRL review.",
+          "match_note": "Strong thematic match because RAPPID addresses rail defect detection, but method/platform differs.",
+          "evidence_map_verdict": "strong",
+          "evidence_map_judgement": "Strong match \u2014 RAPPID explicitly targets detection of rail track defects, directly aligning with the passport's crack, corrosion, and drainage defect identification claims."
+        }
+      },
+      "claim.637192dd": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.637192dd",
+          "claim_id": "637192dd",
+          "claim_text": "Operating UAS in GPS-denied rail environments requires HAZOP review and safety case approval from Network Rail Infrastructure Limited.",
+          "domain": "regulatory",
+          "role": "requires",
+          "conditions": "UK rail network operational environments",
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "The trial was conducted under NRIL HAZOP review and safety case approval.",
+          "confidence_reason": "Requirement is implied from trial description but not cited to formal regulations.",
+          "match_note": "Contextually relevant through Network Rail operational context.",
+          "evidence_map_verdict": "contextual",
+          "evidence_map_judgement": "Contextually relevant \u2014 Network Rail operational environment implies familiarity with HAZOP and safety case processes."
+        }
+      },
+      "gap.1": {
+        "title": "Missing Evidence",
+        "kind": "gap",
+        "content": {
+          "id": "gap.1",
+          "gap_type": "missing_evidence",
+          "title": "Missing Evidence",
+          "magnitude": "large",
+          "severity": "significant",
+          "description": "RAPPID uses UTU ground-based rail vehicles; no evidence of UAS or aerial platform for GPS-denied navigation using LiDAR/computer vision fusion.",
+          "provenance": "stored",
+          "evidence_state": "inferred",
+          "what_would_change": "Evidence that the target context includes UAS/aerial inspection, or a justified translation from ground-based UTU to UAS operations."
+        }
+      },
+      "gap.2": {
+        "title": "Sector Gap",
+        "kind": "gap",
+        "content": {
+          "id": "gap.2",
+          "gap_type": "sector_gap",
+          "title": "Sector Gap",
+          "magnitude": "large",
+          "severity": "significant",
+          "description": "Inspection method is ground-based ultrasonic testing, not aerial UAS-based inspection in tunnels or cuttings.",
+          "provenance": "stored",
+          "evidence_state": "inferred",
+          "what_would_change": "Evidence that the target context includes UAS/aerial inspection, or a justified translation from ground-based UTU to UAS operations."
+        }
+      },
+      "gap.3": {
+        "title": "Missing Evidence",
+        "kind": "gap",
+        "content": {
+          "id": "gap.3",
+          "gap_type": "missing_evidence",
+          "title": "Missing Evidence",
+          "magnitude": "large",
+          "severity": "significant",
+          "description": "No evidence of GPS-denied operational capability or tunnel/cutting flight hours.",
+          "provenance": "stored",
+          "evidence_state": "inferred",
+          "what_would_change": "Verified GPS-denied tunnel/cutting flight logs, navigation accuracy methodology, or comparable operational evidence."
+        }
+      },
+      "gap.4": {
+        "title": "Certification Gap",
+        "kind": "gap",
+        "content": {
+          "id": "gap.4",
+          "gap_type": "certification_gap",
+          "title": "Certification Gap",
+          "magnitude": "small",
+          "severity": "minor",
+          "description": "HAZOP and safety case alignment is implied by Network Rail context but not explicitly evidenced for UAS operations.",
+          "provenance": "stored",
+          "evidence_state": "inferred",
+          "what_would_change": "Evidence that the target context includes UAS/aerial inspection, or a justified translation from ground-based UTU to UAS operations."
+        }
+      },
+      "evidence_map.13cf451f": {
+        "title": "Evidence map item",
+        "kind": "evidence_map",
+        "content": {
+          "id": "evidence_map.13cf451f",
+          "claim_id": "13cf451f",
+          "claim_text": "The trial took place across three Network Rail managed sites over a period of 14 months.",
+          "verdict": "partial",
+          "judgement": "Partial \u2014 RAPPID involves Network Rail managed infrastructure across the UK network, though specific site counts differ.",
+          "evidence_state": "self-reported",
+          "provenance": "derived",
+          "source_excerpt": "Trial took place across three Network Rail managed sites over 14 months.",
+          "confidence_reason": "Sites and duration are self-reported; no independent trial report cited."
+        }
+      },
+      "evidence_map.637192dd": {
+        "title": "Evidence map item",
+        "kind": "evidence_map",
+        "content": {
+          "id": "evidence_map.637192dd",
+          "claim_id": "637192dd",
+          "claim_text": "Operating UAS in GPS-denied rail environments requires HAZOP review and safety case approval from Network Rail Infrastructure Limited.",
+          "verdict": "contextual",
+          "judgement": "Contextually relevant \u2014 Network Rail operational environment implies familiarity with HAZOP and safety case processes.",
+          "evidence_state": "self-reported",
+          "provenance": "derived",
+          "source_excerpt": "The trial was conducted under NRIL HAZOP review and safety case approval.",
+          "confidence_reason": "Requirement is implied from trial description but not cited to formal regulations."
+        }
+      },
+      "evidence_map.9528df5f": {
+        "title": "Evidence map item",
+        "kind": "evidence_map",
+        "content": {
+          "id": "evidence_map.9528df5f",
+          "claim_id": "9528df5f",
+          "claim_text": "Claim 9528df5f",
+          "verdict": "judgement",
+          "judgement": "RAPPID references Network Rail's operational infrastructure and inspection regimes, providing context for HAZOP and safety case requirements.",
+          "evidence_state": "unknown",
+          "provenance": "derived",
+          "source_excerpt": null,
+          "confidence_reason": "No linked claim record found in fixture."
+        }
+      },
+      "evidence_map.b7ef24d8": {
+        "title": "Evidence map item",
+        "kind": "evidence_map",
+        "content": {
+          "id": "evidence_map.b7ef24d8",
+          "claim_id": "b7ef24d8",
+          "claim_text": "The technology has reached Technology Readiness Level 6, having been demonstrated in a relevant operational environment.",
+          "verdict": "strong",
+          "judgement": "Strong match \u2014 RAPPID explicitly targets detection of rail track defects, directly aligning with the passport's crack, corrosion, and drainage defect identification claims.",
+          "evidence_state": "self-reported",
+          "provenance": "derived",
+          "source_excerpt": "The technology is at TRL 6 \u2014 demonstrated in relevant environment.",
+          "confidence_reason": "TRL level is self-assessed without independent TRL review."
+        }
+      },
+      "evidence_map.e8a7afeb": {
+        "title": "Evidence map item",
+        "kind": "evidence_map",
+        "content": {
+          "id": "evidence_map.e8a7afeb",
+          "claim_id": "e8a7afeb",
+          "claim_text": "Inspection results from the UAS have been validated against manual inspection records.",
+          "verdict": "relevant",
+          "judgement": "Relevant \u2014 RAPPID's inspection results against Network Rail's existing UTU data mirrors the validation against manual inspection records claimed in the passport.",
+          "evidence_state": "self-reported",
+          "provenance": "derived",
+          "source_excerpt": "results validated against manual inspection records.",
+          "confidence_reason": "Validation scope/methodology not described and no third-party review referenced."
+        }
+      },
+      "confidence": {
+        "title": "Confidence cap",
+        "kind": "confidence",
+        "content": {
+          "confidence_tier": "Indicative",
+          "cap_reason": "Confidence is capped because 10 of 10 passport claims are self-reported and 3 stored gaps are large/significant.",
+          "evidence_counts": {
+            "verified": 0,
+            "self-reported": 10,
+            "inferred": 0,
+            "unknown": 0,
+            "contested": 0
+          }
+        }
+      }
+    },
+    "snapshot": {
+      "title": "GPS-Denied Rail UAS \u2014 Infrastructure Inspection Demo \u2192 Real-time AI enabled rail track inspection and analysis [RAPPID] - Resilience Fund Application",
+      "included_blocks": [
+        "block.recommendation",
+        "block.evidence_state",
+        "block.dimension_gap",
+        "block.matchbench"
+      ],
+      "must_include": [
+        "decision_spine",
+        "confidence_cap_reason",
+        "large_gaps",
+        "claim_evidence_states"
+      ]
+    },
+    "data_quality_notes": [
+      "Stored match has evidence_map and gaps, which are strong inputs for the Workbench.",
+      "All sampled passport claims are self-reported, so confidence remains capped.",
+      "evidence_map is currently a key-value object; a structured array would improve rendering and inspector links.",
+      "gaps are close to usable but should add affected_claim_ids and what_would_change fields."
+    ]
+  },
+  "cq.match.act": {
+    "artifact_id": "artifact.fdb9019d-768e-41e4-86c6-981b0fd8974f.cq.match.act",
+    "model_version": "v1.0-spike",
+    "generated_at": "2026-06-09T14:33:21.805381Z",
+    "canonical_question_id": "cq.match.act",
+    "layout_template": "Workbench Decision Spine",
+    "mode": "Workbench-one",
+    "source_object": {
+      "type": "passport",
+      "id": "98648147-f217-42c3-a255-46e3c4e4258c",
+      "title": "GPS-Denied Rail UAS \u2014 Infrastructure Inspection Demo",
+      "summary": "A passport describing GPS-denied UAS rail inspection capability, including UAS flight in tunnels/cuttings, computer vision and LiDAR fusion, obstacle detection and defect identification. The underlying claims are self-reported."
+    },
+    "target_object": {
+      "type": "project",
+      "id": "9528df5f-fd14-4743-967e-2c1b7154d05a",
+      "title": "Real-time AI enabled rail track inspection and analysis [RAPPID] - Resilience Fund Application",
+      "funder": "Innovate UK",
+      "status": "Closed",
+      "funding_amount": 43347.0
+    },
+    "decision_spine": {
+      "recommendation": "Strong thematic match, but not UAS-transfer ready",
+      "decision": "Explore / learn / partner, not direct substitution",
+      "summary": "RAPPID (Resilience Fund) directly addresses AI-enabled real-time rail track defect inspection on the UK Network Rail network, closely mirroring the passport's infrastructure defect identification and rail inspection validation claims. This is the strongest thematic match among project results.",
+      "confidence_tier": "Indicative",
+      "confidence_cap_reason": "Confidence is capped because 10 of 10 passport claims are self-reported and 3 stored gaps are large/significant.",
+      "score": 0.314355838682957,
+      "economic_gap_value": 43347
+    },
+    "blocks": [
+      {
+        "id": "block.recommendation",
+        "type": "RecommendationConfidence",
+        "state": "core",
+        "visual": "decision_card",
+        "headline": "Strong thematic match, but not UAS-transfer ready",
+        "content": {
+          "decision": "Explore / learn / partner, not direct substitution",
+          "summary": "RAPPID (Resilience Fund) directly addresses AI-enabled real-time rail track defect inspection on the UK Network Rail network, closely mirroring the passport's infrastructure defect identification and rail inspection validation claims. This is the strongest thematic match among project results.",
+          "score": 0.314355838682957,
+          "confidence_tier": "Indicative",
+          "confidence_cap_reason": "Confidence is capped because 10 of 10 passport claims are self-reported and 3 stored gaps are large/significant."
+        }
+      },
+      {
+        "id": "block.evidence_state",
+        "type": "EvidenceStateSummary",
+        "state": "core",
+        "visual": "evidence_state_bar",
+        "headline": "All passport claims in this fixture are self-reported.",
+        "content": {
+          "counts": {
+            "verified": 0,
+            "self-reported": 10,
+            "inferred": 0,
+            "unknown": 0,
+            "contested": 0
+          },
+          "total_claims": 10,
+          "cap_reason": "Confidence is capped because 10 of 10 passport claims are self-reported and 3 stored gaps are large/significant."
+        }
+      },
+      {
+        "id": "block.dimension_gap",
+        "type": "DimensionGap",
+        "state": "core",
+        "visual": "source_target_gap_rows",
+        "headline": "The match is thematic, but platform/method transfer gaps are large.",
+        "content": [
+          {
+            "id": "gap.1",
+            "gap_type": "missing_evidence",
+            "title": "Missing Evidence",
+            "magnitude": "large",
+            "severity": "significant",
+            "description": "RAPPID uses UTU ground-based rail vehicles; no evidence of UAS or aerial platform for GPS-denied navigation using LiDAR/computer vision fusion.",
+            "provenance": "stored",
+            "evidence_state": "inferred",
+            "what_would_change": "Evidence that the target context includes UAS/aerial inspection, or a justified translation from ground-based UTU to UAS operations."
+          },
+          {
+            "id": "gap.2",
+            "gap_type": "sector_gap",
+            "title": "Sector Gap",
+            "magnitude": "large",
+            "severity": "significant",
+            "description": "Inspection method is ground-based ultrasonic testing, not aerial UAS-based inspection in tunnels or cuttings.",
+            "provenance": "stored",
+            "evidence_state": "inferred",
+            "what_would_change": "Evidence that the target context includes UAS/aerial inspection, or a justified translation from ground-based UTU to UAS operations."
+          },
+          {
+            "id": "gap.3",
+            "gap_type": "missing_evidence",
+            "title": "Missing Evidence",
+            "magnitude": "large",
+            "severity": "significant",
+            "description": "No evidence of GPS-denied operational capability or tunnel/cutting flight hours.",
+            "provenance": "stored",
+            "evidence_state": "inferred",
+            "what_would_change": "Verified GPS-denied tunnel/cutting flight logs, navigation accuracy methodology, or comparable operational evidence."
+          },
+          {
+            "id": "gap.4",
+            "gap_type": "certification_gap",
+            "title": "Certification Gap",
+            "magnitude": "small",
+            "severity": "minor",
+            "description": "HAZOP and safety case alignment is implied by Network Rail context but not explicitly evidenced for UAS operations.",
+            "provenance": "stored",
+            "evidence_state": "inferred",
+            "what_would_change": "Evidence that the target context includes UAS/aerial inspection, or a justified translation from ground-based UTU to UAS operations."
+          }
+        ]
+      },
+      {
+        "id": "block.matchbench",
+        "type": "MatchBench",
+        "state": "core",
+        "visual": "evidence_map_table",
+        "headline": "Stored evidence_map explains how claims relate to the target project.",
+        "content": [
+          {
+            "id": "evidence_map.13cf451f",
+            "claim_id": "13cf451f",
+            "claim_text": "The trial took place across three Network Rail managed sites over a period of 14 months.",
+            "verdict": "partial",
+            "judgement": "Partial \u2014 RAPPID involves Network Rail managed infrastructure across the UK network, though specific site counts differ.",
+            "evidence_state": "self-reported",
+            "provenance": "derived",
+            "source_excerpt": "Trial took place across three Network Rail managed sites over 14 months.",
+            "confidence_reason": "Sites and duration are self-reported; no independent trial report cited."
+          },
+          {
+            "id": "evidence_map.637192dd",
+            "claim_id": "637192dd",
+            "claim_text": "Operating UAS in GPS-denied rail environments requires HAZOP review and safety case approval from Network Rail Infrastructure Limited.",
+            "verdict": "contextual",
+            "judgement": "Contextually relevant \u2014 Network Rail operational environment implies familiarity with HAZOP and safety case processes.",
+            "evidence_state": "self-reported",
+            "provenance": "derived",
+            "source_excerpt": "The trial was conducted under NRIL HAZOP review and safety case approval.",
+            "confidence_reason": "Requirement is implied from trial description but not cited to formal regulations."
+          },
+          {
+            "id": "evidence_map.9528df5f",
+            "claim_id": "9528df5f",
+            "claim_text": "Claim 9528df5f",
+            "verdict": "judgement",
+            "judgement": "RAPPID references Network Rail's operational infrastructure and inspection regimes, providing context for HAZOP and safety case requirements.",
+            "evidence_state": "unknown",
+            "provenance": "derived",
+            "source_excerpt": null,
+            "confidence_reason": "No linked claim record found in fixture."
+          },
+          {
+            "id": "evidence_map.b7ef24d8",
+            "claim_id": "b7ef24d8",
+            "claim_text": "The technology has reached Technology Readiness Level 6, having been demonstrated in a relevant operational environment.",
+            "verdict": "strong",
+            "judgement": "Strong match \u2014 RAPPID explicitly targets detection of rail track defects, directly aligning with the passport's crack, corrosion, and drainage defect identification claims.",
+            "evidence_state": "self-reported",
+            "provenance": "derived",
+            "source_excerpt": "The technology is at TRL 6 \u2014 demonstrated in relevant environment.",
+            "confidence_reason": "TRL level is self-assessed without independent TRL review."
+          },
+          {
+            "id": "evidence_map.e8a7afeb",
+            "claim_id": "e8a7afeb",
+            "claim_text": "Inspection results from the UAS have been validated against manual inspection records.",
+            "verdict": "relevant",
+            "judgement": "Relevant \u2014 RAPPID's inspection results against Network Rail's existing UTU data mirrors the validation against manual inspection records claimed in the passport.",
+            "evidence_state": "self-reported",
+            "provenance": "derived",
+            "source_excerpt": "results validated against manual inspection records.",
+            "confidence_reason": "Validation scope/methodology not described and no third-party review referenced."
+          }
+        ]
+      },
+      {
+        "id": "block.claim_ledger",
+        "type": "ClaimLedger",
+        "state": "core",
+        "visual": "claim_audit_ledger",
+        "headline": "Passport claims remain self-reported and need proof under challenge.",
+        "content": [
+          {
+            "id": "claim.bf6c16d6",
+            "claim_id": "bf6c16d6",
+            "claim_text": "The organisation has conducted a GPS-denied UAS trial on the UK rail network, logging over 847 flight hours in operational tunnels and cuttings.",
+            "domain": "evidence",
+            "role": "asserts",
+            "conditions": "GPS-denied environments including tunnels and cuttings on the UK rail network",
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "source_excerpt": "Over 847 flight hours logged in operational tunnels and cuttings where GPS signal is unavailable.",
+            "confidence_reason": "Flight hour totals are self-reported and have not been independently verified.",
+            "match_note": "Not evidenced in RAPPID; RAPPID is ground-based UTU inspection.",
+            "evidence_map_verdict": "not mapped",
+            "evidence_map_judgement": "No stored evidence_map entry for this claim."
+          },
+          {
+            "id": "claim.18848f1a",
+            "claim_id": "18848f1a",
+            "claim_text": "The navigation system achieved 94.7% accuracy in GPS-denied tunnel environments.",
+            "domain": "performance",
+            "role": "asserts",
+            "conditions": "GPS-denied tunnel environments; metric definition not specified",
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "source_excerpt": "Our navigation system achieved 94.7% accuracy in GPS-denied tunnel environments.",
+            "confidence_reason": "The specific accuracy metric and measurement methodology have not been independently validated.",
+            "match_note": "Not matched; RAPPID does not address UAS GPS-denied navigation accuracy.",
+            "evidence_map_verdict": "not mapped",
+            "evidence_map_judgement": "No stored evidence_map entry for this claim."
+          },
+          {
+            "id": "claim.556a1cf0",
+            "claim_id": "556a1cf0",
+            "claim_text": "The trial was conducted under NRIL HAZOP review and safety case approval.",
+            "domain": "certification",
+            "role": "asserts",
+            "conditions": null,
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "source_excerpt": "The trial was conducted under NRIL HAZOP review and safety case approval.",
+            "confidence_reason": "The HAZOP review and safety case approval are self-reported and documents have not been reviewed.",
+            "match_note": "Contextually relevant via Network Rail operational environment, but not explicit for UAS operations.",
+            "evidence_map_verdict": "not mapped",
+            "evidence_map_judgement": "No stored evidence_map entry for this claim."
+          },
+          {
+            "id": "claim.72044537",
+            "claim_id": "72044537",
+            "claim_text": "The UAS navigation system uses computer vision and LiDAR sensor fusion for localisation in GPS-denied environments.",
+            "domain": "capability",
+            "role": "asserts",
+            "conditions": "GPS-denied environments",
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "source_excerpt": "The system uses computer vision and LiDAR fusion for localisation.",
+            "confidence_reason": "Technical architecture is described without supporting technical documentation or third-party assessment.",
+            "match_note": "No evidence in RAPPID; platform/method gap.",
+            "evidence_map_verdict": "not mapped",
+            "evidence_map_judgement": "No stored evidence_map entry for this claim."
+          },
+          {
+            "id": "claim.70350d4a",
+            "claim_id": "70350d4a",
+            "claim_text": "The UAS demonstrated autonomous obstacle detection and avoidance at track level with zero safety incidents across the trial.",
+            "domain": "performance",
+            "role": "asserts",
+            "conditions": "Track-level operations during 14-month trial across three Network Rail managed sites",
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "source_excerpt": "We demonstrated autonomous obstacle detection and avoidance at track level with zero safety incidents.",
+            "confidence_reason": "Zero safety incidents claim is self-reported without independent safety audit reference.",
+            "match_note": "Only indirectly relevant; not evidenced in RAPPID.",
+            "evidence_map_verdict": "not mapped",
+            "evidence_map_judgement": "No stored evidence_map entry for this claim."
+          },
+          {
+            "id": "claim.f896753c",
+            "claim_id": "f896753c",
+            "claim_text": "The UAS platform is capable of identifying infrastructure defects including cracks, corrosion, and drainage blockages during inspection missions.",
+            "domain": "capability",
+            "role": "asserts",
+            "conditions": null,
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "source_excerpt": "The UAS platform is capable of infrastructure inspection \u2014 identifying cracks, corrosion, and drainage blockages.",
+            "confidence_reason": "Capability is asserted without thresholds, false positive/negative rates, or independent criteria.",
+            "match_note": "Strong thematic alignment with RAPPID rail defect detection.",
+            "evidence_map_verdict": "not mapped",
+            "evidence_map_judgement": "No stored evidence_map entry for this claim."
+          },
+          {
+            "id": "claim.e8a7afeb",
+            "claim_id": "e8a7afeb",
+            "claim_text": "Inspection results from the UAS have been validated against manual inspection records.",
+            "domain": "evidence",
+            "role": "asserts",
+            "conditions": null,
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "source_excerpt": "results validated against manual inspection records.",
+            "confidence_reason": "Validation scope/methodology not described and no third-party review referenced.",
+            "match_note": "Relevant; RAPPID uses Network Rail UTU data as comparison context.",
+            "evidence_map_verdict": "relevant",
+            "evidence_map_judgement": "Relevant \u2014 RAPPID's inspection results against Network Rail's existing UTU data mirrors the validation against manual inspection records claimed in the passport."
+          },
+          {
+            "id": "claim.13cf451f",
+            "claim_id": "13cf451f",
+            "claim_text": "The trial took place across three Network Rail managed sites over a period of 14 months.",
+            "domain": "evidence",
+            "role": "asserts",
+            "conditions": null,
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "source_excerpt": "Trial took place across three Network Rail managed sites over 14 months.",
+            "confidence_reason": "Sites and duration are self-reported; no independent trial report cited.",
+            "match_note": "Partial; RAPPID involves Network Rail managed infrastructure but not same site structure.",
+            "evidence_map_verdict": "partial",
+            "evidence_map_judgement": "Partial \u2014 RAPPID involves Network Rail managed infrastructure across the UK network, though specific site counts differ."
+          },
+          {
+            "id": "claim.b7ef24d8",
+            "claim_id": "b7ef24d8",
+            "claim_text": "The technology has reached Technology Readiness Level 6, having been demonstrated in a relevant operational environment.",
+            "domain": "capability",
+            "role": "asserts",
+            "conditions": "Self-assessed TRL 6",
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "source_excerpt": "The technology is at TRL 6 \u2014 demonstrated in relevant environment.",
+            "confidence_reason": "TRL level is self-assessed without independent TRL review.",
+            "match_note": "Strong thematic match because RAPPID addresses rail defect detection, but method/platform differs.",
+            "evidence_map_verdict": "strong",
+            "evidence_map_judgement": "Strong match \u2014 RAPPID explicitly targets detection of rail track defects, directly aligning with the passport's crack, corrosion, and drainage defect identification claims."
+          },
+          {
+            "id": "claim.637192dd",
+            "claim_id": "637192dd",
+            "claim_text": "Operating UAS in GPS-denied rail environments requires HAZOP review and safety case approval from Network Rail Infrastructure Limited.",
+            "domain": "regulatory",
+            "role": "requires",
+            "conditions": "UK rail network operational environments",
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "source_excerpt": "The trial was conducted under NRIL HAZOP review and safety case approval.",
+            "confidence_reason": "Requirement is implied from trial description but not cited to formal regulations.",
+            "match_note": "Contextually relevant through Network Rail operational context.",
+            "evidence_map_verdict": "contextual",
+            "evidence_map_judgement": "Contextually relevant \u2014 Network Rail operational environment implies familiarity with HAZOP and safety case processes."
+          }
+        ]
+      },
+      {
+        "id": "block.action_plan",
+        "type": "ActionPlan",
+        "state": "core",
+        "visual": "gap_to_action_timeline",
+        "headline": "Next actions should close method, GPS-denied and safety-case gaps.",
+        "content": [
+          {
+            "action": "Validate UAS equivalence",
+            "linked_gap": "sector_gap",
+            "owner": "technical lead",
+            "sequence": 1
+          },
+          {
+            "action": "Request independent GPS-denied evidence",
+            "linked_gap": "missing_evidence",
+            "owner": "supplier",
+            "sequence": 2
+          },
+          {
+            "action": "Confirm HAZOP / safety case evidence",
+            "linked_gap": "certification_gap",
+            "owner": "assurance lead",
+            "sequence": 3
+          },
+          {
+            "action": "Reframe as learning/thematic match",
+            "linked_gap": "method/platform gap",
+            "owner": "analyst",
+            "sequence": 4
+          }
+        ]
+      }
+    ],
+    "inspector_index": {
+      "claim.bf6c16d6": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.bf6c16d6",
+          "claim_id": "bf6c16d6",
+          "claim_text": "The organisation has conducted a GPS-denied UAS trial on the UK rail network, logging over 847 flight hours in operational tunnels and cuttings.",
+          "domain": "evidence",
+          "role": "asserts",
+          "conditions": "GPS-denied environments including tunnels and cuttings on the UK rail network",
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "Over 847 flight hours logged in operational tunnels and cuttings where GPS signal is unavailable.",
+          "confidence_reason": "Flight hour totals are self-reported and have not been independently verified.",
+          "match_note": "Not evidenced in RAPPID; RAPPID is ground-based UTU inspection.",
+          "evidence_map_verdict": "not mapped",
+          "evidence_map_judgement": "No stored evidence_map entry for this claim."
+        }
+      },
+      "claim.18848f1a": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.18848f1a",
+          "claim_id": "18848f1a",
+          "claim_text": "The navigation system achieved 94.7% accuracy in GPS-denied tunnel environments.",
+          "domain": "performance",
+          "role": "asserts",
+          "conditions": "GPS-denied tunnel environments; metric definition not specified",
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "Our navigation system achieved 94.7% accuracy in GPS-denied tunnel environments.",
+          "confidence_reason": "The specific accuracy metric and measurement methodology have not been independently validated.",
+          "match_note": "Not matched; RAPPID does not address UAS GPS-denied navigation accuracy.",
+          "evidence_map_verdict": "not mapped",
+          "evidence_map_judgement": "No stored evidence_map entry for this claim."
+        }
+      },
+      "claim.556a1cf0": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.556a1cf0",
+          "claim_id": "556a1cf0",
+          "claim_text": "The trial was conducted under NRIL HAZOP review and safety case approval.",
+          "domain": "certification",
+          "role": "asserts",
+          "conditions": null,
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "The trial was conducted under NRIL HAZOP review and safety case approval.",
+          "confidence_reason": "The HAZOP review and safety case approval are self-reported and documents have not been reviewed.",
+          "match_note": "Contextually relevant via Network Rail operational environment, but not explicit for UAS operations.",
+          "evidence_map_verdict": "not mapped",
+          "evidence_map_judgement": "No stored evidence_map entry for this claim."
+        }
+      },
+      "claim.72044537": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.72044537",
+          "claim_id": "72044537",
+          "claim_text": "The UAS navigation system uses computer vision and LiDAR sensor fusion for localisation in GPS-denied environments.",
+          "domain": "capability",
+          "role": "asserts",
+          "conditions": "GPS-denied environments",
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "The system uses computer vision and LiDAR fusion for localisation.",
+          "confidence_reason": "Technical architecture is described without supporting technical documentation or third-party assessment.",
+          "match_note": "No evidence in RAPPID; platform/method gap.",
+          "evidence_map_verdict": "not mapped",
+          "evidence_map_judgement": "No stored evidence_map entry for this claim."
+        }
+      },
+      "claim.70350d4a": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.70350d4a",
+          "claim_id": "70350d4a",
+          "claim_text": "The UAS demonstrated autonomous obstacle detection and avoidance at track level with zero safety incidents across the trial.",
+          "domain": "performance",
+          "role": "asserts",
+          "conditions": "Track-level operations during 14-month trial across three Network Rail managed sites",
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "We demonstrated autonomous obstacle detection and avoidance at track level with zero safety incidents.",
+          "confidence_reason": "Zero safety incidents claim is self-reported without independent safety audit reference.",
+          "match_note": "Only indirectly relevant; not evidenced in RAPPID.",
+          "evidence_map_verdict": "not mapped",
+          "evidence_map_judgement": "No stored evidence_map entry for this claim."
+        }
+      },
+      "claim.f896753c": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.f896753c",
+          "claim_id": "f896753c",
+          "claim_text": "The UAS platform is capable of identifying infrastructure defects including cracks, corrosion, and drainage blockages during inspection missions.",
+          "domain": "capability",
+          "role": "asserts",
+          "conditions": null,
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "The UAS platform is capable of infrastructure inspection \u2014 identifying cracks, corrosion, and drainage blockages.",
+          "confidence_reason": "Capability is asserted without thresholds, false positive/negative rates, or independent criteria.",
+          "match_note": "Strong thematic alignment with RAPPID rail defect detection.",
+          "evidence_map_verdict": "not mapped",
+          "evidence_map_judgement": "No stored evidence_map entry for this claim."
+        }
+      },
+      "claim.e8a7afeb": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.e8a7afeb",
+          "claim_id": "e8a7afeb",
+          "claim_text": "Inspection results from the UAS have been validated against manual inspection records.",
+          "domain": "evidence",
+          "role": "asserts",
+          "conditions": null,
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "results validated against manual inspection records.",
+          "confidence_reason": "Validation scope/methodology not described and no third-party review referenced.",
+          "match_note": "Relevant; RAPPID uses Network Rail UTU data as comparison context.",
+          "evidence_map_verdict": "relevant",
+          "evidence_map_judgement": "Relevant \u2014 RAPPID's inspection results against Network Rail's existing UTU data mirrors the validation against manual inspection records claimed in the passport."
+        }
+      },
+      "claim.13cf451f": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.13cf451f",
+          "claim_id": "13cf451f",
+          "claim_text": "The trial took place across three Network Rail managed sites over a period of 14 months.",
+          "domain": "evidence",
+          "role": "asserts",
+          "conditions": null,
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "Trial took place across three Network Rail managed sites over 14 months.",
+          "confidence_reason": "Sites and duration are self-reported; no independent trial report cited.",
+          "match_note": "Partial; RAPPID involves Network Rail managed infrastructure but not same site structure.",
+          "evidence_map_verdict": "partial",
+          "evidence_map_judgement": "Partial \u2014 RAPPID involves Network Rail managed infrastructure across the UK network, though specific site counts differ."
+        }
+      },
+      "claim.b7ef24d8": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.b7ef24d8",
+          "claim_id": "b7ef24d8",
+          "claim_text": "The technology has reached Technology Readiness Level 6, having been demonstrated in a relevant operational environment.",
+          "domain": "capability",
+          "role": "asserts",
+          "conditions": "Self-assessed TRL 6",
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "The technology is at TRL 6 \u2014 demonstrated in relevant environment.",
+          "confidence_reason": "TRL level is self-assessed without independent TRL review.",
+          "match_note": "Strong thematic match because RAPPID addresses rail defect detection, but method/platform differs.",
+          "evidence_map_verdict": "strong",
+          "evidence_map_judgement": "Strong match \u2014 RAPPID explicitly targets detection of rail track defects, directly aligning with the passport's crack, corrosion, and drainage defect identification claims."
+        }
+      },
+      "claim.637192dd": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.637192dd",
+          "claim_id": "637192dd",
+          "claim_text": "Operating UAS in GPS-denied rail environments requires HAZOP review and safety case approval from Network Rail Infrastructure Limited.",
+          "domain": "regulatory",
+          "role": "requires",
+          "conditions": "UK rail network operational environments",
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "The trial was conducted under NRIL HAZOP review and safety case approval.",
+          "confidence_reason": "Requirement is implied from trial description but not cited to formal regulations.",
+          "match_note": "Contextually relevant through Network Rail operational context.",
+          "evidence_map_verdict": "contextual",
+          "evidence_map_judgement": "Contextually relevant \u2014 Network Rail operational environment implies familiarity with HAZOP and safety case processes."
+        }
+      },
+      "gap.1": {
+        "title": "Missing Evidence",
+        "kind": "gap",
+        "content": {
+          "id": "gap.1",
+          "gap_type": "missing_evidence",
+          "title": "Missing Evidence",
+          "magnitude": "large",
+          "severity": "significant",
+          "description": "RAPPID uses UTU ground-based rail vehicles; no evidence of UAS or aerial platform for GPS-denied navigation using LiDAR/computer vision fusion.",
+          "provenance": "stored",
+          "evidence_state": "inferred",
+          "what_would_change": "Evidence that the target context includes UAS/aerial inspection, or a justified translation from ground-based UTU to UAS operations."
+        }
+      },
+      "gap.2": {
+        "title": "Sector Gap",
+        "kind": "gap",
+        "content": {
+          "id": "gap.2",
+          "gap_type": "sector_gap",
+          "title": "Sector Gap",
+          "magnitude": "large",
+          "severity": "significant",
+          "description": "Inspection method is ground-based ultrasonic testing, not aerial UAS-based inspection in tunnels or cuttings.",
+          "provenance": "stored",
+          "evidence_state": "inferred",
+          "what_would_change": "Evidence that the target context includes UAS/aerial inspection, or a justified translation from ground-based UTU to UAS operations."
+        }
+      },
+      "gap.3": {
+        "title": "Missing Evidence",
+        "kind": "gap",
+        "content": {
+          "id": "gap.3",
+          "gap_type": "missing_evidence",
+          "title": "Missing Evidence",
+          "magnitude": "large",
+          "severity": "significant",
+          "description": "No evidence of GPS-denied operational capability or tunnel/cutting flight hours.",
+          "provenance": "stored",
+          "evidence_state": "inferred",
+          "what_would_change": "Verified GPS-denied tunnel/cutting flight logs, navigation accuracy methodology, or comparable operational evidence."
+        }
+      },
+      "gap.4": {
+        "title": "Certification Gap",
+        "kind": "gap",
+        "content": {
+          "id": "gap.4",
+          "gap_type": "certification_gap",
+          "title": "Certification Gap",
+          "magnitude": "small",
+          "severity": "minor",
+          "description": "HAZOP and safety case alignment is implied by Network Rail context but not explicitly evidenced for UAS operations.",
+          "provenance": "stored",
+          "evidence_state": "inferred",
+          "what_would_change": "Evidence that the target context includes UAS/aerial inspection, or a justified translation from ground-based UTU to UAS operations."
+        }
+      },
+      "evidence_map.13cf451f": {
+        "title": "Evidence map item",
+        "kind": "evidence_map",
+        "content": {
+          "id": "evidence_map.13cf451f",
+          "claim_id": "13cf451f",
+          "claim_text": "The trial took place across three Network Rail managed sites over a period of 14 months.",
+          "verdict": "partial",
+          "judgement": "Partial \u2014 RAPPID involves Network Rail managed infrastructure across the UK network, though specific site counts differ.",
+          "evidence_state": "self-reported",
+          "provenance": "derived",
+          "source_excerpt": "Trial took place across three Network Rail managed sites over 14 months.",
+          "confidence_reason": "Sites and duration are self-reported; no independent trial report cited."
+        }
+      },
+      "evidence_map.637192dd": {
+        "title": "Evidence map item",
+        "kind": "evidence_map",
+        "content": {
+          "id": "evidence_map.637192dd",
+          "claim_id": "637192dd",
+          "claim_text": "Operating UAS in GPS-denied rail environments requires HAZOP review and safety case approval from Network Rail Infrastructure Limited.",
+          "verdict": "contextual",
+          "judgement": "Contextually relevant \u2014 Network Rail operational environment implies familiarity with HAZOP and safety case processes.",
+          "evidence_state": "self-reported",
+          "provenance": "derived",
+          "source_excerpt": "The trial was conducted under NRIL HAZOP review and safety case approval.",
+          "confidence_reason": "Requirement is implied from trial description but not cited to formal regulations."
+        }
+      },
+      "evidence_map.9528df5f": {
+        "title": "Evidence map item",
+        "kind": "evidence_map",
+        "content": {
+          "id": "evidence_map.9528df5f",
+          "claim_id": "9528df5f",
+          "claim_text": "Claim 9528df5f",
+          "verdict": "judgement",
+          "judgement": "RAPPID references Network Rail's operational infrastructure and inspection regimes, providing context for HAZOP and safety case requirements.",
+          "evidence_state": "unknown",
+          "provenance": "derived",
+          "source_excerpt": null,
+          "confidence_reason": "No linked claim record found in fixture."
+        }
+      },
+      "evidence_map.b7ef24d8": {
+        "title": "Evidence map item",
+        "kind": "evidence_map",
+        "content": {
+          "id": "evidence_map.b7ef24d8",
+          "claim_id": "b7ef24d8",
+          "claim_text": "The technology has reached Technology Readiness Level 6, having been demonstrated in a relevant operational environment.",
+          "verdict": "strong",
+          "judgement": "Strong match \u2014 RAPPID explicitly targets detection of rail track defects, directly aligning with the passport's crack, corrosion, and drainage defect identification claims.",
+          "evidence_state": "self-reported",
+          "provenance": "derived",
+          "source_excerpt": "The technology is at TRL 6 \u2014 demonstrated in relevant environment.",
+          "confidence_reason": "TRL level is self-assessed without independent TRL review."
+        }
+      },
+      "evidence_map.e8a7afeb": {
+        "title": "Evidence map item",
+        "kind": "evidence_map",
+        "content": {
+          "id": "evidence_map.e8a7afeb",
+          "claim_id": "e8a7afeb",
+          "claim_text": "Inspection results from the UAS have been validated against manual inspection records.",
+          "verdict": "relevant",
+          "judgement": "Relevant \u2014 RAPPID's inspection results against Network Rail's existing UTU data mirrors the validation against manual inspection records claimed in the passport.",
+          "evidence_state": "self-reported",
+          "provenance": "derived",
+          "source_excerpt": "results validated against manual inspection records.",
+          "confidence_reason": "Validation scope/methodology not described and no third-party review referenced."
+        }
+      },
+      "confidence": {
+        "title": "Confidence cap",
+        "kind": "confidence",
+        "content": {
+          "confidence_tier": "Indicative",
+          "cap_reason": "Confidence is capped because 10 of 10 passport claims are self-reported and 3 stored gaps are large/significant.",
+          "evidence_counts": {
+            "verified": 0,
+            "self-reported": 10,
+            "inferred": 0,
+            "unknown": 0,
+            "contested": 0
+          }
+        }
+      }
+    },
+    "snapshot": {
+      "title": "GPS-Denied Rail UAS \u2014 Infrastructure Inspection Demo \u2192 Real-time AI enabled rail track inspection and analysis [RAPPID] - Resilience Fund Application",
+      "included_blocks": [
+        "block.recommendation",
+        "block.evidence_state",
+        "block.dimension_gap",
+        "block.matchbench",
+        "block.claim_ledger",
+        "block.action_plan"
+      ],
+      "must_include": [
+        "decision_spine",
+        "confidence_cap_reason",
+        "large_gaps",
+        "claim_evidence_states"
+      ]
+    },
+    "data_quality_notes": [
+      "Stored match has evidence_map and gaps, which are strong inputs for the Workbench.",
+      "All sampled passport claims are self-reported, so confidence remains capped.",
+      "evidence_map is currently a key-value object; a structured array would improve rendering and inspector links.",
+      "gaps are close to usable but should add affected_claim_ids and what_would_change fields."
+    ]
+  },
+  "cq.match.defend": {
+    "artifact_id": "artifact.fdb9019d-768e-41e4-86c6-981b0fd8974f.cq.match.defend",
+    "model_version": "v1.0-spike",
+    "generated_at": "2026-06-09T14:33:21.805739Z",
+    "canonical_question_id": "cq.match.defend",
+    "layout_template": "Evidence Inspector / Defend",
+    "mode": "Workbench-one",
+    "source_object": {
+      "type": "passport",
+      "id": "98648147-f217-42c3-a255-46e3c4e4258c",
+      "title": "GPS-Denied Rail UAS \u2014 Infrastructure Inspection Demo",
+      "summary": "A passport describing GPS-denied UAS rail inspection capability, including UAS flight in tunnels/cuttings, computer vision and LiDAR fusion, obstacle detection and defect identification. The underlying claims are self-reported."
+    },
+    "target_object": {
+      "type": "project",
+      "id": "9528df5f-fd14-4743-967e-2c1b7154d05a",
+      "title": "Real-time AI enabled rail track inspection and analysis [RAPPID] - Resilience Fund Application",
+      "funder": "Innovate UK",
+      "status": "Closed",
+      "funding_amount": 43347.0
+    },
+    "decision_spine": {
+      "recommendation": "Strong thematic match, but not UAS-transfer ready",
+      "decision": "Explore / learn / partner, not direct substitution",
+      "summary": "RAPPID (Resilience Fund) directly addresses AI-enabled real-time rail track defect inspection on the UK Network Rail network, closely mirroring the passport's infrastructure defect identification and rail inspection validation claims. This is the strongest thematic match among project results.",
+      "confidence_tier": "Indicative",
+      "confidence_cap_reason": "Confidence is capped because 10 of 10 passport claims are self-reported and 3 stored gaps are large/significant.",
+      "score": 0.314355838682957,
+      "economic_gap_value": 43347
+    },
+    "blocks": [
+      {
+        "id": "block.recommendation",
+        "type": "RecommendationConfidence",
+        "state": "core",
+        "visual": "decision_card",
+        "headline": "Strong thematic match, but not UAS-transfer ready",
+        "content": {
+          "decision": "Explore / learn / partner, not direct substitution",
+          "summary": "RAPPID (Resilience Fund) directly addresses AI-enabled real-time rail track defect inspection on the UK Network Rail network, closely mirroring the passport's infrastructure defect identification and rail inspection validation claims. This is the strongest thematic match among project results.",
+          "score": 0.314355838682957,
+          "confidence_tier": "Indicative",
+          "confidence_cap_reason": "Confidence is capped because 10 of 10 passport claims are self-reported and 3 stored gaps are large/significant."
+        }
+      },
+      {
+        "id": "block.evidence_state",
+        "type": "EvidenceStateSummary",
+        "state": "core",
+        "visual": "evidence_state_bar",
+        "headline": "All passport claims in this fixture are self-reported.",
+        "content": {
+          "counts": {
+            "verified": 0,
+            "self-reported": 10,
+            "inferred": 0,
+            "unknown": 0,
+            "contested": 0
+          },
+          "total_claims": 10,
+          "cap_reason": "Confidence is capped because 10 of 10 passport claims are self-reported and 3 stored gaps are large/significant."
+        }
+      },
+      {
+        "id": "block.objections",
+        "type": "ObjectionResponse",
+        "state": "core",
+        "visual": "objection_response_table",
+        "headline": "The safe defence is: strong thematic rail-inspection fit, not direct UAS equivalence.",
+        "content": [
+          {
+            "challenge": "Is this a direct technology match?",
+            "response": "No. It is a strong thematic/domain match, but platform and method transfer is limited.",
+            "evidence_state": "inferred",
+            "provenance": "derived",
+            "linked_gap_ids": [
+              "gap.1",
+              "gap.2",
+              "gap.3"
+            ]
+          },
+          {
+            "challenge": "Are the UAS claims independently verified?",
+            "response": "No. The passport claims are self-reported and require corroborating evidence.",
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "linked_claim_ids": [
+              "claim.bf6c16d6",
+              "claim.18848f1a",
+              "claim.556a1cf0",
+              "claim.72044537",
+              "claim.70350d4a",
+              "claim.f896753c",
+              "claim.e8a7afeb",
+              "claim.13cf451f",
+              "claim.b7ef24d8",
+              "claim.637192dd"
+            ]
+          },
+          {
+            "challenge": "What can safely be claimed?",
+            "response": "Shared rail defect inspection context and Network Rail operational relevance, not GPS-denied UAS equivalence.",
+            "evidence_state": "inferred",
+            "provenance": "derived",
+            "linked_evidence_ids": [
+              "evidence_map.13cf451f",
+              "evidence_map.637192dd",
+              "evidence_map.9528df5f",
+              "evidence_map.b7ef24d8",
+              "evidence_map.e8a7afeb"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "block.claim_audit",
+        "type": "ClaimLedger",
+        "state": "core",
+        "visual": "claim_audit_ledger",
+        "headline": "Claim audit shows the self-reported base under the match judgement.",
+        "content": [
+          {
+            "id": "claim.bf6c16d6",
+            "claim_id": "bf6c16d6",
+            "claim_text": "The organisation has conducted a GPS-denied UAS trial on the UK rail network, logging over 847 flight hours in operational tunnels and cuttings.",
+            "domain": "evidence",
+            "role": "asserts",
+            "conditions": "GPS-denied environments including tunnels and cuttings on the UK rail network",
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "source_excerpt": "Over 847 flight hours logged in operational tunnels and cuttings where GPS signal is unavailable.",
+            "confidence_reason": "Flight hour totals are self-reported and have not been independently verified.",
+            "match_note": "Not evidenced in RAPPID; RAPPID is ground-based UTU inspection.",
+            "evidence_map_verdict": "not mapped",
+            "evidence_map_judgement": "No stored evidence_map entry for this claim."
+          },
+          {
+            "id": "claim.18848f1a",
+            "claim_id": "18848f1a",
+            "claim_text": "The navigation system achieved 94.7% accuracy in GPS-denied tunnel environments.",
+            "domain": "performance",
+            "role": "asserts",
+            "conditions": "GPS-denied tunnel environments; metric definition not specified",
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "source_excerpt": "Our navigation system achieved 94.7% accuracy in GPS-denied tunnel environments.",
+            "confidence_reason": "The specific accuracy metric and measurement methodology have not been independently validated.",
+            "match_note": "Not matched; RAPPID does not address UAS GPS-denied navigation accuracy.",
+            "evidence_map_verdict": "not mapped",
+            "evidence_map_judgement": "No stored evidence_map entry for this claim."
+          },
+          {
+            "id": "claim.556a1cf0",
+            "claim_id": "556a1cf0",
+            "claim_text": "The trial was conducted under NRIL HAZOP review and safety case approval.",
+            "domain": "certification",
+            "role": "asserts",
+            "conditions": null,
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "source_excerpt": "The trial was conducted under NRIL HAZOP review and safety case approval.",
+            "confidence_reason": "The HAZOP review and safety case approval are self-reported and documents have not been reviewed.",
+            "match_note": "Contextually relevant via Network Rail operational environment, but not explicit for UAS operations.",
+            "evidence_map_verdict": "not mapped",
+            "evidence_map_judgement": "No stored evidence_map entry for this claim."
+          },
+          {
+            "id": "claim.72044537",
+            "claim_id": "72044537",
+            "claim_text": "The UAS navigation system uses computer vision and LiDAR sensor fusion for localisation in GPS-denied environments.",
+            "domain": "capability",
+            "role": "asserts",
+            "conditions": "GPS-denied environments",
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "source_excerpt": "The system uses computer vision and LiDAR fusion for localisation.",
+            "confidence_reason": "Technical architecture is described without supporting technical documentation or third-party assessment.",
+            "match_note": "No evidence in RAPPID; platform/method gap.",
+            "evidence_map_verdict": "not mapped",
+            "evidence_map_judgement": "No stored evidence_map entry for this claim."
+          },
+          {
+            "id": "claim.70350d4a",
+            "claim_id": "70350d4a",
+            "claim_text": "The UAS demonstrated autonomous obstacle detection and avoidance at track level with zero safety incidents across the trial.",
+            "domain": "performance",
+            "role": "asserts",
+            "conditions": "Track-level operations during 14-month trial across three Network Rail managed sites",
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "source_excerpt": "We demonstrated autonomous obstacle detection and avoidance at track level with zero safety incidents.",
+            "confidence_reason": "Zero safety incidents claim is self-reported without independent safety audit reference.",
+            "match_note": "Only indirectly relevant; not evidenced in RAPPID.",
+            "evidence_map_verdict": "not mapped",
+            "evidence_map_judgement": "No stored evidence_map entry for this claim."
+          },
+          {
+            "id": "claim.f896753c",
+            "claim_id": "f896753c",
+            "claim_text": "The UAS platform is capable of identifying infrastructure defects including cracks, corrosion, and drainage blockages during inspection missions.",
+            "domain": "capability",
+            "role": "asserts",
+            "conditions": null,
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "source_excerpt": "The UAS platform is capable of infrastructure inspection \u2014 identifying cracks, corrosion, and drainage blockages.",
+            "confidence_reason": "Capability is asserted without thresholds, false positive/negative rates, or independent criteria.",
+            "match_note": "Strong thematic alignment with RAPPID rail defect detection.",
+            "evidence_map_verdict": "not mapped",
+            "evidence_map_judgement": "No stored evidence_map entry for this claim."
+          },
+          {
+            "id": "claim.e8a7afeb",
+            "claim_id": "e8a7afeb",
+            "claim_text": "Inspection results from the UAS have been validated against manual inspection records.",
+            "domain": "evidence",
+            "role": "asserts",
+            "conditions": null,
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "source_excerpt": "results validated against manual inspection records.",
+            "confidence_reason": "Validation scope/methodology not described and no third-party review referenced.",
+            "match_note": "Relevant; RAPPID uses Network Rail UTU data as comparison context.",
+            "evidence_map_verdict": "relevant",
+            "evidence_map_judgement": "Relevant \u2014 RAPPID's inspection results against Network Rail's existing UTU data mirrors the validation against manual inspection records claimed in the passport."
+          },
+          {
+            "id": "claim.13cf451f",
+            "claim_id": "13cf451f",
+            "claim_text": "The trial took place across three Network Rail managed sites over a period of 14 months.",
+            "domain": "evidence",
+            "role": "asserts",
+            "conditions": null,
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "source_excerpt": "Trial took place across three Network Rail managed sites over 14 months.",
+            "confidence_reason": "Sites and duration are self-reported; no independent trial report cited.",
+            "match_note": "Partial; RAPPID involves Network Rail managed infrastructure but not same site structure.",
+            "evidence_map_verdict": "partial",
+            "evidence_map_judgement": "Partial \u2014 RAPPID involves Network Rail managed infrastructure across the UK network, though specific site counts differ."
+          },
+          {
+            "id": "claim.b7ef24d8",
+            "claim_id": "b7ef24d8",
+            "claim_text": "The technology has reached Technology Readiness Level 6, having been demonstrated in a relevant operational environment.",
+            "domain": "capability",
+            "role": "asserts",
+            "conditions": "Self-assessed TRL 6",
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "source_excerpt": "The technology is at TRL 6 \u2014 demonstrated in relevant environment.",
+            "confidence_reason": "TRL level is self-assessed without independent TRL review.",
+            "match_note": "Strong thematic match because RAPPID addresses rail defect detection, but method/platform differs.",
+            "evidence_map_verdict": "strong",
+            "evidence_map_judgement": "Strong match \u2014 RAPPID explicitly targets detection of rail track defects, directly aligning with the passport's crack, corrosion, and drainage defect identification claims."
+          },
+          {
+            "id": "claim.637192dd",
+            "claim_id": "637192dd",
+            "claim_text": "Operating UAS in GPS-denied rail environments requires HAZOP review and safety case approval from Network Rail Infrastructure Limited.",
+            "domain": "regulatory",
+            "role": "requires",
+            "conditions": "UK rail network operational environments",
+            "evidence_state": "self-reported",
+            "provenance": "stored",
+            "source_excerpt": "The trial was conducted under NRIL HAZOP review and safety case approval.",
+            "confidence_reason": "Requirement is implied from trial description but not cited to formal regulations.",
+            "match_note": "Contextually relevant through Network Rail operational context.",
+            "evidence_map_verdict": "contextual",
+            "evidence_map_judgement": "Contextually relevant \u2014 Network Rail operational environment implies familiarity with HAZOP and safety case processes."
+          }
+        ]
+      },
+      {
+        "id": "block.provenance",
+        "type": "ProvenanceTrace",
+        "state": "core",
+        "visual": "evidence_trail",
+        "headline": "Proof trail resolves stored match \u2192 evidence_map \u2192 gaps \u2192 passport_claims.",
+        "content": {
+          "path": [
+            "atlas.matches",
+            "evidence_map",
+            "gaps",
+            "atlas.passport_claims"
+          ],
+          "evidence_map_items": [
+            {
+              "id": "evidence_map.13cf451f",
+              "claim_id": "13cf451f",
+              "claim_text": "The trial took place across three Network Rail managed sites over a period of 14 months.",
+              "verdict": "partial",
+              "judgement": "Partial \u2014 RAPPID involves Network Rail managed infrastructure across the UK network, though specific site counts differ.",
+              "evidence_state": "self-reported",
+              "provenance": "derived",
+              "source_excerpt": "Trial took place across three Network Rail managed sites over 14 months.",
+              "confidence_reason": "Sites and duration are self-reported; no independent trial report cited."
+            },
+            {
+              "id": "evidence_map.637192dd",
+              "claim_id": "637192dd",
+              "claim_text": "Operating UAS in GPS-denied rail environments requires HAZOP review and safety case approval from Network Rail Infrastructure Limited.",
+              "verdict": "contextual",
+              "judgement": "Contextually relevant \u2014 Network Rail operational environment implies familiarity with HAZOP and safety case processes.",
+              "evidence_state": "self-reported",
+              "provenance": "derived",
+              "source_excerpt": "The trial was conducted under NRIL HAZOP review and safety case approval.",
+              "confidence_reason": "Requirement is implied from trial description but not cited to formal regulations."
+            },
+            {
+              "id": "evidence_map.9528df5f",
+              "claim_id": "9528df5f",
+              "claim_text": "Claim 9528df5f",
+              "verdict": "judgement",
+              "judgement": "RAPPID references Network Rail's operational infrastructure and inspection regimes, providing context for HAZOP and safety case requirements.",
+              "evidence_state": "unknown",
+              "provenance": "derived",
+              "source_excerpt": null,
+              "confidence_reason": "No linked claim record found in fixture."
+            },
+            {
+              "id": "evidence_map.b7ef24d8",
+              "claim_id": "b7ef24d8",
+              "claim_text": "The technology has reached Technology Readiness Level 6, having been demonstrated in a relevant operational environment.",
+              "verdict": "strong",
+              "judgement": "Strong match \u2014 RAPPID explicitly targets detection of rail track defects, directly aligning with the passport's crack, corrosion, and drainage defect identification claims.",
+              "evidence_state": "self-reported",
+              "provenance": "derived",
+              "source_excerpt": "The technology is at TRL 6 \u2014 demonstrated in relevant environment.",
+              "confidence_reason": "TRL level is self-assessed without independent TRL review."
+            },
+            {
+              "id": "evidence_map.e8a7afeb",
+              "claim_id": "e8a7afeb",
+              "claim_text": "Inspection results from the UAS have been validated against manual inspection records.",
+              "verdict": "relevant",
+              "judgement": "Relevant \u2014 RAPPID's inspection results against Network Rail's existing UTU data mirrors the validation against manual inspection records claimed in the passport.",
+              "evidence_state": "self-reported",
+              "provenance": "derived",
+              "source_excerpt": "results validated against manual inspection records.",
+              "confidence_reason": "Validation scope/methodology not described and no third-party review referenced."
+            }
+          ],
+          "gap_items": [
+            {
+              "id": "gap.1",
+              "gap_type": "missing_evidence",
+              "title": "Missing Evidence",
+              "magnitude": "large",
+              "severity": "significant",
+              "description": "RAPPID uses UTU ground-based rail vehicles; no evidence of UAS or aerial platform for GPS-denied navigation using LiDAR/computer vision fusion.",
+              "provenance": "stored",
+              "evidence_state": "inferred",
+              "what_would_change": "Evidence that the target context includes UAS/aerial inspection, or a justified translation from ground-based UTU to UAS operations."
+            },
+            {
+              "id": "gap.2",
+              "gap_type": "sector_gap",
+              "title": "Sector Gap",
+              "magnitude": "large",
+              "severity": "significant",
+              "description": "Inspection method is ground-based ultrasonic testing, not aerial UAS-based inspection in tunnels or cuttings.",
+              "provenance": "stored",
+              "evidence_state": "inferred",
+              "what_would_change": "Evidence that the target context includes UAS/aerial inspection, or a justified translation from ground-based UTU to UAS operations."
+            },
+            {
+              "id": "gap.3",
+              "gap_type": "missing_evidence",
+              "title": "Missing Evidence",
+              "magnitude": "large",
+              "severity": "significant",
+              "description": "No evidence of GPS-denied operational capability or tunnel/cutting flight hours.",
+              "provenance": "stored",
+              "evidence_state": "inferred",
+              "what_would_change": "Verified GPS-denied tunnel/cutting flight logs, navigation accuracy methodology, or comparable operational evidence."
+            },
+            {
+              "id": "gap.4",
+              "gap_type": "certification_gap",
+              "title": "Certification Gap",
+              "magnitude": "small",
+              "severity": "minor",
+              "description": "HAZOP and safety case alignment is implied by Network Rail context but not explicitly evidenced for UAS operations.",
+              "provenance": "stored",
+              "evidence_state": "inferred",
+              "what_would_change": "Evidence that the target context includes UAS/aerial inspection, or a justified translation from ground-based UTU to UAS operations."
+            }
+          ]
+        }
+      }
+    ],
+    "inspector_index": {
+      "claim.bf6c16d6": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.bf6c16d6",
+          "claim_id": "bf6c16d6",
+          "claim_text": "The organisation has conducted a GPS-denied UAS trial on the UK rail network, logging over 847 flight hours in operational tunnels and cuttings.",
+          "domain": "evidence",
+          "role": "asserts",
+          "conditions": "GPS-denied environments including tunnels and cuttings on the UK rail network",
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "Over 847 flight hours logged in operational tunnels and cuttings where GPS signal is unavailable.",
+          "confidence_reason": "Flight hour totals are self-reported and have not been independently verified.",
+          "match_note": "Not evidenced in RAPPID; RAPPID is ground-based UTU inspection.",
+          "evidence_map_verdict": "not mapped",
+          "evidence_map_judgement": "No stored evidence_map entry for this claim."
+        }
+      },
+      "claim.18848f1a": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.18848f1a",
+          "claim_id": "18848f1a",
+          "claim_text": "The navigation system achieved 94.7% accuracy in GPS-denied tunnel environments.",
+          "domain": "performance",
+          "role": "asserts",
+          "conditions": "GPS-denied tunnel environments; metric definition not specified",
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "Our navigation system achieved 94.7% accuracy in GPS-denied tunnel environments.",
+          "confidence_reason": "The specific accuracy metric and measurement methodology have not been independently validated.",
+          "match_note": "Not matched; RAPPID does not address UAS GPS-denied navigation accuracy.",
+          "evidence_map_verdict": "not mapped",
+          "evidence_map_judgement": "No stored evidence_map entry for this claim."
+        }
+      },
+      "claim.556a1cf0": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.556a1cf0",
+          "claim_id": "556a1cf0",
+          "claim_text": "The trial was conducted under NRIL HAZOP review and safety case approval.",
+          "domain": "certification",
+          "role": "asserts",
+          "conditions": null,
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "The trial was conducted under NRIL HAZOP review and safety case approval.",
+          "confidence_reason": "The HAZOP review and safety case approval are self-reported and documents have not been reviewed.",
+          "match_note": "Contextually relevant via Network Rail operational environment, but not explicit for UAS operations.",
+          "evidence_map_verdict": "not mapped",
+          "evidence_map_judgement": "No stored evidence_map entry for this claim."
+        }
+      },
+      "claim.72044537": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.72044537",
+          "claim_id": "72044537",
+          "claim_text": "The UAS navigation system uses computer vision and LiDAR sensor fusion for localisation in GPS-denied environments.",
+          "domain": "capability",
+          "role": "asserts",
+          "conditions": "GPS-denied environments",
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "The system uses computer vision and LiDAR fusion for localisation.",
+          "confidence_reason": "Technical architecture is described without supporting technical documentation or third-party assessment.",
+          "match_note": "No evidence in RAPPID; platform/method gap.",
+          "evidence_map_verdict": "not mapped",
+          "evidence_map_judgement": "No stored evidence_map entry for this claim."
+        }
+      },
+      "claim.70350d4a": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.70350d4a",
+          "claim_id": "70350d4a",
+          "claim_text": "The UAS demonstrated autonomous obstacle detection and avoidance at track level with zero safety incidents across the trial.",
+          "domain": "performance",
+          "role": "asserts",
+          "conditions": "Track-level operations during 14-month trial across three Network Rail managed sites",
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "We demonstrated autonomous obstacle detection and avoidance at track level with zero safety incidents.",
+          "confidence_reason": "Zero safety incidents claim is self-reported without independent safety audit reference.",
+          "match_note": "Only indirectly relevant; not evidenced in RAPPID.",
+          "evidence_map_verdict": "not mapped",
+          "evidence_map_judgement": "No stored evidence_map entry for this claim."
+        }
+      },
+      "claim.f896753c": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.f896753c",
+          "claim_id": "f896753c",
+          "claim_text": "The UAS platform is capable of identifying infrastructure defects including cracks, corrosion, and drainage blockages during inspection missions.",
+          "domain": "capability",
+          "role": "asserts",
+          "conditions": null,
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "The UAS platform is capable of infrastructure inspection \u2014 identifying cracks, corrosion, and drainage blockages.",
+          "confidence_reason": "Capability is asserted without thresholds, false positive/negative rates, or independent criteria.",
+          "match_note": "Strong thematic alignment with RAPPID rail defect detection.",
+          "evidence_map_verdict": "not mapped",
+          "evidence_map_judgement": "No stored evidence_map entry for this claim."
+        }
+      },
+      "claim.e8a7afeb": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.e8a7afeb",
+          "claim_id": "e8a7afeb",
+          "claim_text": "Inspection results from the UAS have been validated against manual inspection records.",
+          "domain": "evidence",
+          "role": "asserts",
+          "conditions": null,
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "results validated against manual inspection records.",
+          "confidence_reason": "Validation scope/methodology not described and no third-party review referenced.",
+          "match_note": "Relevant; RAPPID uses Network Rail UTU data as comparison context.",
+          "evidence_map_verdict": "relevant",
+          "evidence_map_judgement": "Relevant \u2014 RAPPID's inspection results against Network Rail's existing UTU data mirrors the validation against manual inspection records claimed in the passport."
+        }
+      },
+      "claim.13cf451f": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.13cf451f",
+          "claim_id": "13cf451f",
+          "claim_text": "The trial took place across three Network Rail managed sites over a period of 14 months.",
+          "domain": "evidence",
+          "role": "asserts",
+          "conditions": null,
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "Trial took place across three Network Rail managed sites over 14 months.",
+          "confidence_reason": "Sites and duration are self-reported; no independent trial report cited.",
+          "match_note": "Partial; RAPPID involves Network Rail managed infrastructure but not same site structure.",
+          "evidence_map_verdict": "partial",
+          "evidence_map_judgement": "Partial \u2014 RAPPID involves Network Rail managed infrastructure across the UK network, though specific site counts differ."
+        }
+      },
+      "claim.b7ef24d8": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.b7ef24d8",
+          "claim_id": "b7ef24d8",
+          "claim_text": "The technology has reached Technology Readiness Level 6, having been demonstrated in a relevant operational environment.",
+          "domain": "capability",
+          "role": "asserts",
+          "conditions": "Self-assessed TRL 6",
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "The technology is at TRL 6 \u2014 demonstrated in relevant environment.",
+          "confidence_reason": "TRL level is self-assessed without independent TRL review.",
+          "match_note": "Strong thematic match because RAPPID addresses rail defect detection, but method/platform differs.",
+          "evidence_map_verdict": "strong",
+          "evidence_map_judgement": "Strong match \u2014 RAPPID explicitly targets detection of rail track defects, directly aligning with the passport's crack, corrosion, and drainage defect identification claims."
+        }
+      },
+      "claim.637192dd": {
+        "title": "Passport claim",
+        "kind": "claim",
+        "content": {
+          "id": "claim.637192dd",
+          "claim_id": "637192dd",
+          "claim_text": "Operating UAS in GPS-denied rail environments requires HAZOP review and safety case approval from Network Rail Infrastructure Limited.",
+          "domain": "regulatory",
+          "role": "requires",
+          "conditions": "UK rail network operational environments",
+          "evidence_state": "self-reported",
+          "provenance": "stored",
+          "source_excerpt": "The trial was conducted under NRIL HAZOP review and safety case approval.",
+          "confidence_reason": "Requirement is implied from trial description but not cited to formal regulations.",
+          "match_note": "Contextually relevant through Network Rail operational context.",
+          "evidence_map_verdict": "contextual",
+          "evidence_map_judgement": "Contextually relevant \u2014 Network Rail operational environment implies familiarity with HAZOP and safety case processes."
+        }
+      },
+      "gap.1": {
+        "title": "Missing Evidence",
+        "kind": "gap",
+        "content": {
+          "id": "gap.1",
+          "gap_type": "missing_evidence",
+          "title": "Missing Evidence",
+          "magnitude": "large",
+          "severity": "significant",
+          "description": "RAPPID uses UTU ground-based rail vehicles; no evidence of UAS or aerial platform for GPS-denied navigation using LiDAR/computer vision fusion.",
+          "provenance": "stored",
+          "evidence_state": "inferred",
+          "what_would_change": "Evidence that the target context includes UAS/aerial inspection, or a justified translation from ground-based UTU to UAS operations."
+        }
+      },
+      "gap.2": {
+        "title": "Sector Gap",
+        "kind": "gap",
+        "content": {
+          "id": "gap.2",
+          "gap_type": "sector_gap",
+          "title": "Sector Gap",
+          "magnitude": "large",
+          "severity": "significant",
+          "description": "Inspection method is ground-based ultrasonic testing, not aerial UAS-based inspection in tunnels or cuttings.",
+          "provenance": "stored",
+          "evidence_state": "inferred",
+          "what_would_change": "Evidence that the target context includes UAS/aerial inspection, or a justified translation from ground-based UTU to UAS operations."
+        }
+      },
+      "gap.3": {
+        "title": "Missing Evidence",
+        "kind": "gap",
+        "content": {
+          "id": "gap.3",
+          "gap_type": "missing_evidence",
+          "title": "Missing Evidence",
+          "magnitude": "large",
+          "severity": "significant",
+          "description": "No evidence of GPS-denied operational capability or tunnel/cutting flight hours.",
+          "provenance": "stored",
+          "evidence_state": "inferred",
+          "what_would_change": "Verified GPS-denied tunnel/cutting flight logs, navigation accuracy methodology, or comparable operational evidence."
+        }
+      },
+      "gap.4": {
+        "title": "Certification Gap",
+        "kind": "gap",
+        "content": {
+          "id": "gap.4",
+          "gap_type": "certification_gap",
+          "title": "Certification Gap",
+          "magnitude": "small",
+          "severity": "minor",
+          "description": "HAZOP and safety case alignment is implied by Network Rail context but not explicitly evidenced for UAS operations.",
+          "provenance": "stored",
+          "evidence_state": "inferred",
+          "what_would_change": "Evidence that the target context includes UAS/aerial inspection, or a justified translation from ground-based UTU to UAS operations."
+        }
+      },
+      "evidence_map.13cf451f": {
+        "title": "Evidence map item",
+        "kind": "evidence_map",
+        "content": {
+          "id": "evidence_map.13cf451f",
+          "claim_id": "13cf451f",
+          "claim_text": "The trial took place across three Network Rail managed sites over a period of 14 months.",
+          "verdict": "partial",
+          "judgement": "Partial \u2014 RAPPID involves Network Rail managed infrastructure across the UK network, though specific site counts differ.",
+          "evidence_state": "self-reported",
+          "provenance": "derived",
+          "source_excerpt": "Trial took place across three Network Rail managed sites over 14 months.",
+          "confidence_reason": "Sites and duration are self-reported; no independent trial report cited."
+        }
+      },
+      "evidence_map.637192dd": {
+        "title": "Evidence map item",
+        "kind": "evidence_map",
+        "content": {
+          "id": "evidence_map.637192dd",
+          "claim_id": "637192dd",
+          "claim_text": "Operating UAS in GPS-denied rail environments requires HAZOP review and safety case approval from Network Rail Infrastructure Limited.",
+          "verdict": "contextual",
+          "judgement": "Contextually relevant \u2014 Network Rail operational environment implies familiarity with HAZOP and safety case processes.",
+          "evidence_state": "self-reported",
+          "provenance": "derived",
+          "source_excerpt": "The trial was conducted under NRIL HAZOP review and safety case approval.",
+          "confidence_reason": "Requirement is implied from trial description but not cited to formal regulations."
+        }
+      },
+      "evidence_map.9528df5f": {
+        "title": "Evidence map item",
+        "kind": "evidence_map",
+        "content": {
+          "id": "evidence_map.9528df5f",
+          "claim_id": "9528df5f",
+          "claim_text": "Claim 9528df5f",
+          "verdict": "judgement",
+          "judgement": "RAPPID references Network Rail's operational infrastructure and inspection regimes, providing context for HAZOP and safety case requirements.",
+          "evidence_state": "unknown",
+          "provenance": "derived",
+          "source_excerpt": null,
+          "confidence_reason": "No linked claim record found in fixture."
+        }
+      },
+      "evidence_map.b7ef24d8": {
+        "title": "Evidence map item",
+        "kind": "evidence_map",
+        "content": {
+          "id": "evidence_map.b7ef24d8",
+          "claim_id": "b7ef24d8",
+          "claim_text": "The technology has reached Technology Readiness Level 6, having been demonstrated in a relevant operational environment.",
+          "verdict": "strong",
+          "judgement": "Strong match \u2014 RAPPID explicitly targets detection of rail track defects, directly aligning with the passport's crack, corrosion, and drainage defect identification claims.",
+          "evidence_state": "self-reported",
+          "provenance": "derived",
+          "source_excerpt": "The technology is at TRL 6 \u2014 demonstrated in relevant environment.",
+          "confidence_reason": "TRL level is self-assessed without independent TRL review."
+        }
+      },
+      "evidence_map.e8a7afeb": {
+        "title": "Evidence map item",
+        "kind": "evidence_map",
+        "content": {
+          "id": "evidence_map.e8a7afeb",
+          "claim_id": "e8a7afeb",
+          "claim_text": "Inspection results from the UAS have been validated against manual inspection records.",
+          "verdict": "relevant",
+          "judgement": "Relevant \u2014 RAPPID's inspection results against Network Rail's existing UTU data mirrors the validation against manual inspection records claimed in the passport.",
+          "evidence_state": "self-reported",
+          "provenance": "derived",
+          "source_excerpt": "results validated against manual inspection records.",
+          "confidence_reason": "Validation scope/methodology not described and no third-party review referenced."
+        }
+      },
+      "confidence": {
+        "title": "Confidence cap",
+        "kind": "confidence",
+        "content": {
+          "confidence_tier": "Indicative",
+          "cap_reason": "Confidence is capped because 10 of 10 passport claims are self-reported and 3 stored gaps are large/significant.",
+          "evidence_counts": {
+            "verified": 0,
+            "self-reported": 10,
+            "inferred": 0,
+            "unknown": 0,
+            "contested": 0
+          }
+        }
+      }
+    },
+    "snapshot": {
+      "title": "GPS-Denied Rail UAS \u2014 Infrastructure Inspection Demo \u2192 Real-time AI enabled rail track inspection and analysis [RAPPID] - Resilience Fund Application",
+      "included_blocks": [
+        "block.recommendation",
+        "block.evidence_state",
+        "block.objections",
+        "block.claim_audit",
+        "block.provenance"
+      ],
+      "must_include": [
+        "decision_spine",
+        "confidence_cap_reason",
+        "large_gaps",
+        "claim_evidence_states"
+      ]
+    },
+    "data_quality_notes": [
+      "Stored match has evidence_map and gaps, which are strong inputs for the Workbench.",
+      "All sampled passport claims are self-reported, so confidence remains capped.",
+      "evidence_map is currently a key-value object; a structured array would improve rendering and inspector links.",
+      "gaps are close to usable but should add affected_claim_ids and what_would_change fields."
+    ]
+  }
+}

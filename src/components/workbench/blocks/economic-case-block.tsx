@@ -29,6 +29,7 @@ import {
   valueClass,
   type ValueSignal,
 } from "@/lib/design/tokens";
+import { CitationList } from "@/components/workbench/citation-popover";
 import type {
   EconomicCaseBlock as EconomicCaseBlockType,
   EconomicCaseContent,
@@ -350,21 +351,21 @@ export function EconomicCaseBlock({ block }: Props) {
           </div>
         )}
 
-        {/* Citations */}
+        {/* Citations — M1.3 popover chips */}
         {c.corpus_citations.length > 0 && (
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
               Evidence ({c.corpus_citations.length})
             </p>
-            <div className="space-y-1">
-              {c.corpus_citations.map((cit) => (
-                <div key={cit.id} className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                  <span className="font-mono bg-muted rounded px-1">{cit.id.slice(0, 8)}</span>
-                  <span className="flex-1 truncate">{cit.title}</span>
-                  <span className="tabular-nums shrink-0">{Math.round(cit.score * 100)}%</span>
-                </div>
-              ))}
-            </div>
+            <CitationList
+              citations={c.corpus_citations.map((cit) => ({
+                id: cit.id,
+                title: cit.title,
+                organisation: (cit as { organisation?: string }).organisation,
+                score: cit.score,
+                schema: "atlas" as const,
+              }))}
+            />
           </div>
         )}
       </div>

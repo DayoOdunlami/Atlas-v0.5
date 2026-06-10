@@ -34,7 +34,14 @@ interface WorkbenchAgentBridgeProps {
 }
 
 export function WorkbenchAgentBridge({ children }: WorkbenchAgentBridgeProps) {
-  const { model, isLoading, setPendingPatch, setReasoningSteps } = useWorkbench();
+  const {
+    model,
+    isLoading,
+    setPendingPatch,
+    setReasoningSteps,
+    setLastRoute,
+    setLastCitations,
+  } = useWorkbench();
 
   // Build slim model summary for the agent — empty object while loading.
   // The runtime provider is always mounted so threads persist across loads.
@@ -47,6 +54,16 @@ export function WorkbenchAgentBridge({ children }: WorkbenchAgentBridgeProps) {
     const trace = state?.last_output?.reasoning_trace;
     if (Array.isArray(trace) && trace.length > 0) {
       setReasoningSteps(trace);
+    }
+    // Track route for mode indicator (M1.4)
+    const route = state?.last_output?.route;
+    if (route) setLastRoute(route);
+    // Sync corpus citations (search/explore routes)
+    const cits = state?.last_output?.corpus_citations;
+    if (Array.isArray(cits) && cits.length > 0) {
+      setLastCitations(cits);
+    } else if (route && route !== "search" && route !== "explore") {
+      setLastCitations([]); // clear on non-search turns
     }
   }
 

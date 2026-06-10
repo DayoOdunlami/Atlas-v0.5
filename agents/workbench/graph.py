@@ -106,8 +106,9 @@ def _load_skill(filename: str) -> str:
 WorkbenchRoute = Literal[
     "explain",
     "search",
+    "explore",      # M1.4 — corpus-wide questions, no match requirement
     "propose",
-    "economic_analysis",  # STAGED — M1.0
+    "economic_analysis",
     "conversational",
 ]
 
@@ -205,10 +206,16 @@ Evidence: {model_summary.get("evidence_counts", {})}
             "Never apply the patch yourself — the user must confirm in the UI."
         ),
         "economic_analysis": (
-            # STAGED M1.0 — placeholder prompt, route not yet wired
-            "ECONOMIC ANALYSIS ROUTE — NOT YET IMPLEMENTED (M1.0).\n"
-            "Respond: 'Economic case analysis is coming in the next release. "
-            "I can currently show you the gap_value_estimate from the match record.'"
+            "You are running a Five Case economic analysis for this match.\n"
+            "Apply Green Book methodology (NPV at 3.5% STPR, Five Case Model).\n"
+            "Be explicit about evidence quality — cap confidence at Indicative when claims are self-reported.\n"
+            "Produce a structured economic case with value drivers and assumptions."
+        ),
+        "explore": (
+            "You are exploring the CPC corpus beyond this match.\n"
+            "Answer the user's question using corpus search results.\n"
+            "Where relevant, note connections back to the current match context.\n"
+            "Do not restrict yourself to the current match — answer the broader question."
         ),
         "conversational": (
             "This is a greeting or meta question. Respond naturally and briefly."
@@ -245,11 +252,16 @@ Route: {route}
 _ROUTE_PROMPT = """Classify the user's intent into exactly one of these routes.
 
 Routes:
-  explain         — asking about the current match/evidence/gaps/confidence
-  search          — explicitly wants corpus search, new evidence, or comparators
+  explain         — asking about THIS match: its evidence, gaps, confidence, recommendation
+  search          — wants corpus evidence for THIS match: comparators, analogues, corroboration
+  explore         — wants to browse/discover BEYOND this match: other projects, general domain questions, "what else is in the corpus", "tell me about X technology", "what other projects deal with Y"
   propose         — wants to update, edit, add, or remove something from the artifact
-  economic_analysis — asks about NPV, BCR, value, cost-benefit, Five Case, economic case
-  conversational  — greeting, thank you, meta, or off-topic
+  economic_analysis — asks about NPV, BCR, value, cost-benefit, Five Case, "is this worth it", "build business case"
+  conversational  — greeting, thank you, meta question about the assistant
+
+Key distinction:
+  search = "find evidence FOR this match"
+  explore = "show me other things / broader questions / not about this specific match"
 
 User message: {query}
 
@@ -266,7 +278,7 @@ def classify_route(state: WorkbenchState) -> dict:
     msg = llm.invoke([HumanMessage(content=_ROUTE_PROMPT.format(query=query))])
     raw = msg.content.strip().lower().split()[0] if msg.content else "explain"
 
-    valid_routes = {"explain", "search", "propose", "economic_analysis", "conversational"}
+    valid_routes = {"explain", "search", "explore", "propose", "economic_analysis", "conversational"}
     route: WorkbenchRoute = raw if raw in valid_routes else "explain"  # type: ignore[assignment]
 
     return {
@@ -290,6 +302,7 @@ extract_query = make_extract_query_node({
     "reasoning_trace": [],
     "error": None,
     "_is_conversational": False,
+    "last_output": None,
 })
 
 classify_intent, _route_after_intent = make_classify_intent_node(
@@ -711,20 +724,45 @@ Rules:
         HumanMessage(content=f"Run Five Case economic analysis for this match."),
     ])
 
-    # Parse the JSON response
+    # Parse the JSON response — multiple extraction strategies for robustness
     model_patch = None
-    chat_text   = "Five Case economic analysis complete. Review the proposed block below."
-    try:
-        raw = response.content.strip()
-        # Strip markdown code fences if present
-        if raw.startswith("```"):
-            raw = re.sub(r"^```(?:json)?\s*", "", raw)
-            raw = re.sub(r"\s*```$", "", raw)
-        parsed = json.loads(raw)
-        chat_text = parsed.get("chat_response", chat_text)
-        ec_block  = parsed.get("economic_case_block")
+    default_chat = (
+        f"Five Case economic analysis complete for "
+        f"**{model_summary.get('source_label', 'this passport')} → "
+        f"{model_summary.get('target_label', 'this project')}**. "
+        "Review the proposed artifact update in the confirmation panel below."
+    )
+    chat_text = default_chat
+    parsed = None
+
+    raw_content = response.content.strip()
+
+    # Strategy 1: strip outermost ```json … ``` fences then parse
+    fenced = re.sub(r"^```(?:json)?\s*", "", raw_content)
+    fenced = re.sub(r"\s*```$", "", fenced).strip()
+    for candidate in (fenced, raw_content):
+        try:
+            parsed = json.loads(candidate)
+            break
+        except Exception:
+            pass
+
+    # Strategy 2: extract first {...} block (handles prose + JSON combos)
+    if parsed is None:
+        m = re.search(r"\{[\s\S]*\}", raw_content)
+        if m:
+            try:
+                parsed = json.loads(m.group(0))
+            except Exception:
+                pass
+
+    if parsed:
+        chat_text = parsed.get("chat_response", default_chat)
+        # Ensure chat_text is prose, not JSON
+        if chat_text.strip().startswith("{") or chat_text.strip().startswith("["):
+            chat_text = default_chat
+        ec_block = parsed.get("economic_case_block")
         if ec_block:
-            # Ensure required fields have defaults
             ec_block.setdefault("id", f"ec-{model_summary.get('artifact_id','')[:8]}-001")
             ec_block.setdefault("type", "EconomicCase")
             ec_block.setdefault("state", "core")
@@ -732,22 +770,27 @@ Rules:
             content.setdefault("corpus_citations", verified_citations)
             content.setdefault("skills_applied", ["green-book", "evidence-triage"])
             ec_block["content"] = content
-
             model_patch = {
                 "rationale": (
-                    f"Five Case economic analysis for {model_summary.get('source_label','')}"
-                    f" → {model_summary.get('target_label','')}. "
+                    f"Five Case economic analysis for "
+                    f"{model_summary.get('source_label','')} → "
+                    f"{model_summary.get('target_label','')}. "
                     f"Verdict: {content.get('verdict', 'unknown')}."
                 ),
                 "ops": [{"op": "add_block", "block": ec_block}],
                 "confidence_tier": content.get("confidence_tier", "Indicative"),
                 "corpus_citations": verified_citations,
             }
-    except Exception as exc:
-        trace.append({"label": f"Parse error: {exc}", "status": "error"})
+    else:
+        # Full parse failure — respond with clean prose, no JSON leaked
+        trace.append({"label": "JSON parse failed — returning prose summary", "status": "error"})
         chat_text = (
-            "I completed the Five Case analysis but encountered a formatting issue. "
-            "Here's my assessment: " + response.content[:500]
+            f"I've completed the Five Case analysis for "
+            f"**{model_summary.get('source_label', 'this passport')} → "
+            f"{model_summary.get('target_label', 'this project')}**.\n\n"
+            "The structured block couldn't be formatted for the artifact panel this time. "
+            "Try asking again — the analysis is often successful on a second attempt. "
+            "In the meantime, I can explain any aspect of the economic case in chat."
         )
 
     trace.append({"label": "Economic analysis complete", "status": "complete"})
@@ -762,50 +805,121 @@ Rules:
 
 
 # ---------------------------------------------------------------------------
+# Node: explore (M1.4 — corpus-wide questions, no match requirement)
+# ---------------------------------------------------------------------------
+
+
+def explore_node(state: WorkbenchState) -> dict:
+    """
+    Handle corpus-wide exploration questions that go beyond the current match.
+
+    Unlike search_node (which finds evidence *for* this match), explore_node
+    answers broader questions: "what other projects deal with X?", "tell me
+    about Y technology", "what's in the corpus on Z?".
+
+    The current match is available as secondary context but is not required.
+    Results are anchored back to the match where relevant.
+    """
+    trace = state.get("reasoning_trace", [])
+    query = state.get("query", "")
+    model_summary = state.get("model_summary") or {}
+
+    trace.append({"label": "Searching CPC corpus (broad exploration)", "status": "active"})
+
+    # Corpus search — use the raw query without match-enrichment so we get
+    # results beyond just the current match context
+    raw_results: list[dict[str, Any]] = []
+    try:
+        raw_results = search_corpus_projects.invoke({"query": query, "k": 10})
+        if not isinstance(raw_results, list):
+            raw_results = []
+    except Exception as exc:
+        trace.append({"label": f"Corpus search failed: {exc}", "status": "error"})
+
+    # Verify and deduplicate citations
+    verified: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for r in raw_results:
+        proj_id = r.get("id") or r.get("project_id", "")
+        if not proj_id or proj_id in seen:
+            continue
+        seen.add(proj_id)
+        try:
+            proj = _verify_project(proj_id)
+            if proj:
+                verified.append({
+                    "id": proj_id,
+                    "title": r.get("title", proj.get("project_title", "")),
+                    "organisation": r.get("organisation", proj.get("organisation", "")),
+                    "relevance_note": r.get("relevance_note", ""),
+                    "score": float(r.get("similarity", 0)),
+                })
+        except Exception:
+            pass
+
+    trace.append({
+        "label": f"Found {len(verified)} projects in corpus",
+        "status": "active",
+    })
+
+    # Build context-aware system prompt
+    match_context = ""
+    if model_summary.get("source_label"):
+        match_context = (
+            f"\nFor context, the analyst is currently viewing: "
+            f"{model_summary.get('source_label')} → {model_summary.get('target_label')}. "
+            "Relate your answer back to this match where relevant, but do not limit "
+            "yourself to it — answer the broader question fully."
+        )
+
+    citations_block = "\n".join(
+        f"- [{c['id'][:8]}] **{c['title']}** ({c['organisation']}) — {int(c['score']*100)}% match"
+        for c in verified
+    ) or "No matching projects found in the current corpus."
+
+    system = (
+        "You are the Atlas Workbench assistant exploring the CPC Connected Places corpus.\n"
+        "Answer the user's question using the corpus results below.\n"
+        "Be specific: cite project titles and IDs. Identify patterns and themes.\n"
+        "Do not confabulate projects — only reference what is in the corpus results.\n"
+        f"{match_context}\n\n"
+        f"Corpus results for this query:\n{citations_block}"
+    )
+
+    llm = _llm()
+    response = llm.invoke(
+        [SystemMessage(content=system)] + list(state.get("messages", []))
+    )
+
+    trace.append({"label": "Corpus exploration complete", "status": "complete"})
+
+    return {
+        "chat_response": response.content,
+        "corpus_citations": verified,
+        "confidence_tier": "Indicative" if verified else "Speculative",
+        "reasoning_trace": trace,
+        "messages": [AIMessage(content=response.content)],
+    }
+
+
+# ---------------------------------------------------------------------------
 # Node: conversational
 # ---------------------------------------------------------------------------
 
 def conversational_node(state: WorkbenchState) -> dict:
-    """Handle greetings, meta, off-topic, and out-of-scope questions."""
-    model_summary = state.get("model_summary") or {}
-    query = state.get("query", "").lower()
-
-    # Detect out-of-scope requests (general DB/corpus browsing, non-workbench)
-    out_of_scope_signals = [
-        "tell me about my db", "what's in the database", "show me all",
-        "list all projects", "what data do you have", "browse corpus",
-        "show everything", "what is in supabase",
-    ]
-    is_out_of_scope = any(sig in query for sig in out_of_scope_signals)
-
-    if is_out_of_scope:
-        scope_msg = (
-            "The Workbench assistant is scoped to this specific match: "
-            f"**{model_summary.get('source_label', 'this passport')} → "
-            f"{model_summary.get('target_label', 'this project')}**.\n\n"
-            "For general corpus browsing, database exploration, or cross-match search, "
-            "use the **JARVIS** agent — it's purpose-built for evidence discovery "
-            "across the full CPC corpus.\n\n"
-            "In the Workbench I can:\n"
-            "- Explain evidence and gaps in this match\n"
-            "- Search the corpus for relevant analogues\n"
-            "- Propose artifact updates for your review\n"
-            "- Run a Five Case economic analysis ('run economic case')"
-        )
-        return {
-            "chat_response": scope_msg,
-            "confidence_tier": "Speculative",
-            "reasoning_trace": [{"label": "Out-of-scope query — redirected to JARVIS", "status": "complete"}],
-            "messages": [AIMessage(content=scope_msg)],
-        }
-
+    """Handle greetings, meta, and off-topic messages."""
     llm = _llm()
     messages = [
         SystemMessage(content=(
-            "You are the Atlas Workbench assistant. "
-            "Respond briefly and helpfully to this conversational message. "
-            "If asked what you can do, explain: explain match evidence, search the CPC corpus, "
-            "propose artifact updates, or run a Five Case economic analysis."
+            "You are the Atlas Workbench assistant — a strategic intelligence tool "
+            "for Connected Places Catapult analysts.\n\n"
+            "You can handle ANY question an analyst would ask:\n"
+            "- Explain evidence and gaps in the current match\n"
+            "- Search the CPC corpus for evidence or comparators\n"
+            "- Explore the corpus broadly — other projects, technologies, sectors\n"
+            "- Propose updates to the artifact for analyst review\n"
+            "- Run a Five Case economic analysis ('run economic case')\n\n"
+            "Respond naturally to this message."
         )),
     ] + list(state.get("messages", []))
     response = llm.invoke(messages)
@@ -827,11 +941,12 @@ def route_to_node(state: WorkbenchState) -> str:
         return "conversational"
     route = state.get("route", "explain")
     return {
-        "explain": "explain",
-        "search": "search",
-        "propose": "propose",
+        "explain":           "explain",
+        "search":            "search",
+        "explore":           "explore",
+        "propose":           "propose",
         "economic_analysis": "economic_analysis",
-        "conversational": "conversational",
+        "conversational":    "conversational",
     }.get(route, "explain")
 
 
@@ -848,6 +963,7 @@ def build_graph():
     graph.add_node("classify_route", classify_route)
     graph.add_node("explain", explain_node)
     graph.add_node("search", search_node)
+    graph.add_node("explore", explore_node)
     graph.add_node("propose", propose_node)
     graph.add_node("economic_analysis", economic_analysis_node)
     graph.add_node("conversational", conversational_node)
@@ -870,16 +986,17 @@ def build_graph():
         "classify_route",
         route_to_node,
         {
-            "explain": "explain",
-            "search": "search",
-            "propose": "propose",
+            "explain":           "explain",
+            "search":            "search",
+            "explore":           "explore",
+            "propose":           "propose",
             "economic_analysis": "economic_analysis",
-            "conversational": "conversational",
+            "conversational":    "conversational",
         },
     )
 
     # All processing nodes → END
-    for node in ["explain", "search", "propose", "economic_analysis", "conversational"]:
+    for node in ["explain", "search", "explore", "propose", "economic_analysis", "conversational"]:
         graph.add_edge(node, END)
 
     # LangGraph API provides its own persistence; MemorySaver is for direct uvicorn use.

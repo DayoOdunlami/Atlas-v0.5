@@ -15,5 +15,6 @@ export function getPassportPool() {
     connectionString,
     ssl: { rejectUnauthorized: false },
     max: 3,
+    connectionTimeoutMillis: 10_000, // fail fast rather than hanging 20-30s
   });
 }

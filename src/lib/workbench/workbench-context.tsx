@@ -185,6 +185,14 @@ interface WorkbenchState {
   reasoningSteps: ReasoningStep[];
   setReasoningSteps: (steps: ReasoningStep[]) => void;
 
+  // Route mode indicator + corpus citations (M1.4)
+  /** The route the agent used on the last completed turn */
+  lastRoute: string | null;
+  setLastRoute: (route: string | null) => void;
+  /** Citations returned by the last search/explore turn */
+  lastCitations: Array<{ id: string; title?: string; organisation?: string; score?: number; relevanceNote?: string }>;
+  setLastCitations: (c: Array<{ id: string; title?: string; organisation?: string; score?: number; relevanceNote?: string }>) => void;
+
   // Patch confirmation (M0.9)
   /** Pending model_patch proposal from the agent — null when none in flight */
   pendingPatch: ModelPatchProposal | null;
@@ -232,6 +240,9 @@ export function WorkbenchProvider({
 
   // Reasoning trace state (M1.1)
   const [reasoningSteps, setReasoningSteps] = React.useState<ReasoningStep[]>([]);
+  // Route mode indicator + citations (M1.4)
+  const [lastRoute, setLastRoute] = React.useState<string | null>(null);
+  const [lastCitations, setLastCitations] = React.useState<Array<{ id: string; title?: string; organisation?: string; score?: number; relevanceNote?: string }>>([]);
 
   // Patch confirmation state (M0.9)
   const [pendingPatch, setPendingPatch] = React.useState<ModelPatchProposal | null>(null);
@@ -409,6 +420,10 @@ export function WorkbenchProvider({
         setSnapshotOpen,
         reasoningSteps,
         setReasoningSteps,
+        lastRoute,
+        setLastRoute,
+        lastCitations,
+        setLastCitations,
         pendingPatch,
         setPendingPatch,
         applyPatch,

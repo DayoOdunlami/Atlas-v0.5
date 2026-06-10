@@ -37,20 +37,27 @@ import {
   FileText,
   Lightbulb,
   Bot,
+  Compass,
+  Search,
+  Sparkles,
+  MessageSquare,
 } from "lucide-react";
 import { useWorkbench } from "@/lib/workbench/workbench-context";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { CitationList } from "@/components/workbench/citation-popover";
 
 // ---------------------------------------------------------------------------
 // Suggested questions — workbench-aware (will be model-driven later)
 // ---------------------------------------------------------------------------
 
+// Suggestions cover all routes: explain, search, explore, economic_analysis
 const SUGGESTIONS = [
   "Why is confidence capped?",
   "Show the largest gaps",
-  "Which claims need evidence?",
-  "What's the recommended next action?",
+  "Find corpus evidence for this match",
+  "What other transport tech projects are in the corpus?",
+  "Run an economic case analysis",
   "How would this match be defended?",
 ];
 
@@ -152,14 +159,27 @@ function AssistantMessage() {
 
 function EmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center py-10 px-4 text-center gap-2">
-      <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center">
-        <Bot className="w-4 h-4 text-indigo-500" />
+    <div className="flex flex-col items-center justify-center py-8 px-4 text-center gap-3">
+      <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+        <Bot className="w-4 h-4 text-primary" />
       </div>
-      <p className="text-xs font-medium text-foreground">Atlas Copilot</p>
-      <p className="text-[11px] text-muted-foreground max-w-[180px] leading-relaxed">
-        Ask anything about this match — evidence gaps, confidence, next actions.
-      </p>
+      <div>
+        <p className="text-xs font-semibold text-foreground">Atlas Copilot</p>
+        <p className="text-[11px] text-muted-foreground mt-0.5 max-w-[200px] leading-relaxed">
+          Ask anything — evidence gaps, corpus search, economic case, or explore the full CPC corpus.
+        </p>
+      </div>
+      {/* Mode pills */}
+      <div className="flex flex-wrap justify-center gap-1.5">
+        {(["Explain", "Search", "Explore", "Economic"] as const).map((m) => (
+          <span
+            key={m}
+            className="text-[9px] px-1.5 py-0.5 rounded border border-border text-muted-foreground"
+          >
+            {m}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
@@ -207,7 +227,7 @@ function WorkbenchComposer() {
         {/* Textarea */}
         <ComposerPrimitive.Input
           rows={1}
-          placeholder="Ask about this artifact…"
+          placeholder="Ask about this match, search the corpus, or explore CPC projects…"
           className={cn(
             "w-full resize-none bg-transparent px-3 pt-3 pb-1 text-xs",
             "placeholder:text-muted-foreground outline-none",
@@ -261,8 +281,73 @@ function WorkbenchComposer() {
 // ChatPanel — root
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// CitationStrip — M1.3: shows corpus citations from last search/explore turn
+// ---------------------------------------------------------------------------
+
+function CitationStrip() {
+  const { lastCitations, lastRoute } = useWorkbench();
+  if (!lastCitations.length) return null;
+  if (lastRoute !== "search" && lastRoute !== "explore") return null;
+
+  return (
+    <div className="px-3 py-2 shrink-0 border-b border-border bg-muted/30">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+        {lastRoute === "explore" ? "Corpus results" : "Evidence sources"} ({lastCitations.length})
+      </p>
+      <CitationList
+        citations={lastCitations.map((c) => ({
+          id: c.id,
+          title: c.title,
+          organisation: c.organisation,
+          score: c.score,
+          relevanceNote: c.relevanceNote,
+          schema: "atlas" as const,
+        }))}
+        maxVisible={6}
+        size="xs"
+      />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Route mode indicator — shows which route the agent last used
+// ---------------------------------------------------------------------------
+
+const ROUTE_LABELS: Record<string, { label: string; icon: React.ElementType; className: string }> = {
+  explain:          { label: "Explain",  icon: MessageSquare, className: "bg-muted text-muted-foreground border-border" },
+  search:           { label: "Search",   icon: Search,        className: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800" },
+  explore:          { label: "Explore",  icon: Compass,       className: "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-800" },
+  propose:          { label: "Propose",  icon: Sparkles,      className: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800" },
+  economic_analysis:{ label: "Economic", icon: Sparkles,      className: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800" },
+  conversational:   { label: "Chat",     icon: MessageSquare, className: "bg-muted text-muted-foreground border-border" },
+};
+
+function RouteModeChip({ route }: { route: string | null }) {
+  if (!route) return null;
+  const def = ROUTE_LABELS[route] ?? ROUTE_LABELS.explain;
+  const Icon = def.icon;
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 text-[10px] rounded px-1.5 py-0.5 border",
+        def.className,
+      )}
+      title={`Last agent route: ${route}`}
+    >
+      <Icon className="w-2.5 h-2.5" />
+      {def.label}
+    </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ChatPanel — root
+// ---------------------------------------------------------------------------
+
 export function ChatPanel() {
-  const { resetSession, session } = useWorkbench();
+  const { resetSession, session, lastRoute } = useWorkbench();
 
   return (
     <ThreadPrimitive.Root className="flex flex-col h-full border-r border-border bg-muted/20">
@@ -271,31 +356,36 @@ export function ChatPanel() {
       <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-background shrink-0">
         <span className="text-sm font-medium">Atlas Copilot</span>
 
-        {/* Live / static status dot */}
+        {/* Running state */}
         <ThreadPrimitive.If running>
-          <span className="ml-1 inline-flex items-center gap-1 text-[10px] rounded px-1.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200">
+          <span className="ml-1 inline-flex items-center gap-1 text-[10px] rounded px-1.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block" />
             thinking
           </span>
         </ThreadPrimitive.If>
 
+        {/* Idle: last route chip OR live/demo */}
         <ThreadPrimitive.If running={false}>
-          <span
-            className={cn(
-              "ml-1 inline-flex items-center gap-1 text-[10px] rounded px-1.5 py-0.5",
-              session.matchId
-                ? "bg-green-50 text-green-700 border border-green-200"
-                : "bg-muted text-muted-foreground",
-            )}
-          >
+          {lastRoute ? (
+            <RouteModeChip route={lastRoute} />
+          ) : (
             <span
               className={cn(
-                "w-1.5 h-1.5 rounded-full inline-block",
-                session.matchId ? "bg-green-500" : "bg-amber-400",
+                "ml-1 inline-flex items-center gap-1 text-[10px] rounded px-1.5 py-0.5 border",
+                session.matchId
+                  ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/40 dark:text-green-300 dark:border-green-800"
+                  : "bg-muted text-muted-foreground border-border",
               )}
-            />
-            {session.matchId ? "live" : "demo"}
-          </span>
+            >
+              <span
+                className={cn(
+                  "w-1.5 h-1.5 rounded-full inline-block",
+                  session.matchId ? "bg-green-500" : "bg-amber-400",
+                )}
+              />
+              {session.matchId ? "live" : "demo"}
+            </span>
+          )}
         </ThreadPrimitive.If>
 
         <div className="flex-1" />
@@ -341,27 +431,29 @@ export function ChatPanel() {
 
       <div className="mx-3 border-t border-border shrink-0" />
 
+      {/* ── Corpus citations strip (search / explore routes) M1.3 ── */}
+      <CitationStrip />
+
       {/* ── Suggested questions ── */}
-      <div className="pt-2 pb-1 shrink-0">
-        <div className="flex items-center gap-1.5 px-3 py-1.5">
-          <Lightbulb className="w-3 h-3 text-muted-foreground/70" />
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-            Suggested
-          </span>
+      <ThreadPrimitive.Empty>
+        <div className="pt-2 pb-1 shrink-0">
+          <div className="flex items-center gap-1.5 px-3 py-1.5">
+            <Lightbulb className="w-3 h-3 text-muted-foreground/70" />
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+              Suggested
+            </span>
+          </div>
+          <div className="px-3 flex flex-wrap gap-1.5 pb-2">
+            {SUGGESTIONS.map((s) => (
+              <SuggestionChip key={s} text={s} />
+            ))}
+          </div>
         </div>
-        <div className="px-3 flex flex-wrap gap-1.5 pb-2">
-          {SUGGESTIONS.map((s) => (
-            <SuggestionChip key={s} text={s} />
-          ))}
-        </div>
-      </div>
+      </ThreadPrimitive.Empty>
 
       {/* ── Pinned input — always visible ── */}
-      <div className="px-3 pb-3 shrink-0">
+      <div className="px-3 pb-3 pt-2 shrink-0">
         <WorkbenchComposer />
-        <p className="text-[10px] text-center text-muted-foreground/40 mt-1.5">
-          Start the LangGraph server to enable live responses
-        </p>
       </div>
 
     </ThreadPrimitive.Root>
