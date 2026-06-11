@@ -29,7 +29,7 @@ import {
   useComposerRuntime,
   useMessage,
 } from "@assistant-ui/react";
-import { MarkdownTextPrimitive } from "@assistant-ui/react-markdown";
+import { WorkbenchMessageText } from "./workbench-message-text";
 import {
   ArrowUp,
   Square,
@@ -46,19 +46,42 @@ import { useWorkbench } from "@/lib/workbench/workbench-context";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { CitationList } from "@/components/workbench/citation-popover";
+import { looksLikePatchPayload } from "@/lib/workbench/patch-normalize";
+
+/** Best-effort: detect patch JSON in a message before parts render. */
+function looksLikePatchInMessage(message: ReturnType<typeof useMessage>): boolean {
+  const content = (message as { content?: unknown }).content;
+  if (typeof content === "string") return looksLikePatchPayload(content);
+  if (Array.isArray(content)) {
+    return content.some(
+      (p) =>
+        typeof p === "object" &&
+        p !== null &&
+        "text" in p &&
+        typeof (p as { text?: string }).text === "string" &&
+        looksLikePatchPayload((p as { text: string }).text),
+    );
+  }
+  return false;
+}
 
 // ---------------------------------------------------------------------------
 // Suggested questions — workbench-aware (will be model-driven later)
 // ---------------------------------------------------------------------------
 
 // Suggestions cover all routes: explain, search, explore, economic_analysis
-const SUGGESTIONS = [
-  "Why is confidence capped?",
-  "Show the largest gaps",
-  "Find corpus evidence for this match",
-  "What other transport tech projects are in the corpus?",
+const SUGGESTIONS_HOME = [
+  "What's in the CPC corpus?",
+  "SWOT the UK rail innovation portfolio",
+  "Build a value case for autonomous inspection",
+  "Find projects on GPS-denied navigation",
+];
+
+const SUGGESTIONS_MATCH = [
+  "Add a SWOT on this match",
   "Run an economic case analysis",
-  "How would this match be defended?",
+  "Find corpus evidence for this match",
+  "Why is confidence capped?",
 ];
 
 // ---------------------------------------------------------------------------
@@ -131,13 +154,12 @@ function AssistantMessage() {
             to satisfy the TextMessagePartComponent generic constraint. */}
         <MessagePrimitive.Content
           components={{
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            Text: MarkdownTextPrimitive as any,
+            Text: WorkbenchMessageText,
           }}
         />
 
-        {/* Streaming typing dots */}
-        {isRunning && (
+        {/* Streaming typing dots — only for non-patch routes */}
+        {isRunning && !looksLikePatchInMessage(message) && (
           <span className="inline-flex items-center gap-1 mt-1">
             {[0, 1, 2].map((i) => (
               <span
@@ -165,8 +187,8 @@ function EmptyState() {
       </div>
       <div>
         <p className="text-xs font-semibold text-foreground">Atlas Copilot</p>
-        <p className="text-[11px] text-muted-foreground mt-0.5 max-w-[200px] leading-relaxed">
-          Ask anything — evidence gaps, corpus search, economic case, or explore the full CPC corpus.
+        <p className="text-[11px] text-muted-foreground mt-0.5 max-w-[220px] leading-relaxed">
+          Ask anything — explore the CPC corpus, add blocks to the artifact, or analyse this match. Changes apply live with undo.
         </p>
       </div>
       {/* Mode pills */}
@@ -227,7 +249,7 @@ function WorkbenchComposer() {
         {/* Textarea */}
         <ComposerPrimitive.Input
           rows={1}
-          placeholder="Ask about this match, search the corpus, or explore CPC projects…"
+          placeholder="Ask anything about the CPC corpus…"
           className={cn(
             "w-full resize-none bg-transparent px-3 pt-3 pb-1 text-xs",
             "placeholder:text-muted-foreground outline-none",
@@ -347,7 +369,20 @@ function RouteModeChip({ route }: { route: string | null }) {
 // ---------------------------------------------------------------------------
 
 export function ChatPanel() {
-  const { resetSession, session, lastRoute } = useWorkbench();
+  const { resetSession, session, lastRoute, cqId, reasoningSteps } = useWorkbench();
+  const isBuildingRoute =
+    lastRoute === "propose" || lastRoute === "economic_analysis";
+  const isHome = cqId === "cq.home";
+
+  // Tier 1C lite — surface the latest active reasoning step under the header
+  // when the agent is mid-flight, so the user can see what's happening.
+  const activeStep = React.useMemo(() => {
+    if (!Array.isArray(reasoningSteps) || reasoningSteps.length === 0) return null;
+    const active = [...reasoningSteps].reverse().find((s) => s.status === "active");
+    if (active) return active.label;
+    const last = reasoningSteps[reasoningSteps.length - 1];
+    return last?.status === "complete" ? null : last?.label ?? null;
+  }, [reasoningSteps]);
 
   return (
     <ThreadPrimitive.Root className="flex flex-col h-full border-r border-border bg-muted/20">
@@ -356,11 +391,16 @@ export function ChatPanel() {
       <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-background shrink-0">
         <span className="text-sm font-medium">Atlas Copilot</span>
 
-        {/* Running state */}
+        {/* Running state — show the active reasoning step when available */}
         <ThreadPrimitive.If running>
-          <span className="ml-1 inline-flex items-center gap-1 text-[10px] rounded px-1.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block" />
-            thinking
+          <span
+            className="ml-1 inline-flex items-center gap-1 text-[10px] rounded px-1.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800 max-w-[260px]"
+            title={activeStep ?? undefined}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block shrink-0" />
+            <span className="truncate">
+              {activeStep ?? (isBuildingRoute ? "building" : "thinking")}
+            </span>
           </span>
         </ThreadPrimitive.If>
 
@@ -402,18 +442,21 @@ export function ChatPanel() {
         </Button>
       </div>
 
-      {/* ── Current artifact ── */}
-      <div className="pt-2 pb-1 shrink-0">
-        <div className="flex items-center gap-1.5 px-3 py-1.5">
-          <FileText className="w-3 h-3 text-muted-foreground/70" />
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-            Current artifact
-          </span>
-        </div>
-        <ArtifactSummaryCard />
-      </div>
-
-      <div className="mx-3 border-t border-border shrink-0" />
+      {/* ── Current artifact ── hidden on Home (nothing to summarise yet) */}
+      {!isHome && (
+        <>
+          <div className="pt-2 pb-1 shrink-0">
+            <div className="flex items-center gap-1.5 px-3 py-1.5">
+              <FileText className="w-3 h-3 text-muted-foreground/70" />
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                Current artifact
+              </span>
+            </div>
+            <ArtifactSummaryCard />
+          </div>
+          <div className="mx-3 border-t border-border shrink-0" />
+        </>
+      )}
 
       {/* ── Messages — scrollable, flex-1 ── */}
       <ThreadPrimitive.Viewport className="flex-1 overflow-y-auto min-h-0 overscroll-contain px-3 py-3">
@@ -444,7 +487,7 @@ export function ChatPanel() {
             </span>
           </div>
           <div className="px-3 flex flex-wrap gap-1.5 pb-2">
-            {SUGGESTIONS.map((s) => (
+            {(isHome ? SUGGESTIONS_HOME : SUGGESTIONS_MATCH).map((s) => (
               <SuggestionChip key={s} text={s} />
             ))}
           </div>

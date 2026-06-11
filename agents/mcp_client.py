@@ -19,6 +19,7 @@ if str(_root) not in sys.path:
 
 from langchain_core.tools import tool
 from mcps.cpc_corpus import queries
+from mcps.cpc_corpus import transport
 
 
 # ---------------------------------------------------------------------------
@@ -220,6 +221,8 @@ def evidence_coverage_summary(results: list[dict[str, Any]]) -> dict[str, Any]:
         "evidence_gaps": gaps,
         "suggested_confidence_tier": tier,
         "coverage_note": note,
+        "transport": transport.get_last_transport(),
+        "transport_note": transport.human_transport_note(),
     }
 
 

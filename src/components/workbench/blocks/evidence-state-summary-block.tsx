@@ -1,5 +1,11 @@
 import type { EvidenceStateSummaryBlock as T, EvidenceState } from "@/lib/workbench/atlas-render-model";
 import { BlockShell } from "../shared/block-shell";
+import { WorkbenchRichVisual } from "../workbench-rich-visual";
+import {
+  buildAtlasVisualBlock,
+  usesDominantAtlasVisual,
+} from "@/lib/workbench/visual-adapter";
+import type { VisualId } from "@/lib/workbench/visual-registry";
 
 const STATE_COLORS: Record<EvidenceState, string> = {
   verified:        "bg-green-500",
@@ -20,16 +26,25 @@ const STATE_LABELS: Record<EvidenceState, string> = {
 export function EvidenceStateSummaryBlock({
   block,
   onInspect,
+  effectiveVisual,
 }: {
   block: T;
   onInspect: (key: string) => void;
+  effectiveVisual: VisualId;
 }) {
   const c = block.content;
   const states: EvidenceState[] = ["verified", "self-reported", "inferred", "unknown", "contested"];
   const total = c.total_claims || 1;
+  const atlasVisual = buildAtlasVisualBlock(block, effectiveVisual);
+  const dominant = usesDominantAtlasVisual(block.type, effectiveVisual);
 
   return (
     <BlockShell headline={block.headline}>
+      {dominant && atlasVisual && (
+        <div className="mb-4">
+          <WorkbenchRichVisual visual={atlasVisual} />
+        </div>
+      )}
       {/* Stacked bar */}
       <div className="flex h-5 w-full rounded overflow-hidden gap-px mb-3">
         {states.map((s) => {

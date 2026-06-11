@@ -35,6 +35,7 @@ import type { LangChainMessage } from "@assistant-ui/react-langgraph";
 import type { RemoteThreadListAdapter } from "@assistant-ui/react";
 import type { WorkbenchAgentState, ModelPatchProposal } from "@/lib/workbench/workbench-agent-contract";
 import type { AtlasRenderModel } from "@/lib/workbench/atlas-render-model";
+import { extractAgentOutput } from "@/lib/workbench/extract-agent-output";
 import { useMemo, useRef, type ReactNode } from "react";
 
 function deriveTitle(messages: LangChainMessage[]): string | null {
@@ -171,14 +172,21 @@ export function WorkbenchRuntimeProvider({
 
     eventHandlers: {
       onValues: (values: unknown) => {
-        // Double-cast: the LangGraph SDK types values as unknown
-        const agentState = values as unknown as WorkbenchAgentState;
+        const raw = values as Record<string, unknown>;
+        const output = extractAgentOutput(raw);
+        // Build a normalized agent state for the bridge (reads last_output + top-level)
+        const agentState = {
+          ...raw,
+          last_output: output ?? (raw.last_output as WorkbenchAgentState["last_output"]),
+        } as unknown as WorkbenchAgentState;
+
         if (onAgentValues) {
           onAgentValues(agentState);
         }
-        // Surface model_patch for confirmation (route = "propose" / future M1.0 economic_analysis)
-        if (onPatchProposal && agentState?.last_output?.model_patch) {
-          onPatchProposal(agentState.last_output.model_patch as ModelPatchProposal);
+        // Surface model_patch — graph stores it at top-level OR in last_output
+        const patch = output?.model_patch;
+        if (onPatchProposal && patch && Array.isArray(patch.ops) && patch.ops.length > 0) {
+          onPatchProposal(patch);
         }
       },
     },

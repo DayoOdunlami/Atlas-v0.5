@@ -1,6 +1,12 @@
 import type { DimensionGapBlock as T, GapItem, GapMagnitude } from "@/lib/workbench/atlas-render-model";
 import { BlockShell } from "../shared/block-shell";
 import { BlockSkeletonDimensionGap } from "../shared/block-skeleton";
+import { WorkbenchRichVisual } from "../workbench-rich-visual";
+import {
+  buildAtlasVisualBlock,
+  usesDominantAtlasVisual,
+} from "@/lib/workbench/visual-adapter";
+import type { VisualId } from "@/lib/workbench/visual-registry";
 import { cn } from "@/lib/utils";
 
 const MAG_ORDER: GapMagnitude[] = ["large", "medium", "small", "unknown"];
@@ -34,17 +40,26 @@ export function DimensionGapBlock({
   block,
   onInspect,
   loading = false,
+  effectiveVisual,
 }: {
   block: T;
   onInspect: (key: string) => void;
   loading?: boolean;
+  effectiveVisual: VisualId;
 }) {
   if (loading) return <BlockSkeletonDimensionGap />;
 
   const sorted = sortGaps(block.content);
+  const atlasVisual = buildAtlasVisualBlock(block, effectiveVisual);
+  const dominant = usesDominantAtlasVisual(block.type, effectiveVisual);
 
   return (
     <BlockShell headline={block.headline}>
+      {dominant && atlasVisual && (
+        <div className="mb-4">
+          <WorkbenchRichVisual visual={atlasVisual} />
+        </div>
+      )}
       <div className="divide-y divide-border">
         {sorted.map((gap) => (
           <div

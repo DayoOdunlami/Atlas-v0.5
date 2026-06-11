@@ -65,8 +65,9 @@ import json
 import os
 import re
 import sys
+import time
 from pathlib import Path
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, Optional
 from typing_extensions import TypedDict
 
 _root = Path(__file__).resolve().parent.parent.parent
@@ -83,6 +84,7 @@ from langgraph.graph.message import add_messages
 
 from agents.llm_factory import get_llm as _get_llm
 from agents.mcp_client import search_corpus_projects
+from mcps.cpc_corpus import transport as corpus_transport
 from mcps.cpc_corpus.queries import get_project as _verify_project
 from agents.base import make_extract_query_node, make_classify_intent_node
 
@@ -107,6 +109,7 @@ WorkbenchRoute = Literal[
     "explain",
     "search",
     "explore",      # M1.4 — corpus-wide questions, no match requirement
+    "translate",    # M1.5 — transfer lanes from match evidence
     "propose",
     "economic_analysis",
     "conversational",
@@ -148,8 +151,549 @@ class WorkbenchState(TypedDict):
     confidence_tier: ConfidenceTier
     reasoning_trace: list[dict[str, Any]]
     error: str | None
+    # Aggregated output — frontend reads last_output.model_patch (also mirrored top-level)
+    last_output: dict[str, Any] | None
     # Internal: set by classify_intent
     _is_conversational: bool
+
+
+def _with_last_output(result: dict[str, Any], route: WorkbenchRoute) -> dict[str, Any]:
+    """Mirror node output into last_output so the frontend contract is satisfied."""
+    result["route"] = route
+    result["last_output"] = {
+        "route": route,
+        "chat_response": result.get("chat_response", ""),
+        "model_patch": result.get("model_patch"),
+        "corpus_citations": result.get("corpus_citations"),
+        "confidence_tier": result.get("confidence_tier", "Speculative"),
+        "reasoning_trace": result.get("reasoning_trace", []),
+        "error": result.get("error"),
+    }
+    return result
+
+
+_ROUTE_SUBJECT_LABELS: dict[str, str] = {
+    "explain":  "Match explanation",
+    "search":   "Corpus evidence",
+    "explore":  "Corpus exploration",
+    "translate": "Transfer verdict",
+    "conversational": "Atlas note",
+}
+
+
+_MARKDOWN_NOISE = re.compile(r"[*_`#>~\[\]\(\)]")
+
+
+def _strip_markdown(text: str) -> str:
+    """Remove markdown punctuation so a headline reads as plain prose."""
+    return _MARKDOWN_NOISE.sub("", text).strip()
+
+
+def _extract_headline(text: str, query: str) -> str:
+    """Pick a clean human headline for an auto-wrapped card.
+
+    Preference order:
+      1. First H1/H2 markdown heading
+      2. Leading bold span "**Title** ..."
+      3. First whole sentence ≤ 80 chars
+      4. Sanitised query (capitalised)
+
+    Never returns a mid-sentence cut. Always strips markdown punctuation.
+    """
+    text = (text or "").strip()
+    fallback = (_strip_markdown(query or "").strip() or "Atlas response")[:80]
+    if not text:
+        return fallback
+
+    # 1. Markdown heading
+    h = re.search(r"^\s*#{1,3}\s+(.+?)\s*$", text, re.MULTILINE)
+    if h:
+        return _strip_markdown(h.group(1))[:80] or fallback
+
+    # 2. Leading bold span
+    b = re.match(r"\s*\*\*([^*]+)\*\*", text)
+    if b:
+        return _strip_markdown(b.group(1))[:80] or fallback
+
+    # 3. First whole sentence — only if it fits cleanly
+    first = re.split(r"(?<=[.!?])\s+|\n", text, maxsplit=1)[0]
+    cleaned = _strip_markdown(first)
+    if cleaned and len(cleaned) <= 80:
+        return cleaned
+
+    # 4. Fallback: use the user's query (much friendlier than a truncation)
+    return fallback
+
+
+# Phrases that indicate the agent had nothing substantive to add. When the
+# response is dominated by these, we suppress the auto-wrap so the canvas
+# stays clean — a "couldn't find anything" answer belongs in chat only.
+_EMPTY_RESPONSE_PHRASES = (
+    "no matching projects",
+    "no matching results",
+    "no results were returned",
+    "the search returned no",
+    "the corpus returned no",
+    "i wasn't able to find",
+    "i was not able to find",
+    "i couldn't find",
+    "i could not find",
+    "i'm not able to identify",
+    "i am not able to identify",
+    "i don't have data",
+    "i do not have data",
+    "no projects with that focus",
+    "the corpus did not return",
+)
+
+
+def _looks_like_empty_response(text: str) -> bool:
+    """Detect 'I couldn't find anything' answers that don't deserve a card."""
+    if not text:
+        return True
+    lower = text.lower()
+    # If any signal phrase appears in the FIRST 240 chars (i.e. lead with it)
+    # treat the whole response as a negative answer.
+    head = lower[:240]
+    return any(p in head for p in _EMPTY_RESPONSE_PHRASES)
+
+
+# ---------------------------------------------------------------------------
+# Structured corpus-result blocks
+# ---------------------------------------------------------------------------
+#
+# When a corpus search returns ≥2 verified projects, render them as an
+# OpportunityList (Browse mode) instead of prose. This is the difference
+# between "here's a wall of text" and "here are 6 projects with
+# their organisations and similarity scores in a scannable table".
+
+
+def _build_corpus_table_patch(
+    verified: list[dict[str, Any]],
+    query: str,
+    route: WorkbenchRoute,
+) -> tuple[str, dict[str, Any]]:
+    """Build an OpportunityList patch from verified corpus rows.
+
+    Returns (short_narration, patch). The narration is the chat-side text;
+    the patch carries the structured browse block + rich visuals.
+    """
+    n = len(verified)
+    rows: list[dict[str, Any]] = []
+    for r in verified[:12]:  # cap visual table at 12 rows for sanity
+        rows.append({
+            "id": r["id"],
+            "title": r["title"][:80],
+            "organisation": r["organisation"][:60] or "—",
+            "score": float(r.get("score", 0) or 0),
+            "funder": "",
+            "status": "corpus",
+        })
+
+    headline_seed = _strip_markdown(query or "Corpus results")[:60]
+    headline = f"Corpus results — {headline_seed}" if headline_seed else "Corpus results"
+
+    visual = "match_score_bar" if n >= 5 else "evidence_bar"
+
+    block = {
+        "id": f"corpus.{route}.{int(time.time() * 1000)}",
+        "type": "OpportunityList",
+        "state": "core",
+        "headline": headline,
+        "visual": visual,
+        "role": "focus",
+        "content": rows,
+    }
+
+    patch = {
+        "rationale": f"Surfaced {n} corpus result{'s' if n != 1 else ''} as a workspace table",
+        "ops": [{"op": "add_block", "block": block, "at_index": None}],
+        "confidence_tier": _derive_search_tier(verified),
+        "corpus_citations": verified,
+        "stage_intent": "extend",
+        "stage_narration": (
+            f"Surfaced {n} corpus matches in a table on the canvas."
+        ),
+    }
+
+    # Short, factual chat narration — the table is the substance.
+    narration = (
+        f"Found **{n}** project{'s' if n != 1 else ''} in the corpus matching that query. "
+        f"Top score: {int((rows[0]['score']) * 100)}% — see the table on the canvas. "
+        "Use undo (Ctrl+Z) to remove."
+    )
+    return narration, patch
+
+
+def _looks_like_landscape_query(query: str) -> bool:
+    """Detect cq.explore.landscape-style questions → NetworkMap instead of table."""
+    q = (query or "").lower()
+    signals = (
+        "landscape", "network", " map", "ecosystem", "stakeholder", "actor",
+        "relationship", "how do ", "how are ", "connected", "theme", "cluster",
+        "who works on", "who is working", "players in", "players working",
+        "show me the landscape", "mapping ",
+    )
+    return any(s in q for s in signals)
+
+
+def _build_network_map_patch(
+    verified: list[dict[str, Any]],
+    query: str,
+    route: WorkbenchRoute,
+) -> tuple[str, dict[str, Any]]:
+    """Build a NetworkMap patch from corpus rows — theme hub + project + org nodes."""
+    theme_id = "theme.query"
+    theme_label = _strip_markdown(query or "Topic")[:48] or "Topic"
+    nodes: list[dict[str, Any]] = [
+        {"id": theme_id, "label": theme_label, "group": "theme", "value": 12},
+    ]
+    edges: list[dict[str, Any]] = []
+    org_seen: set[str] = set()
+
+    for i, r in enumerate(verified[:15]):
+        proj_id = str(r["id"])
+        title = (r.get("title") or f"Project {i + 1}")[:60]
+        score = float(r.get("score", 0) or 0)
+        nodes.append({
+            "id": proj_id,
+            "label": title,
+            "group": "project",
+            "value": max(4, int(score * 10)),
+        })
+        edges.append({
+            "source": theme_id,
+            "target": proj_id,
+            "weight": score,
+            "label": "related",
+        })
+
+        org = (r.get("organisation") or "").strip()
+        if org and org not in ("—", "-"):
+            org_slug = re.sub(r"[^a-z0-9]+", "_", org.lower())[:40]
+            org_id = f"org.{org_slug}"
+            if org_id not in org_seen:
+                org_seen.add(org_id)
+                nodes.append({
+                    "id": org_id,
+                    "label": org[:48],
+                    "group": "organisation",
+                    "value": 6,
+                })
+            edges.append({"source": proj_id, "target": org_id, "label": "led by"})
+
+    n = len([node for node in nodes if node.get("group") == "project"])
+    headline = f"Landscape — {theme_label}"
+
+    block = {
+        "id": f"network.{route}.{int(time.time() * 1000)}",
+        "type": "NetworkMap",
+        "state": "core",
+        "headline": headline,
+        "visual": "knowledge_graph",
+        "role": "focus",
+        "content": {"nodes": nodes, "edges": edges},
+    }
+
+    patch = {
+        "rationale": f"Mapped {n} corpus projects into a relationship graph",
+        "ops": [{"op": "add_block", "block": block, "at_index": None}],
+        "confidence_tier": _derive_search_tier(verified),
+        "corpus_citations": verified,
+        "stage_intent": "extend",
+        "stage_narration": f"Added a landscape network map with {n} projects.",
+    }
+
+    narration = (
+        f"Mapped **{n}** projects into a landscape network on the canvas "
+        f"(theme: {theme_label}). Use undo (Ctrl+Z) to remove."
+    )
+    return narration, patch
+
+
+def _verdict_to_transfer_outcome(verdict: str, evidence_state: str) -> str:
+    v = (verdict or "not mapped").lower().replace("_", " ")
+    es = (evidence_state or "unknown").lower().replace("_", " ")
+    if v == "strong" and es in ("verified", "self-reported", "self reported"):
+        return "travels-as-is"
+    if v in ("partial", "relevant", "contextual"):
+        return "needs-reframing"
+    if v == "judgement":
+        return "not-credible-here"
+    if v in ("not mapped",) or es in ("unknown", "contested"):
+        return "evidence-needed"
+    if v == "strong":
+        return "needs-reframing"
+    return "evidence-needed"
+
+
+def _extract_matchbench_items(artifact: dict[str, Any] | None) -> list[dict[str, Any]]:
+    """Pull evidence rows from artifact MatchBench / ClaimLedger blocks."""
+    if not artifact:
+        return []
+    blocks = artifact.get("blocks") or []
+    items: list[dict[str, Any]] = []
+    for block in blocks:
+        if not isinstance(block, dict):
+            continue
+        btype = block.get("type")
+        content = block.get("content")
+        if btype == "MatchBench" and isinstance(content, list):
+            items.extend(content)
+        elif btype == "ClaimLedger" and isinstance(content, list):
+            for row in content:
+                if not isinstance(row, dict):
+                    continue
+                items.append({
+                    "id": row.get("id"),
+                    "claim_id": row.get("claim_id"),
+                    "claim_text": row.get("claim_text"),
+                    "verdict": row.get("evidence_map_verdict", "not mapped"),
+                    "evidence_state": row.get("evidence_state", "unknown"),
+                    "provenance": row.get("provenance", "stored"),
+                    "judgement": row.get("evidence_map_judgement"),
+                    "confidence_reason": row.get("confidence_reason"),
+                })
+    return items
+
+
+def _build_transfer_lanes_patch(
+    items: list[dict[str, Any]],
+    model_summary: dict[str, Any],
+    query: str,
+) -> tuple[str, dict[str, Any]]:
+    lanes: list[dict[str, Any]] = []
+    for i, item in enumerate(items[:24]):
+        verdict = str(item.get("verdict") or "not mapped")
+        es = str(item.get("evidence_state") or "unknown")
+        note = item.get("judgement") or item.get("confidence_reason")
+        lanes.append({
+            "id": str(item.get("id") or f"lane-{i}"),
+            "claim_text": str(item.get("claim_text") or "Untitled claim")[:500],
+            "transfer_outcome": _verdict_to_transfer_outcome(verdict, es),
+            "evidence_state": es if es in (
+                "verified", "self-reported", "inferred", "unknown", "contested"
+            ) else "unknown",
+            "provenance": item.get("provenance") or "derived",
+            "note": str(note)[:240] if note else None,
+        })
+
+    source = model_summary.get("source_label") or "Source"
+    target = model_summary.get("target_label") or "Target"
+    headline = f"Transfer verdict — {source} → {target}"
+
+    block = {
+        "id": f"transfer.{int(time.time() * 1000)}",
+        "type": "TransferLanes",
+        "state": "core",
+        "headline": headline,
+        "visual": "four_lane_board",
+        "role": "focus",
+        "content": lanes,
+    }
+
+    patch = {
+        "rationale": f"Sorted {len(lanes)} claims into four transfer lanes",
+        "ops": [{"op": "add_block", "block": block, "at_index": None}],
+        "confidence_tier": model_summary.get("confidence_tier", "Indicative"),
+        "corpus_citations": [],
+        "stage_intent": "extend",
+        "stage_narration": f"Added transfer lanes for {len(lanes)} claims.",
+    }
+
+    narration = (
+        f"Sorted **{len(lanes)}** claims into four transfer lanes on the canvas "
+        f"({source} → {target}). Use undo (Ctrl+Z) to remove."
+    )
+    return narration, patch
+
+
+def _empty_transfer_chat(query: str) -> str:
+    return (
+        "I need match evidence to build transfer lanes — open a match in workbench mode "
+        "with an evidence map, then ask e.g. "
+        f"'can these claims transfer?' or '{(query or 'does this evidence travel')[:60]}'."
+    )
+
+
+def _empty_corpus_chat(query: str) -> str:
+    """Polite 'couldn't find anything' message for chat — keeps canvas clean."""
+    return (
+        f"I couldn't find any matching projects in the current CPC corpus for "
+        f"`{(query or 'that query')[:80]}`. Try a different phrasing — e.g. swap "
+        "domain terms ('clean maritime' vs 'maritime decarbonisation'), broaden "
+        "the topic, or ask me to compare it with a specific sector."
+    )
+
+
+def _unavailable_corpus_chat(query: str, coverage: dict[str, Any]) -> str:
+    """When all DB transports fail — explicit, actionable."""
+    detail = coverage.get("transport_note") or corpus_transport.human_transport_note("unavailable")
+    return (
+        f"{detail}\n\n"
+        f"I couldn't search the corpus for `{(query or 'that query')[:80]}`. "
+        "Check `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_KEY` in agents/.env, "
+        "or connect via hotspot/VPN if Postgres pooler (port 6543) is required."
+    )
+
+
+def _corpus_transport_trace(coverage: dict[str, Any]) -> dict[str, Any] | None:
+    tier = coverage.get("transport") or corpus_transport.get_last_transport()
+    if tier == "postgres":
+        return None
+    note = coverage.get("transport_note") or corpus_transport.human_transport_note(tier)
+    status = "error" if tier == "unavailable" else "active"
+    return {"label": f"Corpus transport: {tier}", "status": status, "detail": note}
+
+
+def _prepend_corpus_transport_banner(text: str, coverage: dict[str, Any]) -> str:
+    tier = coverage.get("transport") or corpus_transport.get_last_transport()
+    if tier == "postgres":
+        return text
+    note = coverage.get("transport_note") or corpus_transport.human_transport_note(tier)
+    if tier == "unavailable":
+        return note
+    return f"_{note}_\n\n{text}"
+
+
+def _parse_corpus_tool_output(
+    tool_output: Any,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    if isinstance(tool_output, dict):
+        return tool_output.get("results") or [], tool_output.get("coverage") or {}
+    if isinstance(tool_output, list):
+        return tool_output, {}
+    return [], {}
+
+
+def _canonical_cq_for_route(route: WorkbenchRoute, query: str) -> str:
+    """Map agent route + query shape → canonical question id (Seam 5.2)."""
+    q = (query or "").lower()
+    if route == "translate":
+        return "cq.translate.transfer"
+    if route == "economic_analysis":
+        return "cq.decide.pursue"
+    if route == "search":
+        return "cq.explore.landscape" if _looks_like_landscape_query(query) else "cq.match.workbench"
+    if route == "explore":
+        if _looks_like_landscape_query(query):
+            return "cq.explore.landscape"
+        return "cq.explore.discover"
+    if route == "propose":
+        return "cq.package.brief" if any(k in q for k in ("brief", "snapshot", "export", "package")) else "cq.match.workbench"
+    return "cq.match.workbench"
+
+
+def _short_narration(text: str, route: str, headline: str) -> str:
+    """1-2 sentence narration for the chat panel; full content lives in the card."""
+    # If the agent's answer is already short, keep it as the narration.
+    text = text.strip()
+    if len(text) <= 160:
+        return text
+
+    # Otherwise summarise the move JARVIS-style.
+    label_map = {
+        "explain":  "Pulled together what I know on the canvas.",
+        "search":   "Captured the corpus evidence on the canvas.",
+        "explore":  "Added the corpus findings to your workspace.",
+        "conversational": "Added a note to your workspace.",
+    }
+    base = label_map.get(route, "Added a card to your workspace.")
+    return f"{base} See **{headline}** on the canvas → use undo (Ctrl+Z) to remove."
+
+
+def _is_substantive(text: str) -> bool:
+    """A response is 'substantive' if it deserves its own card on the canvas."""
+    t = (text or "").strip()
+    if not t:
+        return False
+    if len(t) < 120 and "\n" not in t:
+        return False
+    return True
+
+
+def _auto_wrap_as_card(
+    chat_text: str,
+    route: WorkbenchRoute,
+    query: str,
+    corpus_citations: list[dict[str, Any]] | None = None,
+) -> tuple[str, Optional[dict[str, Any]]]:
+    """Convert a substantive chat answer into (short_narration, ContextCard patch).
+
+    Returns (original_chat_text, None) when the answer is:
+      - too short to deserve its own card (greetings, single short sentence)
+      - a negative / empty response ("I couldn't find...") — keep that in chat only
+
+    Otherwise returns (short_narration, model_patch) wrapping the answer as a
+    ContextCard. Citations are embedded in the block content so the card
+    surfaces them as chips at the bottom.
+    """
+    if not _is_substantive(chat_text):
+        return chat_text, None
+
+    # NEW: don't pollute the canvas with "I couldn't find anything" cards.
+    # The chat reply already explains the negative result clearly.
+    if _looks_like_empty_response(chat_text):
+        return chat_text, None
+
+    headline = _extract_headline(chat_text, query)
+    block_id = f"card.{route}.{int(time.time() * 1000)}"
+
+    # Limit citations to top 6 for visual cleanliness on the card.
+    citations_for_card = (corpus_citations or [])[:6]
+
+    block = {
+        "id": block_id,
+        "type": "ContextCard",
+        "state": "core",
+        "headline": headline,
+        "visual": "paired_context_cards",
+        "role": "focus",  # M3 — new auto-wrapped cards land as focus
+        "content": {
+            "subject": _ROUTE_SUBJECT_LABELS.get(route, "Atlas response"),
+            "body": chat_text.strip(),
+            # Citations embedded in content so the renderer can surface chips
+            "citations": citations_for_card,
+        },
+    }
+
+    patch: dict[str, Any] = {
+        "rationale": f"Captured {route} response as a workspace card",
+        "ops": [{"op": "add_block", "block": block, "at_index": None}],
+        "confidence_tier": "Indicative",
+        "corpus_citations": corpus_citations or [],
+        # M3 — auto-wraps are additive; never branch
+        "stage_intent": "extend",
+        "stage_narration": f"Added '{headline}' to the canvas.",
+    }
+
+    return _short_narration(chat_text, route, headline), patch
+
+
+def _strip_json_from_chat(raw: str, json_start: int, json_end: int) -> str:
+    """Remove JSON block from chat prose (before AND after the JSON section)."""
+    if json_start >= 0 and json_end > json_start:
+        chat = (raw[:json_start] + raw[json_end:]).strip()
+    else:
+        chat = re.sub(r"```(?:json)?[\s\S]*?```", "", raw).strip()
+        chat = re.sub(r"\{[^{}]*\"model_patch\"[\s\S]*\}", "", chat).strip()
+    chat = re.sub(
+        r"(?im)^(?:here\s+is|here['\u2019]s)\s+the\s+(?:proposed\s+)?patch[:.]?\s*$",
+        "",
+        chat,
+    ).strip()
+    # Deduplicate repeated paragraphs (LLM sometimes echoes itself)
+    lines = chat.split("\n")
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for line in lines:
+        key = line.strip()
+        if key and key in seen:
+            continue
+        if key:
+            seen.add(key)
+        deduped.append(line)
+    return "\n".join(deduped).strip()
 
 
 # ---------------------------------------------------------------------------
@@ -200,10 +744,14 @@ Evidence: {model_summary.get("evidence_counts", {})}
             "Do NOT propose a model patch unless the user explicitly asks."
         ),
         "propose": (
-            "You are proposing a structured update to the workbench artifact.\n"
+            "You are updating the workbench artifact.\n"
             "Your response MUST include a model_patch in your final JSON output.\n"
-            "State clearly what you are changing and why (rationale).\n"
-            "Never apply the patch yourself — the user must confirm in the UI."
+            "Start with a brief 1-2 sentence prose summary of the change (what + why).\n"
+            "Most patches apply IMMEDIATELY with an undo affordance; only edits to\n"
+            "blocks the analyst has pinned require a hard confirm. Write the prose\n"
+            "as if the change has been made (e.g. 'I've added a SWOT-style\n"
+            "ComparisonMatrix...') rather than 'I propose to add...'.\n"
+            "Do NOT include 'awaiting confirmation' boilerplate."
         ),
         "economic_analysis": (
             "You are running a Five Case economic analysis for this match.\n"
@@ -216,6 +764,11 @@ Evidence: {model_summary.get("evidence_counts", {})}
             "Answer the user's question using corpus search results.\n"
             "Where relevant, note connections back to the current match context.\n"
             "Do not restrict yourself to the current match — answer the broader question."
+        ),
+        "translate": (
+            "You are assessing whether passport claims transfer to the target context.\n"
+            "Sort evidence into travels-as-is, needs-reframing, not-credible-here, or evidence-needed.\n"
+            "Be explicit about evidence quality — never overstate transferability."
         ),
         "conversational": (
             "This is a greeting or meta question. Respond naturally and briefly."
@@ -239,7 +792,7 @@ Route: {route}
 ## Critical rules
 - Confidence tier: NEVER emit a tier higher than the model's existing tier.
 - Citations: Only cite IDs that were verified to exist in atlas.projects.
-- Model patches: Only when route = "propose". User must confirm before applying.
+- Model patches: Only when route = "propose". Patches auto-apply with undo; pinned blocks require confirm.
 - Five Case / economic analysis: Staged for M1.0. Do not run spontaneously.
 - SUPABASE_SERVICE_KEY: Never reference in any output.
 """
@@ -255,6 +808,7 @@ Routes:
   explain         — asking about THIS match: its evidence, gaps, confidence, recommendation
   search          — wants corpus evidence for THIS match: comparators, analogues, corroboration
   explore         — wants to browse/discover BEYOND this match: other projects, general domain questions, "what else is in the corpus", "tell me about X technology", "what other projects deal with Y"
+  translate       — asks whether evidence/claims from the source context transfer to the target: "does this travel", "can we port this", "transfer verdict", "what reframes"
   propose         — wants to update, edit, add, or remove something from the artifact
   economic_analysis — asks about NPV, BCR, value, cost-benefit, Five Case, "is this worth it", "build business case"
   conversational  — greeting, thank you, meta question about the assistant
@@ -262,6 +816,17 @@ Routes:
 Key distinction:
   search = "find evidence FOR this match"
   explore = "show me other things / broader questions / not about this specific match"
+  translate = "does evidence/claims transfer from source to target context"
+  propose = "add/update canvas/artifact" — includes SWOT, comparison matrix, add block, show on canvas
+  economic_analysis = NPV/BCR/Five Case ONLY — NOT generic SWOT or strategic analysis
+
+Examples:
+  "perform a swot on cpc" → propose
+  "add swot to artifact" → propose
+  "what is the NPV" → economic_analysis
+  "what projects are in the corpus" → explore
+  "can this evidence transfer to the target" → translate
+  "show me the landscape of rail AI projects" → explore
 
 User message: {query}
 
@@ -274,11 +839,43 @@ def classify_route(state: WorkbenchState) -> dict:
     if not query.strip():
         return {"route": "conversational"}
 
+    q_lower = query.lower()
+    # Fast-path: artifact mutations (avoid misrouting SWOT → economic_analysis)
+    patch_signals = (
+        "swot", "add to artifact", "add to canvas", "update artifact", "update canvas",
+        "propose", "comparison matrix", "add block", "put on", "show on canvas",
+        "add a ", "add an ",
+    )
+    if any(sig in q_lower for sig in patch_signals):
+        return {
+            "route": "propose",
+            "reasoning_trace": [
+                {"label": "Route classified: propose (artifact update)", "status": "complete"},
+            ],
+        }
+
+    translate_signals = (
+        "transfer", "translate", "travels", "reframe", "reframing", "port to",
+        "port this", "apply to", "credible here", "does this work in",
+        "does this evidence", "can this claim", "travel to", "transfer lane",
+        "transfer verdict",
+    )
+    if any(sig in q_lower for sig in translate_signals):
+        return {
+            "route": "translate",
+            "reasoning_trace": [
+                {"label": "Route classified: translate (transfer lanes)", "status": "complete"},
+            ],
+        }
+
     llm = _llm()
     msg = llm.invoke([HumanMessage(content=_ROUTE_PROMPT.format(query=query))])
     raw = msg.content.strip().lower().split()[0] if msg.content else "explain"
 
-    valid_routes = {"explain", "search", "explore", "propose", "economic_analysis", "conversational"}
+    valid_routes = {
+        "explain", "search", "explore", "translate", "propose",
+        "economic_analysis", "conversational",
+    }
     route: WorkbenchRoute = raw if raw in valid_routes else "explain"  # type: ignore[assignment]
 
     return {
@@ -336,12 +933,19 @@ def explain_node(state: WorkbenchState) -> dict:
 
     trace.append({"label": "Generating explanation", "status": "complete"})
 
-    return {
-        "chat_response": response.content,
+    content = response.content if isinstance(response.content, str) else str(response.content)
+
+    # Tier 1B: auto-wrap substantive answers as a workspace card.
+    # Short answers stay in chat; long answers move to the canvas with a one-liner pointer.
+    narration, patch = _auto_wrap_as_card(content, "explain", state.get("query", ""))
+
+    return _with_last_output({
+        "chat_response": narration,
+        "model_patch": patch,
         "confidence_tier": state.get("confidence_tier", "Speculative"),
         "reasoning_trace": trace,
-        "messages": [AIMessage(content=response.content)],
-    }
+        "messages": [AIMessage(content=narration)],
+    }, "explain")
 
 
 # ---------------------------------------------------------------------------
@@ -359,6 +963,7 @@ def search_node(state: WorkbenchState) -> dict:
 
     # --- corpus search ---
     raw_results: list[dict[str, Any]] = []
+    coverage: dict[str, Any] = {}
     try:
         enriched_query = (
             f"{query} "
@@ -366,13 +971,13 @@ def search_node(state: WorkbenchState) -> dict:
             f"{model_summary.get('target_label', '')}"
         ).strip()
         tool_output = search_corpus_projects.invoke({"query": enriched_query, "k": 8})
-        # Tool returns {"results": [...], "coverage": {...}} or bare list
-        if isinstance(tool_output, dict):
-            raw_results = tool_output.get("results", [])
-        elif isinstance(tool_output, list):
-            raw_results = tool_output
+        raw_results, coverage = _parse_corpus_tool_output(tool_output)
     except Exception as exc:
         trace.append({"label": "Corpus search failed", "status": "error", "detail": str(exc)})
+
+    transport_chip = _corpus_transport_trace(coverage)
+    if transport_chip:
+        trace.append(transport_chip)
 
     trace.append({"label": f"Found {len(raw_results)} results", "status": "active"})
 
@@ -394,7 +999,53 @@ def search_node(state: WorkbenchState) -> dict:
 
     trace.append({"label": f"Verified {len(verified)} citations", "status": "complete"})
 
-    # --- LLM synthesis ---
+    # === FAST-PATH: zero / many results ===
+    # 0 results → polite chat-only message, no canvas pollution
+    # ≥2 results → structured corpus table on the canvas, short chat narration
+    # 1 result → fall through to LLM synthesis (a single hit deserves prose)
+    if len(verified) == 0:
+        if coverage.get("transport") == "unavailable":
+            chat_text = _unavailable_corpus_chat(query, coverage)
+        else:
+            chat_text = _empty_corpus_chat(query)
+        chat_text = _prepend_corpus_transport_banner(chat_text, coverage)
+        return _with_last_output({
+            "chat_response": chat_text,
+            "model_patch": None,
+            "corpus_citations": verified,
+            "confidence_tier": "Speculative",
+            "reasoning_trace": trace,
+            "messages": [AIMessage(content=chat_text)],
+        }, "search")
+
+    cq = _canonical_cq_for_route("search", query)
+    trace.append({"label": f"Canonical question: {cq}", "status": "complete"})
+
+    if len(verified) >= 3 and cq == "cq.explore.landscape":
+        narration, patch = _build_network_map_patch(verified, query, "search")
+        narration = _prepend_corpus_transport_banner(narration, coverage)
+        return _with_last_output({
+            "chat_response": narration,
+            "model_patch": patch,
+            "corpus_citations": verified,
+            "confidence_tier": _derive_search_tier(verified),
+            "reasoning_trace": trace,
+            "messages": [AIMessage(content=narration)],
+        }, "search")
+
+    if len(verified) >= 2:
+        narration, patch = _build_corpus_table_patch(verified, query, "search")
+        narration = _prepend_corpus_transport_banner(narration, coverage)
+        return _with_last_output({
+            "chat_response": narration,
+            "model_patch": patch,
+            "corpus_citations": verified,
+            "confidence_tier": _derive_search_tier(verified),
+            "reasoning_trace": trace,
+            "messages": [AIMessage(content=narration)],
+        }, "search")
+
+    # === Single-result path: LLM synthesis + auto-wrap as ContextCard ===
     system = _build_system_prompt(
         state.get("model_summary"),
         state.get("lens", "CPC"),
@@ -402,8 +1053,8 @@ def search_node(state: WorkbenchState) -> dict:
     )
     citations_json = json.dumps(verified, indent=2)
     synthesis_prompt = (
-        f"Based on these corpus search results, answer the user's question.\n\n"
-        f"Search results:\n{citations_json}\n\n"
+        f"Based on this corpus search result, answer the user's question.\n\n"
+        f"Search result:\n{citations_json}\n\n"
         f"User question: {query}"
     )
     messages = [
@@ -413,13 +1064,17 @@ def search_node(state: WorkbenchState) -> dict:
     llm = _llm()
     response = llm.invoke(messages)
 
-    return {
-        "chat_response": response.content,
+    content = response.content if isinstance(response.content, str) else str(response.content)
+    narration, patch = _auto_wrap_as_card(content, "search", query, verified)
+
+    return _with_last_output({
+        "chat_response": narration,
+        "model_patch": patch,
         "corpus_citations": verified,
         "confidence_tier": _derive_search_tier(verified),
         "reasoning_trace": trace,
-        "messages": [AIMessage(content=response.content)],
-    }
+        "messages": [AIMessage(content=narration)],
+    }, "search")
 
 
 def _derive_search_tier(citations: list[dict]) -> ConfidenceTier:
@@ -441,21 +1096,240 @@ def _derive_search_tier(citations: list[dict]) -> ConfidenceTier:
 _PROPOSE_SYSTEM_SUFFIX = """
 ## Model patch output format
 
-You MUST include a `model_patch` key in your response JSON with this shape:
-{
-  "rationale": "Human-readable explanation of the change",
-  "ops": [
-    {"op": "add_block", "block": {...RenderBlock...}, "at_index": null},
-    {"op": "update_block", "block_id": "...", "patch": {...}},
-    {"op": "remove_block", "block_id": "..."},
-    {"op": "update_spine", "patch": {...}}
-  ],
-  "confidence_tier": "Indicative",
-  "corpus_citations": [...]
-}
+Respond with a brief prose summary (1-3 sentences) in past tense, explaining what
+you added. Then ONE fenced JSON block at the very end.
 
-IMPORTANT: Only one patch per response. User must confirm before it is applied.
+CRITICAL: The JSON block is for the system only. Never repeat it in prose.
+Never paste unfenced JSON. The user sees prose + a build trace, not raw JSON.
+
+```json
+{
+  "model_patch": {
+    "rationale": "Human-readable explanation of the change",
+    "ops": [
+      {"op": "add_block", "block": {...RenderBlock with role}, "at_index": null}
+    ],
+    "confidence_tier": "Indicative",
+    "corpus_citations": [],
+    "stage_intent": "extend",
+    "stage_narration": "One-sentence past-tense move description."
+  }
+}
+```
+
+## Stage intent (M3 — required field)
+
+Every patch must declare how it reshapes the canvas. Pick ONE:
+
+- `extend`    — add to the current view. Empty canvas, or adding alongside.
+                Default for almost all "add X" requests.
+- `pivot`     — new focus for a related but different question. Demote the
+                current focus block(s) to role="context" via set_block_role.
+                Example: "OK now how do I act on this?" while a recommendation
+                is on screen — promote ActionPlan to focus, demote Recommendation.
+- `recompose` — same content, better arrangement. Use update_block ops to swap
+                visual / headline / role. Rare.
+- `branch`    — user has shifted to a different topic. Archive existing focus +
+                context blocks via archive_block ops, then add new focus. The
+                user will get a 3-second confirm chip — only use this when the
+                shift is genuinely off-topic from what's currently on screen.
+
+## Block roles (M3)
+
+Every block has a `role`: focus | context | reference | archived.
+Default `focus` for new blocks. Use roles to guide composition:
+
+- focus     — primary answer to the current question (max 2-3 at a time)
+- context   — kept around to ground the focus
+- reference — peripheral, available but minimised
+- archived  — hidden off-stage (use archive_block op, recoverable)
+
+For a PIVOT, your ops should include:
+  1. `set_block_role` on the previous focus → "context"
+  2. `add_block` with role="focus" for the new answer
+
+For a BRANCH, your ops should include:
+  1. `archive_block` for each existing focus/context block
+  2. `add_block` with role="focus" for the new topic
+
+## Stage narration (M3)
+
+Set `stage_narration` to one past-tense sentence narrating the move:
+- extend:    "Added a SWOT card to the canvas."
+- pivot:     "Brought the action plan forward, parked the recommendation as context."
+- recompose: "Swapped the recommendation card for a chart."
+- branch:    "Started a new thread on maritime decarbonisation. Previous view archived."
+
+This is shown alongside the chat reply — make it concrete and human.
+
+## Block type catalog — pick the right tool
+
+Choose the block that best fits the user's intent. Never invent a new type.
+For composite analyses (e.g. SWOT, comparison tables), reach for ComparisonMatrix
+or compose several ContextCards.
+
+| Intent                                   | Block type             | When to use                                              |
+| ---------------------------------------- | ---------------------- | -------------------------------------------------------- |
+| Free-form summary / narrative / SWOT prose | ContextCard          | Anything that's prose, multi-point notes, or simple text |
+| 2x2 / quadrant analysis (e.g. SWOT grid) | ComparisonMatrix       | Set `visual: "quadrant_grid"`, content `{quadrants:{...}}` |
+| Side-by-side projects / options compare  | ComparisonMatrix       | Default `visual: "stored_match_list"`                    |
+| Headline decision + score + confidence   | RecommendationConfidence | Verdict, score, confidence tier, cap reason            |
+| Evidence state counts                    | EvidenceStateSummary   | Verified/self-reported/inferred/unknown bar              |
+| Gaps between source and target           | DimensionGap           | List of gaps with magnitude                              |
+| Capability claim ledger                  | ClaimLedger            | Audit-style list of claims with evidence state           |
+| Match evidence map                       | MatchBench             | Evidence map table tying claims to corpus                |
+| What to do next / next steps             | ActionPlan             | Sequenced actions tied to gaps                           |
+| Counter-arguments + responses            | ObjectionResponse      | Challenge/response/evidence rows                         |
+| Evidence trail / provenance              | ProvenanceTrace        | Path through citations                                   |
+| Five Case / NPV / value drivers          | EconomicCase           | Use the economic_analysis route instead                  |
+
+Examples:
+
+- User: "add a SWOT on CPC"
+  → ComparisonMatrix with visual="quadrant_grid", content={quadrants:{strengths:[...],weaknesses:[...],opportunities:[...],threats:[...]}}
+
+- User: "summarise the recommendation"
+  → ContextCard with content={subject:"Recommendation", body:"..."}
+
+- User: "what should we do next?"
+  → ActionPlan with content=[{action,linked_gap,owner,sequence},...]
+
+- User: "now switch focus to action plan"  (something already on stage)
+  → stage_intent="pivot", set_block_role demoting current focus + add ActionPlan as focus
+
+- User: "let's look at maritime decarbonisation projects instead"
+  → stage_intent="branch", archive_block ops + add new ContextCard/ComparisonMatrix focus
+
+## Valid block types (STRICT — agent MUST use one of these)
+
+You may ONLY add or update blocks whose `type` is one of these registered types:
+  - RecommendationConfidence  (decision verdict + tier badge)
+  - EvidenceStateSummary      (verified/self-reported/inferred breakdown)
+  - DimensionGap              (gap rows with magnitude + would-change-if)
+  - MatchBench                (4-dimension score table or radar)
+  - ClaimLedger               (audit table of claims and evidence state)
+  - ActionPlan                (checklist or timeline)
+  - ObjectionResponse         (objection vs response table)
+  - ProvenanceTrace           (evidence chain breadcrumb)
+  - OpportunityList           (Browse mode — ranked corpus rows; USE for project lists)
+  - ComparisonMatrix          (N x M grid — USE THIS FOR SWOT, 2x2 quadrants, etc.)
+  - ContextCard               (free-form prose card with a single subject)
+  - EconomicCase              (Five Case NPV/BCR/value-driver block)
+
+## Forbidden patterns
+
+- Do NOT invent block types (no "swot", "summary", "table", "chart" etc.)
+- Do NOT add a Markdown table or chart as a custom block type.
+
+## Composing complex analyses
+
+For a SWOT analysis, emit ONE `ComparisonMatrix` block with visual `quadrant_grid`
+and this content shape (NOT match-list rows):
+
+```json
+{
+  "type": "ComparisonMatrix",
+  "id": "swot_cpc_org",
+  "headline": "SWOT — Connected Places Catapult",
+  "visual": "quadrant_grid",
+  "state": "core",
+  "quadrants": [
+    {"label": "Strengths", "body": "bullet points as markdown"},
+    {"label": "Weaknesses", "body": "..."},
+    {"label": "Opportunities", "body": "..."},
+    {"label": "Threats", "body": "..."}
+  ]
+}
+```
+
+Use `id` and `headline` (NOT block_id / title). SWOT about CPC is NOT about the
+current GPS-Denied match unless the user explicitly asks about that match.
+
+For multi-dimension scoring, use `MatchBench`.
+
+## Other rules
+
+- Only one model_patch per response.
+- JSON goes ONLY in the fenced block — never repeat it in prose.
+- Patches auto-apply to the artifact with undo — write past tense in prose.
 """
+
+
+def _extract_json_object(text: str, key: str = "model_patch") -> tuple[Optional[dict], int, int]:
+    """
+    Robust JSON object extractor.
+    Finds the first balanced {...} that contains the given key.
+    Returns (parsed_dict, start_idx, end_idx) or (None, -1, -1).
+    Handles nested braces, code fences, and prose-around-JSON.
+    """
+    fenced = re.search(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", text)
+    if fenced:
+        try:
+            obj = json.loads(fenced.group(1))
+            if key in obj or key in str(obj):
+                return obj, fenced.start(), fenced.end()
+        except Exception:
+            pass
+
+    # Bracket-balanced scan for the first { containing the key
+    for start in range(len(text)):
+        if text[start] != "{":
+            continue
+        depth = 0
+        for end in range(start, len(text)):
+            ch = text[end]
+            if ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    candidate = text[start:end + 1]
+                    if key not in candidate:
+                        break
+                    try:
+                        return json.loads(candidate), start, end + 1
+                    except Exception:
+                        break
+    return None, -1, -1
+
+
+_VALID_STAGE_INTENTS = {"extend", "pivot", "recompose", "branch"}
+_VALID_BLOCK_ROLES = {"focus", "context", "reference", "archived"}
+
+
+def _normalize_stage_metadata(patch: dict[str, Any]) -> dict[str, Any]:
+    """Ensure every patch has a valid stage_intent + stage_narration + block roles.
+
+    Defaults:
+      - stage_intent defaults to "extend" (safest, additive)
+      - new blocks default to role="focus" if not specified
+      - stage_narration falls back to the rationale (truncated) if absent
+
+    Returns the same patch dict (mutated in place for simplicity).
+    """
+    intent = patch.get("stage_intent")
+    if intent not in _VALID_STAGE_INTENTS:
+        patch["stage_intent"] = "extend"
+
+    if not patch.get("stage_narration"):
+        rationale = patch.get("rationale") or ""
+        patch["stage_narration"] = (rationale[:140] + "...") if len(rationale) > 140 else rationale
+
+    ops = patch.get("ops")
+    if isinstance(ops, list):
+        for op in ops:
+            if not isinstance(op, dict):
+                continue
+            if op.get("op") == "add_block":
+                block = op.get("block")
+                if isinstance(block, dict):
+                    role = block.get("role")
+                    if role not in _VALID_BLOCK_ROLES:
+                        block["role"] = "focus"
+            elif op.get("op") == "set_block_role":
+                if op.get("role") not in _VALID_BLOCK_ROLES:
+                    op["role"] = "context"  # safe default for unknown roles
+    return patch
 
 
 def propose_node(state: WorkbenchState) -> dict:
@@ -472,34 +1346,98 @@ def propose_node(state: WorkbenchState) -> dict:
     messages = [SystemMessage(content=system)] + list(state.get("messages", []))
     llm = _llm()
     response = llm.invoke(messages)
+    raw = response.content if isinstance(response.content, str) else str(response.content)
 
-    # --- parse model_patch from response ---
+    # --- parse model_patch from response (robust extraction) ---
     model_patch = None
-    chat_text = response.content
-    try:
-        # Expect the LLM to embed JSON in a ```json block or as raw JSON
-        m = re.search(r"```json\s*(\{.*?\})\s*```", response.content, re.DOTALL)
-        if not m:
-            m = re.search(r"(\{[^{]*\"model_patch\".*\})", response.content, re.DOTALL)
-        if m:
-            parsed = json.loads(m.group(1))
-            model_patch = parsed.get("model_patch") or parsed
-            # Extract prose before the JSON block as the chat response
-            chat_text = response.content[:m.start()].strip() or (
-                "I've prepared a patch proposal — see the confirmation panel below."
+    parsed, start, end = _extract_json_object(raw, "model_patch")
+    if parsed:
+        # Unwrap {"model_patch": {...}} or accept top-level patch
+        model_patch = parsed.get("model_patch") if "model_patch" in parsed else parsed
+
+    # --- validate block types (M2.1 — reject inventions) ---
+    # Constrain to the registered 13 block types. The agent must compose
+    # complex layouts (e.g. SWOT) using existing blocks, not invent new ones.
+    valid_block_types = {
+        "RecommendationConfidence", "EvidenceStateSummary", "DimensionGap",
+        "MatchBench", "ClaimLedger", "ActionPlan", "ObjectionResponse",
+        "ProvenanceTrace", "ComparisonMatrix", "OpportunityList", "ContextCard",
+        "EconomicCase", "NetworkMap", "TransferLanes",
+    }
+    invalid_types: list[str] = []
+    if model_patch and isinstance(model_patch.get("ops"), list):
+        for op in model_patch["ops"]:
+            if isinstance(op, dict) and op.get("op") == "add_block":
+                block = op.get("block") or {}
+                btype = block.get("type")
+                if btype and btype not in valid_block_types:
+                    invalid_types.append(btype)
+            elif isinstance(op, dict) and op.get("op") == "update_block":
+                # update_block ops carry a partial patch — type changes not allowed
+                patch = op.get("patch") or {}
+                if patch.get("type") and patch["type"] not in valid_block_types:
+                    invalid_types.append(patch["type"])
+
+    if invalid_types:
+        trace.append({
+            "label": f"Patch rejected: invented block types {invalid_types}",
+            "status": "error",
+        })
+        unique = sorted(set(invalid_types))
+        chat_text = (
+            f"I can't add a block of type `{unique[0]}` — that's not a registered "
+            "block type in this workbench. Valid blocks are: "
+            f"{', '.join(sorted(valid_block_types))}.\n\n"
+            "For composite analyses like SWOT, ask me to use a `ComparisonMatrix` "
+            "(quadrant layout) or multiple `ContextCard` blocks, and I'll re-propose."
+        )
+        return _with_last_output({
+            "chat_response": chat_text,
+            "model_patch": None,
+            "confidence_tier": "Speculative",
+            "reasoning_trace": trace,
+            "messages": [AIMessage(content=chat_text)],
+        }, "propose")
+
+    # --- M3 — normalise stage_intent + roles + narration ---
+    if model_patch:
+        model_patch = _normalize_stage_metadata(model_patch)
+        trace.append({
+            "label": f"Stage intent: {model_patch.get('stage_intent')}",
+            "status": "complete",
+        })
+
+    # --- derive clean prose for chat (strip ALL JSON from display) ---
+    if model_patch:
+        chat_text = _strip_json_from_chat(raw, start, end)
+        if not chat_text:
+            rationale = model_patch.get("rationale", "")
+            narration = model_patch.get("stage_narration", "")
+            chat_text = (
+                f"{narration} Use undo (top-right) or Ctrl+Z to revert."
+                if narration
+                else f"Done — {rationale} Use undo (top-right) or Ctrl+Z to revert."
+                if rationale
+                else "Done. The block is on the artifact — use undo or Ctrl+Z to revert."
             )
-    except Exception:
-        pass  # non-JSON response: treat entire response as chat_text
+    else:
+        chat_text = _strip_json_from_chat(raw, -1, -1)
+        if not chat_text:
+            chat_text = (
+                "I couldn't format a valid artifact patch from that response. "
+                "Try again with e.g. 'add a SWOT on CPC to the artifact'."
+            )
 
     trace.append({"label": "Patch proposal ready", "status": "complete"})
 
-    return {
+    return _with_last_output({
         "chat_response": chat_text,
         "model_patch": model_patch,
         "confidence_tier": "Indicative",
         "reasoning_trace": trace,
-        "messages": [AIMessage(content=response.content)],
-    }
+        # CRITICAL: clean prose only — never raw JSON in messages
+        "messages": [AIMessage(content=chat_text)],
+    }, "propose")
 
 
 # ---------------------------------------------------------------------------
@@ -728,7 +1666,7 @@ Rules:
         f"Five Case economic analysis complete for "
         f"**{model_summary.get('source_label', 'this passport')} → "
         f"{model_summary.get('target_label', 'this project')}**. "
-        "Review the proposed artifact update in the confirmation panel below."
+        "EconomicCase block added to the artifact — use undo to revert."
     )
     chat_text = default_chat
     parsed = None
@@ -768,6 +1706,7 @@ Rules:
             content.setdefault("corpus_citations", verified_citations)
             content.setdefault("skills_applied", ["green-book", "evidence-triage"])
             ec_block["content"] = content
+            ec_block.setdefault("role", "focus")  # M3 — economic case takes focus
             model_patch = {
                 "rationale": (
                     f"Five Case economic analysis for "
@@ -778,6 +1717,12 @@ Rules:
                 "ops": [{"op": "add_block", "block": ec_block}],
                 "confidence_tier": content.get("confidence_tier", "Indicative"),
                 "corpus_citations": verified_citations,
+                # M3 — economic analysis arrives as a sustantive new focus
+                "stage_intent": "extend",
+                "stage_narration": (
+                    f"Added Five Case economic analysis — "
+                    f"verdict: {content.get('verdict', 'unknown')}."
+                ),
             }
     else:
         # Full parse failure — respond with clean prose, no JSON leaked
@@ -793,13 +1738,13 @@ Rules:
 
     trace.append({"label": "Economic analysis complete", "status": "complete"})
 
-    return {
+    return _with_last_output({
         "chat_response": chat_text,
         "model_patch": model_patch,
         "confidence_tier": "Indicative",
         "reasoning_trace": trace,
         "messages": [AIMessage(content=chat_text)],
-    }
+    }, "economic_analysis")
 
 
 # ---------------------------------------------------------------------------
@@ -828,15 +1773,19 @@ def explore_node(state: WorkbenchState) -> dict:
     # beyond the current match context.
     # search_corpus_projects returns DB-verified rows so no secondary verify needed.
     raw_results: list[dict[str, Any]] = []
+    coverage: dict[str, Any] = {}
     try:
         tool_output = search_corpus_projects.invoke({"query": query, "k": 10})
-        # Tool returns {"results": [...], "coverage": {...}} or bare list
-        if isinstance(tool_output, dict):
-            raw_results = tool_output.get("results", [])
-        elif isinstance(tool_output, list):
-            raw_results = tool_output
+        raw_results, coverage = _parse_corpus_tool_output(tool_output)
     except Exception as exc:
         trace.append({"label": f"Corpus search failed: {exc}", "status": "error"})
+
+    transport_chip = _corpus_transport_trace(coverage)
+    if transport_chip:
+        trace.append(transport_chip)
+
+    cq = _canonical_cq_for_route("explore", query)
+    trace.append({"label": f"Canonical question: {cq}", "status": "complete"})
 
     # Deduplicate — results are already DB-verified by the search query
     verified: list[dict[str, Any]] = []
@@ -859,7 +1808,47 @@ def explore_node(state: WorkbenchState) -> dict:
         "status": "active" if verified else "error",
     })
 
-    # Build context-aware system prompt
+    # === FAST-PATH: zero / many results (same shape as search_node) ===
+    if len(verified) == 0:
+        if coverage.get("transport") == "unavailable":
+            chat_text = _unavailable_corpus_chat(query, coverage)
+        else:
+            chat_text = _empty_corpus_chat(query)
+        chat_text = _prepend_corpus_transport_banner(chat_text, coverage)
+        return _with_last_output({
+            "chat_response": chat_text,
+            "model_patch": None,
+            "corpus_citations": verified,
+            "confidence_tier": "Speculative",
+            "reasoning_trace": trace,
+            "messages": [AIMessage(content=chat_text)],
+        }, "explore")
+
+    if len(verified) >= 3 and cq == "cq.explore.landscape":
+        narration, patch = _build_network_map_patch(verified, query, "explore")
+        narration = _prepend_corpus_transport_banner(narration, coverage)
+        return _with_last_output({
+            "chat_response": narration,
+            "model_patch": patch,
+            "corpus_citations": verified,
+            "confidence_tier": "Indicative",
+            "reasoning_trace": trace,
+            "messages": [AIMessage(content=narration)],
+        }, "explore")
+
+    if len(verified) >= 2:
+        narration, patch = _build_corpus_table_patch(verified, query, "explore")
+        narration = _prepend_corpus_transport_banner(narration, coverage)
+        return _with_last_output({
+            "chat_response": narration,
+            "model_patch": patch,
+            "corpus_citations": verified,
+            "confidence_tier": "Indicative",
+            "reasoning_trace": trace,
+            "messages": [AIMessage(content=narration)],
+        }, "explore")
+
+    # === Single-result path: LLM prose summary + auto-wrap as ContextCard ===
     match_context = ""
     if model_summary.get("source_label"):
         match_context = (
@@ -872,7 +1861,7 @@ def explore_node(state: WorkbenchState) -> dict:
     citations_block = "\n".join(
         f"- [{c['id'][:8]}] **{c['title']}** ({c['organisation']}) — {int(c['score']*100)}% match"
         for c in verified
-    ) or "No matching projects found in the current corpus."
+    )
 
     system = (
         "You are the Atlas Workbench assistant exploring the CPC Connected Places corpus.\n"
@@ -880,11 +1869,7 @@ def explore_node(state: WorkbenchState) -> dict:
         "Be specific: cite project titles and IDs. Identify patterns and themes.\n"
         "Do not confabulate projects — only reference what is in the corpus results.\n"
         f"{match_context}\n\n"
-        f"Corpus results for this query:\n{citations_block}\n\n"
-        "## Offer to add findings to the artifact canvas\n"
-        "At the end of your response, if you've produced a structured analysis (e.g. SWOT, "
-        "comparison table, technology landscape), add a one-line offer:\n"
-        "'→ Say **\"add this to the artifact\"** to push this analysis into the workbench canvas.'"
+        f"Corpus result for this query:\n{citations_block}"
     )
 
     llm = _llm()
@@ -894,13 +1879,58 @@ def explore_node(state: WorkbenchState) -> dict:
 
     trace.append({"label": "Corpus exploration complete", "status": "complete"})
 
-    return {
-        "chat_response": response.content,
+    content = response.content if isinstance(response.content, str) else str(response.content)
+    narration, patch = _auto_wrap_as_card(content, "explore", query, verified)
+
+    return _with_last_output({
+        "chat_response": narration,
+        "model_patch": patch,
         "corpus_citations": verified,
-        "confidence_tier": "Indicative" if verified else "Speculative",
+        "confidence_tier": "Indicative",
         "reasoning_trace": trace,
-        "messages": [AIMessage(content=response.content)],
-    }
+        "messages": [AIMessage(content=narration)],
+    }, "explore")
+
+
+# ---------------------------------------------------------------------------
+# Node: translate (M1.5 — transfer lanes from match evidence)
+# ---------------------------------------------------------------------------
+
+
+def translate_node(state: WorkbenchState) -> dict:
+    """Build TransferLanes from the current match evidence map."""
+    trace = state.get("reasoning_trace", [])
+    query = state.get("query", "")
+    model_summary = state.get("model_summary") or {}
+    artifact = state.get("artifact")
+
+    trace.append({"label": "Building transfer lanes from match evidence", "status": "active"})
+
+    items = _extract_matchbench_items(artifact if isinstance(artifact, dict) else None)
+
+    if not items:
+        chat_text = _empty_transfer_chat(query)
+        trace.append({"label": "No evidence map items in artifact", "status": "error"})
+        return _with_last_output({
+            "chat_response": chat_text,
+            "model_patch": None,
+            "corpus_citations": [],
+            "confidence_tier": model_summary.get("confidence_tier", "Speculative"),
+            "reasoning_trace": trace,
+            "messages": [AIMessage(content=chat_text)],
+        }, "translate")
+
+    narration, patch = _build_transfer_lanes_patch(items, model_summary, query)
+    trace.append({"label": f"Transfer lanes: {len(items)} claims", "status": "complete"})
+
+    return _with_last_output({
+        "chat_response": narration,
+        "model_patch": patch,
+        "corpus_citations": [],
+        "confidence_tier": patch.get("confidence_tier", "Indicative"),
+        "reasoning_trace": trace,
+        "messages": [AIMessage(content=narration)],
+    }, "translate")
 
 
 # ---------------------------------------------------------------------------
@@ -918,25 +1948,38 @@ def conversational_node(state: WorkbenchState) -> dict:
             "- **Explain** — answer questions about this match: evidence, gaps, confidence\n"
             "- **Search** — find corpus evidence for this specific match\n"
             "- **Explore** — browse the full CPC corpus: other projects, sectors, themes\n"
-            "- **Propose** — update the artifact canvas (add/edit blocks). "
-            "The user must say 'add to the artifact', 'propose', 'update the canvas', etc. "
-            "Only then does a patch confirmation panel appear for the analyst to approve.\n"
+            "- **Translate** — sort match claims into transfer lanes (travels / reframes / not credible / evidence needed)\n"
+            "- **Update the canvas** — add or edit blocks. Just ask 'add a SWOT', "
+            "'show me a comparison matrix', 'add a context card on X'. Changes apply "
+            "immediately with an undo button — only edits to pinned blocks need approval.\n"
             "- **Economic case** — 'run economic case' or 'what is the NPV?'\n\n"
+            "## Canvas-first behaviour (always true)\n"
+            "Any substantive answer you write (more than ~120 characters) is "
+            "automatically captured as a card on the user's canvas. So write the FULL "
+            "answer naturally — the chat shows a one-liner pointer and the body goes "
+            "to the canvas. Do NOT add boilerplate like 'I've put this on the canvas' "
+            "yourself; that happens automatically. Just give the answer.\n\n"
             "## Critical rule\n"
             "NEVER say 'I cannot control the canvas' or 'I cannot push to the UI'. "
-            "You CAN update the artifact — just tell the user to ask you to 'propose' or "
-            "'add to the artifact' and you will generate a model patch they can confirm.\n\n"
-            "Respond naturally to this message. If the user asks to show something in the canvas, "
-            "tell them to say 'add X to the artifact' or 'propose adding X' and you will do it."
+            "You CAN and DO update the artifact directly. Speak in present tense and "
+            "give the answer — the system handles canvas mechanics.\n\n"
+            "Respond naturally to this message."
         )),
     ] + list(state.get("messages", []))
     response = llm.invoke(messages)
-    return {
-        "chat_response": response.content,
+    content = response.content if isinstance(response.content, str) else str(response.content)
+
+    # Tier 1B: only wrap substantive conversational responses (e.g. "what can you do?")
+    # Greetings, ack, "hi", etc. stay in chat — _auto_wrap_as_card returns (text, None).
+    narration, patch = _auto_wrap_as_card(content, "conversational", state.get("query", ""))
+
+    return _with_last_output({
+        "chat_response": narration,
+        "model_patch": patch,
         "confidence_tier": "Speculative",
         "reasoning_trace": [{"label": "Conversational response", "status": "complete"}],
-        "messages": [AIMessage(content=response.content)],
-    }
+        "messages": [AIMessage(content=narration)],
+    }, "conversational")
 
 
 # ---------------------------------------------------------------------------
@@ -952,6 +1995,7 @@ def route_to_node(state: WorkbenchState) -> str:
         "explain":           "explain",
         "search":            "search",
         "explore":           "explore",
+        "translate":         "translate",
         "propose":           "propose",
         "economic_analysis": "economic_analysis",
         "conversational":    "conversational",
@@ -972,6 +2016,7 @@ def build_graph():
     graph.add_node("explain", explain_node)
     graph.add_node("search", search_node)
     graph.add_node("explore", explore_node)
+    graph.add_node("translate", translate_node)
     graph.add_node("propose", propose_node)
     graph.add_node("economic_analysis", economic_analysis_node)
     graph.add_node("conversational", conversational_node)
@@ -997,6 +2042,7 @@ def build_graph():
             "explain":           "explain",
             "search":            "search",
             "explore":           "explore",
+            "translate":         "translate",
             "propose":           "propose",
             "economic_analysis": "economic_analysis",
             "conversational":    "conversational",
@@ -1004,7 +2050,10 @@ def build_graph():
     )
 
     # All processing nodes → END
-    for node in ["explain", "search", "explore", "propose", "economic_analysis", "conversational"]:
+    for node in [
+        "explain", "search", "explore", "translate", "propose",
+        "economic_analysis", "conversational",
+    ]:
         graph.add_edge(node, END)
 
     # LangGraph API provides its own persistence; MemorySaver is for direct uvicorn use.

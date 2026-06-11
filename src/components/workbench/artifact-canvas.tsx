@@ -1,27 +1,29 @@
 "use client";
 
-import { useWorkbench, CQ_LABELS } from "@/lib/workbench/workbench-context";
-import type { CanonicalQuestionId } from "@/lib/workbench/atlas-render-model";
+import * as React from "react";
+import { useWorkbench, CQ_LABELS, MATCH_CQ_IDS } from "@/lib/workbench/workbench-context";
+import type { CanonicalQuestionId, RenderBlock } from "@/lib/workbench/atlas-render-model";
 import { DecisionSpineStrip } from "./decision-spine-strip";
 import { BlockRenderer } from "./block-renderer";
 import { ReasoningTrace, DEMO_REASONING_STEPS } from "./reasoning-trace";
+import { BranchConfirmChip } from "./branch-confirm-chip";
+import { StageHistoryBreadcrumb } from "./stage-history-breadcrumb";
 import {
   BlockSkeletonRecommendation,
   BlockSkeletonDimensionGap,
   BlockSkeletonMatchBench,
   BlockSkeletonClaimLedger,
 } from "./shared/block-skeleton";
-import { AlertCircle, Camera, ChevronRight } from "lucide-react";
+import { AlertCircle, ChevronRight, Archive } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 
 export function ArtifactCanvas() {
   const {
     model,
     cqId,
     setCqId,
-    cqIds,
     openInspector,
-    setSnapshotOpen,
     isLoading,
     error,
     isDbBacked,
@@ -36,32 +38,13 @@ export function ArtifactCanvas() {
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
-      {/* Artifact header */}
-      <div className="px-5 pt-5 pb-3 border-b border-border bg-background shrink-0">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <span className="text-xs text-muted-foreground">{model.mode} · {model.layout_template}</span>
-              <ChevronRight className="w-3 h-3 text-muted-foreground" />
-              <span className="inline-flex items-center rounded border border-accent/20 bg-accent/10 px-1.5 py-0.5 text-xs font-medium text-accent">
-                {model.canonical_question_id}
-              </span>
-            </div>
-            <h1 className="text-sm font-semibold leading-snug line-clamp-2">
-              {isLoading && isDbBacked ? "Loading match…" : model.source_object.title}
-            </h1>
-            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-              {isLoading && isDbBacked
-                ? "Fetching DB-backed render model"
-                : `Target: ${model.target_object.title}`}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Morph bar — CQ selector (M1.2) */}
+      {/* Canvas subheader — context + CQ morph bar (no duplicate source title, that's in WorkbenchHeader) */}
       <div className="flex items-center gap-2 px-5 py-2.5 border-b border-border bg-muted/10 shrink-0 overflow-x-auto">
-        {cqIds.map((id: CanonicalQuestionId) => (
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 shrink-0">
+          View
+        </span>
+        <ChevronRight className="w-3 h-3 text-muted-foreground shrink-0" />
+        {MATCH_CQ_IDS.map((id: CanonicalQuestionId) => (
           <button
             key={id}
             onClick={() => setCqId(id)}
@@ -77,13 +60,9 @@ export function ArtifactCanvas() {
           </button>
         ))}
         <div className="flex-1" />
-        <button
-          onClick={() => setSnapshotOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border border-border bg-background text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors whitespace-nowrap"
-        >
-          <Camera className="w-3.5 h-3.5" />
-          Snapshot
-        </button>
+        <span className="text-[10px] text-muted-foreground/60 shrink-0 truncate max-w-[200px]">
+          {model.mode} · {model.layout_template}
+        </span>
       </div>
 
       {/* Error state — DB fetch failed */}
@@ -128,37 +107,184 @@ export function ArtifactCanvas() {
         </div>
       )}
 
-      {/* Blocks */}
-      <div className="flex-1 px-5 pb-6 space-y-4">
+      {/* Stage chrome — branch confirm chip + history breadcrumb */}
+      {!error && (
+        <>
+          <BranchConfirmChip />
+          <StageHistoryBreadcrumb />
+        </>
+      )}
+
+      {/* Blocks — 3-zone stage layout (focus / context / reference) */}
+      <div className="flex-1 px-5 pb-6">
         {isLoading && isDbBacked ? (
-          <>
+          <div className="space-y-4">
             <BlockSkeletonRecommendation />
             <BlockSkeletonDimensionGap />
             <BlockSkeletonMatchBench />
             <BlockSkeletonClaimLedger />
-          </>
+          </div>
         ) : error ? null : (
-          <>
-            {model.blocks.map((block) => (
-              <BlockRenderer key={block.id} block={block} onInspect={openInspector} />
-            ))}
+          <StageZones blocks={model.blocks} onInspect={openInspector} />
+        )}
 
-            {/* Data quality notes */}
-            {model.data_quality_notes.length > 0 && (
-              <div className="rounded-md border border-dashed border-border p-3">
-                <p className="text-xs font-semibold text-muted-foreground mb-2">Data quality notes</p>
-                <ul className="space-y-1">
-                  {model.data_quality_notes.map((note, i) => (
-                    <li key={i} className="text-xs text-muted-foreground flex gap-1.5">
-                      <span className="shrink-0">·</span>{note}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </>
+        {/* Data quality notes */}
+        {!error && !isLoading && model.data_quality_notes.length > 0 && (
+          <div className="rounded-md border border-dashed border-border p-3 mt-4">
+            <p className="text-xs font-semibold text-muted-foreground mb-2">Data quality notes</p>
+            <ul className="space-y-1">
+              {model.data_quality_notes.map((note, i) => (
+                <li key={i} className="text-xs text-muted-foreground flex gap-1.5">
+                  <span className="shrink-0">·</span>{note}
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// StageZones — Tier 2 (M3) 3-zone canvas
+//
+// Groups blocks by their `role` (focus / context / reference / archived) into
+// distinct visual zones. Defaults to `focus` for legacy blocks without a role
+// so the existing match models continue to render unchanged.
+//
+// Animation: framer-motion LayoutGroup + motion.div per block gives a 200ms
+// auto-morph when a block's role changes (Cmd+Z, agent pivot, etc.).
+// ---------------------------------------------------------------------------
+function StageZones({
+  blocks,
+  onInspect,
+}: {
+  blocks: RenderBlock[];
+  onInspect: (kind: string, payload?: unknown) => void;
+}) {
+  const groups = React.useMemo(() => {
+    const focus: RenderBlock[] = [];
+    const context: RenderBlock[] = [];
+    const reference: RenderBlock[] = [];
+    const archived: RenderBlock[] = [];
+    for (const b of blocks) {
+      const role = b.role ?? "focus";
+      if (role === "context") context.push(b);
+      else if (role === "reference") reference.push(b);
+      else if (role === "archived") archived.push(b);
+      else focus.push(b);
+    }
+    return { focus, context, reference, archived };
+  }, [blocks]);
+
+  // Show "ready for work" hint when canvas is empty but on a match CQ
+  const isEmpty =
+    groups.focus.length === 0 &&
+    groups.context.length === 0 &&
+    groups.reference.length === 0;
+  if (isEmpty) {
+    return (
+      <div className="rounded-lg border border-dashed border-border bg-muted/10 p-8 text-center">
+        <p className="text-sm font-medium text-muted-foreground">
+          Ask a question in chat to populate this stage
+        </p>
+        <p className="text-xs text-muted-foreground/70 mt-1">
+          Substantive answers land here as cards. Use Cmd+Z to revert.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <LayoutGroup>
+      <div className="space-y-6">
+        {/* FOCUS zone — primary content, full cards */}
+        {groups.focus.length > 0 && (
+          <AnimatePresence mode="popLayout">
+            <div className="space-y-4">
+              {groups.focus.map((block) => (
+                <motion.div
+                  key={block.id}
+                  layout
+                  layoutId={`block-${block.id}`}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                >
+                  <BlockRenderer block={block} onInspect={onInspect} />
+                </motion.div>
+              ))}
+            </div>
+          </AnimatePresence>
+        )}
+
+        {/* CONTEXT strip — condensed, kept around to ground the focus */}
+        {groups.context.length > 0 && (
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 mb-2 px-1">
+              Context
+            </p>
+            <AnimatePresence mode="popLayout">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 opacity-90">
+                {groups.context.map((block) => (
+                  <motion.div
+                    key={block.id}
+                    layout
+                    layoutId={`block-${block.id}`}
+                    initial={{ opacity: 0, scale: 0.97 }}
+                    animate={{ opacity: 0.9, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.97 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    className="text-[13px]"
+                  >
+                    <BlockRenderer block={block} onInspect={onInspect} />
+                  </motion.div>
+                ))}
+              </div>
+            </AnimatePresence>
+          </div>
+        )}
+
+        {/* REFERENCE rail — tiny chips, click to recall */}
+        {groups.reference.length > 0 && (
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 mb-2 px-1">
+              Reference
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {groups.reference.map((block) => (
+                <motion.button
+                  key={block.id}
+                  layout
+                  layoutId={`block-${block.id}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                  onClick={() => onInspect("block", block.id)}
+                  className="text-xs px-2.5 py-1.5 rounded-md border border-border bg-muted/40 hover:bg-muted/70 text-muted-foreground hover:text-foreground transition-colors max-w-[200px] truncate"
+                  title={block.headline}
+                >
+                  {block.headline}
+                </motion.button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ARCHIVED footer — count only, recoverable via undo/history */}
+        {groups.archived.length > 0 && (
+          <div className="flex items-center gap-2 text-[11px] text-muted-foreground/60 pt-2 border-t border-border/50">
+            <Archive className="w-3 h-3" />
+            <span>
+              {groups.archived.length} archived{" "}
+              {groups.archived.length === 1 ? "block" : "blocks"} (Cmd+Z to restore)
+            </span>
+          </div>
+        )}
+      </div>
+    </LayoutGroup>
   );
 }

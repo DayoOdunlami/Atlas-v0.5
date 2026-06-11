@@ -1,0 +1,26 @@
+{
+  "rationale": "Landscape network from corpus exploration",
+  "ops": [
+    {
+      "op": "add_block",
+      "block": {
+        "id": "network.explore.test",
+        "type": "NetworkMap",
+        "state": "core",
+        "headline": "Landscape — rail AI",
+        "visual": "knowledge_graph",
+        "role": "focus",
+        "content": {
+          "nodes": [
+            { "id": "theme.query", "label": "Rail AI", "group": "theme", "value": 12 },
+            { "id": "p1", "label": "RAPPID", "group": "project", "value": 8 }
+          ],
+          "edges": [{ "source": "theme.query", "target": "p1", "weight": 0.9, "label": "related" }]
+        }
+      }
+    }
+  ],
+  "confidence_tier": "Indicative",
+  "corpus_citations": [],
+  "stage_intent": "extend"
+}

@@ -37,6 +37,10 @@ import type {
   ObjectionResponseItem,
   MatchListItem,
   ConfidenceTier,
+  TransferLaneItem,
+  TransferOutcome,
+  EvidenceVerdict,
+  EvidenceState,
 } from "./atlas-render-model";
 import {
   type MatchRow,
@@ -84,6 +88,7 @@ function sortGaps(gaps: GapItem[]): GapItem[] {
 // ---------------------------------------------------------------------------
 
 const CQ_META: Record<CanonicalQuestionId, { mode: string; layout: string }> = {
+  "cq.home": { mode: "home", layout: "home" },
   "cq.match.browse": { mode: "browse", layout: "comparison" },
   "cq.match.workbench": { mode: "workbench", layout: "evidence_workbench" },
   "cq.match.act": { mode: "act", layout: "action_plan" },
@@ -341,6 +346,7 @@ function buildBlocksForCq(cqId: CanonicalQuestionId, ctx: BlockBuildCtx): Render
   const dimensionGap = makeDimensionGapBlock(ctx);
   const matchBench = makeMatchBenchBlock(ctx);
   const claimLedger = makeClaimLedgerBlock(ctx);
+  const transferLanes = makeTransferLanesBlock(ctx);
 
   switch (cqId) {
     case "cq.match.browse":
@@ -350,8 +356,11 @@ function buildBlocksForCq(cqId: CanonicalQuestionId, ctx: BlockBuildCtx): Render
     case "cq.match.defend":
       return [recommendation, makeObjectionResponseBlock(ctx), makeProvenanceTraceBlock(ctx), matchBench];
     case "cq.match.workbench":
-    default:
-      return [recommendation, evidenceSummary, dimensionGap, matchBench, claimLedger];
+    default: {
+      const blocks = [recommendation, evidenceSummary, dimensionGap, matchBench, claimLedger];
+      if (transferLanes) blocks.splice(3, 0, transferLanes);
+      return blocks;
+    }
   }
 }
 
@@ -402,6 +411,50 @@ function makeMatchBenchBlock(ctx: BlockBuildCtx): RenderBlock {
     state: "core",
     headline: "Evidence map",
     content: ctx.evidenceItems,
+  };
+}
+
+function mapVerdictToTransfer(
+  verdict: EvidenceVerdict,
+  evidenceState: EvidenceState,
+): TransferOutcome {
+  if (verdict === "strong" && (evidenceState === "verified" || evidenceState === "self-reported")) {
+    return "travels-as-is";
+  }
+  if (verdict === "partial" || verdict === "relevant" || verdict === "contextual") {
+    return "needs-reframing";
+  }
+  if (verdict === "judgement") {
+    return "not-credible-here";
+  }
+  if (verdict === "not mapped" || evidenceState === "unknown" || evidenceState === "contested") {
+    return "evidence-needed";
+  }
+  if (verdict === "strong") {
+    return "needs-reframing";
+  }
+  return "evidence-needed";
+}
+
+function makeTransferLanesBlock(ctx: BlockBuildCtx): RenderBlock | null {
+  if (ctx.evidenceItems.length === 0) return null;
+
+  const content: TransferLaneItem[] = ctx.evidenceItems.map((item, i) => ({
+    id: item.id || `lane-${i}`,
+    claim_text: item.claim_text,
+    transfer_outcome: mapVerdictToTransfer(item.verdict, item.evidence_state),
+    evidence_state: item.evidence_state,
+    provenance: item.provenance,
+    note: item.judgement,
+  }));
+
+  return {
+    id: "block-transfer-lanes",
+    type: "TransferLanes",
+    visual: "four_lane_board",
+    state: "core",
+    headline: `Transfer lanes (${content.length})`,
+    content,
   };
 }
 

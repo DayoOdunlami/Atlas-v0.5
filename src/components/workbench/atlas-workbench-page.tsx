@@ -10,6 +10,7 @@ import { WorkbenchSidebar } from "./app-sidebar";
 import { WorkbenchHeader } from "./site-header";
 import { AtlasShell } from "./atlas-shell";
 import { WorkbenchAgentBridge } from "./workbench-agent-bridge";
+import { Toaster } from "@/components/ui/ui/sonner";
 
 /**
  * Top-level workbench page component.
@@ -49,6 +50,9 @@ export function AtlasWorkbenchPage({
             </div>
           </SidebarInset>
         </SidebarProvider>
+        {/* Toaster mounts the M2.0 undo-toast affordance. Positioned bottom-right
+            so it doesn't collide with the chat composer or PatchConfirmationPanel. */}
+        <Toaster position="bottom-right" richColors closeButton />
       </WorkbenchAgentBridge>
     </WorkbenchProvider>
   );

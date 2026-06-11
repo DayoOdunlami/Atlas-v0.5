@@ -137,9 +137,33 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 
 @app.get("/health")
-async def health() -> dict[str, str]:
-    """Service-level health check — returns {"status": "ok"}."""
-    return {"status": "ok"}
+async def health() -> dict:
+    """Service-level health check with corpus transport probe."""
+    from mcps.cpc_corpus import transport
+    from mcps.cpc_corpus import queries
+
+    corpus_transport = "unknown"
+    corpus_ok = False
+    try:
+        rows = queries.search_projects("health", limit=1)
+        corpus_transport = transport.get_last_transport()
+        corpus_ok = corpus_transport != "unavailable"
+    except Exception as exc:
+        corpus_transport = "error"
+        corpus_detail = str(exc)[:120]
+    else:
+        corpus_detail = transport.human_transport_note(corpus_transport)
+
+    return {
+        "status": "ok",
+        "corpus": {
+            "ok": corpus_ok,
+            "transport": corpus_transport,
+            "note": corpus_detail,
+            "postgres_url_set": bool(os.getenv("POSTGRES_URL") or os.getenv("DATABASE_URL")),
+            "supabase_rest_set": transport.rest_configured(),
+        },
+    }
 
 
 @app.get("/")

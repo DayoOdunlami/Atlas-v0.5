@@ -1,0 +1,35 @@
+{
+  "rationale": "Transfer verdict for match evidence",
+  "ops": [
+    {
+      "op": "add_block",
+      "block": {
+        "id": "transfer.test",
+        "type": "TransferLanes",
+        "state": "core",
+        "headline": "Transfer verdict — Source → Target",
+        "visual": "four_lane_board",
+        "role": "focus",
+        "content": [
+          {
+            "id": "c1",
+            "claim_text": "TRL 6 demonstrated in rail",
+            "transfer_outcome": "travels-as-is",
+            "evidence_state": "verified",
+            "provenance": "stored"
+          },
+          {
+            "id": "c2",
+            "claim_text": "Needs reframing for maritime ports",
+            "transfer_outcome": "needs-reframing",
+            "evidence_state": "inferred",
+            "provenance": "derived"
+          }
+        ]
+      }
+    }
+  ],
+  "confidence_tier": "Indicative",
+  "corpus_citations": [],
+  "stage_intent": "extend"
+}

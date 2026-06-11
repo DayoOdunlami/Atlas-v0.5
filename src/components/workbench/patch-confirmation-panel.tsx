@@ -1,19 +1,18 @@
 "use client";
 
 /**
- * PatchConfirmationPanel — Model patch diff panel (M0.9)
+ * PatchConfirmationPanel — Hard-confirm Sheet (M0.9 / M2.0)
  *
- * Shown as a bottom Sheet when the workbench agent proposes a model_patch
- * (route = "propose"). Displays:
- *   - Agent rationale
- *   - Each operation (add_block / update_block / remove_block / update_spine)
+ * In the M2.0 act-don't-ask model this panel ONLY surfaces when the agent
+ * proposes a patch that would overwrite or remove a PINNED block (analyst
+ * work). All other patches auto-apply with a sonner undo toast.
+ *
+ * Surfaces:
+ *   - Agent rationale (why)
+ *   - Each destructive op (update_block / remove_block on a pinned block)
  *   - Confidence tier badge
  *   - Corpus citations backing the proposal
- *   - Confirm / Dismiss buttons
- *
- * Confirming calls WorkbenchContext.applyPatch() which applies the ops to
- * the active model immediately (client-side, no round-trip).
- * Dismissing calls dismissPatch() which clears the proposal.
+ *   - "Apply anyway" / "Keep my version" buttons
  *
  * Five Case / economic_analysis (M1.0):
  *   When the economic_analysis route produces a model_patch containing
@@ -133,8 +132,8 @@ export function PatchConfirmationPanel() {
       >
         <SheetHeader className="shrink-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <Sparkles className="w-4 h-4 text-indigo-500 shrink-0" />
-            <SheetTitle className="text-sm">Proposed artifact update</SheetTitle>
+            <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+            <SheetTitle className="text-sm">Confirm change to pinned block</SheetTitle>
             <Badge
               variant="outline"
               className={cn("text-[10px] ml-auto", tierStyle)}
@@ -143,6 +142,10 @@ export function PatchConfirmationPanel() {
             </Badge>
           </div>
           <SheetDescription className="text-xs text-muted-foreground leading-relaxed mt-1">
+            <span className="block mb-1">
+              <strong>The agent wants to edit a block you&apos;ve pinned.</strong> Other
+              changes apply automatically — this one needs your confirmation.
+            </span>
             {pendingPatch.rationale}
           </SheetDescription>
         </SheetHeader>
@@ -198,15 +201,15 @@ export function PatchConfirmationPanel() {
             onClick={dismissPatch}
           >
             <XCircle className="w-3.5 h-3.5" />
-            Dismiss
+            Keep my version
           </Button>
           <Button
             size="sm"
-            className="flex-1 gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white"
+            className="flex-1 gap-1.5 bg-amber-600 hover:bg-amber-700 text-white"
             onClick={() => applyPatch(pendingPatch)}
           >
             <CheckCircle2 className="w-3.5 h-3.5" />
-            Apply to artifact
+            Apply anyway
           </Button>
         </SheetFooter>
       </SheetContent>

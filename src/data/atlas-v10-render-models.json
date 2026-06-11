@@ -1,4 +1,39 @@
 {
+  "cq.home": {
+    "artifact_id": "artifact.home",
+    "model_version": "v1.0-home",
+    "generated_at": "2026-06-11T00:00:00Z",
+    "canonical_question_id": "cq.home",
+    "layout_template": "Home",
+    "mode": "Home",
+    "source_object": {
+      "type": "passport",
+      "id": "home",
+      "title": "Atlas Workbench",
+      "summary": "Ask anything about the CPC corpus, propose new analyses, or open a stored match."
+    },
+    "target_object": {
+      "type": "project",
+      "id": "home",
+      "title": "Your analysis"
+    },
+    "decision_spine": {
+      "recommendation": "Pick a starting point or just ask.",
+      "decision": "",
+      "summary": "Atlas can search the CPC corpus, build SWOTs and economic cases, compare projects, or open any stored match.",
+      "confidence_tier": "Robust",
+      "confidence_cap_reason": "",
+      "score": 1.0
+    },
+    "blocks": [],
+    "inspector_index": {},
+    "snapshot": {
+      "title": "Atlas Workbench \u2014 Home",
+      "included_blocks": [],
+      "must_include": []
+    },
+    "data_quality_notes": []
+  },
   "cq.match.browse": {
     "artifact_id": "artifact.fdb9019d-768e-41e4-86c6-981b0fd8974f.cq.match.browse",
     "model_version": "v1.0-spike",

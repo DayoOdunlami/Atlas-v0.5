@@ -16,7 +16,7 @@
  * See atlas-render-model.ts STAGED section for full Five Case mapping.
  */
 
-import type { AtlasRenderModel, RenderBlock } from "./atlas-render-model";
+import type { AtlasRenderModel, BlockRole, RenderBlock } from "./atlas-render-model";
 
 // ---------------------------------------------------------------------------
 // Route discriminator
@@ -49,6 +49,7 @@ export type WorkbenchRoute =
   | "explain"
   | "search"
   | "explore"           // M1.4 — corpus-wide exploration
+  | "translate"         // M1.5 — transfer lanes from match evidence
   | "propose"
   | "economic_analysis"
   | "conversational";
@@ -108,10 +109,12 @@ export interface WorkbenchAgentInput {
  * The frontend shows a diff confirmation before applying it to the artifact.
  *
  * Patch types:
- *   add_block    — insert a new block at the given index
- *   update_block — replace a block (matched by block_id)
- *   remove_block — remove a block
- *   update_spine — update specific fields in decision_spine
+ *   add_block       — insert a new block at the given index
+ *   update_block    — replace fields on a block (matched by block_id)
+ *   remove_block    — remove a block
+ *   update_spine    — update specific fields in decision_spine
+ *   set_block_role  — (M3) move a block into a different stage zone
+ *   archive_block   — (M3) hide a block off-stage (recoverable via undo / history)
  */
 export type ModelPatchOp =
   | {
@@ -132,7 +135,26 @@ export type ModelPatchOp =
   | {
       op: "update_spine";
       patch: Record<string, unknown>;
+    }
+  | {
+      op: "set_block_role";
+      block_id: string;
+      role: BlockRole;
+    }
+  | {
+      op: "archive_block";
+      block_id: string;
     };
+
+/**
+ * Stage intent (M3) — classifies how this patch reshapes the canvas.
+ *
+ *   extend    — add to the current stage without disturbing focus
+ *   pivot     — new focus, demote current focus to context (preserves thread)
+ *   recompose — same blocks, different visual / arrangement
+ *   branch    — archive entire current stage, start fresh (with breadcrumb back)
+ */
+export type StageIntent = "extend" | "pivot" | "recompose" | "branch";
 
 export interface ModelPatchProposal {
   /** human-readable summary of what this patch does */
@@ -147,6 +169,16 @@ export interface ModelPatchProposal {
     organisation: string;
     score: number;
   }>;
+  /**
+   * (M3) How this patch reshapes the stage. Defaults to `extend` when absent.
+   * Drives 200ms morph animation + branch confirm chip.
+   */
+  stage_intent?: StageIntent;
+  /**
+   * (M3) One-sentence narration of the stage move, shown alongside the chat
+   * reply: "Brought the action plan forward, parked the recommendation as context."
+   */
+  stage_narration?: string;
 }
 
 // ---------------------------------------------------------------------------

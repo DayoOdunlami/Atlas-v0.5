@@ -1,16 +1,11 @@
 """
-CPC-corpus MCP — PostgreSQL query implementations.
+CPC-corpus MCP — PostgreSQL query implementations with HTTPS REST fallback.
 
-Uses direct PostgreSQL (POSTGRES_URL / DATABASE_URL) to query atlas and hive
-schemas. The Supabase REST API does NOT expose these schemas.
+Primary: direct PostgreSQL (POSTGRES_URL) for pgvector semantic search.
+Fallback: Supabase REST on port 443 when Postgres TCP is blocked (corp VPN).
 
-All queries use explicit schema qualifiers:
-  atlas.projects, atlas.live_calls, atlas.knowledge_chunks,
-  atlas.knowledge_documents, hive.document_chunks, hive.articles
-Never: bare table names without schema prefix.
-
-Embedding: OpenAI text-embedding-3-small (1536-dim) — same model as corpus vectors.
-Falls back to ILIKE keyword search when OPENAI_API_KEY is absent.
+All queries use explicit schema qualifiers on atlas / hive.
+Embedding: OpenAI text-embedding-3-small (1536-dim).
 
 READ ONLY — SELECT queries only. Never INSERT/UPDATE/DELETE.
 """
@@ -25,6 +20,9 @@ from typing import Any, Optional
 
 import psycopg2
 import psycopg2.extras
+
+from mcps.cpc_corpus import transport
+from mcps.cpc_corpus import queries_rest
 
 # Load .env from agents/ or repo root so corpus search works in all runners
 # (langgraph dev, pytest, direct python -c, etc.)
@@ -50,6 +48,8 @@ except ImportError:
 def _conn():
     """Return a psycopg2 connection using POSTGRES_URL or DATABASE_URL."""
     raw = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL") or ""
+    if not raw.strip():
+        raise transport.PostgresUnavailable("POSTGRES_URL / DATABASE_URL not set")
     conn_str = re.sub(r"[?&]sslmode=[^&]*", "", raw)
     is_local = "localhost" in raw or "127.0.0.1" in raw
     kwargs: dict = {}
@@ -58,15 +58,55 @@ def _conn():
     return psycopg2.connect(conn_str, **kwargs)
 
 
-def _query(sql: str, params: tuple = ()) -> list[dict[str, Any]]:
-    """Execute a SELECT and return list of row dicts."""
-    conn = _conn()
+def _pg_query(sql: str, params: tuple = ()) -> list[dict[str, Any]]:
+    """Execute a SELECT on Postgres; raises PostgresUnavailable on network failure."""
     try:
-        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute(sql, params)
-            return [dict(row) for row in cur.fetchall()]
-    finally:
-        conn.close()
+        conn = _conn()
+        try:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(sql, params)
+                return [dict(row) for row in cur.fetchall()]
+        finally:
+            conn.close()
+    except transport.PostgresUnavailable:
+        raise
+    except (psycopg2.OperationalError, psycopg2.InterfaceError, OSError) as exc:
+        raise transport.PostgresUnavailable(str(exc)) from exc
+
+
+def _query(sql: str, params: tuple = ()) -> list[dict[str, Any]]:
+    """Back-compat alias — Postgres only (callers should use _pg_query + REST fallback)."""
+    return _pg_query(sql, params)
+
+
+def _rest_fallback_projects(
+    query: str,
+    limit: int,
+    embedding: Optional[str],
+) -> list[dict[str, Any]]:
+    if not transport.rest_configured():
+        transport.set_transport("unavailable")
+        return []
+    if embedding:
+        try:
+            vec = queries_rest.parse_embedding_string(embedding)
+            rows = queries_rest.search_projects_vector(vec, limit)
+            if rows:
+                transport.set_transport("rest_vector")
+                return rows
+        except Exception:
+            pass
+    rows = queries_rest.search_projects_keyword(query, limit)
+    transport.set_transport("rest_keyword")
+    return rows
+
+
+def _rest_fallback_live_calls(query: str, limit: int, open_only: bool) -> list[dict[str, Any]]:
+    if not transport.rest_configured():
+        transport.set_transport("unavailable")
+        return []
+    transport.set_transport("rest_keyword")
+    return queries_rest.search_live_calls_keyword(query, limit, open_only=open_only)
 
 
 # ---------------------------------------------------------------------------
@@ -111,42 +151,43 @@ def embed_query(text: str) -> Optional[str]:
 def search_projects(query: str, limit: int = 10) -> list[dict[str, Any]]:
     """
     Semantic search over atlas.projects. Falls back to ILIKE when no embedding.
-    All returned IDs are real UUIDs from atlas.projects.
+    On Postgres timeout, falls back to Supabase REST (443).
     """
+    transport.set_operation("search_projects")
     limit = min(int(limit), 50)
     embedding = embed_query(query)
 
-    if embedding:
-        rows = _query(
-            """
-            SELECT id, title, lead_org_name, abstract, transport_relevance_score,
-                   (1 - (embedding <=> %s::vector))::float AS similarity
-            FROM   atlas.projects
-            WHERE  embedding IS NOT NULL
-            ORDER  BY embedding <=> %s::vector
-            LIMIT  %s
-            """,
-            (embedding, embedding, limit),
-        )
-        return [
-            {
-                "id": str(r["id"]),
-                "title": r.get("title") or "",
-                "organisation": r.get("lead_org_name") or "",
-                "abstract": (r.get("abstract") or "")[:300],
-                # Cast numeric → float so results are JSON-serializable (Decimal is not)
-                "transport_relevance_score": (
-                    float(r["transport_relevance_score"])
-                    if r.get("transport_relevance_score") is not None else None
-                ),
-                "similarity": round(float(r.get("similarity") or 0), 4),
-                "source_type": "project",
-            }
-            for r in rows
-        ]
-    else:
+    try:
+        if embedding:
+            rows = _pg_query(
+                """
+                SELECT id, title, lead_org_name, abstract, transport_relevance_score,
+                       (1 - (embedding <=> %s::vector))::float AS similarity
+                FROM   atlas.projects
+                WHERE  embedding IS NOT NULL
+                ORDER  BY embedding <=> %s::vector
+                LIMIT  %s
+                """,
+                (embedding, embedding, limit),
+            )
+            transport.set_transport("postgres")
+            return [
+                {
+                    "id": str(r["id"]),
+                    "title": r.get("title") or "",
+                    "organisation": r.get("lead_org_name") or "",
+                    "abstract": (r.get("abstract") or "")[:300],
+                    "transport_relevance_score": (
+                        float(r["transport_relevance_score"])
+                        if r.get("transport_relevance_score") is not None else None
+                    ),
+                    "similarity": round(float(r.get("similarity") or 0), 4),
+                    "source_type": "project",
+                }
+                for r in rows
+            ]
         term = f"%{query}%"
-        rows = _query(
+        rows = _pg_query(
             """
             SELECT id, title, lead_org_name, abstract, transport_relevance_score
             FROM   atlas.projects
@@ -156,6 +197,7 @@ def search_projects(query: str, limit: int = 10) -> list[dict[str, Any]]:
             """,
             (term, term, limit),
         )
+        transport.set_transport("postgres")
         return [
             {
                 "id": str(r["id"]),
@@ -171,20 +213,33 @@ def search_projects(query: str, limit: int = 10) -> list[dict[str, Any]]:
             }
             for r in rows
         ]
+    except transport.PostgresUnavailable as exc:
+        transport.set_transport("unavailable", error=str(exc))
+        return _rest_fallback_projects(query, limit, embedding)
 
 
 def get_project(project_id: str) -> Optional[dict[str, Any]]:
     """Fetch a single atlas.projects record by UUID. Returns None if not found."""
-    rows = _query(
-        """
-        SELECT id, title, lead_org_name, abstract, transport_relevance_score
-        FROM   atlas.projects
-        WHERE  id = %s::uuid
-        LIMIT  1
-        """,
-        (project_id,),
-    )
+    transport.set_operation("get_project")
+    try:
+        rows = _pg_query(
+            """
+            SELECT id, title, lead_org_name, abstract, transport_relevance_score
+            FROM   atlas.projects
+            WHERE  id = %s::uuid
+            LIMIT  1
+            """,
+            (project_id,),
+        )
+        transport.set_transport("postgres")
+    except transport.PostgresUnavailable:
+        transport.set_transport("rest_keyword")
+        return queries_rest.get_project(project_id) if transport.rest_configured() else None
+
     if not rows:
+        if transport.rest_configured():
+            transport.set_transport("rest_keyword")
+            return queries_rest.get_project(project_id)
         return None
     r = rows[0]
     return {
@@ -213,61 +268,70 @@ def search_live_calls(
     """
     limit = min(int(limit), 50)
     embedding = embed_query(query)
+    transport.set_operation("search_live_calls")
 
-    if embedding:
-        if open_only:
-            sql = """
-                SELECT id, title, funder, description, status, deadline, source_url,
-                       (1 - (embedding <=> %s::vector))::float AS similarity
-                FROM   atlas.live_calls
-                WHERE  embedding IS NOT NULL AND status = 'open' AND (relevance_tag IS NULL OR relevance_tag != 'irrelevant')
-                ORDER  BY embedding <=> %s::vector
-                LIMIT  %s
-            """
+    try:
+        if embedding:
+            if open_only:
+                sql = """
+                    SELECT id, title, funder, description, status, deadline, source_url,
+                           (1 - (embedding <=> %s::vector))::float AS similarity
+                    FROM   atlas.live_calls
+                    WHERE  embedding IS NOT NULL AND status = 'open'
+                      AND (relevance_tag IS NULL OR relevance_tag != 'irrelevant')
+                    ORDER  BY embedding <=> %s::vector
+                    LIMIT  %s
+                """
+            else:
+                sql = """
+                    SELECT id, title, funder, description, status, deadline, source_url,
+                           (1 - (embedding <=> %s::vector))::float AS similarity
+                    FROM   atlas.live_calls
+                    WHERE  embedding IS NOT NULL
+                      AND (relevance_tag IS NULL OR relevance_tag != 'irrelevant')
+                    ORDER  BY embedding <=> %s::vector
+                    LIMIT  %s
+                """
+            rows = _pg_query(sql, (embedding, embedding, limit))
         else:
-            sql = """
-                SELECT id, title, funder, description, status, deadline, source_url,
-                       (1 - (embedding <=> %s::vector))::float AS similarity
-                FROM   atlas.live_calls
-                WHERE  embedding IS NOT NULL AND (relevance_tag IS NULL OR relevance_tag != 'irrelevant')
-                ORDER  BY embedding <=> %s::vector
-                LIMIT  %s
-            """
-        rows = _query(sql, (embedding, embedding, limit))
-    else:
-        term = f"%{query}%"
-        if open_only:
-            sql = """
-                SELECT id, title, funder, description, status, deadline, source_url
-                FROM   atlas.live_calls
-                WHERE  (title ILIKE %s OR description ILIKE %s) AND status = 'open' AND (relevance_tag IS NULL OR relevance_tag != 'irrelevant')
-                ORDER  BY deadline ASC NULLS LAST
-                LIMIT  %s
-            """
-        else:
-            sql = """
-                SELECT id, title, funder, description, status, deadline, source_url
-                FROM   atlas.live_calls
-                WHERE  (title ILIKE %s OR description ILIKE %s) AND (relevance_tag IS NULL OR relevance_tag != 'irrelevant')
-                ORDER  BY deadline ASC NULLS LAST
-                LIMIT  %s
-            """
-        rows = _query(sql, (term, term, limit))
+            term = f"%{query}%"
+            if open_only:
+                sql = """
+                    SELECT id, title, funder, description, status, deadline, source_url
+                    FROM   atlas.live_calls
+                    WHERE  (title ILIKE %s OR description ILIKE %s) AND status = 'open'
+                      AND (relevance_tag IS NULL OR relevance_tag != 'irrelevant')
+                    ORDER  BY deadline ASC NULLS LAST
+                    LIMIT  %s
+                """
+            else:
+                sql = """
+                    SELECT id, title, funder, description, status, deadline, source_url
+                    FROM   atlas.live_calls
+                    WHERE  (title ILIKE %s OR description ILIKE %s)
+                      AND (relevance_tag IS NULL OR relevance_tag != 'irrelevant')
+                    ORDER  BY deadline ASC NULLS LAST
+                    LIMIT  %s
+                """
+            rows = _pg_query(sql, (term, term, limit))
 
-    return [
-        {
-            "id": str(r["id"]),
-            "title": r.get("title") or "",
-            "funder": r.get("funder") or "",
-            "description": (r.get("description") or "")[:300],
-            "status": r.get("status") or "",
-            "deadline": str(r["deadline"]) if r.get("deadline") else None,
-            "source_url": r.get("source_url") or "",
-            "similarity": round(float(r["similarity"]), 4) if r.get("similarity") is not None else None,
-            "source_type": "live_call",
-        }
-        for r in rows
-    ]
+        transport.set_transport("postgres")
+        return [
+            {
+                "id": str(r["id"]),
+                "title": r.get("title") or "",
+                "funder": r.get("funder") or "",
+                "description": (r.get("description") or "")[:300],
+                "status": r.get("status") or "",
+                "deadline": str(r["deadline"]) if r.get("deadline") else None,
+                "source_url": r.get("source_url") or "",
+                "similarity": round(float(r["similarity"]), 4) if r.get("similarity") is not None else None,
+                "source_type": "live_call",
+            }
+            for r in rows
+        ]
+    except transport.PostgresUnavailable:
+        return _rest_fallback_live_calls(query, limit, open_only)
 
 
 # ---------------------------------------------------------------------------
@@ -593,16 +657,26 @@ def get_record_by_id(source_type: str, record_id: str) -> Optional[dict[str, Any
 
 def search_hive(query: str, limit: int = 10) -> list[dict[str, Any]]:
     """Article-level HIVE search (legacy). Prefer search_hive_evidence for chunk-level retrieval."""
+    transport.set_operation("search_hive")
     term = f"%{query}%"
-    rows = _query(
-        """
-        SELECT id, project_title, measure_title
-        FROM   hive.articles
-        WHERE  project_title ILIKE %s OR measure_title ILIKE %s
-        LIMIT  %s
-        """,
-        (term, term, min(int(limit), 50)),
-    )
+    try:
+        rows = _pg_query(
+            """
+            SELECT id, project_title, measure_title
+            FROM   hive.articles
+            WHERE  project_title ILIKE %s OR measure_title ILIKE %s
+            LIMIT  %s
+            """,
+            (term, term, min(int(limit), 50)),
+        )
+        transport.set_transport("postgres")
+    except transport.PostgresUnavailable:
+        if not transport.rest_configured():
+            transport.set_transport("unavailable")
+            return []
+        transport.set_transport("rest_keyword")
+        return queries_rest.search_hive_keyword(query, min(int(limit), 50))
+
     return [
         {
             "article_id": str(r["id"]),

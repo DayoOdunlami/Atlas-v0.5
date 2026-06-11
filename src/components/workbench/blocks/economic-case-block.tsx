@@ -30,6 +30,12 @@ import {
   type ValueSignal,
 } from "@/lib/design/tokens";
 import { CitationList } from "@/components/workbench/citation-popover";
+import { WorkbenchRichVisual } from "@/components/workbench/workbench-rich-visual";
+import {
+  buildAtlasVisualBlock,
+  usesDominantAtlasVisual,
+} from "@/lib/workbench/visual-adapter";
+import type { VisualId } from "@/lib/workbench/visual-registry";
 import type {
   EconomicCaseBlock as EconomicCaseBlockType,
   EconomicCaseContent,
@@ -242,12 +248,18 @@ function AssumptionLedger({ assumptions }: { assumptions: Assumption[] }) {
 
 interface Props {
   block: EconomicCaseBlockType;
+  effectiveVisual?: VisualId;
 }
 
-export function EconomicCaseBlock({ block }: Props) {
+export function EconomicCaseBlock({ block, effectiveVisual }: Props) {
   const c = block.content;
   const signal = verdictToSignal(c.verdict);
   const hasWaterfall = block.visual === "npv_waterfall" && c.npv_waterfall && c.npv_waterfall.length > 0;
+  const visual =
+    effectiveVisual ??
+    (block.visual as VisualId);
+  const atlasVisual = buildAtlasVisualBlock(block, visual);
+  const dominant = usesDominantAtlasVisual(block.type, visual);
 
   return (
     <div className="rounded-lg border border-border bg-card overflow-hidden">
@@ -264,6 +276,10 @@ export function EconomicCaseBlock({ block }: Props) {
       </div>
 
       <div className="px-4 py-4 space-y-5">
+        {dominant && atlasVisual && (
+          <WorkbenchRichVisual visual={atlasVisual} />
+        )}
+
         {/* Verdict card */}
         <div className={cn("rounded-lg border px-4 py-3 flex items-start gap-3", `bg-value-${signal}-bg border-value-${signal}/20`)}>
           <div className={cn("mt-0.5 shrink-0", valueClass(signal))}>

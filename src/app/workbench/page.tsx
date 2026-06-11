@@ -22,6 +22,7 @@ interface WorkbenchPageProps {
 }
 
 const VALID_CQ_IDS: CanonicalQuestionId[] = [
+  "cq.home",
   "cq.match.browse",
   "cq.match.workbench",
   "cq.match.act",

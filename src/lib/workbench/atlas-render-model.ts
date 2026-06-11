@@ -2,6 +2,7 @@
 // Source of truth: static JSON. No Supabase, no agent calls.
 
 export type CanonicalQuestionId =
+  | "cq.home"
   | "cq.match.browse"
   | "cq.match.workbench"
   | "cq.match.act"
@@ -145,6 +146,17 @@ export interface MatchListItem {
   status?: string;
 }
 
+/** Browse-mode corpus row — canonical OpportunityList item shape. */
+export interface OpportunityListItem {
+  id: string;
+  title: string;
+  organisation?: string;
+  score?: number;
+  funder?: string;
+  status?: string;
+  abstract?: string;
+}
+
 export interface ContextCardContent {
   source: {
     id: string;
@@ -272,10 +284,39 @@ export interface RecommendationConfidenceContent {
 // Discriminated block union
 // ---------------------------------------------------------------------------
 
+/**
+ * Stage role (M3 — Stage model).
+ *
+ * Atlas Workbench is a stage, not a log. Each block has a role that the
+ * agent (and analyst) can mutate per turn:
+ *
+ *   focus     — the primary answer to the current question (max ~3 at a time)
+ *   context   — supporting info kept around to ground the focus
+ *   reference — earlier work, available but minimised
+ *   archived  — off-stage but recoverable via Cmd+Z or stage history
+ *
+ * Backward compatible: blocks without an explicit role render as `focus`.
+ * The 3-zone canvas decides layout from `role`; legacy single-list canvas
+ * still works (every block renders as focus).
+ */
+export type BlockRole = "focus" | "context" | "reference" | "archived";
+
 interface BaseBlock {
   id: string;
   state: "core" | "collapsed" | "hidden";
   headline: string;
+  /**
+   * M2.0 — Pin a block to protect it from agent overwrite.
+   * When `pinned: true`, any `update_block` / `remove_block` patch targeting
+   * this block triggers a hard-confirm panel instead of auto-applying.
+   * Treat as analyst-edited content; the agent must ask before amputating.
+   */
+  pinned?: boolean;
+  /**
+   * M3 — Stage role (default `focus` if undefined).
+   * Decides which canvas zone renders this block.
+   */
+  role?: BlockRole;
 }
 
 export interface RecommendationConfidenceBlock extends BaseBlock {
@@ -326,10 +367,70 @@ export interface ProvenanceTraceBlock extends BaseBlock {
   content: ProvenanceTraceContent;
 }
 
+export interface QuadrantGridContent {
+  quadrants: Array<{ label: string; body: string }>;
+}
+
+// ---------------------------------------------------------------------------
+// NetworkMap — cq.explore.landscape (actors / themes / projects)
+// ---------------------------------------------------------------------------
+
+export type NetworkNodeGroup =
+  | "theme"
+  | "project"
+  | "funder"
+  | "document"
+  | "concept"
+  | "organisation";
+
+export interface NetworkMapNode {
+  id: string;
+  label: string;
+  group: NetworkNodeGroup;
+  value?: number;
+}
+
+export interface NetworkMapEdge {
+  source: string;
+  target: string;
+  weight?: number;
+  label?: string;
+}
+
+export interface NetworkMapContent {
+  nodes: NetworkMapNode[];
+  edges: NetworkMapEdge[];
+}
+
+// ---------------------------------------------------------------------------
+// TransferLanes — cq.translate.transfer (four-lane value translation verdict)
+// ---------------------------------------------------------------------------
+
+export type TransferOutcome =
+  | "travels-as-is"
+  | "needs-reframing"
+  | "not-credible-here"
+  | "evidence-needed";
+
+export interface TransferLaneItem {
+  id: string;
+  claim_text: string;
+  transfer_outcome: TransferOutcome;
+  evidence_state: EvidenceState;
+  provenance: Provenance;
+  note?: string;
+}
+
 export interface ComparisonMatrixBlock extends BaseBlock {
   type: "ComparisonMatrix";
-  visual: "stored_match_list";
-  content: MatchListItem[];
+  visual: "stored_match_list" | "match_score_bar" | "quadrant_grid";
+  content: MatchListItem[] | QuadrantGridContent;
+}
+
+export interface OpportunityListBlock extends BaseBlock {
+  type: "OpportunityList";
+  visual: "evidence_bar" | "ranked_table" | "match_score_bar";
+  content: OpportunityListItem[];
 }
 
 export interface ContextCardBlock extends BaseBlock {
@@ -345,6 +446,18 @@ export interface EconomicCaseBlock extends BaseBlock {
   content: EconomicCaseContent;
 }
 
+export interface NetworkMapBlock extends BaseBlock {
+  type: "NetworkMap";
+  visual: "knowledge_graph";
+  content: NetworkMapContent;
+}
+
+export interface TransferLanesBlock extends BaseBlock {
+  type: "TransferLanes";
+  visual: "four_lane_board";
+  content: TransferLaneItem[];
+}
+
 export type RenderBlock =
   | RecommendationConfidenceBlock
   | EvidenceStateSummaryBlock
@@ -355,6 +468,9 @@ export type RenderBlock =
   | ObjectionResponseBlock
   | ProvenanceTraceBlock
   | ComparisonMatrixBlock
+  | OpportunityListBlock
+  | NetworkMapBlock
+  | TransferLanesBlock
   | ContextCardBlock
   | EconomicCaseBlock;
   // ---------------------------------------------------------------------------

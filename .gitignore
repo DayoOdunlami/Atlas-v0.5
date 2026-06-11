@@ -53,3 +53,10 @@ agent/venv/
 agent/__pycache__/
 agent/.venv/
 agents/.env
+agents/.venv/
+agents/__pycache__/
+agents/**/__pycache__/
+agents/.langgraph_api/
+agents/.pytest_cache/
+mcps/**/__pycache__/
+**/*.pyc

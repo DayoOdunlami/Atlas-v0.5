@@ -23,11 +23,13 @@ import type {
   ReasoningStep,
 } from "./atlas-render-model";
 import type { ModelPatchProposal, ModelPatchOp } from "./workbench-agent-contract";
+import { normalizePatchProposal } from "./patch-normalize";
 import renderModels from "@/data/atlas-v10-render-models.json";
 
 const MODELS = renderModels as RenderModelMap;
 
 const CQ_IDS: CanonicalQuestionId[] = [
+  "cq.home",
   "cq.match.browse",
   "cq.match.workbench",
   "cq.match.act",
@@ -35,11 +37,25 @@ const CQ_IDS: CanonicalQuestionId[] = [
 ];
 
 export const CQ_LABELS: Record<CanonicalQuestionId, string> = {
+  "cq.home": "Home",
   "cq.match.browse": "Browse",
   "cq.match.workbench": "Workbench",
   "cq.match.act": "Act",
   "cq.match.defend": "Defend",
 };
+
+/** CQs that require a loaded match (source/target context) */
+export const MATCH_CQ_IDS: CanonicalQuestionId[] = [
+  "cq.match.browse",
+  "cq.match.workbench",
+  "cq.match.act",
+  "cq.match.defend",
+];
+
+/** True when this CQ requires a loaded match to be meaningful */
+export function isMatchCq(id: CanonicalQuestionId): boolean {
+  return MATCH_CQ_IDS.includes(id);
+}
 
 // ---------------------------------------------------------------------------
 // WorkbenchSession — the session/persistence contract.
@@ -80,29 +96,7 @@ export interface WorkbenchChatMessage {
   timestamp: string;
 }
 
-const INITIAL_MESSAGES: WorkbenchChatMessage[] = [
-  {
-    id: "demo-1",
-    role: "assistant",
-    content:
-      "The artifact on the right is the source of truth. I can help you navigate and explain it.",
-    timestamp: new Date().toISOString(),
-  },
-  {
-    id: "demo-2",
-    role: "assistant",
-    content:
-      "The RAPPID match is strong thematically, but confidence is capped at **Indicative** because all 10 passport claims are self-reported.",
-    timestamp: new Date().toISOString(),
-  },
-  {
-    id: "demo-3",
-    role: "assistant",
-    content:
-      "Three large gaps are holding back a higher score: platform method, GPS-denied evidence, and no independent safety case evidence.",
-    timestamp: new Date().toISOString(),
-  },
-];
+const INITIAL_MESSAGES: WorkbenchChatMessage[] = [];
 
 // ---------------------------------------------------------------------------
 // SessionListItem — entry shape for the sidebar sessions list
@@ -142,6 +136,36 @@ const DEMO_SESSIONS: SessionListItem[] = [
 // ---------------------------------------------------------------------------
 // WorkbenchState — full context shape
 // ---------------------------------------------------------------------------
+
+/**
+ * (M3) A snapshot of a past stage composition. Pushed onto stageHistory
+ * whenever a `branch` patch is applied. Lets the user scrub back through
+ * compositions, not just single-op undo.
+ */
+export interface StageSnapshot {
+  /** The model at the moment of branching */
+  model: AtlasRenderModel;
+  /** Patches applied at the time of the branch */
+  appliedPatches: ModelPatchProposal[];
+  /** Short label describing what was lost (e.g. "GPS-Denied analysis") */
+  label: string;
+  /** When the snapshot was taken */
+  snappedAt: string;
+}
+
+/**
+ * (M3) A `branch` patch held pending a 3-second auto-confirm chip.
+ * The user can cancel (drops the branch) or wait (auto-applies).
+ */
+export interface PendingBranchState {
+  patch: ModelPatchProposal;
+  /** Short topic label inferred from the rationale or stage_narration */
+  topicLabel: string;
+  /** Wall-clock ms when the chip appeared (drives the countdown) */
+  startedAt: number;
+  /** Auto-confirm delay in ms */
+  timeoutMs: number;
+}
 
 interface WorkbenchState {
   // Session
@@ -193,7 +217,7 @@ interface WorkbenchState {
   lastCitations: Array<{ id: string; title?: string; organisation?: string; score?: number; relevanceNote?: string }>;
   setLastCitations: (c: Array<{ id: string; title?: string; organisation?: string; score?: number; relevanceNote?: string }>) => void;
 
-  // Patch confirmation (M0.9)
+  // Patch confirmation (M0.9 — kept for hard-confirm overwrite case)
   /** Pending model_patch proposal from the agent — null when none in flight */
   pendingPatch: ModelPatchProposal | null;
   /** Set by WorkbenchAgentBridge when the agent emits a propose route output */
@@ -202,6 +226,130 @@ interface WorkbenchState {
   applyPatch: (patch: ModelPatchProposal) => void;
   /** Dismiss the pending patch without applying */
   dismissPatch: () => void;
+
+  // Act-don't-ask (M2.0) — undo stack + tiered confirmation routing
+  /**
+   * Receive a patch from the agent. Classifies destructiveness:
+   *  - `auto` (default for additive: add_block, update_spine, unpinned edits) → applies immediately
+   *  - `hard` (overwriting a pinned block) → surfaces PatchConfirmationPanel
+   * Returns the chosen tier so the caller can fire an undo toast on auto.
+   */
+  proposePatch: (patch: ModelPatchProposal) => ConfirmTier;
+  /** History of applied patches (oldest first) — source of truth for undo */
+  appliedPatches: ModelPatchProposal[];
+  /** True when there is a patch available to undo */
+  canUndo: boolean;
+  /** True when there is a patch available to redo */
+  canRedo: boolean;
+  /** Pop the most recent applied patch and replay the rest */
+  undo: () => boolean;
+  /** Re-apply the most recently undone patch */
+  redo: () => boolean;
+  /** Pin a block so it can't be overwritten without a hard confirm */
+  togglePin: (blockId: string) => void;
+
+  // ----------------------------------------------------------------
+  // M3 — Stage model: branch confirmation + stage history
+  // ----------------------------------------------------------------
+  /** A `branch` patch awaiting the 3-sec auto-confirm chip decision. */
+  pendingBranch: PendingBranchState | null;
+  /** User clicked "Keep this view" — drops the branch entirely. */
+  cancelPendingBranch: () => void;
+  /** Snapshots of previous stage compositions (one per branch). */
+  stageHistory: StageSnapshot[];
+  /** Pop the most recent stage snapshot and restore its composition. */
+  restorePreviousStage: () => boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Pure helpers (M2.0)
+// ---------------------------------------------------------------------------
+
+/**
+ * Apply a single patch to a model, returning the new model.
+ * Pure — does not mutate inputs. Supports all M3 patch ops:
+ *   add_block / update_block / remove_block / update_spine
+ *   set_block_role / archive_block
+ * `pinned` and `role` flags are preserved across updates unless the
+ * patch explicitly sets them.
+ */
+export function applyPatchToModel(
+  base: AtlasRenderModel,
+  patch: ModelPatchProposal,
+): AtlasRenderModel {
+  let blocks = [...base.blocks];
+  let spine = { ...base.decision_spine };
+
+  for (const op of patch.ops as ModelPatchOp[]) {
+    if (op.op === "add_block") {
+      const idx = typeof op.at_index === "number" ? op.at_index : blocks.length;
+      // New blocks default to focus role unless the agent specified one
+      const newBlock = {
+        role: "focus",
+        ...(op.block as RenderBlock),
+      } as RenderBlock;
+      blocks = [...blocks.slice(0, idx), newBlock, ...blocks.slice(idx)];
+    } else if (op.op === "update_block") {
+      blocks = blocks.map((b) =>
+        b.id === op.block_id
+          ? ({ ...b, ...(op.patch as Record<string, unknown>) } as RenderBlock)
+          : b,
+      );
+    } else if (op.op === "remove_block") {
+      blocks = blocks.filter((b) => b.id !== op.block_id);
+    } else if (op.op === "update_spine") {
+      spine = { ...spine, ...(op.patch as typeof spine) };
+    } else if (op.op === "set_block_role") {
+      blocks = blocks.map((b) =>
+        b.id === op.block_id ? ({ ...b, role: op.role } as RenderBlock) : b,
+      );
+    } else if (op.op === "archive_block") {
+      blocks = blocks.map((b) =>
+        b.id === op.block_id ? ({ ...b, role: "archived" } as RenderBlock) : b,
+      );
+    }
+  }
+
+  return { ...base, blocks, decision_spine: spine };
+}
+
+/** Replay an ordered list of patches against a base model. */
+function replayPatches(
+  base: AtlasRenderModel,
+  patches: ModelPatchProposal[],
+): AtlasRenderModel {
+  return patches.reduce(applyPatchToModel, base);
+}
+
+export type ConfirmTier = "auto" | "soft" | "hard" | "branch";
+
+/**
+ * Decide the confirmation tier for an incoming patch.
+ *
+ * Rules (additive-vs-destructive, NOT stakes):
+ *  - `add_block`                              → additive (auto)
+ *  - `update_block` on a pinned block         → destructive (hard)
+ *  - `remove_block` on a pinned block         → destructive (hard)
+ *  - `update_block` on an unpinned block      → additive (auto + undo toast)
+ *  - `remove_block` on an unpinned block      → additive (auto + undo toast)
+ *  - `update_spine`                           → additive (auto)
+ *
+ * "Pinned" = analyst has explicitly locked this block from agent overwrite.
+ * If ANY op in the patch is destructive, the entire patch is hard-confirmed.
+ */
+function classifyPatchTier(
+  patch: ModelPatchProposal,
+  currentModel: AtlasRenderModel,
+): ConfirmTier {
+  for (const op of patch.ops as ModelPatchOp[]) {
+    if (op.op === "update_block" || op.op === "remove_block") {
+      const target = currentModel.blocks.find((b) => b.id === op.block_id) as
+        | (RenderBlock & { pinned?: boolean })
+        | undefined;
+      if (target?.pinned) return "hard";
+    }
+  }
+  return "auto";
 }
 
 // ---------------------------------------------------------------------------
@@ -230,8 +378,16 @@ export function WorkbenchProvider({
   initialMatchId = null,
   initialCqId,
 }: WorkbenchProviderProps) {
+  // Default behaviour:
+  //   - If a match_id is in the URL → start in Browse (match-loaded)
+  //   - Otherwise → start at Home (no match required; "ask anything" landing)
+  // Explicit cq param always wins.
   const resolvedInitialCq: CanonicalQuestionId =
-    initialCqId && CQ_IDS.includes(initialCqId) ? initialCqId : "cq.match.workbench";
+    initialCqId && CQ_IDS.includes(initialCqId)
+      ? initialCqId
+      : initialMatchId
+        ? "cq.match.browse"
+        : "cq.home";
 
   const [cqId, setCqIdState] = React.useState<CanonicalQuestionId>(resolvedInitialCq);
   const [inspectorKey, setInspectorKey] = React.useState<string | null>(null);
@@ -244,11 +400,18 @@ export function WorkbenchProvider({
   const [lastRoute, setLastRoute] = React.useState<string | null>(null);
   const [lastCitations, setLastCitations] = React.useState<Array<{ id: string; title?: string; organisation?: string; score?: number; relevanceNote?: string }>>([]);
 
-  // Patch confirmation state (M0.9)
+  // Patch confirmation state (M0.9 + M2.0)
   const [pendingPatch, setPendingPatch] = React.useState<ModelPatchProposal | null>(null);
-  // Overlay model: starts as null, set when a patch is confirmed and applied.
-  // Sits on top of dbModel / static fixture until a new model is fetched.
-  const [patchedModel, setPatchedModel] = React.useState<AtlasRenderModel | null>(null);
+  // Applied patch history — replayed deterministically from baseModel.
+  // appliedPatches[0] is the oldest, appliedPatches[last] is the most recent.
+  const [appliedPatches, setAppliedPatches] = React.useState<ModelPatchProposal[]>([]);
+  // Patches that have been undone — pushed back on redo
+  const [redoStack, setRedoStack] = React.useState<ModelPatchProposal[]>([]);
+  // M3 — Stage history snapshots (one per branch)
+  const [stageHistory, setStageHistory] = React.useState<StageSnapshot[]>([]);
+  // M3 — Branch chip pending decision
+  const [pendingBranch, setPendingBranch] = React.useState<PendingBranchState | null>(null);
+  const branchTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // DB-backed model state. When initialMatchId is set, the model is fetched
   // from /api/workbench/render-model; otherwise the static fixture is used.
@@ -257,15 +420,24 @@ export function WorkbenchProvider({
   const [isLoading, setIsLoading] = React.useState<boolean>(isDbBacked);
   const [error, setError] = React.useState<string | null>(null);
 
-  // Active model priority: patched > DB-fetched > static fixture
+  // Base model resolution: DB-fetched > static fixture
   const baseModel: AtlasRenderModel = isDbBacked
     ? (dbModel ?? MODELS[cqId])
     : MODELS[cqId];
-  const model: AtlasRenderModel = patchedModel ?? baseModel;
 
-  // Clear patchedModel when cq or match changes so stale patches don't persist
+  // Derive the current model by replaying all applied patches from baseModel.
+  // This keeps undo deterministic — pop a patch and the model recomputes.
+  const model: AtlasRenderModel = React.useMemo(
+    () => replayPatches(baseModel, appliedPatches),
+    [baseModel, appliedPatches],
+  );
+
+  // Clear patch history + stage history when cq or match changes so stale state doesn't persist
   React.useEffect(() => {
-    setPatchedModel(null);
+    setAppliedPatches([]);
+    setRedoStack([]);
+    setStageHistory([]);
+    setPendingBranch(null);
   }, [cqId, initialMatchId]);
 
   const [session, setSessionState] = React.useState<WorkbenchSession>({
@@ -359,43 +531,192 @@ export function WorkbenchProvider({
     setInspectorKey(null);
   }, []);
 
-  // Apply a ModelPatchProposal to the active model.
-  // Supports: add_block, update_block, remove_block, update_spine.
+  // ---------------------------------------------------------------------
+  // Patch routing (M2.0 — act-don't-ask)
+  // ---------------------------------------------------------------------
+  //
+  // Apply pushes a patch onto the appliedPatches history. The current model
+  // is always replayPatches(baseModel, appliedPatches) — so undo is just a
+  // history pop. This guarantees consistency across undo/redo/cq changes.
+
   const applyPatch = React.useCallback((patch: ModelPatchProposal) => {
-    setPatchedModel((prev) => {
-      const base = prev ?? model;
-      let blocks = [...base.blocks];
-      let spine = { ...base.decision_spine };
-
-      for (const op of patch.ops as ModelPatchOp[]) {
-        if (op.op === "add_block") {
-          const idx = typeof op.at_index === "number" ? op.at_index : blocks.length;
-          blocks = [
-            ...blocks.slice(0, idx),
-            op.block as RenderBlock,
-            ...blocks.slice(idx),
-          ];
-        } else if (op.op === "update_block") {
-          blocks = blocks.map((b) =>
-            b.block_id === op.block_id
-              ? { ...b, ...(op.patch as Partial<RenderBlock>) }
-              : b,
-          );
-        } else if (op.op === "remove_block") {
-          blocks = blocks.filter((b) => b.block_id !== op.block_id);
-        } else if (op.op === "update_spine") {
-          spine = { ...spine, ...(op.patch as typeof spine) };
-        }
-      }
-
-      return { ...base, blocks, decision_spine: spine };
-    });
+    const normalized = normalizePatchProposal(patch);
+    setAppliedPatches((prev) => [...prev, normalized]);
+    setRedoStack([]); // new action invalidates redo stack
     setPendingPatch(null);
-  }, [model]);
+  }, []);
 
   const dismissPatch = React.useCallback(() => {
     setPendingPatch(null);
   }, []);
+
+  // M3 — Stage history & branch handling
+  // -------------------------------------------------------------------
+  // When the agent emits stage_intent="branch", we hold the patch in
+  // pendingBranch and surface a 3-sec auto-confirm chip. If the timer
+  // fires, we snapshot the current composition and apply the patch.
+  // If the user cancels, we drop the patch entirely.
+
+  const clearBranchTimer = React.useCallback(() => {
+    if (branchTimerRef.current) {
+      clearTimeout(branchTimerRef.current);
+      branchTimerRef.current = null;
+    }
+  }, []);
+
+  const _applyBranchInternal = React.useCallback(
+    (patch: ModelPatchProposal, currentModel: AtlasRenderModel, currentPatches: ModelPatchProposal[]) => {
+      // Snapshot the current composition so the user can restore it later
+      const focusBlocks = currentModel.blocks.filter(
+        (b) => !b.role || b.role === "focus",
+      );
+      const label =
+        focusBlocks[0]?.headline ??
+        currentModel.source_object?.title ??
+        "Previous stage";
+      const snapshot: StageSnapshot = {
+        model: currentModel,
+        appliedPatches: [...currentPatches],
+        label: label.slice(0, 60),
+        snappedAt: new Date().toISOString(),
+      };
+      setStageHistory((prev) => [...prev, snapshot]);
+      // Apply the branch patch as a fresh stage
+      applyPatch(patch);
+    },
+    [applyPatch],
+  );
+
+  const cancelPendingBranch = React.useCallback(() => {
+    clearBranchTimer();
+    setPendingBranch(null);
+  }, [clearBranchTimer]);
+
+  const restorePreviousStage = React.useCallback((): boolean => {
+    let didRestore = false;
+    setStageHistory((prev) => {
+      if (prev.length === 0) return prev;
+      const last = prev[prev.length - 1];
+      setAppliedPatches(last.appliedPatches);
+      setRedoStack([]);
+      didRestore = true;
+      return prev.slice(0, -1);
+    });
+    return didRestore;
+  }, []);
+
+  // proposePatch: receives an incoming patch from the agent and decides
+  // the confirmation tier based on destructiveness AND stage intent.
+  //  - branch  (M3) → surfaces a 3-sec auto-confirm chip
+  //  - hard         → surfaces PatchConfirmationPanel for pinned-block overwrite
+  //  - auto / soft  → applies immediately with undo toast
+  const proposePatch = React.useCallback((patch: ModelPatchProposal): ConfirmTier => {
+    // M3 — branch intent always confirms first
+    if (patch.stage_intent === "branch") {
+      clearBranchTimer();
+      const topicLabel =
+        patch.stage_narration ??
+        patch.rationale.slice(0, 60) ??
+        "new topic";
+      setPendingBranch({
+        patch,
+        topicLabel,
+        startedAt: Date.now(),
+        timeoutMs: 3000,
+      });
+      // Capture closure-stable refs for the auto-fire
+      const snapshotModel = model;
+      const snapshotPatches = appliedPatches;
+      branchTimerRef.current = setTimeout(() => {
+        _applyBranchInternal(patch, snapshotModel, snapshotPatches);
+        setPendingBranch(null);
+        branchTimerRef.current = null;
+      }, 3000);
+      return "branch";
+    }
+
+    const tier = classifyPatchTier(patch, model);
+    if (tier === "hard") {
+      setPendingPatch(patch);
+      return tier;
+    }
+    // auto / soft: apply immediately. The toast (fired by the bridge) surfaces
+    // the undo affordance.
+    applyPatch(patch);
+    return tier;
+  }, [model, appliedPatches, applyPatch, clearBranchTimer, _applyBranchInternal]);
+
+  // Cleanup branch timer on unmount
+  React.useEffect(() => () => clearBranchTimer(), [clearBranchTimer]);
+
+  const canUndo = appliedPatches.length > 0;
+  const canRedo = redoStack.length > 0;
+
+  const undo = React.useCallback((): boolean => {
+    let didUndo = false;
+    setAppliedPatches((prev) => {
+      if (prev.length === 0) return prev;
+      const last = prev[prev.length - 1];
+      setRedoStack((r) => [...r, last]);
+      didUndo = true;
+      return prev.slice(0, -1);
+    });
+    return didUndo;
+  }, []);
+
+  const redo = React.useCallback((): boolean => {
+    let didRedo = false;
+    setRedoStack((prev) => {
+      if (prev.length === 0) return prev;
+      const last = prev[prev.length - 1];
+      setAppliedPatches((p) => [...p, last]);
+      didRedo = true;
+      return prev.slice(0, -1);
+    });
+    return didRedo;
+  }, []);
+
+  // Pinning a block: emit a virtual update_block patch that flips `pinned`.
+  // Stored as a history entry so unpinning is also undoable.
+  const togglePin = React.useCallback((blockId: string) => {
+    const target = model.blocks.find((b) => b.id === blockId);
+    if (!target) return;
+    const nextPinned = !((target as RenderBlock & { pinned?: boolean }).pinned);
+    const pinPatch: ModelPatchProposal = {
+      rationale: nextPinned ? `Pinned block ${blockId}` : `Unpinned block ${blockId}`,
+      ops: [
+        {
+          op: "update_block",
+          block_id: blockId,
+          patch: { pinned: nextPinned } as Partial<RenderBlock>,
+        },
+      ],
+      confidence_tier: "Robust",
+      corpus_citations: [],
+    };
+    applyPatch(pinPatch);
+  }, [model.blocks, applyPatch]);
+
+  // Global keyboard listener for Cmd+Z / Ctrl+Z (undo), Cmd+Shift+Z (redo)
+  React.useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod) return;
+      // Ignore when typing in an input/textarea/contentEditable
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+      if (tag === "input" || tag === "textarea" || target?.isContentEditable) return;
+      if (e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      } else if ((e.key === "z" && e.shiftKey) || e.key === "y") {
+        e.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [undo, redo]);
 
   return (
     <WorkbenchContext.Provider
@@ -428,6 +749,18 @@ export function WorkbenchProvider({
         setPendingPatch,
         applyPatch,
         dismissPatch,
+        proposePatch,
+        appliedPatches,
+        canUndo,
+        canRedo,
+        undo,
+        redo,
+        togglePin,
+        // M3 — stage model
+        pendingBranch,
+        cancelPendingBranch,
+        stageHistory,
+        restorePreviousStage,
       }}
     >
       {children}

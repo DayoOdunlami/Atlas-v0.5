@@ -21,6 +21,16 @@
 
 import type { RenderBlock } from "./atlas-render-model";
 
+export interface BlockDataShape {
+  rowCount?: number;
+  quadrantCount?: number;
+  gapCount?: number;
+  nodeCount?: number;
+  hasNpvWaterfall?: boolean;
+  hasFiveCaseScores?: boolean;
+  evidenceStateTotal?: number;
+}
+
 // ---------------------------------------------------------------------------
 // Visual identifier union — every allowed visual string lives here
 // ---------------------------------------------------------------------------
@@ -49,8 +59,15 @@ export type VisualId =
   // ComparisonMatrix
   | "stored_match_list"
   | "match_score_bar"
+  | "quadrant_grid"
   // ContextCard
   | "paired_context_cards"
+  // OpportunityList (Browse mode)
+  | "ranked_table"
+  // NetworkMap
+  | "knowledge_graph"
+  // TransferLanes
+  | "four_lane_board"
   // EconomicCase (Five Case Model — M1.0)
   | "npv_waterfall"
   | "value_driver_cards";
@@ -129,14 +146,35 @@ export const VISUAL_REGISTRY: Record<RenderBlock["type"], VisualRegistryEntry> =
   ComparisonMatrix: {
     blockType: "ComparisonMatrix",
     primary: "stored_match_list",
-    alternatives: ["match_score_bar"],
-    description: "Browse-mode list of available matches with scores and funder.",
+    alternatives: ["match_score_bar", "quadrant_grid"],
+    description: "Match list (browse) or quadrant grid layout recipe (e.g. SWOT).",
   },
   ContextCard: {
     blockType: "ContextCard",
     primary: "paired_context_cards",
     alternatives: [],
     description: "Side-by-side source/target context cards.",
+  },
+  OpportunityList: {
+    blockType: "OpportunityList",
+    primary: "evidence_bar",
+    alternatives: ["ranked_table", "match_score_bar"],
+    description:
+      "Ranked/filterable corpus rows (Browse mode). evidence_bar for ≥3 results; ranked_table for side-by-side compare.",
+  },
+  NetworkMap: {
+    blockType: "NetworkMap",
+    primary: "knowledge_graph",
+    alternatives: [],
+    description:
+      "Force-directed graph of projects, organisations, and themes — cq.explore.landscape.",
+  },
+  TransferLanes: {
+    blockType: "TransferLanes",
+    primary: "four_lane_board",
+    alternatives: [],
+    description:
+      "Four-lane value translation board: travels-as-is / needs reframing / not credible / evidence needed.",
   },
   EconomicCase: {
     blockType: "EconomicCase",
@@ -159,19 +197,37 @@ export const VISUAL_REGISTRY: Record<RenderBlock["type"], VisualRegistryEntry> =
 export function selectVisualRecipe(
   blockType: RenderBlock["type"],
   requestedVisual?: string,
+  dataShape?: BlockDataShape,
 ): VisualId {
   const entry = VISUAL_REGISTRY[blockType];
   if (!entry) return "decision_card"; // safe fallback — should never happen
 
-  if (!requestedVisual) return entry.primary;
-
   const allowed: VisualId[] = [entry.primary, ...entry.alternatives];
-  if (allowed.includes(requestedVisual as VisualId)) {
+
+  if (requestedVisual && allowed.includes(requestedVisual as VisualId)) {
     return requestedVisual as VisualId;
   }
 
-  // Requested visual is not registered — fall back to primary and let
-  // validateBlockVisual() emit the dev warning.
+  // Art Director — data-shape heuristics when agent omits visual
+  if (blockType === "OpportunityList" || blockType === "ComparisonMatrix") {
+    const rows = dataShape?.rowCount ?? 0;
+    if (rows >= 5) return "match_score_bar";
+    if (rows >= 2) return blockType === "OpportunityList" ? "evidence_bar" : "stored_match_list";
+  }
+
+  if (blockType === "DimensionGap" && (dataShape?.gapCount ?? 0) >= 3) {
+    return "gap_matrix";
+  }
+
+  if (blockType === "EvidenceStateSummary" && (dataShape?.evidenceStateTotal ?? 0) >= 4) {
+    return "evidence_coverage_donut";
+  }
+
+  if (blockType === "EconomicCase") {
+    if (dataShape?.hasNpvWaterfall) return "npv_waterfall";
+    if (dataShape?.hasFiveCaseScores) return "value_driver_cards";
+  }
+
   return entry.primary;
 }
 

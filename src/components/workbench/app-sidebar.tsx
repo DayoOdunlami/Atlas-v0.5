@@ -16,10 +16,12 @@ import {
 import {
   useWorkbench,
   CQ_LABELS,
+  isMatchCq,
   type SessionListItem,
 } from "@/lib/workbench/workbench-context";
 import type { CanonicalQuestionId } from "@/lib/workbench/atlas-render-model";
 import {
+  Home,
   Search,
   Wrench,
   Zap,
@@ -32,6 +34,7 @@ import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 
 const CQ_ICONS: Record<CanonicalQuestionId, React.ReactNode> = {
+  "cq.home":            <Home className="w-4 h-4" />,
   "cq.match.browse":    <Search className="w-4 h-4" />,
   "cq.match.workbench": <Wrench className="w-4 h-4" />,
   "cq.match.act":       <Zap className="w-4 h-4" />,
@@ -130,9 +133,13 @@ function WorkbenchSessionsSection() {
 // ---------------------------------------------------------------------------
 
 export function WorkbenchSidebar() {
-  const { cqId, setCqId, cqIds } = useWorkbench();
+  const { cqId, setCqId, cqIds, session } = useWorkbench();
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
+  const hasMatch = Boolean(session.matchId);
+
+  const homeIds = cqIds.filter((id) => !isMatchCq(id));
+  const matchIds = cqIds.filter(isMatchCq);
 
   return (
     <Sidebar collapsible="icon">
@@ -152,19 +159,50 @@ export function WorkbenchSidebar() {
       </div>
 
       <SidebarContent>
-        {/* CQ shortcuts */}
+        {/* Top-level: Home */}
         <SidebarGroup>
-          {!collapsed && (
-            <SidebarGroupLabel>Canonical questions</SidebarGroupLabel>
-          )}
           <SidebarGroupContent>
             <SidebarMenu>
-              {cqIds.map((id: CanonicalQuestionId) => (
+              {homeIds.map((id: CanonicalQuestionId) => (
                 <SidebarMenuItem key={id}>
                   <SidebarMenuButton
                     isActive={id === cqId}
                     tooltip={CQ_LABELS[id]}
                     onClick={() => setCqId(id)}
+                  >
+                    {CQ_ICONS[id]}
+                    <span>{CQ_LABELS[id]}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
+        {/* Match-bound CQs — greyed out when no match is loaded */}
+        <SidebarGroup>
+          {!collapsed && (
+            <SidebarGroupLabel className="flex items-center gap-1.5">
+              Match views
+              {!hasMatch && (
+                <span className="text-[9px] text-muted-foreground/50 normal-case font-normal">
+                  · load a match
+                </span>
+              )}
+            </SidebarGroupLabel>
+          )}
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {matchIds.map((id: CanonicalQuestionId) => (
+                <SidebarMenuItem key={id}>
+                  <SidebarMenuButton
+                    isActive={id === cqId}
+                    tooltip={CQ_LABELS[id]}
+                    onClick={() => setCqId(id)}
+                    disabled={!hasMatch}
+                    className={cn(!hasMatch && "opacity-40")}
                   >
                     {CQ_ICONS[id]}
                     <span>{CQ_LABELS[id]}</span>
