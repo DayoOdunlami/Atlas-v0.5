@@ -39,18 +39,18 @@ export function ArtifactCanvas() {
   return (
     <div className="flex flex-col h-full overflow-y-auto">
       {/* Canvas subheader — context + CQ morph bar (no duplicate source title, that's in WorkbenchHeader) */}
-      <div className="flex items-center gap-2 px-5 py-2.5 border-b border-border bg-muted/10 shrink-0 overflow-x-auto">
-        <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 shrink-0">
+      <div className="flex items-center gap-2 px-6 py-3 border-b border-border bg-muted/10 shrink-0 overflow-x-auto">
+        <span className="text-[11px] uppercase tracking-wider text-muted-foreground/80 shrink-0 font-semibold">
           View
         </span>
-        <ChevronRight className="w-3 h-3 text-muted-foreground shrink-0" />
+        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
         {MATCH_CQ_IDS.map((id: CanonicalQuestionId) => (
           <button
             key={id}
             onClick={() => setCqId(id)}
             disabled={isLoading}
             className={cn(
-              "px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed",
+              "px-3 py-1.5 rounded-md text-[13px] font-medium transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed",
               id === cqId
                 ? "bg-primary text-primary-foreground"
                 : "bg-background border border-border text-muted-foreground hover:text-foreground hover:border-primary/40",
@@ -60,7 +60,7 @@ export function ArtifactCanvas() {
           </button>
         ))}
         <div className="flex-1" />
-        <span className="text-[10px] text-muted-foreground/60 shrink-0 truncate max-w-[200px]">
+        <span className="text-[11px] text-muted-foreground/70 shrink-0 truncate max-w-[240px]">
           {model.mode} · {model.layout_template}
         </span>
       </div>
@@ -116,7 +116,7 @@ export function ArtifactCanvas() {
       )}
 
       {/* Blocks — 3-zone stage layout (focus / context / reference) */}
-      <div className="flex-1 px-5 pb-6">
+      <div className="flex-1 px-6 pb-8 pt-1">
         {isLoading && isDbBacked ? (
           <div className="space-y-4">
             <BlockSkeletonRecommendation />
@@ -130,12 +130,18 @@ export function ArtifactCanvas() {
 
         {/* Data quality notes */}
         {!error && !isLoading && model.data_quality_notes.length > 0 && (
-          <div className="rounded-md border border-dashed border-border p-3 mt-4">
-            <p className="text-xs font-semibold text-muted-foreground mb-2">Data quality notes</p>
-            <ul className="space-y-1">
+          <div className="rounded-lg border border-dashed border-border p-4 mt-6 bg-muted/20">
+            <p className="text-[13px] font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
+              Data quality notes
+            </p>
+            <ul className="space-y-1.5">
               {model.data_quality_notes.map((note, i) => (
-                <li key={i} className="text-xs text-muted-foreground flex gap-1.5">
-                  <span className="shrink-0">·</span>{note}
+                <li
+                  key={i}
+                  className="text-sm text-muted-foreground flex gap-2 leading-relaxed"
+                >
+                  <span className="shrink-0 text-muted-foreground/60">·</span>
+                  <span>{note}</span>
                 </li>
               ))}
             </ul>
@@ -185,12 +191,16 @@ function StageZones({
     groups.reference.length === 0;
   if (isEmpty) {
     return (
-      <div className="rounded-lg border border-dashed border-border bg-muted/10 p-8 text-center">
-        <p className="text-sm font-medium text-muted-foreground">
+      <div className="rounded-xl border border-dashed border-border bg-muted/10 p-12 text-center">
+        <p className="text-base font-semibold text-foreground">
           Ask a question in chat to populate this stage
         </p>
-        <p className="text-xs text-muted-foreground/70 mt-1">
-          Substantive answers land here as cards. Use Cmd+Z to revert.
+        <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto leading-relaxed">
+          Substantive answers land here as cards. Use{" "}
+          <kbd className="px-1.5 py-0.5 rounded border border-border bg-background text-[11px] font-mono">
+            Cmd+Z
+          </kbd>{" "}
+          to revert any block the agent adds.
         </p>
       </div>
     );
@@ -198,46 +208,31 @@ function StageZones({
 
   return (
     <LayoutGroup>
-      <div className="space-y-6">
-        {/* FOCUS zone — primary content, full cards */}
+      <div className="space-y-8">
+        {/* FOCUS zone — primary content, full cards arranged via content-aware grid */}
         {groups.focus.length > 0 && (
           <AnimatePresence mode="popLayout">
-            <div className="space-y-4">
-              {groups.focus.map((block) => (
-                <motion.div
-                  key={block.id}
-                  layout
-                  layoutId={`block-${block.id}`}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4, scale: 0.98 }}
-                  transition={{ duration: 0.2, ease: "easeOut" }}
-                >
-                  <BlockRenderer block={block} onInspect={onInspect} />
-                </motion.div>
-              ))}
-            </div>
+            <FocusGrid blocks={groups.focus} onInspect={onInspect} />
           </AnimatePresence>
         )}
 
         {/* CONTEXT strip — condensed, kept around to ground the focus */}
         {groups.context.length > 0 && (
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 mb-2 px-1">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 mb-2.5 px-1">
               Context
             </p>
             <AnimatePresence mode="popLayout">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 opacity-90">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 opacity-95">
                 {groups.context.map((block) => (
                   <motion.div
                     key={block.id}
                     layout
                     layoutId={`block-${block.id}`}
                     initial={{ opacity: 0, scale: 0.97 }}
-                    animate={{ opacity: 0.9, scale: 1 }}
+                    animate={{ opacity: 0.95, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.97 }}
                     transition={{ duration: 0.2, ease: "easeOut" }}
-                    className="text-[13px]"
                   >
                     <BlockRenderer block={block} onInspect={onInspect} />
                   </motion.div>
@@ -250,7 +245,7 @@ function StageZones({
         {/* REFERENCE rail — tiny chips, click to recall */}
         {groups.reference.length > 0 && (
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 mb-2 px-1">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 mb-2.5 px-1">
               Reference
             </p>
             <div className="flex flex-wrap gap-2">
@@ -276,8 +271,8 @@ function StageZones({
 
         {/* ARCHIVED footer — count only, recoverable via undo/history */}
         {groups.archived.length > 0 && (
-          <div className="flex items-center gap-2 text-[11px] text-muted-foreground/60 pt-2 border-t border-border/50">
-            <Archive className="w-3 h-3" />
+          <div className="flex items-center gap-2 text-[12px] text-muted-foreground/70 pt-3 border-t border-border/50">
+            <Archive className="w-3.5 h-3.5" />
             <span>
               {groups.archived.length} archived{" "}
               {groups.archived.length === 1 ? "block" : "blocks"} (Cmd+Z to restore)
@@ -286,5 +281,120 @@ function StageZones({
         )}
       </div>
     </LayoutGroup>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// FocusGrid — content-aware layout for the focus zone
+//
+// Atlas blocks have very different visual weight:
+//   - Full-width: NetworkMap, ComparisonMatrix (SWOT), EconomicCase,
+//     MatchBench, DimensionGap, ClaimLedger, OpportunityList, TransferLanes,
+//     ActionPlan, ObjectionResponse, ProvenanceTrace
+//   - Half-width: ContextCard, EvidenceStateSummary, RecommendationConfidence
+//
+// We pair consecutive half-width blocks side-by-side on >=lg screens. Full
+// blocks always take a row of their own. This stops the canvas from feeling
+// like a single tall column and recovers the unused horizontal real estate.
+// ---------------------------------------------------------------------------
+
+const HALF_WIDTH_BLOCK_TYPES = new Set<RenderBlock["type"]>([
+  "ContextCard",
+  "EvidenceStateSummary",
+  "RecommendationConfidence",
+]);
+
+type FocusRow =
+  | { kind: "full"; block: RenderBlock }
+  | { kind: "pair"; blocks: [RenderBlock, RenderBlock] }
+  | { kind: "half"; block: RenderBlock };
+
+function packFocusRows(blocks: RenderBlock[]): FocusRow[] {
+  const rows: FocusRow[] = [];
+  let i = 0;
+  while (i < blocks.length) {
+    const a = blocks[i];
+    if (HALF_WIDTH_BLOCK_TYPES.has(a.type)) {
+      const b = blocks[i + 1];
+      if (b && HALF_WIDTH_BLOCK_TYPES.has(b.type)) {
+        rows.push({ kind: "pair", blocks: [a, b] });
+        i += 2;
+        continue;
+      }
+      rows.push({ kind: "half", block: a });
+      i += 1;
+      continue;
+    }
+    rows.push({ kind: "full", block: a });
+    i += 1;
+  }
+  return rows;
+}
+
+function FocusGrid({
+  blocks,
+  onInspect,
+}: {
+  blocks: RenderBlock[];
+  onInspect: (kind: string, payload?: unknown) => void;
+}) {
+  const rows = React.useMemo(() => packFocusRows(blocks), [blocks]);
+
+  return (
+    <div className="space-y-5">
+      {rows.map((row, idx) => {
+        if (row.kind === "full") {
+          return (
+            <motion.div
+              key={row.block.id}
+              layout
+              layoutId={`block-${row.block.id}`}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4, scale: 0.98 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+            >
+              <BlockRenderer block={row.block} onInspect={onInspect} />
+            </motion.div>
+          );
+        }
+        if (row.kind === "half") {
+          return (
+            <motion.div
+              key={row.block.id}
+              layout
+              layoutId={`block-${row.block.id}`}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4, scale: 0.98 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="md:max-w-[60%]"
+            >
+              <BlockRenderer block={row.block} onInspect={onInspect} />
+            </motion.div>
+          );
+        }
+        return (
+          <div
+            key={`pair-${idx}-${row.blocks[0].id}`}
+            className="grid grid-cols-1 lg:grid-cols-2 gap-5"
+          >
+            {row.blocks.map((b) => (
+              <motion.div
+                key={b.id}
+                layout
+                layoutId={`block-${b.id}`}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+              >
+                <BlockRenderer block={b} onInspect={onInspect} />
+              </motion.div>
+            ))}
+          </div>
+        );
+      })}
+    </div>
   );
 }

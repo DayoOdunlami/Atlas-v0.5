@@ -15,8 +15,8 @@ export function AtlasShell() {
 
   return (
     <div className="flex h-full overflow-hidden">
-      {/* Chat panel — narrow but readable; clamps so the canvas keeps the spotlight */}
-      <div className="hidden lg:flex flex-col w-[320px] xl:w-[360px] shrink-0 h-full max-w-[28vw]">
+      {/* Chat panel — readable density; clamps so the canvas keeps the spotlight */}
+      <div className="hidden lg:flex flex-col w-[360px] xl:w-[400px] 2xl:w-[440px] shrink-0 h-full max-w-[32vw]">
         <ChatPanel />
       </div>
 

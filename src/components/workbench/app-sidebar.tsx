@@ -73,11 +73,11 @@ function WorkbenchSessionItem({ session }: { session: SessionListItem }) {
               {label}
             </span>
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] text-muted-foreground truncate">
+              <span className="text-[11px] text-muted-foreground truncate">
                 {CQ_LABELS[session.cqId]}
               </span>
-              <span className="text-[10px] text-muted-foreground/50">·</span>
-              <span className="text-[10px] text-muted-foreground/70 shrink-0">
+              <span className="text-[11px] text-muted-foreground/50">·</span>
+              <span className="text-[11px] text-muted-foreground/70 shrink-0">
                 {timeAgo}
               </span>
             </div>
@@ -101,7 +101,7 @@ function WorkbenchSessionsSection() {
           Recent sessions
         </SidebarGroupLabel>
         <SidebarGroupContent>
-          <p className="px-2 py-2 text-[10px] text-muted-foreground/60 leading-relaxed">
+          <p className="px-2 py-2 text-[11px] text-muted-foreground/60 leading-relaxed">
             Sessions will appear here once the backend is wired.
           </p>
         </SidebarGroupContent>
@@ -187,7 +187,7 @@ export function WorkbenchSidebar() {
             <SidebarGroupLabel className="flex items-center gap-1.5">
               Match views
               {!hasMatch && (
-                <span className="text-[9px] text-muted-foreground/50 normal-case font-normal">
+                <span className="text-[11px] text-muted-foreground/50 normal-case font-normal">
                   · load a match
                 </span>
               )}

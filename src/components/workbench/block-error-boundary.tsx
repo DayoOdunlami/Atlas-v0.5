@@ -45,7 +45,7 @@ export class BlockErrorBoundary extends Component<Props, State> {
               The agent emitted a shape this block can&apos;t display. Press undo (Ctrl+Z)
               to remove it, or ask the agent to try a different format.
             </p>
-            <p className="text-[10px] text-muted-foreground/70 mt-1 font-mono break-all">
+            <p className="text-[11px] text-muted-foreground/70 mt-1 font-mono break-all">
               {this.state.error.message}
             </p>
           </div>

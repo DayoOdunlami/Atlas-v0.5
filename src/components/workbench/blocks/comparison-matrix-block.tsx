@@ -83,7 +83,7 @@ function QuadrantGrid({ content }: { content: SwotQuadrantContent }) {
               <span className={cn("w-1.5 h-1.5 rounded-full inline-block", theme.dot)} />
               <p
                 className={cn(
-                  "text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded",
+                  "text-[11px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded",
                   theme.chip,
                 )}
               >

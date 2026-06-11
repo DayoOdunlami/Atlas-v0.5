@@ -183,7 +183,7 @@ export function HomeCanvas() {
       {!hasActivity && (
         <div className="px-6 pb-8 max-w-3xl w-full mx-auto">
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold">
+            <span className="text-[11px] uppercase tracking-wider text-muted-foreground/70 font-semibold">
               Start with an intent
             </span>
             <div className="flex-1 h-px bg-border" />
@@ -201,10 +201,10 @@ export function HomeCanvas() {
       {hasBlocks && (
         <div className="px-6 pb-12 max-w-5xl w-full mx-auto space-y-4">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold">
+            <span className="text-[11px] uppercase tracking-wider text-muted-foreground/70 font-semibold">
               Your workspace
             </span>
-            <span className="text-[10px] text-muted-foreground/60">
+            <span className="text-[11px] text-muted-foreground/60">
               {model.blocks.length} {model.blocks.length === 1 ? "card" : "cards"}
             </span>
             <div className="flex-1 h-px bg-border" />
@@ -222,7 +222,7 @@ export function HomeCanvas() {
       )}
 
       {/* Footer hint */}
-      <div className="mt-auto px-6 py-3 border-t border-border/50 text-[10px] text-muted-foreground/50 text-center">
+      <div className="mt-auto px-6 py-3 border-t border-border/50 text-[11px] text-muted-foreground/50 text-center">
         Tip: changes apply live with one-click undo (Ctrl+Z). Pin any card to protect it from edits.
       </div>
     </div>

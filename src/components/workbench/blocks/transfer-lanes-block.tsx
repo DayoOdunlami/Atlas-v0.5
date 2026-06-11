@@ -65,11 +65,11 @@ function LaneCard({ item }: { item: TransferLaneItem }) {
     <div className="rounded-md border border-border/80 bg-background px-2.5 py-2 space-y-1.5">
       <p className="text-xs text-foreground leading-snug line-clamp-4">{item.claim_text}</p>
       {item.note && (
-        <p className="text-[10px] text-muted-foreground leading-snug">{item.note}</p>
+        <p className="text-[11px] text-muted-foreground leading-snug">{item.note}</p>
       )}
       <div className="flex items-center gap-2 flex-wrap">
         <EvidenceStateBadge state={item.evidence_state} />
-        <span className="text-[10px] text-muted-foreground capitalize">{item.provenance}</span>
+        <span className="text-[11px] text-muted-foreground capitalize">{item.provenance}</span>
       </div>
     </div>
   );
@@ -93,17 +93,17 @@ export function TransferLanesBlock({ block }: { block: T }) {
             >
               <div className={cn("px-3 py-2 border-b border-border/60", lane.header)}>
                 <p className="text-[11px] font-semibold uppercase tracking-wide">{lane.title}</p>
-                <p className="text-[10px] opacity-80 mt-0.5">{lane.subtitle}</p>
-                <p className="text-[10px] font-medium mt-1">{items.length} item{items.length !== 1 ? "s" : ""}</p>
+                <p className="text-[11px] opacity-80 mt-0.5">{lane.subtitle}</p>
+                <p className="text-[11px] font-medium mt-1">{items.length} item{items.length !== 1 ? "s" : ""}</p>
               </div>
               <div className="p-2 space-y-2 flex-1">
                 {items.length === 0 ? (
-                  <p className="text-[10px] text-muted-foreground italic px-1 py-2">None in this lane</p>
+                  <p className="text-[11px] text-muted-foreground italic px-1 py-2">None in this lane</p>
                 ) : (
                   items.slice(0, 6).map((item) => <LaneCard key={item.id} item={item} />)
                 )}
                 {items.length > 6 && (
-                  <p className="text-[10px] text-muted-foreground text-center">
+                  <p className="text-[11px] text-muted-foreground text-center">
                     +{items.length - 6} more
                   </p>
                 )}

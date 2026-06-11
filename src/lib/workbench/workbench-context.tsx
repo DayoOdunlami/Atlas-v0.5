@@ -259,6 +259,13 @@ interface WorkbenchState {
   stageHistory: StageSnapshot[];
   /** Pop the most recent stage snapshot and restore its composition. */
   restorePreviousStage: () => boolean;
+
+  /**
+   * True when this provider was mounted with a demo fixture.
+   * UI surfaces use this to: (a) show a demo banner, (b) disable composer
+   * submit, (c) skip the agent bridge.
+   */
+  demoMode: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -371,12 +378,28 @@ export interface WorkbenchProviderProps {
    * Falls back to "cq.match.workbench" if not provided or invalid.
    */
   initialCqId?: CanonicalQuestionId | null;
+  /**
+   * Demo mode — when set, the provider uses the supplied model as the base
+   * for ALL CQs and seeds the chat with `initialMessages`. The LangGraph
+   * bridge is bypassed (the demo workbench page does not mount the agent
+   * runtime). This unblocks UI evaluation when the corpus is unreachable.
+   */
+  initialModel?: AtlasRenderModel | null;
+  initialMessages?: WorkbenchChatMessage[];
+  initialRoute?: string | null;
+  initialCitations?: WorkbenchState["lastCitations"];
+  demoMode?: boolean;
 }
 
 export function WorkbenchProvider({
   children,
   initialMatchId = null,
   initialCqId,
+  initialModel = null,
+  initialMessages,
+  initialRoute = null,
+  initialCitations,
+  demoMode = false,
 }: WorkbenchProviderProps) {
   // Default behaviour:
   //   - If a match_id is in the URL → start in Browse (match-loaded)
@@ -392,13 +415,19 @@ export function WorkbenchProvider({
   const [cqId, setCqIdState] = React.useState<CanonicalQuestionId>(resolvedInitialCq);
   const [inspectorKey, setInspectorKey] = React.useState<string | null>(null);
   const [snapshotOpen, setSnapshotOpen] = React.useState(false);
-  const [messages, setMessages] = React.useState<WorkbenchChatMessage[]>(INITIAL_MESSAGES);
+  const [messages, setMessages] = React.useState<WorkbenchChatMessage[]>(
+    initialMessages && initialMessages.length > 0
+      ? initialMessages
+      : INITIAL_MESSAGES,
+  );
 
   // Reasoning trace state (M1.1)
   const [reasoningSteps, setReasoningSteps] = React.useState<ReasoningStep[]>([]);
   // Route mode indicator + citations (M1.4)
-  const [lastRoute, setLastRoute] = React.useState<string | null>(null);
-  const [lastCitations, setLastCitations] = React.useState<Array<{ id: string; title?: string; organisation?: string; score?: number; relevanceNote?: string }>>([]);
+  const [lastRoute, setLastRoute] = React.useState<string | null>(initialRoute);
+  const [lastCitations, setLastCitations] = React.useState<Array<{ id: string; title?: string; organisation?: string; score?: number; relevanceNote?: string }>>(
+    initialCitations ?? [],
+  );
 
   // Patch confirmation state (M0.9 + M2.0)
   const [pendingPatch, setPendingPatch] = React.useState<ModelPatchProposal | null>(null);
@@ -420,10 +449,15 @@ export function WorkbenchProvider({
   const [isLoading, setIsLoading] = React.useState<boolean>(isDbBacked);
   const [error, setError] = React.useState<string | null>(null);
 
-  // Base model resolution: DB-fetched > static fixture
-  const baseModel: AtlasRenderModel = isDbBacked
-    ? (dbModel ?? MODELS[cqId])
-    : MODELS[cqId];
+  // Base model resolution priority (highest first):
+  //   1. demo fixture (initialModel)  — overrides everything; seeds all CQs
+  //   2. DB-backed model              — when match_id supplied
+  //   3. static JSON fixture          — keyed by current CQ
+  const baseModel: AtlasRenderModel = initialModel
+    ? initialModel
+    : isDbBacked
+      ? (dbModel ?? MODELS[cqId])
+      : MODELS[cqId];
 
   // Derive the current model by replaying all applied patches from baseModel.
   // This keeps undo deterministic — pop a patch and the model recomputes.
@@ -440,13 +474,17 @@ export function WorkbenchProvider({
     setPendingBranch(null);
   }, [cqId, initialMatchId]);
 
+  // Seed the session from the demo fixture if supplied, otherwise from the
+  // static MODELS map. This keeps the artifact summary card / snapshot
+  // metadata coherent with the actual model on first paint.
+  const seedModel = initialModel ?? MODELS[resolvedInitialCq];
   const [session, setSessionState] = React.useState<WorkbenchSession>({
     matchId: initialMatchId ?? null,
     sessionId: null,
-    passportId: MODELS[resolvedInitialCq].source_object.id,
-    targetId: MODELS[resolvedInitialCq].target_object.id,
-    artifactVersion: MODELS[resolvedInitialCq].model_version,
-    artifactId: MODELS[resolvedInitialCq].artifact_id,
+    passportId: seedModel.source_object.id,
+    targetId: seedModel.target_object.id,
+    artifactVersion: seedModel.model_version,
+    artifactId: seedModel.artifact_id,
     canonicalQuestionId: resolvedInitialCq,
   });
 
@@ -761,6 +799,7 @@ export function WorkbenchProvider({
         cancelPendingBranch,
         stageHistory,
         restorePreviousStage,
+        demoMode,
       }}
     >
       {children}

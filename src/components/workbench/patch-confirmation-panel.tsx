@@ -44,15 +44,15 @@ function OpRow({ op }: { op: ModelPatchOp }) {
     const block = op.block as { type?: string; headline?: string };
     return (
       <div className="flex items-start gap-2 py-2 border-b border-border last:border-0">
-        <span className="mt-0.5 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-green-50 text-green-700 border border-green-200 shrink-0">
+        <span className="mt-0.5 inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium bg-green-50 text-green-700 border border-green-200 shrink-0">
           + add
         </span>
         <div className="min-w-0">
           <p className="text-xs font-medium">{block.headline ?? block.type ?? "New block"}</p>
-          <p className="text-[10px] text-muted-foreground font-mono">{block.type}</p>
+          <p className="text-[11px] text-muted-foreground font-mono">{block.type}</p>
         </div>
         {typeof op.at_index === "number" && (
-          <span className="ml-auto text-[10px] text-muted-foreground shrink-0">
+          <span className="ml-auto text-[11px] text-muted-foreground shrink-0">
             at position {op.at_index}
           </span>
         )}
@@ -64,12 +64,12 @@ function OpRow({ op }: { op: ModelPatchOp }) {
     const patchKeys = Object.keys(op.patch ?? {});
     return (
       <div className="flex items-start gap-2 py-2 border-b border-border last:border-0">
-        <span className="mt-0.5 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
+        <span className="mt-0.5 inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
           ~ edit
         </span>
         <div className="min-w-0">
           <p className="text-xs font-medium font-mono">{op.block_id}</p>
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-[11px] text-muted-foreground">
             Updating: {patchKeys.join(", ") || "fields"}
           </p>
         </div>
@@ -80,7 +80,7 @@ function OpRow({ op }: { op: ModelPatchOp }) {
   if (op.op === "remove_block") {
     return (
       <div className="flex items-start gap-2 py-2 border-b border-border last:border-0">
-        <span className="mt-0.5 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-red-50 text-red-700 border border-red-200 shrink-0">
+        <span className="mt-0.5 inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium bg-red-50 text-red-700 border border-red-200 shrink-0">
           − remove
         </span>
         <p className="text-xs font-medium font-mono">{op.block_id}</p>
@@ -92,12 +92,12 @@ function OpRow({ op }: { op: ModelPatchOp }) {
     const spineKeys = Object.keys(op.patch ?? {});
     return (
       <div className="flex items-start gap-2 py-2 border-b border-border last:border-0">
-        <span className="mt-0.5 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">
+        <span className="mt-0.5 inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">
           ↻ spine
         </span>
         <div className="min-w-0">
           <p className="text-xs font-medium">Decision spine update</p>
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-[11px] text-muted-foreground">
             Updating: {spineKeys.join(", ") || "fields"}
           </p>
         </div>
@@ -136,7 +136,7 @@ export function PatchConfirmationPanel() {
             <SheetTitle className="text-sm">Confirm change to pinned block</SheetTitle>
             <Badge
               variant="outline"
-              className={cn("text-[10px] ml-auto", tierStyle)}
+              className={cn("text-[11px] ml-auto", tierStyle)}
             >
               {pendingPatch.confidence_tier}
             </Badge>
@@ -154,7 +154,7 @@ export function PatchConfirmationPanel() {
         <div className="flex-1 min-h-0 overflow-y-auto py-2">
 
           {/* Operations */}
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-0 mb-1">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-0 mb-1">
             {opCount} change{opCount !== 1 ? "s" : ""}
           </p>
           <div className="rounded-lg border border-border divide-y divide-border bg-muted/20 mb-4">
@@ -168,7 +168,7 @@ export function PatchConfirmationPanel() {
           {/* Citations */}
           {citations.length > 0 && (
             <>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
                 Supporting evidence ({citations.length})
               </p>
               <div className="space-y-1.5">
@@ -180,9 +180,9 @@ export function PatchConfirmationPanel() {
                     <FileText className="w-3 h-3 text-muted-foreground shrink-0 mt-0.5" />
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-medium line-clamp-1">{c.title}</p>
-                      <p className="text-[10px] text-muted-foreground">{c.organisation}</p>
+                      <p className="text-[11px] text-muted-foreground">{c.organisation}</p>
                     </div>
-                    <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">
+                    <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">
                       {Math.round((c.score ?? 0) * 100)}%
                     </span>
                   </div>

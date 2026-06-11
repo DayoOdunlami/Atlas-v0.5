@@ -110,7 +110,7 @@ export function CitationChip({
       className={cn(
         "inline-flex items-center gap-1 rounded border font-mono cursor-pointer select-none",
         "hover:brightness-95 active:scale-95 transition-all",
-        size === "xs" ? "text-[10px] px-1.5 py-0" : "text-xs px-2 py-0.5",
+        size === "xs" ? "text-[11px] px-1.5 py-0" : "text-xs px-2 py-0.5",
         stateStyle,
       )}
     >
@@ -151,7 +151,7 @@ function CitationCard({ citation }: { citation: CitationSource }) {
         <Badge
           variant="outline"
           className={cn(
-            "text-[10px] px-1.5 py-0 shrink-0 border",
+            "text-[11px] px-1.5 py-0 shrink-0 border",
             EVIDENCE_STYLES[evidenceState],
           )}
         >
@@ -162,7 +162,7 @@ function CitationCard({ citation }: { citation: CitationSource }) {
       {/* Score bar */}
       {bar && (
         <div className="space-y-1">
-          <div className="flex justify-between text-[10px] text-muted-foreground">
+          <div className="flex justify-between text-[11px] text-muted-foreground">
             <span>Similarity</span>
             <span className="font-mono">{bar.pct}%</span>
           </div>
@@ -184,10 +184,10 @@ function CitationCard({ citation }: { citation: CitationSource }) {
 
       {/* Footer — ID + schema */}
       <div className="flex items-center justify-between pt-1 border-t border-border/50">
-        <span className="font-mono text-[9px] text-muted-foreground/70 truncate max-w-[180px]">
+        <span className="font-mono text-[11px] text-muted-foreground/70 truncate max-w-[180px]">
           {id}
         </span>
-        <span className="text-[9px] text-muted-foreground/50 flex items-center gap-1">
+        <span className="text-[11px] text-muted-foreground/50 flex items-center gap-1">
           <BookOpen className="size-2.5" />
           {schema}.projects
         </span>
@@ -269,7 +269,7 @@ export function CitationList({
         <button
           type="button"
           onClick={() => setShowAll(true)}
-          className="text-[10px] text-muted-foreground hover:text-foreground px-1 py-0"
+          className="text-[11px] text-muted-foreground hover:text-foreground px-1 py-0"
         >
           +{overflow} more
         </button>

@@ -47,7 +47,7 @@ export function WorkbenchMessageText(_props: any) {
         <ReactMarkdown>{clean}</ReactMarkdown>
       </div>
       {!isRunning && (
-        <p className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+        <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
           <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
           Applied to artifact — use undo to revert
         </p>

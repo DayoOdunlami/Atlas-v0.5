@@ -61,7 +61,7 @@ function CitationStrip({ citations }: { citations: Citation[] }) {
   if (citations.length === 0) return null;
   return (
     <div className="flex flex-wrap gap-1.5 pt-2 mt-2 border-t border-border/60">
-      <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 self-center pr-1">
+      <span className="text-[11px] uppercase tracking-wider text-muted-foreground/70 self-center pr-1">
         Sources
       </span>
       {citations.slice(0, 8).map((c, i) => (
@@ -152,7 +152,7 @@ export function ContextCardBlock({ block }: { block: T }) {
     <BlockShell headline={block.headline}>
       <div className="rounded-md border border-border bg-background p-4 space-y-2">
         {subject && (
-          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
             {subject}
           </p>
         )}

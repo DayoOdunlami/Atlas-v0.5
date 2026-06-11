@@ -11,7 +11,7 @@
     "start": "next start",
     "lint": "next lint",
     "eval:tier1": "vitest run --config eval/vitest.atlas5.config.ts",
-    "eval:workbench": "vitest run --config eval/vitest.atlas5.config.ts eval/workbench-tier1.test.ts eval/workbench-tier2.test.ts",
+    "eval:workbench": "vitest run --config eval/vitest.atlas5.config.ts eval/workbench-tier1.test.ts eval/workbench-tier2.test.ts eval/density-audit.test.ts",
     "eval:workbench:agent": "node scripts/python-bin.mjs agents/test_workbench_patch.py && node scripts/python-bin.mjs agents/test_corpus_transport.py",
     "eval:parity": "node scripts/python-bin.mjs eval/test_parity_gate.py",
     "eval:parity:live": "node scripts/python-bin.mjs eval/test_parity_gate.py --live",

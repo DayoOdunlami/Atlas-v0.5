@@ -94,13 +94,13 @@ function SectionScoreRow({ score }: { score: FiveCaseSectionScore }) {
 
   return (
     <div className="flex items-center gap-2 py-1">
-      <span className="w-24 text-[10px] font-medium text-muted-foreground capitalize shrink-0">
+      <span className="w-24 text-[11px] font-medium text-muted-foreground capitalize shrink-0">
         {score.label}
       </span>
       <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
         <div className={cn("h-full rounded-full", barColour)} style={{ width: `${pct}%` }} />
       </div>
-      <span className="w-8 text-right text-[10px] text-muted-foreground tabular-nums shrink-0">
+      <span className="w-8 text-right text-[11px] text-muted-foreground tabular-nums shrink-0">
         {pct}%
       </span>
     </div>
@@ -126,7 +126,7 @@ function NpvWaterfall({ items }: { items: NpvWaterfallItem[] }) {
 
         return (
           <div key={idx} className="flex items-center gap-2">
-            <span className="w-32 text-[10px] text-muted-foreground truncate shrink-0">
+            <span className="w-32 text-[11px] text-muted-foreground truncate shrink-0">
               {item.label}
             </span>
             <div className="flex-1 h-4 bg-muted rounded overflow-hidden flex items-center">
@@ -137,7 +137,7 @@ function NpvWaterfall({ items }: { items: NpvWaterfallItem[] }) {
             </div>
             <span
               className={cn(
-                "w-16 text-right text-[10px] font-medium tabular-nums shrink-0",
+                "w-16 text-right text-[11px] font-medium tabular-nums shrink-0",
                 isCost ? "text-value-negative" : "text-value-positive",
                 isNpv && "font-bold text-value-gold",
               )}
@@ -175,7 +175,7 @@ function ValueDriverRow({ driver }: { driver: ValueDriver }) {
         <p className="text-xs font-medium">{driver.name}</p>
         <p className="text-[11px] text-muted-foreground mt-0.5">{driver.description}</p>
         {driver.assumption && (
-          <p className="text-[10px] text-muted-foreground/70 mt-0.5 italic">
+          <p className="text-[11px] text-muted-foreground/70 mt-0.5 italic">
             Assumes: {driver.assumption}
           </p>
         )}
@@ -183,14 +183,14 @@ function ValueDriverRow({ driver }: { driver: ValueDriver }) {
       <div className="flex items-center gap-1.5 shrink-0">
         {driver.quantified_value !== undefined && (
           <span className={cn(
-            "text-[10px] font-semibold tabular-nums",
+            "text-[11px] font-semibold tabular-nums",
             driver.direction === "benefit" ? "text-value-positive" : "text-value-negative",
           )}>
             {driver.quantified_value >= 0 ? "+" : ""}{fmt(driver.quantified_value)}
           </span>
         )}
-        <span className="capitalize text-[10px]">{driver.magnitude}</span>
-        <span className={cn("rounded border px-1 py-0.5 text-[9px] font-medium", evClass)}>
+        <span className="capitalize text-[11px]">{driver.magnitude}</span>
+        <span className={cn("rounded border px-1 py-0.5 text-[11px] font-medium", evClass)}>
           {driver.evidence_state}
         </span>
       </div>
@@ -227,10 +227,10 @@ function AssumptionLedger({ assumptions }: { assumptions: Assumption[] }) {
               <div key={i} className="px-3 py-2 flex items-start gap-2">
                 <div className="flex-1 min-w-0">
                   <p className="text-[11px] font-medium">{a.name}</p>
-                  <p className="text-[10px] text-muted-foreground">{a.value}</p>
-                  {a.note && <p className="text-[10px] text-muted-foreground/70 italic mt-0.5">{a.note}</p>}
+                  <p className="text-[11px] text-muted-foreground">{a.value}</p>
+                  {a.note && <p className="text-[11px] text-muted-foreground/70 italic mt-0.5">{a.note}</p>}
                 </div>
-                <span className={cn("text-[10px] font-medium shrink-0", sensitivityColour)}>
+                <span className={cn("text-[11px] font-medium shrink-0", sensitivityColour)}>
                   {a.sensitivity} sensitivity
                 </span>
               </div>
@@ -269,7 +269,7 @@ export function EconomicCaseBlock({ block, effectiveVisual }: Props) {
         <h3 className="text-sm font-semibold flex-1">{block.headline}</h3>
         <Badge
           variant="outline"
-          className={cn("text-[10px] border", tierClass(toConfidenceTier(c.confidence_tier)))}
+          className={cn("text-[11px] border", tierClass(toConfidenceTier(c.confidence_tier)))}
         >
           {c.confidence_tier}
         </Badge>
@@ -291,7 +291,7 @@ export function EconomicCaseBlock({ block, effectiveVisual }: Props) {
             </p>
             <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{c.verdict_summary}</p>
             {c.confidence_cap_reason && (
-              <p className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
+              <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
                 <Info className="w-3 h-3 shrink-0" />
                 {c.confidence_cap_reason}
               </p>
@@ -303,9 +303,9 @@ export function EconomicCaseBlock({ block, effectiveVisual }: Props) {
               <p className={cn("text-lg font-bold tabular-nums", valueClass("gold").split(" ")[0])}>
                 {c.npv_value >= 0 ? "+" : ""}{fmt(c.npv_value)}
               </p>
-              <p className="text-[10px] text-muted-foreground">NPV ({(c.discount_rate * 100).toFixed(1)}% STPR)</p>
+              <p className="text-[11px] text-muted-foreground">NPV ({(c.discount_rate * 100).toFixed(1)}% STPR)</p>
               {c.bcr != null && (
-                <p className="text-[10px] text-muted-foreground">BCR {c.bcr.toFixed(2)}</p>
+                <p className="text-[11px] text-muted-foreground">BCR {c.bcr.toFixed(2)}</p>
               )}
             </div>
           )}
@@ -314,7 +314,7 @@ export function EconomicCaseBlock({ block, effectiveVisual }: Props) {
         {/* Five Case section scores */}
         {c.section_scores.length > 0 && (
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
               Five Case scores
             </p>
             <div className="space-y-0.5">
@@ -328,7 +328,7 @@ export function EconomicCaseBlock({ block, effectiveVisual }: Props) {
         {/* NPV waterfall */}
         {hasWaterfall && (
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
               NPV waterfall
             </p>
             <NpvWaterfall items={c.npv_waterfall!} />
@@ -338,7 +338,7 @@ export function EconomicCaseBlock({ block, effectiveVisual }: Props) {
         {/* Value drivers */}
         {c.value_drivers.length > 0 && (
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
               Value drivers
             </p>
             <div className="rounded border border-border divide-y divide-border">
@@ -370,7 +370,7 @@ export function EconomicCaseBlock({ block, effectiveVisual }: Props) {
         {/* Citations — M1.3 popover chips */}
         {c.corpus_citations.length > 0 && (
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
               Evidence ({c.corpus_citations.length})
             </p>
             <CitationList

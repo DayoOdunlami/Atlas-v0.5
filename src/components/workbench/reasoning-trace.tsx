@@ -77,13 +77,13 @@ function StepRow({ step, isLast }: { step: ReasoningStep; isLast: boolean }) {
             {step.evidence_ids.slice(0, 3).map((id) => (
               <span
                 key={id}
-                className="inline-block rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground"
+                className="inline-block rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground"
               >
                 {id.slice(0, 8)}…
               </span>
             ))}
             {step.evidence_ids.length > 3 && (
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-[11px] text-muted-foreground">
                 +{step.evidence_ids.length - 3} more
               </span>
             )}

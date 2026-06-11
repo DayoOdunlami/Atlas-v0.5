@@ -1,5 +1,13 @@
 import { cn } from "@/lib/utils";
 
+/**
+ * BlockShell — the chrome around every workbench block.
+ *
+ * Density rationale (post-density-pass):
+ *   - Headline:  text-sm (14px) semibold so it reads as a card title, not a label.
+ *   - Padding:   px-4 py-3 header, p-4 body — matches Linear/Notion card spacing.
+ *   - Border:    bg-card so blocks lift off the muted canvas.
+ */
 export function BlockShell({
   headline,
   children,
@@ -12,8 +20,10 @@ export function BlockShell({
   return (
     <div className={cn("rounded-lg border border-border bg-card overflow-hidden", className)}>
       {headline && (
-        <div className="px-4 py-2.5 border-b border-border bg-muted/20">
-          <p className="text-xs font-semibold text-foreground leading-snug">{headline}</p>
+        <div className="px-4 py-3 border-b border-border bg-muted/30">
+          <p className="text-sm font-semibold text-foreground leading-snug tracking-tight">
+            {headline}
+          </p>
         </div>
       )}
       <div className="p-4">{children}</div>

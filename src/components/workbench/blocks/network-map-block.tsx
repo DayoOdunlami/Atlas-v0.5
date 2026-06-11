@@ -34,20 +34,20 @@ export function NetworkMapBlock({ block, effectiveVisual }: Props) {
             <Badge
               key={node.id}
               variant="outline"
-              className="text-[10px] font-normal capitalize"
+              className="text-[11px] font-normal capitalize"
             >
               {node.label.slice(0, 36)}
             </Badge>
           ))}
           {nodes.length > 12 && (
-            <span className="text-[10px] text-muted-foreground self-center">
+            <span className="text-[11px] text-muted-foreground self-center">
               +{nodes.length - 12} more
             </span>
           )}
         </div>
       )}
 
-      <p className="mt-2 text-[10px] text-muted-foreground">
+      <p className="mt-2 text-[11px] text-muted-foreground">
         {nodes.length} entities · {edges.length} relationships
       </p>
     </BlockShell>
