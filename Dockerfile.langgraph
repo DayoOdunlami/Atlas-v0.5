@@ -1,0 +1,30 @@
+# LangGraph API — workbench graph (Railway service #2)
+#
+# Deploy as a SECOND service in the same Railway project as agents.server (port 8000).
+# Railway: Settings → Dockerfile path = Dockerfile.langgraph
+#
+# Exposes LangGraph Platform API (/ok, /threads, /runs/stream) for assistant-ui workbench.
+# Graph config: agents/langgraph.json → workbench, atlas, jarvis, cicerone, hyve
+
+FROM python:3.11-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY agents/requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY agents/ ./agents/
+COPY mcps/   ./mcps/
+
+WORKDIR /app/agents
+
+# Railway injects $PORT; langgraph dev is the in-process API server (same as local dev:lg)
+ENV HOST=0.0.0.0
+EXPOSE 8080
+
+CMD ["sh", "-c", "langgraph dev --host 0.0.0.0 --port ${PORT:-8080} --no-browser --no-reload"]
