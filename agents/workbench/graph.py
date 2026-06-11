@@ -880,7 +880,11 @@ def explore_node(state: WorkbenchState) -> dict:
         "Be specific: cite project titles and IDs. Identify patterns and themes.\n"
         "Do not confabulate projects — only reference what is in the corpus results.\n"
         f"{match_context}\n\n"
-        f"Corpus results for this query:\n{citations_block}"
+        f"Corpus results for this query:\n{citations_block}\n\n"
+        "## Offer to add findings to the artifact canvas\n"
+        "At the end of your response, if you've produced a structured analysis (e.g. SWOT, "
+        "comparison table, technology landscape), add a one-line offer:\n"
+        "'→ Say **\"add this to the artifact\"** to push this analysis into the workbench canvas.'"
     )
 
     llm = _llm()
@@ -910,13 +914,20 @@ def conversational_node(state: WorkbenchState) -> dict:
         SystemMessage(content=(
             "You are the Atlas Workbench assistant — a strategic intelligence tool "
             "for Connected Places Catapult analysts.\n\n"
-            "You can handle ANY question an analyst would ask:\n"
-            "- Explain evidence and gaps in the current match\n"
-            "- Search the CPC corpus for evidence or comparators\n"
-            "- Explore the corpus broadly — other projects, technologies, sectors\n"
-            "- Propose updates to the artifact for analyst review\n"
-            "- Run a Five Case economic analysis ('run economic case')\n\n"
-            "Respond naturally to this message."
+            "## What you can do\n"
+            "- **Explain** — answer questions about this match: evidence, gaps, confidence\n"
+            "- **Search** — find corpus evidence for this specific match\n"
+            "- **Explore** — browse the full CPC corpus: other projects, sectors, themes\n"
+            "- **Propose** — update the artifact canvas (add/edit blocks). "
+            "The user must say 'add to the artifact', 'propose', 'update the canvas', etc. "
+            "Only then does a patch confirmation panel appear for the analyst to approve.\n"
+            "- **Economic case** — 'run economic case' or 'what is the NPV?'\n\n"
+            "## Critical rule\n"
+            "NEVER say 'I cannot control the canvas' or 'I cannot push to the UI'. "
+            "You CAN update the artifact — just tell the user to ask you to 'propose' or "
+            "'add to the artifact' and you will generate a model patch they can confirm.\n\n"
+            "Respond naturally to this message. If the user asks to show something in the canvas, "
+            "tell them to say 'add X to the artifact' or 'propose adding X' and you will do it."
         )),
     ] + list(state.get("messages", []))
     response = llm.invoke(messages)
