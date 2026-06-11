@@ -1,0 +1,668 @@
+{
+  "version": "1.0",
+  "scope": "Connected Places Catapult (CPC) strategist questions for Atlas 5 UI discovery",
+  "agents": ["ATLAS", "JARVIS", "CICERONE", "HYVE"],
+  "lenses": ["CPC", "Atlas", "Ecosystem", "Funder", "Mode"],
+  "intended_use": "Drive 50 root questions + 2-3 follow-ons each through real Supabase corpus + LangGraph agents. Capture raw outputs. Use as the basis for UI/UX discovery experiments.",
+  "questions": [
+    {
+      "id": "Q01",
+      "domain": "portfolio-diagnosis",
+      "lens": "CPC",
+      "agent": "JARVIS",
+      "question": "What are the top 10 most-cited projects in CPC's corpus, ranked by external references?",
+      "why_it_matters": "Shows portfolio impact — informs which projects deserve flagship case-study treatment.",
+      "expected_shape_hint": "ranked-list-with-bars",
+      "follow_ons": [
+        "For the top 3, summarise the headline outcome in plain English.",
+        "Which of these 10 have NO follow-on funding? That's a stranding risk.",
+        "Who are the most frequent co-investigators across these 10?"
+      ]
+    },
+    {
+      "id": "Q02",
+      "domain": "portfolio-diagnosis",
+      "lens": "Mode",
+      "agent": "JARVIS",
+      "question": "Break down CPC's portfolio by transport mode (rail, road, maritime, air, active travel, micromobility). Where are we strong, where thin?",
+      "why_it_matters": "Surfaces mode-level concentration and gaps for portfolio rebalancing decisions.",
+      "expected_shape_hint": "stacked-bar + commentary",
+      "follow_ons": [
+        "Compare CPC's mode distribution to UK DfT funding distribution. Mismatch?",
+        "What's the cheapest mode to expand into based on existing capability?"
+      ]
+    },
+    {
+      "id": "Q03",
+      "domain": "portfolio-diagnosis",
+      "lens": "CPC",
+      "agent": "ATLAS",
+      "question": "Run a full SWOT on CPC's innovation portfolio in 2026.",
+      "why_it_matters": "Annual strategy refresh staple — needs to be defensible.",
+      "expected_shape_hint": "quadrant + citations per cell",
+      "follow_ons": [
+        "Of the threats, which is most urgent and what's the mitigation?",
+        "Of the weaknesses, which 2 are addressable with existing partnerships?"
+      ]
+    },
+    {
+      "id": "Q04",
+      "domain": "portfolio-diagnosis",
+      "lens": "CPC",
+      "agent": "JARVIS",
+      "question": "Which CPC projects from the last 3 years have no follow-on funding or downstream activity?",
+      "why_it_matters": "Stranded research — identifies missed commercialisation opportunities.",
+      "expected_shape_hint": "table + concentration indicators",
+      "follow_ons": [
+        "Group those by reason: corpus says why each one stalled.",
+        "Which of those could be revived with new partner X (suggest top 3 partners)."
+      ]
+    },
+    {
+      "id": "Q05",
+      "domain": "portfolio-diagnosis",
+      "lens": "Funder",
+      "agent": "JARVIS",
+      "question": "Show the funding concentration across CPC projects. Are we over-dependent on any single funder?",
+      "why_it_matters": "Risk management — concentration risk in funder relationships.",
+      "expected_shape_hint": "treemap or pareto + commentary",
+      "follow_ons": [
+        "Top 5 funders by total committed amount.",
+        "Funders we have NOT yet worked with where there is clear thematic fit."
+      ]
+    },
+    {
+      "id": "Q06",
+      "domain": "portfolio-diagnosis",
+      "lens": "Ecosystem",
+      "agent": "JARVIS",
+      "question": "Who are CPC's top 20 partners by frequency of co-mention in the corpus?",
+      "why_it_matters": "Network mapping for partnership strategy.",
+      "expected_shape_hint": "ranked list or chord diagram",
+      "follow_ons": [
+        "Of those, which have we NOT worked with in the last 12 months?",
+        "Which partner has the broadest sector reach across our work?"
+      ]
+    },
+    {
+      "id": "Q07",
+      "domain": "portfolio-diagnosis",
+      "lens": "CPC",
+      "agent": "ATLAS",
+      "question": "Where in CPC's stated capabilities is the evidence base weakest?",
+      "why_it_matters": "Honest internal assessment — drives evidence collection priorities.",
+      "expected_shape_hint": "gap matrix",
+      "follow_ons": [
+        "For the top 3 gaps, what would it take to close them?",
+        "Which gaps are externally facing (risk to credibility)?"
+      ]
+    },
+    {
+      "id": "Q08",
+      "domain": "portfolio-diagnosis",
+      "lens": "Ecosystem",
+      "agent": "JARVIS",
+      "question": "How often is CPC's work cited or referenced by external organisations (gov, industry, academia)?",
+      "why_it_matters": "External reach metric — feeds annual report and impact case studies.",
+      "expected_shape_hint": "timeline + breakdown by audience type",
+      "follow_ons": [
+        "Top 5 most-referenced CPC outputs externally.",
+        "Sectors where we have most external pull-through."
+      ]
+    },
+
+    {
+      "id": "Q09",
+      "domain": "sector-entry-partnerships",
+      "lens": "Mode",
+      "agent": "ATLAS",
+      "question": "What should CPC partner on in the UK maritime sector?",
+      "why_it_matters": "Active partnership planning — needs evidence-backed recommendation.",
+      "expected_shape_hint": "recommendation + 3-5 partner options + transferable capability list",
+      "follow_ons": [
+        "Of those partners, which would unlock the most cross-mode value?",
+        "What's the smallest pilot we could co-fund this year?"
+      ]
+    },
+    {
+      "id": "Q10",
+      "domain": "sector-entry-partnerships",
+      "lens": "Ecosystem",
+      "agent": "CICERONE",
+      "question": "Who would be the best academic partner for autonomous vehicle research given CPC's existing focus?",
+      "why_it_matters": "Partnership recommendation with academic rigour rationale.",
+      "expected_shape_hint": "ranked partners + fit rationale + prior collaboration evidence",
+      "follow_ons": [
+        "Which research groups inside that institution are most aligned?",
+        "Have they collaborated with any of our current partners before?"
+      ]
+    },
+    {
+      "id": "Q11",
+      "domain": "sector-entry-partnerships",
+      "lens": "Mode",
+      "agent": "ATLAS",
+      "question": "Should CPC invest more in active travel? Make the case either way.",
+      "why_it_matters": "Investment direction debate — needs structured pros/cons with citations.",
+      "expected_shape_hint": "decision recommendation + opposing-cases comparison",
+      "follow_ons": [
+        "If yes, what's the minimum viable programme (cost + scope)?",
+        "If no, what reallocation makes more sense?"
+      ]
+    },
+    {
+      "id": "Q12",
+      "domain": "sector-entry-partnerships",
+      "lens": "CPC",
+      "agent": "CICERONE",
+      "question": "Which sectors do CPC have the most transferable expertise INTO?",
+      "why_it_matters": "Identifies where existing capability has untapped market potential.",
+      "expected_shape_hint": "transfer-lanes diagram",
+      "follow_ons": [
+        "For the top transfer lane, what's the realistic time-to-value?",
+        "Who else is already operating in that adjacent space?"
+      ]
+    },
+    {
+      "id": "Q13",
+      "domain": "sector-entry-partnerships",
+      "lens": "Ecosystem",
+      "agent": "JARVIS",
+      "question": "Map our partner network by sector. Where do we have density, where are we sparse?",
+      "why_it_matters": "Network strategy — identifies sparse sectors needing relationship investment.",
+      "expected_shape_hint": "network graph + sector heatmap",
+      "follow_ons": [
+        "Suggest 3 brokerage moves that would densify a sparse area.",
+        "Which partners bridge sectors (high betweenness)?"
+      ]
+    },
+    {
+      "id": "Q14",
+      "domain": "sector-entry-partnerships",
+      "lens": "Funder",
+      "agent": "ATLAS",
+      "question": "Top 5 funders for connected places work over the next 2 years and what they fund.",
+      "why_it_matters": "Funding pipeline scanning — bid planning input.",
+      "expected_shape_hint": "table with funder profile + recent calls",
+      "follow_ons": [
+        "Which of those have call windows in the next 6 months?",
+        "What evidence would strengthen a CPC bid to funder X?"
+      ]
+    },
+    {
+      "id": "Q15",
+      "domain": "sector-entry-partnerships",
+      "lens": "Mode",
+      "agent": "JARVIS",
+      "question": "Who's doing rail digital twin work in the UK that CPC should know about?",
+      "why_it_matters": "Competitive + collaborator scan in an active CPC theme.",
+      "expected_shape_hint": "actor list + project list + capability profile",
+      "follow_ons": [
+        "Of those, who is technology-led vs operations-led?",
+        "Where are the white spaces nobody is working on?"
+      ]
+    },
+    {
+      "id": "Q16",
+      "domain": "sector-entry-partnerships",
+      "lens": "CPC",
+      "agent": "ATLAS",
+      "question": "What is the cost of NOT entering the freight decarbonisation space over the next 3 years?",
+      "why_it_matters": "Counterfactual thinking — challenges status quo.",
+      "expected_shape_hint": "scenario comparison + economic case",
+      "follow_ons": [
+        "Which competitors will own that space if we don't enter?",
+        "What's the minimum entry cost vs the cost of catching up later?"
+      ]
+    },
+
+    {
+      "id": "Q17",
+      "domain": "evidence-triage",
+      "lens": "Atlas",
+      "agent": "JARVIS",
+      "question": "Find evidence in our corpus for the claim 'smart city investments reduce urban congestion by 20%'.",
+      "why_it_matters": "Claim verification — needed for any external statement.",
+      "expected_shape_hint": "evidence ledger + confidence tier per source",
+      "follow_ons": [
+        "What's the strongest single source and what does it actually say?",
+        "Where does the corpus disagree with this claim?"
+      ]
+    },
+    {
+      "id": "Q18",
+      "domain": "evidence-triage",
+      "lens": "Mode",
+      "agent": "ATLAS",
+      "question": "What's our strongest evidence-backed case for combining autonomous vehicles with freight logistics?",
+      "why_it_matters": "Building thesis evidence for active workstream.",
+      "expected_shape_hint": "claim + supporting evidence by tier",
+      "follow_ons": [
+        "What additional evidence would lift this from Indicative to Supported?",
+        "Counter-evidence we should be ready to address?"
+      ]
+    },
+    {
+      "id": "Q19",
+      "domain": "evidence-triage",
+      "lens": "Mode",
+      "agent": "ATLAS",
+      "question": "Confidence tier on: 'green hydrogen is a viable fuel for UK bus fleets by 2030'.",
+      "why_it_matters": "Quick directional read on a contested technology bet.",
+      "expected_shape_hint": "single confidence verdict + rationale chips",
+      "follow_ons": [
+        "What changes between today and a Robust verdict?",
+        "Who in our corpus is most bullish and most sceptical?"
+      ]
+    },
+    {
+      "id": "Q20",
+      "domain": "evidence-triage",
+      "lens": "Mode",
+      "agent": "JARVIS",
+      "question": "What can CPC say with high confidence about UK MaaS (Mobility as a Service) adoption to date?",
+      "why_it_matters": "Public-facing position — must be defensible.",
+      "expected_shape_hint": "claims with evidence tiers + recommended phrasing",
+      "follow_ons": [
+        "Which adoption claims are over-stated in industry coverage?",
+        "Top 3 MaaS evidence sources to cite in a public document."
+      ]
+    },
+    {
+      "id": "Q21",
+      "domain": "evidence-triage",
+      "lens": "Atlas",
+      "agent": "JARVIS",
+      "question": "Where in our corpus do claims contradict each other? Pick the 3 most consequential contradictions.",
+      "why_it_matters": "Quality assurance — internal consistency check.",
+      "expected_shape_hint": "contradiction pairs + which side has stronger evidence",
+      "follow_ons": [
+        "What would resolve contradiction #1?",
+        "Has anyone publicly flagged these contradictions?"
+      ]
+    },
+    {
+      "id": "Q22",
+      "domain": "evidence-triage",
+      "lens": "Atlas",
+      "agent": "ATLAS",
+      "question": "Falsification test: what evidence would prove the 'smart cities reduce congestion' thesis wrong?",
+      "why_it_matters": "Pre-mortem thinking — surfaces what we should monitor.",
+      "expected_shape_hint": "falsification criteria list + monitoring plan",
+      "follow_ons": [
+        "Which of those signals can we monitor from existing data sources?",
+        "What's our response plan if the thesis fails?"
+      ]
+    },
+
+    {
+      "id": "Q23",
+      "domain": "gap-analysis",
+      "lens": "Mode",
+      "agent": "JARVIS",
+      "question": "What questions about rail decarbonisation can CPC NOT currently answer well?",
+      "why_it_matters": "Honest gap statement — drives research commissioning.",
+      "expected_shape_hint": "question-gap pairs with severity",
+      "follow_ons": [
+        "For the top gap, what would a project to close it look like?",
+        "Who in the wider ecosystem could close these gaps faster?"
+      ]
+    },
+    {
+      "id": "Q24",
+      "domain": "gap-analysis",
+      "lens": "Funder",
+      "agent": "ATLAS",
+      "question": "Where are our research gaps relative to current DfT priorities?",
+      "why_it_matters": "Strategic alignment check against the primary UK funder.",
+      "expected_shape_hint": "alignment matrix + delta commentary",
+      "follow_ons": [
+        "Which gaps are addressable in the next 12 months?",
+        "Which gaps are deliberate (we should not chase) — explain."
+      ]
+    },
+    {
+      "id": "Q25",
+      "domain": "gap-analysis",
+      "lens": "Mode",
+      "agent": "JARVIS",
+      "question": "Which transport modes are most under-represented in our corpus?",
+      "why_it_matters": "Coverage check across mode coverage statement.",
+      "expected_shape_hint": "coverage bar + risk indicators",
+      "follow_ons": [
+        "For the most under-covered, what's the cheapest way to build coverage?",
+        "Are any modes intentionally under-covered (out of scope)?"
+      ]
+    },
+    {
+      "id": "Q26",
+      "domain": "gap-analysis",
+      "lens": "Mode",
+      "agent": "ATLAS",
+      "question": "Run a gap analysis on UK autonomous vehicle regulation evidence.",
+      "why_it_matters": "Policy-adjacent — feeds responses to consultations.",
+      "expected_shape_hint": "DimensionGap blocks with HAVE / PARTIAL / MISSING tags",
+      "follow_ons": [
+        "Of the MISSING items, which has the highest external demand?",
+        "What's our position on each of the PARTIAL items?"
+      ]
+    },
+    {
+      "id": "Q27",
+      "domain": "gap-analysis",
+      "lens": "Mode",
+      "agent": "HYVE",
+      "question": "What does our corpus tell us about flood-resilient road infrastructure? Where are the gaps?",
+      "why_it_matters": "Climate adaptation evidence for a high-public-interest topic.",
+      "expected_shape_hint": "evidence summary + gap matrix",
+      "follow_ons": [
+        "Which UK regions are best/worst represented in this evidence?",
+        "Are international examples covered?"
+      ]
+    },
+    {
+      "id": "Q28",
+      "domain": "gap-analysis",
+      "lens": "Mode",
+      "agent": "HYVE",
+      "question": "Gaps in our climate adaptation evidence base — by mode and by hazard type.",
+      "why_it_matters": "Cross-cut gap analysis for HYVE workstream prioritisation.",
+      "expected_shape_hint": "mode-x-hazard matrix",
+      "follow_ons": [
+        "Top 3 gaps by combination of severity and external demand.",
+        "Whose evidence would close these gaps fastest?"
+      ]
+    },
+
+    {
+      "id": "Q29",
+      "domain": "economic-case",
+      "lens": "Atlas",
+      "agent": "ATLAS",
+      "question": "Build a Five Case Model business case for a £20m CPC investment in rail digital twins over 5 years.",
+      "why_it_matters": "Standard HMG investment justification format.",
+      "expected_shape_hint": "Five Case Model: strategic / economic / commercial / financial / management",
+      "follow_ons": [
+        "NPV at 3.5% STPR over 10 years.",
+        "Top 3 risks to the financial case and mitigations."
+      ]
+    },
+    {
+      "id": "Q30",
+      "domain": "economic-case",
+      "lens": "Atlas",
+      "agent": "ATLAS",
+      "question": "What is the NPV of accelerating UK MaaS adoption by 3 years?",
+      "why_it_matters": "Quantified case for early intervention.",
+      "expected_shape_hint": "NPV waterfall + sensitivity",
+      "follow_ons": [
+        "What if we used 5.5% discount rate instead of 3.5%?",
+        "Which benefit category is the largest contributor?"
+      ]
+    },
+    {
+      "id": "Q31",
+      "domain": "economic-case",
+      "lens": "Mode",
+      "agent": "ATLAS",
+      "question": "Run a cost-benefit analysis on a £10m connected vehicle infrastructure pilot programme.",
+      "why_it_matters": "Pilot-scale CBA — typical CPC programme size.",
+      "expected_shape_hint": "BCR + waterfall + assumptions",
+      "follow_ons": [
+        "What BCR threshold should pass a CPC investment committee?",
+        "Sensitivity: what input most changes the BCR?"
+      ]
+    },
+    {
+      "id": "Q32",
+      "domain": "economic-case",
+      "lens": "Mode",
+      "agent": "ATLAS",
+      "question": "Compare the economic case for bus electrification versus rail electrification at equal £100m capex.",
+      "why_it_matters": "Cross-mode investment comparison — relevant to portfolio committees.",
+      "expected_shape_hint": "side-by-side economic cases",
+      "follow_ons": [
+        "Which has lower implementation risk?",
+        "Combined investment vs either alone — better or worse?"
+      ]
+    },
+    {
+      "id": "Q33",
+      "domain": "economic-case",
+      "lens": "CPC",
+      "agent": "ATLAS",
+      "question": "What's the typical BCR threshold for the kinds of interventions CPC supports? Show evidence from past CPC-backed cases.",
+      "why_it_matters": "Calibrates committee expectations.",
+      "expected_shape_hint": "distribution + reference cases",
+      "follow_ons": [
+        "Which sectors have the highest BCR distributions?",
+        "Where have we backed below-threshold interventions and why?"
+      ]
+    },
+
+    {
+      "id": "Q34",
+      "domain": "knowledge-graph",
+      "lens": "Ecosystem",
+      "agent": "JARVIS",
+      "question": "Map the UK connected places ecosystem — who are the key actors and how are they connected?",
+      "why_it_matters": "Ecosystem map for partnership and influence strategy.",
+      "expected_shape_hint": "NetworkMap with clustering by sector",
+      "follow_ons": [
+        "Which actors are most central?",
+        "Which clusters have the weakest inter-connection?"
+      ]
+    },
+    {
+      "id": "Q35",
+      "domain": "knowledge-graph",
+      "lens": "Ecosystem",
+      "agent": "JARVIS",
+      "question": "Who connects DfT to Innovate UK in our corpus? (intermediaries / brokers)",
+      "why_it_matters": "Brokerage identification — high-leverage relationship targets.",
+      "expected_shape_hint": "path diagram + broker list",
+      "follow_ons": [
+        "Who plays the strongest broker role and how?",
+        "What if that broker disappeared — single point of failure?"
+      ]
+    },
+    {
+      "id": "Q36",
+      "domain": "knowledge-graph",
+      "lens": "Mode",
+      "agent": "JARVIS",
+      "question": "Show me the actor network around autonomous vehicles in the UK.",
+      "why_it_matters": "Sector deep-dive for an active CPC theme.",
+      "expected_shape_hint": "knowledge graph + co-mention strength",
+      "follow_ons": [
+        "Where are the academic-industry bridges weakest?",
+        "Who is influential but under-the-radar?"
+      ]
+    },
+    {
+      "id": "Q37",
+      "domain": "knowledge-graph",
+      "lens": "Mode",
+      "agent": "JARVIS",
+      "question": "Sector innovation network for UK maritime — who's connected to whom and on what.",
+      "why_it_matters": "Sector entry intelligence (see also Q09).",
+      "expected_shape_hint": "network + capability tags per node",
+      "follow_ons": [
+        "Which nodes have unmet partnership demand?",
+        "Comparison to road / rail networks — denser or sparser?"
+      ]
+    },
+    {
+      "id": "Q38",
+      "domain": "knowledge-graph",
+      "lens": "Ecosystem",
+      "agent": "JARVIS",
+      "question": "Which actors are isolated in our corpus (no co-mentions with others)?",
+      "why_it_matters": "Surfaces under-connected stakeholders — potential partnership or M&A targets.",
+      "expected_shape_hint": "isolated-node list with capability summary",
+      "follow_ons": [
+        "Of those, which have most potential as future partners?",
+        "Are they isolated because we missed coverage or because they really are isolated?"
+      ]
+    },
+
+    {
+      "id": "Q39",
+      "domain": "cross-sector-transfer",
+      "lens": "Mode",
+      "agent": "CICERONE",
+      "question": "What works in healthcare AI that could transfer to transport applications?",
+      "why_it_matters": "Cross-pollination — CICERONE's specialty.",
+      "expected_shape_hint": "transfer lanes + transferability score 0-100",
+      "follow_ons": [
+        "Top transfer with highest transferability score — full case.",
+        "Which healthcare partners would be willing to cross over?"
+      ]
+    },
+    {
+      "id": "Q40",
+      "domain": "cross-sector-transfer",
+      "lens": "Mode",
+      "agent": "CICERONE",
+      "question": "Can smart manufacturing techniques transfer to logistics and last-mile delivery?",
+      "why_it_matters": "Concrete transfer thesis with evidence grounding.",
+      "expected_shape_hint": "analogue case + transferability matrix",
+      "follow_ons": [
+        "What's already been tried and what happened?",
+        "What's the minimum viable transfer demonstrator?"
+      ]
+    },
+    {
+      "id": "Q41",
+      "domain": "cross-sector-transfer",
+      "lens": "Mode",
+      "agent": "CICERONE",
+      "question": "Has aviation safety methodology been applied to rail safety? With what results?",
+      "why_it_matters": "Cross-mode learning question with operational stakes.",
+      "expected_shape_hint": "case timeline + transferability assessment",
+      "follow_ons": [
+        "What blocked broader adoption?",
+        "Reverse direction: anything rail does that aviation should adopt?"
+      ]
+    },
+    {
+      "id": "Q42",
+      "domain": "cross-sector-transfer",
+      "lens": "Mode",
+      "agent": "CICERONE",
+      "question": "Can energy grid optimisation algorithms transfer to transport scheduling at scale?",
+      "why_it_matters": "Cross-domain algorithmic transfer thesis.",
+      "expected_shape_hint": "algorithmic mapping + practical fit",
+      "follow_ons": [
+        "Which transport modes are most analogous to the energy grid?",
+        "Practical pilots to test the transfer?"
+      ]
+    },
+    {
+      "id": "Q43",
+      "domain": "cross-sector-transfer",
+      "lens": "Mode",
+      "agent": "CICERONE",
+      "question": "What defence-sector connected comms patterns could apply to connected vehicles?",
+      "why_it_matters": "Adjacent-sector capability scan with security implications.",
+      "expected_shape_hint": "transferable patterns + security caveats",
+      "follow_ons": [
+        "Where do dual-use considerations apply?",
+        "Defence primes who would licence or partner."
+      ]
+    },
+
+    {
+      "id": "Q44",
+      "domain": "climate-adaptation",
+      "lens": "Mode",
+      "agent": "HYVE",
+      "question": "What climate risks face the UK rail network in 2030 and 2050?",
+      "why_it_matters": "Long-horizon resilience planning question — HYVE core topic.",
+      "expected_shape_hint": "risk-time matrix with citations",
+      "follow_ons": [
+        "Which risks are already materialising?",
+        "Geographic concentration of risks?"
+      ]
+    },
+    {
+      "id": "Q45",
+      "domain": "climate-adaptation",
+      "lens": "Mode",
+      "agent": "HYVE",
+      "question": "Top adaptation measures for UK port infrastructure facing sea-level rise.",
+      "why_it_matters": "Maritime + climate cross-cut — concrete adaptation guidance.",
+      "expected_shape_hint": "ranked measures with cost / effectiveness",
+      "follow_ons": [
+        "Which UK ports are most at risk and what are they doing?",
+        "International benchmarks (Rotterdam, Singapore)?"
+      ]
+    },
+    {
+      "id": "Q46",
+      "domain": "climate-adaptation",
+      "lens": "Mode",
+      "agent": "HYVE",
+      "question": "Where in HIVE corpus do we have evidence on heat-resilient road materials?",
+      "why_it_matters": "Targeted HIVE evidence retrieval with article-level citation.",
+      "expected_shape_hint": "article list with relevance scores + chunk previews",
+      "follow_ons": [
+        "Which articles are most cited externally?",
+        "Gaps in heat-resilient evidence by region?"
+      ]
+    },
+    {
+      "id": "Q47",
+      "domain": "climate-adaptation",
+      "lens": "Mode",
+      "agent": "HYVE",
+      "question": "Compare climate vulnerability across UK transport modes — which mode is most at risk overall?",
+      "why_it_matters": "Cross-mode prioritisation for adaptation investment.",
+      "expected_shape_hint": "vulnerability comparison + composite score",
+      "follow_ons": [
+        "What's the cheapest reduction in overall vulnerability?",
+        "Which mode adaptation has biggest co-benefits?"
+      ]
+    },
+
+    {
+      "id": "Q48",
+      "domain": "strategic-decision",
+      "lens": "CPC",
+      "agent": "ATLAS",
+      "question": "Should CPC bid for the upcoming £5m freight decarbonisation call? Recommend with rationale.",
+      "why_it_matters": "Real bid/no-bid decision support — Atlas's flagship use case.",
+      "expected_shape_hint": "Recommend + confidence tier + counter-considerations",
+      "follow_ons": [
+        "What's our strongest unique selling point?",
+        "Most likely competitors and how to beat them?"
+      ]
+    },
+    {
+      "id": "Q49",
+      "domain": "strategic-decision",
+      "lens": "Ecosystem",
+      "agent": "ATLAS",
+      "question": "Recommend the best-fit consortium partners for a connected vehicle bid worth £15m over 3 years.",
+      "why_it_matters": "Consortium composition — needs evidence-backed partner ranking.",
+      "expected_shape_hint": "ranked partner list + roles + fit rationale",
+      "follow_ons": [
+        "Any partner overlaps that would create conflicts?",
+        "What capability gap remains even with the best partners?"
+      ]
+    },
+    {
+      "id": "Q50",
+      "domain": "strategic-decision",
+      "lens": "CPC",
+      "agent": "ATLAS",
+      "question": "Given these 10 candidate project ideas, which 3 should CPC fund this cycle? (ideas to be drawn from a recent CPC portfolio review)",
+      "why_it_matters": "Pure prioritisation decision — high-stakes committee output.",
+      "expected_shape_hint": "ranked list + selection criteria + confidence per pick",
+      "follow_ons": [
+        "What's the case for the unfunded #4?",
+        "Sensitivity: which inputs most change the ranking?"
+      ]
+    }
+  ]
+}
