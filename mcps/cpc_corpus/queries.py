@@ -18,11 +18,29 @@ from __future__ import annotations
 
 import os
 import re
+import sys
 import warnings
+from pathlib import Path
 from typing import Any, Optional
 
 import psycopg2
 import psycopg2.extras
+
+# Load .env from agents/ or repo root so corpus search works in all runners
+# (langgraph dev, pytest, direct python -c, etc.)
+try:
+    from dotenv import load_dotenv
+    _here = Path(__file__).resolve()
+    for _candidate in [
+        _here.parent.parent.parent / "agents" / ".env",  # mcps/cpc_corpus → repo/agents/.env
+        _here.parent.parent.parent / ".env.local",        # repo root .env.local
+        _here.parent.parent.parent / ".env",              # repo root .env
+    ]:
+        if _candidate.exists():
+            load_dotenv(_candidate, override=False)
+            break
+except ImportError:
+    pass
 
 
 # ---------------------------------------------------------------------------

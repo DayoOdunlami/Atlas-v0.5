@@ -360,38 +360,37 @@ def search_node(state: WorkbenchState) -> dict:
     # --- corpus search ---
     raw_results: list[dict[str, Any]] = []
     try:
-        # Enrich query with source/target labels for better recall
         enriched_query = (
             f"{query} "
             f"{model_summary.get('source_label', '')} "
             f"{model_summary.get('target_label', '')}"
         ).strip()
-        raw_results = search_corpus_projects.invoke({"query": enriched_query, "k": 8})
-        if not isinstance(raw_results, list):
-            raw_results = []
+        tool_output = search_corpus_projects.invoke({"query": enriched_query, "k": 8})
+        # Tool returns {"results": [...], "coverage": {...}} or bare list
+        if isinstance(tool_output, dict):
+            raw_results = tool_output.get("results", [])
+        elif isinstance(tool_output, list):
+            raw_results = tool_output
     except Exception as exc:
         trace.append({"label": "Corpus search failed", "status": "error", "detail": str(exc)})
 
     trace.append({"label": f"Found {len(raw_results)} results", "status": "active"})
 
-    # --- citation verification ---
+    # Deduplicate — search results are DB-verified rows, no secondary lookup needed
+    seen: set[str] = set()
     verified: list[dict[str, Any]] = []
     for r in raw_results:
         proj_id = r.get("id") or r.get("project_id", "")
-        if not proj_id:
+        if not proj_id or proj_id in seen:
             continue
-        try:
-            proj = _verify_project(proj_id)
-            if proj:
-                verified.append({
-                    "id": proj_id,
-                    "title": r.get("title", proj.get("project_title", "")),
-                    "organisation": r.get("organisation", proj.get("organisation", "")),
-                    "relevance_note": r.get("relevance_note", ""),
-                    "score": float(r.get("similarity", 0)),
-                })
-        except Exception:
-            continue  # skip unverifiable IDs
+        seen.add(proj_id)
+        verified.append({
+            "id": proj_id,
+            "title": r.get("title", ""),
+            "organisation": r.get("organisation", ""),
+            "relevance_note": r.get("relevance_note", ""),
+            "score": float(r.get("similarity", 0)),
+        })
 
     trace.append({"label": f"Verified {len(verified)} citations", "status": "complete"})
 
@@ -633,28 +632,27 @@ def economic_analysis_node(state: WorkbenchState) -> dict:
     ).strip()
     raw_results: list[dict[str, Any]] = []
     try:
-        raw_results = search_corpus_projects.invoke({"query": search_query, "k": 6})
-        if not isinstance(raw_results, list):
-            raw_results = []
+        tool_output = search_corpus_projects.invoke({"query": search_query, "k": 6})
+        if isinstance(tool_output, dict):
+            raw_results = tool_output.get("results", [])
+        elif isinstance(tool_output, list):
+            raw_results = tool_output
     except Exception:
         pass
 
+    seen_ec: set[str] = set()
     verified_citations: list[dict[str, Any]] = []
     for r in raw_results:
         proj_id = r.get("id") or r.get("project_id", "")
-        if not proj_id:
+        if not proj_id or proj_id in seen_ec:
             continue
-        try:
-            proj = _verify_project(proj_id)
-            if proj:
-                verified_citations.append({
-                    "id": proj_id,
-                    "title": r.get("title", proj.get("project_title", "")),
-                    "organisation": r.get("organisation", proj.get("organisation", "")),
-                    "score": float(r.get("similarity", 0)),
-                })
-        except Exception:
-            pass
+        seen_ec.add(proj_id)
+        verified_citations.append({
+            "id": proj_id,
+            "title": r.get("title", ""),
+            "organisation": r.get("organisation", ""),
+            "score": float(r.get("similarity", 0)),
+        })
 
     trace.append({
         "label": f"Found {len(verified_citations)} economic evidence items",
@@ -826,17 +824,21 @@ def explore_node(state: WorkbenchState) -> dict:
 
     trace.append({"label": "Searching CPC corpus (broad exploration)", "status": "active"})
 
-    # Corpus search — use the raw query without match-enrichment so we get
-    # results beyond just the current match context
+    # Corpus search — raw query, no match-enrichment, so we get results
+    # beyond the current match context.
+    # search_corpus_projects returns DB-verified rows so no secondary verify needed.
     raw_results: list[dict[str, Any]] = []
     try:
-        raw_results = search_corpus_projects.invoke({"query": query, "k": 10})
-        if not isinstance(raw_results, list):
-            raw_results = []
+        tool_output = search_corpus_projects.invoke({"query": query, "k": 10})
+        # Tool returns {"results": [...], "coverage": {...}} or bare list
+        if isinstance(tool_output, dict):
+            raw_results = tool_output.get("results", [])
+        elif isinstance(tool_output, list):
+            raw_results = tool_output
     except Exception as exc:
         trace.append({"label": f"Corpus search failed: {exc}", "status": "error"})
 
-    # Verify and deduplicate citations
+    # Deduplicate — results are already DB-verified by the search query
     verified: list[dict[str, Any]] = []
     seen: set[str] = set()
     for r in raw_results:
@@ -844,22 +846,17 @@ def explore_node(state: WorkbenchState) -> dict:
         if not proj_id or proj_id in seen:
             continue
         seen.add(proj_id)
-        try:
-            proj = _verify_project(proj_id)
-            if proj:
-                verified.append({
-                    "id": proj_id,
-                    "title": r.get("title", proj.get("project_title", "")),
-                    "organisation": r.get("organisation", proj.get("organisation", "")),
-                    "relevance_note": r.get("relevance_note", ""),
-                    "score": float(r.get("similarity", 0)),
-                })
-        except Exception:
-            pass
+        verified.append({
+            "id": proj_id,
+            "title": r.get("title", ""),
+            "organisation": r.get("organisation", ""),
+            "relevance_note": r.get("relevance_note", ""),
+            "score": float(r.get("similarity", 0)),
+        })
 
     trace.append({
         "label": f"Found {len(verified)} projects in corpus",
-        "status": "active",
+        "status": "active" if verified else "error",
     })
 
     # Build context-aware system prompt
