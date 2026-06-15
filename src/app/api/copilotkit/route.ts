@@ -24,10 +24,12 @@ const AGENT_BASE = (
 ).replace(/\/$/, "");
 
 // CopilotRuntime — routes to the right AG-UI agent by name
-// JARVIS   → /jarvis    (corpus explorer — evidence search + citation verification)
-// ATLAS    → /atlas     (Green Book strategist — Five Case Model + NPV)
-// CICERONE → /cicerone  (cross-sector transfer — transferability score + HAVE/PARTIAL/MISSING gaps)
-// HYVE     → /hyve      (climate adaptation — HIVE case studies + transport mode classification)
+// JARVIS       → /jarvis       (corpus explorer — evidence search + citation verification)
+// ATLAS        → /atlas        (Green Book strategist — Five Case Model + NPV)
+// CICERONE     → /cicerone     (cross-sector transfer — transferability score + HAVE/PARTIAL/MISSING gaps)
+// HYVE         → /hyve         (climate adaptation — HIVE case studies + transport mode classification)
+// WORKBENCH    → /workbench    (legacy hard-router, superseded when ATLAS5_ORCHESTRATOR_V1=true)
+// ORCHESTRATOR → /workbench    (ADR-0001 tool-calling brain, active when flag is on)
 const agentRuntime = new CopilotRuntime({
   agents: {
     jarvis: new HttpAgent({
@@ -41,6 +43,12 @@ const agentRuntime = new CopilotRuntime({
     }),
     hyve: new HttpAgent({
       url: `${AGENT_BASE}/hyve`,
+    }),
+    // The workbench endpoint is always registered (server.py handles the flag routing).
+    // When ATLAS5_ORCHESTRATOR_V1=true the Python server serves the new orchestrator graph;
+    // when false it serves the legacy hard-router.  The frontend always connects here.
+    workbench: new HttpAgent({
+      url: `${AGENT_BASE}/workbench`,
     }),
   },
 });

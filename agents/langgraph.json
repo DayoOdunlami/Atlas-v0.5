@@ -2,6 +2,7 @@
   "dependencies": ["."],
   "graphs": {
     "workbench": "./workbench/graph.py:graph",
+    "orchestrator": "./orchestrator/graph.py:orchestrator_graph",
     "atlas": "./atlas/graph.py:atlas_graph",
     "jarvis": "./jarvis/graph.py:jarvis_graph",
     "cicerone": "./cicerone/graph.py:cicerone_graph",

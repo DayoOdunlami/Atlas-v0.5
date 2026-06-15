@@ -1,6 +1,13 @@
 """
 Atlas Visual Recipe Director — Python port.
 
+⚠ DO NOT IMPORT THIS MODULE DIRECTLY IN NEW CODE (ADR-0001 D0.4).
+   Use agents.registry.viz instead — it re-exports this module's public API
+   and will be updated to the live art-director path when D1.4 is wired.
+
+   Old:  from agents.visual_recipe_director import build_chart_specs
+   New:  from agents.registry.viz import build_chart_specs
+
 Mirrors src/lib/atlas/visual-recipe-director.ts exactly.
 Call build_chart_specs() from verify_citations (and other agent nodes)
 to replace the hard-coded 2-bar-chart output with intent-appropriate visuals.

@@ -2,7 +2,19 @@
 Atlas Workbench Agent — LangGraph StateGraph
 =============================================
 
-PURPOSE
+⚠ LEGACY — DO NOT EXTEND (ADR-0001, 2026-06-15)
+-------------------------------------------------
+This file is the pre-ADR-0001 hard-router workbench graph.
+It is preserved as a live fallback (ATLAS5_ORCHESTRATOR_V1=false)
+and as a reference implementation.
+
+Replacement: agents/orchestrator/graph.py  (ATLAS5_ORCHESTRATOR_V1=true)
+Cutover milestone: D4.5
+
+Do not add new routes or nodes here.  If a capability is needed, build it
+in agents/orchestrator/ and agents/spine/ instead.
+
+PURPOSE (legacy)
 -------
 A purpose-built agent for the /workbench chat panel.  Unlike the general
 ATLAS agent this graph is tightly scoped: it answers questions about the

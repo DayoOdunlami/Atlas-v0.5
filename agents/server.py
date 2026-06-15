@@ -96,6 +96,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     print(f"  OPENAI_API_KEY:    {'set' if os.getenv('OPENAI_API_KEY') else 'not set (ILIKE fallback)'}")
     print(f"  EXA_API_KEY:       {'set' if os.getenv('EXA_API_KEY') else 'not set (Exa disabled)'}")
     print("  Agents: JARVIS /jarvis | ATLAS /atlas | CICERONE /cicerone | HYVE /hyve")
+    from agents.feature_flags import flags as _startup_flags
+    print(f"  Feature flags: ATLAS5_ORCHESTRATOR_V1={_startup_flags.orchestrator_v1} | "
+          f"VIZ_ART_DIRECTOR={_startup_flags.viz_art_director_v1} | "
+          f"GENERATIVE_VIZ={_startup_flags.generative_viz_v1}")
     print("  Docs:   http://localhost:8000/docs")
     yield
     print("Atlas 5 agent service shutting down.")
@@ -109,9 +113,10 @@ app = FastAPI(
     title="Atlas 5 — Agent Service",
     description=(
         "AG-UI streaming agent service for Connected Places Catapult Atlas 5. "
-        "JARVIS (corpus explorer) and ATLAS (Green Book strategist) via LangGraph."
+        "JARVIS (corpus explorer), ATLAS (Green Book strategist), CICERONE (cross-sector), "
+        "HYVE (climate adaptation), and the new tool-calling ORCHESTRATOR (ADR-0001) via LangGraph."
     ),
-    version="0.5.0",
+    version="0.6.0",
     lifespan=lifespan,
 )
 
@@ -169,9 +174,15 @@ async def health() -> dict:
 @app.get("/")
 async def root() -> dict[str, str]:
     """Service info."""
+    from agents.feature_flags import flags as _root_flags
     return {
         "service": "Atlas 5 agent service",
-        "version": "0.5.0",
+        "version": "0.6.0",
+        "feature_flags": {
+            "orchestrator_v1": _root_flags.orchestrator_v1,
+            "viz_art_director_v1": _root_flags.viz_art_director_v1,
+            "generative_viz_v1": _root_flags.generative_viz_v1,
+        },
         "protocol": "AG-UI (ag_ui_langgraph)",
         "agents": {
             "jarvis":    "/jarvis    POST → AG-UI SSE stream",
@@ -279,6 +290,66 @@ try:
 except Exception as _hyve_err:
     print(f"[server] WARNING: HYVE failed to load: {_hyve_err}")
     print("[server] HYVE endpoint will return 500 until graph is fixed.")
+
+
+# ---------------------------------------------------------------------------
+# ORCHESTRATOR — /workbench  (feature-flag gated, ADR-0001)
+#
+# When ATLAS5_ORCHESTRATOR_V1=true the new tool-calling orchestrator graph is
+# registered at /workbench, replacing the legacy hard-router.
+# When the flag is OFF the legacy graph.py is registered instead so the
+# existing Vercel/Railway workbench continues to work unchanged.
+# ---------------------------------------------------------------------------
+
+from agents.feature_flags import flags as _flags
+
+if _flags.orchestrator_v1:
+    try:
+        from agents.orchestrator.graph import orchestrator_graph as _wb_graph  # type: ignore[import]
+        _wb_name = "orchestrator"
+        _wb_description = (
+            "Atlas 5 tool-calling orchestrator (v1). "
+            "Triages queries, gates deep research, runs a tool-calling loop, "
+            "verifies claims via the trust spine, and produces a format-passed "
+            "AtlasRenderModel. Flag: ATLAS5_ORCHESTRATOR_V1=true."
+        )
+        print("[server] ATLAS5_ORCHESTRATOR_V1=true — loading new orchestrator graph")
+    except Exception as _orch_err:
+        _wb_graph = None
+        print(f"[server] WARNING: orchestrator graph failed to load: {_orch_err}")
+        print("[server] Falling back to legacy workbench graph.")
+        _flags_fallback = True
+    else:
+        _flags_fallback = False
+else:
+    _wb_graph = None
+    _flags_fallback = True
+    print("[server] ATLAS5_ORCHESTRATOR_V1 not set — using legacy workbench graph")
+
+if _wb_graph is None:
+    try:
+        from agents.workbench.graph import graph as _wb_graph  # type: ignore[import]
+        _wb_name = "workbench"
+        _wb_description = (
+            "Legacy Atlas 5 workbench hard-router (pre-ADR-0001). "
+            "Served until ATLAS5_ORCHESTRATOR_V1=true."
+        )
+        print("[server] Legacy workbench graph loaded at /workbench")
+    except Exception as _wb_err:
+        _wb_graph = None
+        print(f"[server] WARNING: legacy workbench graph also failed: {_wb_err}")
+
+if _wb_graph is not None:
+    try:
+        workbench_agent = LangGraphAgent(
+            name=_wb_name,
+            graph=_wb_graph,
+            description=_wb_description,
+        )
+        add_langgraph_fastapi_endpoint(app, workbench_agent, path="/workbench")
+        print(f"[server] {_wb_name.upper()} registered at /workbench")
+    except Exception as _wb_reg_err:
+        print(f"[server] WARNING: /workbench registration failed: {_wb_reg_err}")
 
 
 # ---------------------------------------------------------------------------
