@@ -46,7 +46,7 @@ _OUTCOME_PATTERNS: list[tuple[Outcome, list[re.Pattern[str]]]] = [
         re.compile(r"\bwhat.*is\b.{0,40}\b(sector|space|field|domain|market)\b", re.I),
     ]),
     ("connect", [
-        re.compile(r"\banalog\b|\btransfer\b|\bsector.*match\b|\bwho.*else\b|\bsimilar.*to\b|\bfunding.*call\b|\bopportunit", re.I),
+        re.compile(r"\banalog\b|\btransfer(?:s)?\b|\bsector.*match\b|\bwho.*else\b|\bsimilar.*to\b|\bfunding.*call\b|\bopportunit", re.I),
         re.compile(r"\b(can|could|should).*work.*in\b|\bfit.*for\b|\bappl.*in\b", re.I),
     ]),
     ("diagnose", [
@@ -54,7 +54,7 @@ _OUTCOME_PATTERNS: list[tuple[Outcome, list[re.Pattern[str]]]] = [
         re.compile(r"\bdiagnos\b|\baudit\b|\bassess.*capabilit\b|\benrich\b", re.I),
     ]),
     ("act", [
-        re.compile(r"\bbusiness case\b|\binvestment brief\b|\bnpv\b|\bwhat.*should.*do\b|\bnext.*step\b|\baction\b|\brecommend", re.I),
+        re.compile(r"\bbusiness case\b|\binvestment (?:case|brief)\b|\bnpv\b|\bwhat.*should.*do\b|\bnext.*step\b|\baction\b|\brecommend", re.I),
         re.compile(r"\bwhat.*bid\b|\bshould.*bid\b|\bworth.*bid\b|\bfive.case\b", re.I),
     ]),
     ("defend", [

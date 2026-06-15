@@ -102,6 +102,104 @@ def search_external(
     return [{"note": "No external search API configured (TAVILY_API_KEY / EXA_API_KEY)"}]
 
 
-ALL_TOOLS = [search_corpus, search_hive, load_passport, search_external]
-STANDARD_TOOLS = [search_corpus, search_hive, load_passport]
-DEEP_TOOLS = [search_corpus, search_hive, load_passport, search_external]
+@tool
+def extract_requirement_spec(
+    opportunity_text: Annotated[str, "Funding call or opportunity description to parse"],
+) -> dict:
+    """
+    Extract a structured Requirement Spec from opportunity text.
+
+    Returns criteria with importance, domain, and evidence_type fields.
+    """
+    try:
+        from agents.matcher.requirement_spec import extract_requirement_spec as _extract
+        spec = _extract(opportunity_text)
+        return {
+            "title": spec.title,
+            "funder": spec.funder,
+            "sector_target": spec.sector_target,
+            "criteria": [
+                {
+                    "label": c.label,
+                    "description": c.description,
+                    "importance": c.importance,
+                    "domain": c.domain,
+                    "evidence_type": c.evidence_type,
+                }
+                for c in spec.criteria
+            ],
+        }
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
+@tool
+def run_matcher(
+    passport_json: Annotated[dict, "Passport dict from load_passport"],
+    spec_json: Annotated[dict, "Requirement spec dict from extract_requirement_spec"],
+) -> dict:
+    """
+    Run Fit / Gap / Risk / Move matcher between a Passport and Requirement Spec.
+
+    Returns scored matches and overall fit score.
+    """
+    try:
+        from agents.matcher.passport import dict_to_passport
+        from agents.matcher.requirement_spec import dict_to_requirement_spec
+        from agents.matcher.matcher import run_matcher as _run
+
+        passport = dict_to_passport(passport_json)
+        spec = dict_to_requirement_spec(spec_json)
+        result = _run(passport, spec)
+        return result.to_dict()
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
+@tool
+def run_value_translation(
+    passport_json: Annotated[dict, "Passport dict"],
+    spec_json: Annotated[dict, "Requirement spec dict"],
+) -> dict:
+    """
+    Run the full Value Translation report (matcher + transfer labels).
+
+    Returns headline, insight_card, blocks_data, and confidence_tier.
+    """
+    try:
+        from agents.matcher.passport import dict_to_passport
+        from agents.matcher.requirement_spec import dict_to_requirement_spec
+        from agents.matcher.report import build_value_translation_report
+
+        passport = dict_to_passport(passport_json)
+        spec = dict_to_requirement_spec(spec_json)
+        report = build_value_translation_report(passport=passport, spec=spec)
+        return {
+            "headline": report.get("headline"),
+            "insight_card": report.get("insight_card"),
+            "confidence_tier": report.get("confidence_tier"),
+            "blocks_data": report.get("blocks_data"),
+            "translation_summary": report.get("translation_summary"),
+        }
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
+ALL_TOOLS = [
+    search_corpus,
+    search_hive,
+    load_passport,
+    extract_requirement_spec,
+    run_matcher,
+    run_value_translation,
+    search_external,
+]
+STANDARD_TOOLS = [
+    search_corpus,
+    search_hive,
+    load_passport,
+    extract_requirement_spec,
+    run_matcher,
+    run_value_translation,
+]
+DEEP_TOOLS = ALL_TOOLS

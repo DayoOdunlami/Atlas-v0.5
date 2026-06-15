@@ -224,14 +224,48 @@ async def node_loop(state: dict[str, Any]) -> dict[str, Any]:
     """
     Tool-calling loop — runs until the LLM stops calling tools.
 
-    Uses claude-sonnet-4-6 (from llm_factory) with tools bound.
-    For stub vertical (D1.6) returns a stub response if ANTHROPIC_API_KEY is absent.
+    Deterministic paths (no LLM required):
+      - diagnose / connect+transfer → Value Translation (Phase 3)
+      - orient / connect / act / defend → corpus-backed outcome builders (Phase 4)
+
+    Falls back to LLM loop when ANTHROPIC_API_KEY is set; stub otherwise.
     """
     from agents.llm_factory import get_llm
+    from agents.orchestrator.diagnose import run_value_translation_pipeline
+    from agents.orchestrator.outcome_builders import build_outcome_model
+    from agents.orchestrator.reasoning_trace import steps_for_pipeline
 
     query = state.get("query", "")
     effort = state.get("effort", "analyze")
     outcome = state.get("outcome", "orient")
+
+    # Phase 3 — Value Translation (diagnose + connect+transfer)
+    vt_model = run_value_translation_pipeline(
+        query=query,
+        outcome=outcome,
+        thread_id=state.get("thread_id"),
+    )
+    if vt_model is not None:
+        insight = vt_model.get("insight_card", "")
+        steps = steps_for_pipeline(outcome=outcome, effort=effort, path="value_translation")
+        vt_model["reasoning_steps"] = steps
+        return {
+            "render_model": vt_model,
+            "reasoning_steps": steps,
+            "messages": [AIMessage(content=insight)],
+        }
+
+    # Phase 4 — deterministic outcome builders (all five outcomes except diagnose-only VT)
+    if outcome in ("orient", "connect", "act", "defend"):
+        built = build_outcome_model(query=query, outcome=outcome, thread_id=state.get("thread_id"))
+        insight = built.get("insight_card", "")
+        steps = steps_for_pipeline(outcome=outcome, effort=effort, path=f"{outcome}_builder")
+        built["reasoning_steps"] = steps
+        return {
+            "render_model": built,
+            "reasoning_steps": steps,
+            "messages": [AIMessage(content=insight)],
+        }
 
     tools = DEEP_TOOLS if effort == "deep" else STANDARD_TOOLS
 
@@ -390,7 +424,12 @@ def node_format(state: dict[str, Any]) -> dict[str, Any]:
     except Exception:
         updated["gap_signals"] = []
 
-    return {"render_model": updated}
+    # U7 — propagate reasoning steps to coAgent state
+    steps = state.get("reasoning_steps") or (model.get("reasoning_steps") if model else None)
+    if steps:
+        updated["reasoning_steps"] = steps
+
+    return {"render_model": updated, "reasoning_steps": steps or []}
 
 
 # ---------------------------------------------------------------------------

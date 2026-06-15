@@ -351,6 +351,34 @@ Phases 4 deliverables are smaller because the skeleton + vertical already proved
 
 ---
 
+## 3.5 Phase 3.5 — UI Integration Seam (MVP wiring)
+
+Backend Phases 0–5 are implemented in Python/tests. This phase makes the workbench **live** on `/workbench`.
+
+| ID | Deliverable | Status |
+|----|-------------|--------|
+| U1 | Diagnose path → `build_value_translation_report()` in orchestrator loop | Done — `agents/orchestrator/diagnose.py` |
+| U2 | Matcher tools (`extract_requirement_spec`, `run_matcher`, `run_value_translation`) | Done — `agents/orchestrator/tools.py` |
+| U3 | Render block payloads + TS adapter (`orchestratorToAtlasRenderModel`) | Done — `block_payloads.py`, `orchestrator-adapter.ts` |
+| U4 | Flag-gated runtime swap (`NEXT_PUBLIC_ATLAS5_ORCHESTRATOR_V1`) | Done — `workbench-agent-bridge.tsx` |
+| U5 | Context sync (`setLiveModelFromOrchestrator`) | Done — `workbench-context.tsx` |
+| U6 | Gate card in chat (`useLangGraphInterrupt`) | Done — client-side deep-query confirm fallback in `orchestrator-chat-panel.tsx` |
+| U7 | Reasoning trace from orchestrator steps | Done — `reasoning_trace.py` + bridge sync |
+| U8 | Document mode (`research-document.tsx`) | Done — `research-document.tsx` + canvas toggle |
+| U9 | Lab split-view `/lab/orchestrator` | Done |
+| U10 | Env + deploy (local flag, Railway, Vercel) | Done — `.env.example` defaults ON; deploy envs manual |
+| U11 | Playwright e2e (canonical question → canvas blocks) | Done — `eval/orchestrator_workbench.spec.ts` |
+| U12 | Sameer validation harness | Done — `eval/sameer_validation.md` + pytest |
+
+**Canonical gate question:**
+> What evidence does CPC have in smart mobility that would transfer to the Innovate UK Smart City Challenge?
+
+**Acceptance:** `/workbench` with both flags on → chat → canvas shows `TransferLanes` + `MatchBench` + confidence tier.
+
+**Build order:** U1 → U2 → U3 → U4 → U5 → U11 → U6 → U8 → D4.5 → D5.4
+
+---
+
 ## 7. What's out of scope for Stage 1.5
 
 - Canvas mode (tldraw) re-wiring — runs unchanged.

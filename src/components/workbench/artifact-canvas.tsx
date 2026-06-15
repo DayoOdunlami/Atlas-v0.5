@@ -6,6 +6,7 @@ import type { CanonicalQuestionId, RenderBlock } from "@/lib/workbench/atlas-ren
 import { DecisionSpineStrip } from "./decision-spine-strip";
 import { BlockRenderer } from "./block-renderer";
 import { ReasoningTrace, DEMO_REASONING_STEPS } from "./reasoning-trace";
+import { ResearchDocument } from "./research-document";
 import { BranchConfirmChip } from "./branch-confirm-chip";
 import { StageHistoryBreadcrumb } from "./stage-history-breadcrumb";
 import {
@@ -28,6 +29,9 @@ export function ArtifactCanvas() {
     error,
     isDbBacked,
     reasoningSteps,
+    renderMode,
+    documentSections,
+    lastCitations,
   } = useWorkbench();
 
   // Live agent steps when available; fall back to demo steps so the
@@ -115,7 +119,7 @@ export function ArtifactCanvas() {
         </>
       )}
 
-      {/* Blocks — 3-zone stage layout (focus / context / reference) */}
+      {/* Blocks or document layout */}
       <div className="flex-1 px-6 pb-8 pt-1">
         {isLoading && isDbBacked ? (
           <div className="space-y-4">
@@ -124,7 +128,15 @@ export function ArtifactCanvas() {
             <BlockSkeletonMatchBench />
             <BlockSkeletonClaimLedger />
           </div>
-        ) : error ? null : (
+        ) : error ? null : renderMode === "document" ? (
+          <ResearchDocument
+            headline={model.decision_spine.recommendation}
+            insightCard={model.decision_spine.summary}
+            sections={documentSections}
+            confidenceTier={model.decision_spine.confidence_tier}
+            citations={lastCitations}
+          />
+        ) : (
           <StageZones blocks={model.blocks} onInspect={openInspector} />
         )}
 

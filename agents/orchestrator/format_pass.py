@@ -35,6 +35,22 @@ from agents.registry.blocks import get_blocks_for_outcome, BlockSpec
 
 RenderMode = Literal["blocks", "document", "chart"]
 
+_MATCHER_BLOCK_IDS = frozenset({
+    "match_bench",
+    "transfer_lanes",
+    "dimension_gap",
+    "claim_ledger",
+    "evidence_state_summary",
+    "opportunity_list",
+    "comparison_matrix",
+    "economic_case",
+    "action_plan",
+    "objection_response",
+    "provenance_trace",
+    "context_card",
+    "recommendation_confidence",
+})
+
 _PROSE_PATTERNS = [
     re.compile(r"\bwrite\b|\bsummar\b|\bnarrat\b|\breport\b|\bdraft\b", re.I),
     re.compile(r"\bprose\b|\bdocument\b|\bpaper\b|\bbrief\s+me\b", re.I),
@@ -178,6 +194,19 @@ def run_format_pass(
     q = query or model.get("query", "")
     render_mode = _choose_render_mode(model, q)
     block_ids = _select_blocks(model, render_mode)
+
+    # Phase 3.5 — when matcher vertical populated blocks_data, force those blocks
+    blocks_data = model.get("blocks_data") or {}
+    if blocks_data:
+        render_mode = "blocks"
+        matcher_blocks = [k for k in blocks_data if k in _MATCHER_BLOCK_IDS]
+        # Preserve outcome-preferred order
+        preferred = [b for b in block_ids if b in matcher_blocks]
+        for bid in matcher_blocks:
+            if bid not in preferred:
+                preferred.append(bid)
+        block_ids = preferred if preferred else block_ids
+
     chart_spec = _attach_chart_spec(model, render_mode)
 
     updated = dict(model)
@@ -185,5 +214,10 @@ def run_format_pass(
     updated["render_mode"] = render_mode
     if chart_spec is not None:
         updated["chart_spec"] = chart_spec
+
+    # Materialize full block payloads when matcher vertical populated blocks_data
+    if updated.get("blocks_data"):
+        from agents.orchestrator.block_payloads import materialize_render_blocks
+        updated["render_blocks"] = materialize_render_blocks(updated, block_ids)
 
     return updated

@@ -181,6 +181,16 @@ interface WorkbenchState {
 
   // Active model
   model: AtlasRenderModel;
+  /** Replace the canvas model from orchestrator coAgent state (flag-gated path) */
+  setLiveModelFromOrchestrator: (model: AtlasRenderModel) => void;
+  /** Clear orchestrator override — revert to base + patches */
+  clearLiveModelOverride: () => void;
+  /** Orchestrator render mode from last turn */
+  renderMode: "blocks" | "document" | "chart";
+  setRenderMode: (mode: "blocks" | "document" | "chart") => void;
+  /** Prose sections when render_mode=document */
+  documentSections: Record<string, string>;
+  setDocumentSections: (s: Record<string, string>) => void;
   /** True while a DB-backed model is being fetched */
   isLoading: boolean;
   /** Error message from the last failed fetch, or null */
@@ -448,6 +458,9 @@ export function WorkbenchProvider({
   const [dbModel, setDbModel] = React.useState<AtlasRenderModel | null>(null);
   const [isLoading, setIsLoading] = React.useState<boolean>(isDbBacked);
   const [error, setError] = React.useState<string | null>(null);
+  const [liveModelOverride, setLiveModelOverride] = React.useState<AtlasRenderModel | null>(null);
+  const [renderMode, setRenderMode] = React.useState<"blocks" | "document" | "chart">("blocks");
+  const [documentSections, setDocumentSections] = React.useState<Record<string, string>>({});
 
   // Base model resolution priority (highest first):
   //   1. demo fixture (initialModel)  — overrides everything; seeds all CQs
@@ -460,11 +473,21 @@ export function WorkbenchProvider({
       : MODELS[cqId];
 
   // Derive the current model by replaying all applied patches from baseModel.
-  // This keeps undo deterministic — pop a patch and the model recomputes.
-  const model: AtlasRenderModel = React.useMemo(
+  // Orchestrator live override takes precedence when set (Phase 3.5).
+  const patchedModel: AtlasRenderModel = React.useMemo(
     () => replayPatches(baseModel, appliedPatches),
     [baseModel, appliedPatches],
   );
+  const model: AtlasRenderModel = liveModelOverride ?? patchedModel;
+
+  const setLiveModelFromOrchestrator = React.useCallback((m: AtlasRenderModel) => {
+    setLiveModelOverride(m);
+    setCqIdState("cq.match.workbench");
+  }, []);
+
+  const clearLiveModelOverride = React.useCallback(() => {
+    setLiveModelOverride(null);
+  }, []);
 
   // Clear patch history + stage history when cq or match changes so stale state doesn't persist
   React.useEffect(() => {
@@ -765,6 +788,12 @@ export function WorkbenchProvider({
         cqId,
         setCqId,
         model,
+        setLiveModelFromOrchestrator,
+        clearLiveModelOverride,
+        renderMode,
+        setRenderMode,
+        documentSections,
+        setDocumentSections,
         isLoading,
         error,
         isDbBacked,

@@ -2,11 +2,15 @@
 
 import { useWorkbench } from "@/lib/workbench/workbench-context";
 import { ChatPanel } from "./chat-panel";
+import { OrchestratorChatPanel } from "./orchestrator-chat-panel";
 import { ArtifactCanvas } from "./artifact-canvas";
 import { HomeCanvas } from "./home-canvas";
 import { InspectorDrawer } from "./inspector-drawer";
 import { SnapshotPreview } from "./snapshot-preview";
 import { PatchConfirmationPanel } from "./patch-confirmation-panel";
+
+const ORCHESTRATOR_V1 =
+  process.env.NEXT_PUBLIC_ATLAS5_ORCHESTRATOR_V1 === "true";
 
 export function AtlasShell() {
   const { model, cqId, inspectorKey, closeInspector, snapshotOpen, setSnapshotOpen } =
@@ -17,7 +21,7 @@ export function AtlasShell() {
     <div className="flex h-full overflow-hidden">
       {/* Chat panel — readable density; clamps so the canvas keeps the spotlight */}
       <div className="hidden lg:flex flex-col w-[360px] xl:w-[400px] 2xl:w-[440px] shrink-0 h-full max-w-[32vw]">
-        <ChatPanel />
+        {ORCHESTRATOR_V1 ? <OrchestratorChatPanel /> : <ChatPanel />}
       </div>
 
       {/* Main canvas — gets all remaining real estate */}

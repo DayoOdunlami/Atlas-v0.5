@@ -28,6 +28,7 @@
 
 import { CopilotKit } from "@copilotkit/react-core";
 import type { ReactNode } from "react";
+import { useEffect, useRef } from "react";
 
 interface OrchestratorRuntimeProviderProps {
   children: ReactNode;
@@ -104,10 +105,15 @@ function useOrchestratorState(
     },
   });
 
-  // Sync render_model to parent callback whenever it changes
-  if (state.render_model && onRenderModel) {
+  const lastKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!state.render_model || !onRenderModel) return;
+    const key = JSON.stringify(state.render_model);
+    if (key === lastKeyRef.current) return;
+    lastKeyRef.current = key;
     onRenderModel(state.render_model);
-  }
+  }, [state.render_model, onRenderModel]);
 }
 
 // ---------------------------------------------------------------------------

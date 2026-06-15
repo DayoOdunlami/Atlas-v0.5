@@ -159,6 +159,29 @@ def extract_requirement_spec(
     )
 
 
+def dict_to_requirement_spec(data: dict[str, Any]) -> RequirementSpec:
+    """Convert a requirement spec dict (from tool result) to a typed RequirementSpec."""
+    criteria = [
+        RequirementCriterion(
+            label=c.get("label", ""),
+            description=c.get("description", ""),
+            importance=c.get("importance", "desirable"),
+            domain=c.get("domain", ""),
+            evidence_type=c.get("evidence_type", "case_study"),
+        )
+        for c in (data.get("criteria") or [])
+    ]
+    return RequirementSpec(
+        source_text=data.get("source_text", ""),
+        title=data.get("title", "Unknown opportunity"),
+        sector_target=data.get("sector_target", ""),
+        funder=data.get("funder", "Unknown"),
+        criteria=criteria,
+        total_value=data.get("total_value", ""),
+        deadline=data.get("deadline", ""),
+    )
+
+
 def validate_requirement_spec(spec: RequirementSpec) -> list[str]:
     """Return validation errors (empty = valid)."""
     errors: list[str] = []
