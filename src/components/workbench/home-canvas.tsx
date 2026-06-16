@@ -16,6 +16,8 @@
 import * as React from "react";
 import { useWorkbench } from "@/lib/workbench/workbench-context";
 import { useComposerRuntime } from "@assistant-ui/react";
+import { useCopilotChat } from "@copilotkit/react-core";
+import { TextMessage, MessageRole } from "@copilotkit/runtime-client-gql";
 import {
   Compass,
   Search,
@@ -88,7 +90,10 @@ const EXAMPLE_QUESTIONS = [
   "Which projects could partner on autonomous inspection?",
 ];
 
-function StarterCard({ intent }: { intent: StarterIntent }) {
+const ORCHESTRATOR_V1 =
+  process.env.NEXT_PUBLIC_ATLAS5_ORCHESTRATOR_V1 === "true";
+
+function LegacyStarterCard({ intent }: { intent: StarterIntent }) {
   const composer = useComposerRuntime();
   const Icon = intent.icon;
 
@@ -121,7 +126,45 @@ function StarterCard({ intent }: { intent: StarterIntent }) {
   );
 }
 
-function ExampleChip({ text }: { text: string }) {
+function OrchestratorStarterCard({ intent }: { intent: StarterIntent }) {
+  const { appendMessage } = useCopilotChat();
+  const Icon = intent.icon;
+
+  const handleClick = React.useCallback(() => {
+    void appendMessage(
+      new TextMessage({ role: MessageRole.User, content: intent.prompt }),
+    );
+  }, [appendMessage, intent.prompt]);
+
+  return (
+    <button
+      onClick={handleClick}
+      className={`group text-left rounded-xl border bg-gradient-to-br ${intent.accent} p-4 transition-all hover:shadow-md hover:-translate-y-0.5 hover:border-foreground/30`}
+    >
+      <div className="flex items-start gap-3">
+        <div className="w-9 h-9 rounded-lg bg-background/80 border border-border flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+          <Icon className="w-4 h-4 text-foreground/80" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold leading-tight">{intent.label}</p>
+          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+            {intent.description}
+          </p>
+        </div>
+        <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-foreground/60 group-hover:translate-x-0.5 transition-all shrink-0 mt-1" />
+      </div>
+    </button>
+  );
+}
+
+function StarterCard({ intent }: { intent: StarterIntent }) {
+  if (ORCHESTRATOR_V1) {
+    return <OrchestratorStarterCard intent={intent} />;
+  }
+  return <LegacyStarterCard intent={intent} />;
+}
+
+function LegacyExampleChip({ text }: { text: string }) {
   const composer = useComposerRuntime();
 
   const handleClick = React.useCallback(() => {
@@ -140,6 +183,32 @@ function ExampleChip({ text }: { text: string }) {
       {text}
     </button>
   );
+}
+
+function OrchestratorExampleChip({ text }: { text: string }) {
+  const { appendMessage } = useCopilotChat();
+
+  const handleClick = React.useCallback(() => {
+    void appendMessage(
+      new TextMessage({ role: MessageRole.User, content: text }),
+    );
+  }, [appendMessage, text]);
+
+  return (
+    <button
+      onClick={handleClick}
+      className="text-xs rounded-full border border-border px-3 py-1.5 bg-background text-muted-foreground hover:text-foreground hover:border-foreground/40 hover:bg-muted/40 transition-colors"
+    >
+      {text}
+    </button>
+  );
+}
+
+function ExampleChip({ text }: { text: string }) {
+  if (ORCHESTRATOR_V1) {
+    return <OrchestratorExampleChip text={text} />;
+  }
+  return <LegacyExampleChip text={text} />;
 }
 
 export function HomeCanvas() {
