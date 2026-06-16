@@ -353,6 +353,18 @@ if _wb_graph is not None:
 
 
 # ---------------------------------------------------------------------------
+# EVAL — /eval/run, /eval/battery (Phase B observability)
+# ---------------------------------------------------------------------------
+
+try:
+    from agents.eval.routes import router as _eval_router
+    app.include_router(_eval_router)
+    print("[server] Eval routes registered at /eval/*")
+except Exception as _eval_err:
+    print(f"[server] WARNING: eval routes failed to load: {_eval_err}")
+
+
+# ---------------------------------------------------------------------------
 # Entrypoint (direct execution)
 # ---------------------------------------------------------------------------
 

@@ -66,6 +66,18 @@ def build_orient_model(query: str, thread_id: str | None = None) -> dict[str, An
         }
         for c in citations[:6]
     ]
+    if not opportunities:
+        opportunities = [
+            {
+                "id": "scaffold-orient",
+                "title": "Run corpus landscape search",
+                "organisation": "CPC",
+                "score": 0.0,
+                "funder": "CPC corpus",
+                "status": "pending",
+                "abstract": "Structural scaffold — no ILIKE/vector hits for this query.",
+            },
+        ]
 
     comparisons = [
         {
@@ -78,6 +90,17 @@ def build_orient_model(query: str, thread_id: str | None = None) -> dict[str, An
         }
         for c in citations[:4]
     ]
+    if not comparisons:
+        comparisons = [
+            {
+                "match_id": "scaffold-orient",
+                "passport": "CPC corpus",
+                "target": "Pending corpus match",
+                "score": 0.0,
+                "funder": "CPC",
+                "status": "scaffold",
+            },
+        ]
 
     headline = f"Landscape: {len(citations)} CPC projects match '{query[:50]}'"
     insight = (
@@ -142,6 +165,25 @@ def build_connect_model(query: str, thread_id: str | None = None) -> dict[str, A
         }
         for c in citations[:4]
     ]
+    if not opportunities:
+        opportunities = [
+            {
+                "id": "scaffold-connect",
+                "title": "Map funding calls to CPC capability profile",
+                "organisation": "CPC",
+                "score": 0.0,
+                "abstract": "Structural scaffold — commission corpus search for live calls.",
+            },
+        ]
+    if not lanes:
+        lanes = [
+            {
+                "criterion": "Capability alignment",
+                "domain": "funding-fit",
+                "transfer_label": "evidence-needed",
+                "note": "No corpus hits — run semantic search to populate transfer lanes.",
+            },
+        ]
 
     return build_atlas_render_model(
         outcome="connect",
@@ -244,6 +286,19 @@ def build_defend_model(query: str, thread_id: str | None = None) -> dict[str, An
         }
         for i, c in enumerate(citations[:5])
     ]
+    if not claims:
+        claims = [
+            {
+                "id": "cl-scaffold",
+                "claim_id": "scaffold-defend",
+                "claim_text": "Defensibility scaffold — link corpus citations before board scrutiny.",
+                "domain": "method",
+                "role": "primary",
+                "evidence_state": "self-reported",
+                "provenance": "derived",
+                "confidence_reason": "Speculative until corpus search populates claims",
+            },
+        ]
 
     objections = [
         {

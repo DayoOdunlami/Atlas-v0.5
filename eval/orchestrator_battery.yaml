@@ -1,0 +1,145 @@
+# Orchestrator eval battery — 20 golden questions from AtlasDiscover seed pack
+# domain → expected_outcome mapping is explicit per item
+
+battery:
+  version: "1.0"
+  description: "Phase B golden set — structural + judge scoring"
+
+  items:
+    - id: Q001
+      domain: org_capability
+      query: "What is CPC genuinely strong at, based on evidence?"
+      expected_outcome: diagnose
+      follow_ups:
+        - "What evidence supports that?"
+        - "What would change the answer?"
+
+    - id: Q007
+      domain: pipeline
+      query: "Which live calls are closest to CPC's capability profile?"
+      expected_outcome: connect
+      follow_ups:
+        - "Which is the best fit?"
+        - "What evidence supports that?"
+
+    - id: Q011
+      domain: compare
+      query: "Compare these calls and rank which deserves effort first."
+      expected_outcome: connect
+      follow_ups:
+        - "Which option is least risky?"
+
+    - id: Q016
+      domain: fit
+      query: "How does CPC fit this funding call?"
+      expected_outcome: connect
+      follow_ups:
+        - "What confidence cap applies to this fit?"
+
+    - id: Q021
+      domain: gap
+      query: "What is the biggest gap between source and target?"
+      expected_outcome: diagnose
+      follow_ups:
+        - "What should we collect next?"
+
+    - id: Q026
+      domain: translate
+      query: "What evidence does CPC have in smart mobility that would transfer to the Innovate UK Smart City Challenge?"
+      expected_outcome: connect
+      follow_ups:
+        - "Which claims travel, reframe or fail?"
+        - "What should we do in the next 90 days?"
+
+    - id: Q029
+      domain: translate
+      query: "Which claims travel, reframe or fail?"
+      expected_outcome: connect
+      follow_ups:
+        - "Which target-context differences matter most?"
+
+    - id: Q031
+      domain: decide
+      query: "Should CPC pursue this opportunity?"
+      expected_outcome: act
+      follow_ups:
+        - "What would make this a no-go?"
+
+    - id: Q034
+      domain: decide
+      query: "What is the minimum viable pursuit plan?"
+      expected_outcome: act
+      follow_ups:
+        - "Who needs to be engaged next?"
+
+    - id: Q036
+      domain: defend
+      query: "How would I defend this to a board?"
+      expected_outcome: defend
+      follow_ups:
+        - "What are likely objections?"
+
+    - id: Q039
+      domain: defend
+      query: "Show the evidence trail behind this conclusion."
+      expected_outcome: defend
+      follow_ups:
+        - "Which claim will be challenged first?"
+
+    - id: Q041
+      domain: act
+      query: "What should we do next?"
+      expected_outcome: act
+      follow_ups:
+        - "What actions close the top three gaps?"
+
+    - id: Q046
+      domain: economic
+      query: "What is the economic case for pursuing this?"
+      expected_outcome: act
+      follow_ups:
+        - "What assumptions dominate NPV or BCR?"
+
+    - id: Q061
+      domain: portfolio
+      query: "Which capability areas are over-represented?"
+      expected_outcome: orient
+      follow_ups:
+        - "Where is the portfolio thin relative to policy priorities?"
+
+    - id: Q064
+      domain: portfolio
+      query: "What is the best rail AI wedge?"
+      expected_outcome: orient
+      follow_ups:
+        - "Which matches have high value but low confidence?"
+
+    - id: Q002
+      domain: org_capability
+      query: "Which CPC capabilities are proven versus self-reported?"
+      expected_outcome: diagnose
+      follow_ups: []
+
+    - id: Q010
+      domain: pipeline
+      query: "What should we ignore despite thematic appeal?"
+      expected_outcome: connect
+      follow_ups: []
+
+    - id: Q048
+      domain: economic
+      query: "Build a business case for an autonomous freight corridor pilot programme."
+      expected_outcome: act
+      follow_ups: []
+
+    - id: Q056
+      domain: explain
+      query: "Why did Atlas conclude this?"
+      expected_outcome: defend
+      follow_ups: []
+
+    - id: Q077
+      domain: landscape
+      query: "Explore the UK smart mobility innovation landscape"
+      expected_outcome: orient
+      follow_ups: []

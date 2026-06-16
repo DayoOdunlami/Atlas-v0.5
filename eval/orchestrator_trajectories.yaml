@@ -1,0 +1,67 @@
+# Phase D — multi-turn trajectory scenarios
+
+trajectories:
+  - id: T01_sameer_transfer
+    name: "Sameer transfer → gaps → action"
+    description: "Canonical Phase 3 gate with follow-ups toward decision"
+    turns:
+      - query: "What evidence does CPC have in smart mobility that would transfer to the Innovate UK Smart City Challenge?"
+        expect_outcome: [connect, diagnose]
+        expect_blocks: [TransferLanes, MatchBench]
+        min_quality: 0.7
+      - query: "Which gaps are blockers versus reframes?"
+        expect_outcome: [diagnose, connect]
+        expect_blocks: [TransferLanes, DimensionGap, MatchBench]
+        min_quality: 0.6
+      - query: "What should we do in the next 90 days?"
+        expect_outcome: [act, diagnose, connect]
+        expect_blocks: [ActionPlan, EconomicCase]
+        min_quality: 0.6
+
+  - id: T02_orient_to_connect
+    name: "Landscape → pipeline fit"
+    turns:
+      - query: "Explore the UK smart mobility innovation landscape"
+        expect_outcome: [orient]
+        expect_blocks: [OpportunityList]
+        min_quality: 0.65
+      - query: "Which live calls are closest to CPC's capability profile?"
+        expect_outcome: [connect]
+        expect_blocks: [OpportunityList, TransferLanes]
+        min_quality: 0.65
+
+  - id: T03_gap_to_evidence
+    name: "Gap diagnosis → evidence plan"
+    turns:
+      - query: "What is the biggest gap between source and target?"
+        expect_outcome: [diagnose]
+        expect_blocks: [DimensionGap, MatchBench, TransferLanes]
+        min_quality: 0.65
+      - query: "What should we collect next?"
+        expect_outcome: [diagnose, act]
+        expect_blocks: [DimensionGap, MatchBench, TransferLanes]
+        min_quality: 0.6
+
+  - id: T04_defend_scrutiny
+    name: "Board defend → objections"
+    turns:
+      - query: "How would I defend this to a board?"
+        expect_outcome: [defend]
+        expect_blocks: [ClaimLedger, ObjectionResponse]
+        min_quality: 0.65
+      - query: "What are likely objections?"
+        expect_outcome: [defend]
+        expect_blocks: [ObjectionResponse, ClaimLedger]
+        min_quality: 0.65
+
+  - id: T05_business_case
+    name: "Investment case deep dive"
+    turns:
+      - query: "Build a business case for an autonomous freight corridor pilot programme."
+        expect_outcome: [act]
+        expect_blocks: [EconomicCase, ActionPlan]
+        min_quality: 0.65
+      - query: "What assumptions dominate NPV or BCR?"
+        expect_outcome: [act, defend]
+        expect_blocks: [EconomicCase, ActionPlan]
+        min_quality: 0.6

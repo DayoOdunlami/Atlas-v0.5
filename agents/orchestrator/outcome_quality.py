@@ -236,7 +236,7 @@ def run_golden_prompt_pipeline(query: str, expected_outcome: Outcome) -> dict[st
     vt = run_value_translation_pipeline(query=query, outcome=outcome)
     if vt is not None:
         model = vt
-    elif outcome in ("orient", "connect", "act", "defend"):
+    elif outcome in ("orient", "connect", "act", "defend", "diagnose"):
         model = build_outcome_model(query=query, outcome=outcome)
     else:
         model = build_outcome_model(query=query, outcome=expected_outcome)
