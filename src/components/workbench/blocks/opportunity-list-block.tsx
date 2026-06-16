@@ -54,7 +54,9 @@ export function OpportunityListBlock({ block, effectiveVisual }: Props) {
                 {row.score != null ? `${Math.round(row.score * 100)}%` : "—"}
               </TableCell>
               <TableCell className="text-xs align-top text-muted-foreground">
-                {row.status ?? "corpus"}
+                {(row as { source?: string; status?: string }).source === "external"
+                  ? "candidate (web)"
+                  : (row.status ?? "corpus")}
               </TableCell>
             </TableRow>
           ))}

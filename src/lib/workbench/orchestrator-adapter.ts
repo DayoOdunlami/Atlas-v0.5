@@ -110,6 +110,9 @@ export function orchestratorToAtlasRenderModel(
       ...(base.data_quality_notes ?? []),
       `Orchestrator outcome: ${String(raw.outcome ?? "unknown")}`,
       `Render mode: ${String(raw.render_mode ?? "blocks")}`,
+      ...(Array.isArray(raw.external_evidence) && raw.external_evidence.length > 0
+        ? [`External evidence: ${raw.external_evidence.length} candidate source(s)`]
+        : []),
     ],
   };
 }

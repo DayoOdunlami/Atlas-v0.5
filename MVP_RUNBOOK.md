@@ -1,6 +1,6 @@
 # Atlas 5 MVP Runbook
 
-> **Status:** Local MVP gate green (2026-06-16). `eval:orchestrator` 85 passed; `eval:mvp-gate` 8 passed. Vercel preview pending push.
+> **Status:** Local MVP gate green (2026-06-16). `eval:orchestrator` 103 passed; `eval:mvp-gate` 8 passed. D4.6 harmonized evidence on. Push for Vercel preview.
 
 ## MVP definition
 
@@ -79,7 +79,7 @@ Atlas never treats web results as corpus citations. Pattern:
 | 2 (deep + gate) | User confirms research plan | Exa + GovUK MCP | Separate external evidence zone; never merged into ClaimLedger |
 | 3 (defend) | Defend / falsification lane | Exa red-team queries | ObjectionResponse block |
 
-**MVP:** deterministic builders are corpus-only; `search_external` runs only on deep LLM loop after HITL gate. Post-MVP: wire Tier-1 gap-triggered Exa on Connect freshness.
+**MVP:** deterministic builders are corpus-only (delivery wedge). **Post-MVP:** D4.6 Harmonized Evidence — dual lane with reconciliation; see `ATLAS5_IMPLEMENTATION_PLAN.md` §D4.6.
 
 ## Ready for Dayo
 

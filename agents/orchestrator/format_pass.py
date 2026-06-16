@@ -49,6 +49,8 @@ _MATCHER_BLOCK_IDS = frozenset({
     "provenance_trace",
     "context_card",
     "recommendation_confidence",
+    "external_evidence",
+    "opportunity_candidates",
 })
 
 _PROSE_PATTERNS = [
@@ -206,6 +208,15 @@ def run_format_pass(
             if bid not in preferred:
                 preferred.append(bid)
         block_ids = preferred if preferred else block_ids
+
+    # D4.6 — append harmonized evidence blocks when populated
+    if blocks_data.get("external_evidence", {}).get("items"):
+        if "external_evidence" not in block_ids:
+            block_ids.insert(-1 if "recommendation_confidence" in block_ids else len(block_ids), "external_evidence")
+    if blocks_data.get("opportunity_candidates", {}).get("items"):
+        if "opportunity_candidates" not in block_ids:
+            idx = block_ids.index("opportunity_list") + 1 if "opportunity_list" in block_ids else len(block_ids)
+            block_ids.insert(idx, "opportunity_candidates")
 
     chart_spec = _attach_chart_spec(model, render_mode)
 

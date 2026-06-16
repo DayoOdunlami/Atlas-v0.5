@@ -43,6 +43,8 @@ export async function GET() {
       flags: {
         ATLAS5_ORCHESTRATOR_V1: orchestratorFlag,
         NEXT_PUBLIC_ATLAS5_ORCHESTRATOR_V1: uiOrchestratorFlag,
+        ATLAS5_HARMONIZED_EVIDENCE_V1:
+          process.env.ATLAS5_HARMONIZED_EVIDENCE_V1 === "true",
       },
     });
   } catch (err) {

@@ -21,7 +21,7 @@
     "eval:sprint5:gates": "node eval/sprint5/scripts/check-sprint5-gates.mjs",
     "bundle:surfaces": "node scripts/bundle-surface-export.mjs",
     "eval:horsemen": "node scripts/python-bin.mjs eval/test_four_horsemen.py",
-    "eval:orchestrator": "node scripts/python-bin.mjs -m pytest agents/test_outcome_quality.py agents/test_diagnose_ui_seam.py agents/test_outcome_builders.py agents/test_value_translation.py agents/test_eval_battery.py agents/test_eval_trajectories.py agents/test_eval_api.py agents/test_chat_path.py agents/test_demo_scenarios.py agents/test_orchestrator_e2e.py -q",
+    "eval:orchestrator": "node scripts/python-bin.mjs -m pytest agents/test_outcome_quality.py agents/test_diagnose_ui_seam.py agents/test_outcome_builders.py agents/test_value_translation.py agents/test_eval_battery.py agents/test_eval_trajectories.py agents/test_eval_api.py agents/test_chat_path.py agents/test_demo_scenarios.py agents/test_orchestrator_e2e.py agents/test_evidence_router_lanes.py agents/test_reconcile_harmonized.py agents/test_harmonized_evidence.py eval/latency_budget.py -q",
     "eval:chat-path": "node scripts/python-bin.mjs -m pytest agents/test_chat_path.py -q",
     "eval:demo-scenarios": "node scripts/python-bin.mjs -m pytest agents/test_demo_scenarios.py -q",
     "eval:battery": "node scripts/python-bin.mjs eval/run_battery.py --no-judge",

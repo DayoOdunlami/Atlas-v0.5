@@ -30,4 +30,4 @@
 | Item | Why deferred | Trigger |
 |------|--------------|---------|
 | Notion harmonisation | MCP was offline | Notion MCP restored |
-| Weekly CPC passport refresh job | Manual refresh via script for MVP | Production cadence agreed |
+| Harmonized external evidence (D4.6) | In plan v2.1 — not yet built | After MVP preview sign-off; Connect + policy first |

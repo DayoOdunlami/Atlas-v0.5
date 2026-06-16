@@ -38,6 +38,8 @@ _BLOCK_TYPE_MAP: dict[str, tuple[str, str]] = {
     "action_plan": ("ActionPlan", "sequenced_action_list"),
     "objection_response": ("ObjectionResponse", "objection_response_cards"),
     "provenance_trace": ("ProvenanceTrace", "provenance_path"),
+    "external_evidence": ("ProvenanceTrace", "provenance_path"),
+    "opportunity_candidates": ("OpportunityList", "ranked_table"),
     "comparison_matrix": ("ComparisonMatrix", "stored_match_list"),
     "opportunity_list": ("OpportunityList", "ranked_table"),
     "network_map": ("NetworkMap", "knowledge_graph"),
@@ -198,6 +200,9 @@ def _build_evidence_state_summary(model: dict[str, Any]) -> dict[str, Any]:
 
 
 def _build_provenance_trace(blocks_data: dict[str, Any]) -> dict[str, Any]:
+    pt = blocks_data.get("provenance_trace")
+    if isinstance(pt, dict) and pt.get("evidence_map_items"):
+        return pt
     claims = blocks_data.get("claim_ledger", {}).get("claims", [])
     items = [
         {
@@ -211,7 +216,44 @@ def _build_provenance_trace(blocks_data: dict[str, Any]) -> dict[str, Any]:
         }
         for i, c in enumerate(claims[:3])
     ]
-    return {"path": ["corpus_search", "citation_guard", "artifact_qa"], "evidence_map_items": items}
+    path = ["corpus_search", "citation_guard", "artifact_qa"]
+    ext = blocks_data.get("external_evidence", {}).get("items", [])
+    if ext:
+        path = ["corpus_search", "external_lane", "reconcile", "citation_guard"]
+        for e in ext[:5]:
+            items.append({
+                "id": e.get("id", f"ext-{len(items)}"),
+                "claim_id": e.get("id", ""),
+                "claim_text": e.get("title", ""),
+                "verdict": "partial",
+                "judgement": f"External · {e.get('publisher', '')} · candidate",
+                "evidence_state": "unknown",
+                "provenance": "live-gap",
+            })
+    return {"path": path, "evidence_map_items": items}
+
+
+def _build_external_evidence(blocks_data: dict[str, Any]) -> dict[str, Any]:
+    items = blocks_data.get("external_evidence", {}).get("items", [])
+    return {
+        "path": ["external_lane", "sense_check", "reconcile"],
+        "evidence_map_items": [
+            {
+                "id": e.get("id", f"ext-{i}"),
+                "claim_id": e.get("id", ""),
+                "claim_text": e.get("title", ""),
+                "verdict": "partial",
+                "judgement": (e.get("snippet") or e.get("url") or "")[:200],
+                "evidence_state": "unknown",
+                "provenance": "live-gap",
+            }
+            for i, e in enumerate(items)
+        ],
+    }
+
+
+def _build_opportunity_candidates(blocks_data: dict[str, Any]) -> list[dict[str, Any]]:
+    return blocks_data.get("opportunity_candidates", {}).get("items", [])
 
 
 def _build_context_card(model: dict[str, Any]) -> dict[str, Any]:
@@ -261,6 +303,10 @@ def _content_for_block(block_id: str, model: dict[str, Any], blocks_data: dict[s
         return _build_evidence_state_summary(model)
     if block_id == "provenance_trace":
         return _build_provenance_trace(blocks_data)
+    if block_id == "external_evidence":
+        return _build_external_evidence(blocks_data)
+    if block_id == "opportunity_candidates":
+        return _build_opportunity_candidates(blocks_data)
     return []
 
 
@@ -299,6 +345,10 @@ def _headline_for_block(block_id: str, model: dict[str, Any]) -> str:
         return "Evidence quality summary"
     if block_id == "provenance_trace":
         return "Evidence provenance path"
+    if block_id == "external_evidence":
+        return "External evidence (candidate — pending verification)"
+    if block_id == "opportunity_candidates":
+        return "Opportunity candidates — discovered online, not yet in corpus"
     return spec.display_name if spec else block_id.replace("_", " ").title()
 
 

@@ -327,6 +327,15 @@ async def node_loop(state: dict[str, Any]) -> dict[str, Any]:
         thread_id=state.get("thread_id"),
     )
     if vt_model is not None:
+        from agents.orchestrator.harmonized import enrich_with_harmonized_evidence
+
+        vt_model = enrich_with_harmonized_evidence(
+            vt_model,
+            query=query,
+            outcome=outcome,
+            intent=state.get("_intent") if isinstance(state.get("_intent"), dict) else None,
+            scope=scope,
+        )
         insight = vt_model.get("insight_card", "")
         steps = steps_for_pipeline(outcome=outcome, effort=effort, path="value_translation")
         vt_model["reasoning_steps"] = steps
@@ -338,6 +347,15 @@ async def node_loop(state: dict[str, Any]) -> dict[str, Any]:
             query=query,
             outcome=outcome,
             thread_id=state.get("thread_id"),
+            scope=scope,
+        )
+        from agents.orchestrator.harmonized import enrich_with_harmonized_evidence
+
+        built = enrich_with_harmonized_evidence(
+            built,
+            query=query,
+            outcome=outcome,
+            intent=state.get("_intent") if isinstance(state.get("_intent"), dict) else None,
             scope=scope,
         )
         insight = built.get("insight_card", "")

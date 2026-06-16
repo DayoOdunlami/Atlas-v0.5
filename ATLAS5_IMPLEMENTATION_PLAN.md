@@ -1,16 +1,19 @@
 # ATLAS5_IMPLEMENTATION_PLAN.md — Sequenced Build (Stage 1.5)
 
-> **Status:** v2.0 — **APPROVED** (Dayo greenlight 2026-06-16). Autonomous build to MVP.
+> **Status:** v2.1 — **APPROVED**. Local gate green (103 pytest + 8 Playwright, 2026-06-16). D4.6 harmonized evidence implemented.
 > **MVP gate:** Five demo scenarios on live `/workbench` — see `MVP_RUNBOOK.md`.
 > **Backlog:** `BACKLOG.md` · **CPC Passport ID:** `67e68525-1da0-4301-8853-04d401107594`
+> **Build status:** §9 below (built vs remaining as of 2026-06-16).
 
-## v2.0 executive summary (canonical)
+## v2.1 executive summary (canonical)
 
 **MVP** = dynamic multi-turn workbench anchored on real **CPC Capability Passport** (Supabase `cpc_v0_1` corpus), passing **S1–S5** demo scenarios with smart chat/artifact routing.
 
-**Build order:** Phase 1.5 (live path) → Phase 2 (instrument) → Phase 3 (CPC passport + Diagnose) → Phase 4 (Orient/Connect/Act/Defend + stateful artifact) → Phase 5 (harden) → Phase 5.5 (demo ready → Dayo verification).
+**Build order:** Phase 1.5 (live path) → Phase 2 (instrument) → Phase 3 (CPC passport + Diagnose) → Phase 4 (Orient/Connect/Act/Defend + stateful artifact) → **Phase 4.6 (Harmonized Evidence — corpus + external reconciliation)** → Phase 5 (harden) → Phase 5.5 (demo ready → Dayo verification).
 
 **New in v2.0:** D3.0a–c CPC passport surface (not synthetic extraction), D1.4b chat/artifact routing, D4.0 stateful artifact augment, D5.6 five-scenario gate, `/workbench/health`.
+
+**New in v2.1:** **D4.6 Harmonized Evidence Model** — dual-lane retrieval (corpus + targeted external), reconciliation layer, conflict-as-feature UX, discover→verify→ingest loop for calls not yet in corpus. Replaces the MVP wedge of "corpus-only deterministic builders" as the architectural end state (not a trust moat — a **provenance moat**).
 
 ---
 
@@ -103,6 +106,8 @@ Phase 3 — Prove the vertical (Diagnose / Value Translation, end-to-end)
   ⚑ GATE — Dayo product review: does it reveal a non-obvious gap/route/risk?
   ↓
 Phase 4 — Expand (Orient, Connect, Act, Defend lit up; cutover from old graph)
+  ↓
+Phase 4.6 — Harmonized Evidence (corpus + external reconciliation; D4.6)
   ↓
 Phase 5 — Harden (latency budget, encoding guardrail in CI, render-parity gate)
   ⚑ GATE — Tier 3 product review (30-min walk-through with Dayo)
@@ -302,6 +307,105 @@ Phases 4 deliverables are smaller because the skeleton + vertical already proved
 - **Acceptance:** Workbench production traffic uses the orchestrator; `/lab/legacy-workbench` route added for one-week diff comparison.
 - **Tests:** existing eval suite (now run against orchestrator); the legacy route is read-only.
 
+**D4.6 — Harmonized Evidence Model (corpus + external reconciliation)** *(v2.1 — product architecture)*
+
+> **Principle:** Corpus and web are two **evidence lanes** with the same rigor, different provenance. Trust comes from labelled provenance + verification state + explicit reconciliation — not from refusing external signals.
+
+**D4.6a — Evidence schema (dual lane)**
+
+- **What:** Extend render model / block payloads with a unified evidence object:
+  ```typescript
+  EvidenceItem {
+    id: string
+    provenance: 'corpus' | 'external' | 'synthesized'
+    verification_state: 'verified' | 'candidate' | 'conflicted'
+    source_tier: 'primary_gov' | 'funder' | 'publisher' | 'news' | 'other'
+    publisher?: string          // DfT, InnovateUK, etc.
+    retrieval_tool?: string     // govuk_search | exa_search | search_corpus
+    url?: string
+    retrieved_at?: string
+    corpus_ref?: { id, type: 'project' | 'article' | 'live_call' }
+    snippet?: string
+    confidence_cap: 'Speculative' | 'Indicative' | 'Supported'  // external capped at Supported
+  }
+  ```
+  - `corpus_citations[]` unchanged for verified Supabase UUIDs.
+  - New `external_evidence[]` for web lane (`citation_status: candidate` until ingest).
+  - `reconciliation_notes[]` when lanes agree, diverge, or external-only discovery.
+- **Where:** `agents/registry/render_model.py`, `agents/orchestrator/block_payloads.py`, TS adapter `orchestrator-adapter.ts`, optional `ExternalEvidenceBlock` / extend `ProvenanceTrace`.
+- **Acceptance:** a single turn can render corpus claims + external policy signal side-by-side without merging provenance types.
+- **Tests:** `test_evidence_schema_dual_lane.py`, adapter unit test.
+
+**D4.6b — Lane router (intent + gap triggered, not always-on)**
+
+- **What:** `agents/orchestrator/evidence_router.py` — after triage/intent, selects lane mix:
+
+  | Mode | When | Corpus | External |
+  |------|------|--------|----------|
+  | `corpus_only` | Orient capability, rich passport scope | ✓ | — |
+  | `corpus_primary` | Default strategic queries | ✓ | gap-triggered |
+  | `dual` | Opportunities, policy direction, freshness | ✓ | ✓ targeted |
+  | `external_primary` | "What's open now?" / explicit policy scan | secondary | ✓ GovUK-first |
+
+  Triggers for external (automatic — **no HITL** for Tier 0/1):
+  - Matcher returns `evidence-needed` or GAP dimensions
+  - No `live_call` match but query mentions funding/opportunity/deadline
+  - Intent router sets `external_search: true`
+  - Corpus claim `updated_at` stale vs query freshness keywords
+
+  **Deep exploratory web** (wide Exa, multi-hop) remains behind existing HITL gate (D1.1).
+- **Where:** `agents/orchestrator/evidence_router.py`; wired between `intent_router` and outcome builders / `node_loop`.
+- **Acceptance:** 12 fixture queries route to correct lane mix; external never fires on pure Orient without gap.
+- **Tests:** `test_evidence_router_lanes.py` (12 cases).
+
+**D4.6c — External retrieval (controlled, not free-browse)**
+
+- **What:** Port gap-triggered pattern from legacy `agents/atlas/graph.py` + `agents/external_search.py` into orchestrator:
+  1. **GovUK lane** — policy, official guidance, known publishers (DfT, Innovate UK, National Highways)
+  2. **Exa lane** — domain-scoped (`site:gov.uk`, funder domains); `market_discovery` / `landscape_gap` only
+  3. **Sense-check pass** — publisher inference, recency, snippet↔claim alignment, dedupe vs corpus
+  - Reuse existing `search_external` tool; add `discover_live_calls(query, sector)` wrapper for Connect.
+- **Where:** `agents/orchestrator/external_lane.py` (new); `agents/external_search.py` (extend, do not duplicate).
+- **Acceptance:** external results tagged `verification_state: candidate`; never appear in `corpus_citations[]`; confidence capped at Supported.
+- **Tests:** `test_external_lane_sense_check.py`, mock Exa/GovUK fixtures.
+
+**D4.6d — Reconciliation layer**
+
+- **What:** `agents/orchestrator/reconcile.py` compares corpus + external findings:
+
+  | Outcome | UX |
+  |---------|-----|
+  | **Corroborates** | Boost tier one notch; show both sources in ProvenanceTrace |
+  | **Corpus-only** | Standard ClaimLedger; note "no recent external contradiction" |
+  | **External-only (high-value)** | `OpportunityCandidate` block — call/policy not yet in corpus |
+  | **Conflict** | `ComparisonMatrix` or tension row — **feature, not bug** |
+
+  Conflict copy pattern: *"Corpus suggests X; GovUK (date) emphasises Y — tension worth noting."*
+- **Where:** `agents/orchestrator/reconcile.py`; called before `format_pass`.
+- **Acceptance:** 4 fixture reconciliation outcomes render correctly; conflicts never silently resolved.
+- **Tests:** `test_reconcile_corroborate.py`, `test_reconcile_conflict_surfaces.py`.
+
+**D4.6e — Discover → verify → ingest loop (calls not in corpus)**
+
+- **What:** When external discovers an open call absent from `atlas.live_calls`:
+  1. Surface as **OpportunityCandidate** in Connect/Act with URL, publisher, deadline (if extracted)
+  2. Optional server action / admin queue: `POST /api/workbench/ingest-candidate` → upsert to `live_calls` after human or automated verify
+  3. On ingest success, re-run matcher → promote to corpus citation
+- **Where:** `agents/orchestrator/ingest_queue.py`, API route, Supabase upsert script.
+- **Acceptance:** simulated external call → candidate card → ingest → appears in next Connect turn as corpus match.
+- **Tests:** `test_discover_ingest_promotion.py` (integration, mocked external).
+
+**D4.6f — UI: external + conflict surfaces**
+
+- **What:** Render `external_evidence[]` in ProvenanceTrace sidecar or dedicated ExternalEvidence strip; OpportunityCandidate as first-class block; conflict rows styled as intelligence (not errors).
+- **Where:** `src/components/workbench/blocks/` — extend ProvenanceTrace or add ExternalEvidenceBlock + OpportunityCandidateBlock.
+- **Acceptance:** S3 opportunity-first scenario surfaces a call found online but not in corpus without breaking citation integrity elsewhere.
+- **Tests:** Playwright `harmonized_evidence.spec.ts` (3 cases: corroborate, external-only, conflict).
+
+**D4.6 — Phase gate:** Connect + policy queries demonstrate dual-lane harmony; Dayo confirms conflicts feel useful, not confusing.
+
+**Flag:** `ATLAS5_HARMONIZED_EVIDENCE_V1` (default OFF until D4.6f green; can ship incrementally: 6b→6c→6d before ingest loop).
+
 ### Phase 5 — Harden
 
 **D5.1 — Latency budget + early-exit**
@@ -319,6 +423,12 @@ Phases 4 deliverables are smaller because the skeleton + vertical already proved
 - **Acceptance:** CI fails if either mode drops a citation the other keeps.
 - **Tests:** Playwright `render-parity.spec.ts` in CI.
 
+**D5.6 — Five-scenario MVP gate (Playwright + runbook)**
+- **What:** `eval/mvp_gate.spec.ts` + `MVP_RUNBOOK.md` S1–S5; `/workbench/health` via `/api/workbench/health`.
+- **Acceptance:** all scenarios green locally; Vercel preview green after deploy.
+- **Tests:** `npm run eval:mvp-gate`.
+- **Status:** ✅ Local green (2026-06-16). Vercel preview pending push.
+
 **D5.4 — Tier-3 product review with Dayo (30 min)**
 - **What:** walk through the Sameer pilot end-to-end on the live system. Sign-off or backlog.
 - **⚑ Stage-1.5 close-out gate.**
@@ -329,6 +439,7 @@ Phases 4 deliverables are smaller because the skeleton + vertical already proved
 
 | Flag | Default | Controls |
 |---|---|---|
+| `ATLAS5_HARMONIZED_EVIDENCE_V1` | OFF | Dual-lane corpus + external retrieval, reconciliation, OpportunityCandidate (D4.6). |
 | `ATLAS5_ORCHESTRATOR_V1` | OFF (Phases 0–3) → ON (D4.5) | Routes traffic to the new brain. |
 | `ATLAS5_FALSIFICATION_LANE_V1` | (existing) | Already gates falsification today; rewired in D1.3 to "always on for deep". |
 | `ATLAS5_VIZ_ART_DIRECTOR_V1` | OFF → ON in D4.1 | Live viz selection (was audit-only). |
@@ -346,7 +457,8 @@ Phases 4 deliverables are smaller because the skeleton + vertical already proved
 | Determinism regression vs old router | Medium | Low temp + full trace logging; legacy route preserved (D4.5) for one-week side-by-side diff. |
 | Block registry gaps revealed late | Medium | D2.2 capability-gap report exposes them continuously; new blocks added in Phase 4 / 5 as needed. |
 | CopilotKit + AG-UI vs assistant-ui transport conflict | Low | ADR §12 decision: CopilotKit + AG-UI is the control layer for the orchestrator; assistant-ui only on `/lab/langgraph`. Do not run both on the same surface. |
-| Encoding guardrail blocks legitimate charts | Low | 10-case test suite (D5.2); guardrail tunable per chart type. |
+| External lane adds liability (URLs, misquotes) | Medium | Separate `external_evidence[]`; candidate status; ingest promotion path (D4.6e); domain-scoped retrieval only. |
+| Corpus vs external conflict confuses users | Low–medium | Conflict-as-feature UX with explicit tension copy (D4.6d); tier caps on external. |
 
 ---
 
@@ -398,9 +510,9 @@ Backend Phases 0–5 are implemented in Python/tests. This phase makes the workb
 - Canvas mode (tldraw) re-wiring — runs unchanged.
 - Brief v2 / Run 3 anything — superseded; do not touch.
 - Buyer lenses beyond SME (Phase 2 per North Star).
-- Entity resolution / cross-Passport relationship modelling (Phase 2 per North Star).
+- Entity resolution / cross-Passport relationship modelling (Phase 2).
 - Synthesised hypothetical Requirement Specs from user briefs (Phase 2).
-- Open-web research mode beyond Exa falsification lane.
+- **Unscoped open-web browsing** (no domain constraints, no sense-check) — superseded by D4.6 controlled external lane.
 
 ---
 
@@ -412,7 +524,104 @@ Backend Phases 0–5 are implemented in Python/tests. This phase makes the workb
 4. Render-parity, latency, encoding-guardrail tests green in CI.
 5. Four Horsemen + outcome eval suite passing.
 6. Notion harmonised to match the four canonical repo docs (deferred work item — runs once MCP is back).
+7. Harmonized Evidence (D4.6) live for Connect + policy queries when flag on.
 
 ---
 
-*Sequenced from `ATLAS5_BRAIN_ADR.md` (paradigm) for the outcomes in `ATLAS5_NORTH_STAR.md`, within the stack in `CLAUDE.md`. Owner: Dayo. Plan version: 1.0 — 2026-06-15.*
+## 9. Build status (as of 2026-06-16)
+
+Legend: ✅ Done · 🟡 Partial · ⬜ Not started · 🚫 Deferred
+
+### Phase 0 — Foundation
+
+| ID | Deliverable | Status | Notes |
+|----|-------------|--------|-------|
+| D0.1 | Module skeleton + feature flag | ✅ | `orchestrator/`, `spine/`, `registry/`, `instrumentation/` |
+| D0.2 | Archive old graph reference | 🟡 | Tag may exist; header comment in workbench graph |
+| D0.3 | Promote citation_guard / falsification / artifact_qa | ✅ | `agents/spine/` |
+| D0.4 | Promote viz registry + art director | ✅ | `agents/registry/viz.py` |
+| D0.5 | Declarative block registry (13 blocks) | ✅ | `agents/registry/blocks.py` |
+| D0.6 | buildAtlasRenderModel keystone | 🟡 | Python builder + TS adapter; not all match_ids covered |
+
+### Phase 1 — Skeleton
+
+| ID | Deliverable | Status | Notes |
+|----|-------------|--------|-------|
+| D1.1 | Triage + gate | ✅ | `triage.py`, `gate.py`, `intent_router.py` |
+| D1.2 | Orchestrator tool-calling loop | 🟡 | Tools exist; MVP path uses **deterministic builders** in `node_loop` |
+| D1.3 | Shared verify spine | 🟡 | `spine/verify.py` exists; not on every deterministic path |
+| D1.4 | Format pass + layout | ✅ | `format_pass.py`, chat_surface routing |
+| D1.5 | CopilotKit + AG-UI rewire | ✅ | Workbench live on flag |
+| D1.6 | Stub vertical e2e | ✅ | pytest + Playwright |
+
+### Phase 2 — Instrument
+
+| ID | Deliverable | Status | Notes |
+|----|-------------|--------|-------|
+| D2.1 | Gap-signal emitters | 🟡 | `signals.py` scaffold; not wired on all nodes |
+| D2.2 | Capability-gap report | 🟡 | `gap_report.py` + lab page partial |
+| D2.3 | Dev split-view | ✅ | `/lab/orchestrator` |
+
+### Phase 3 — Value Translation vertical
+
+| ID | Deliverable | Status | Notes |
+|----|-------------|--------|-------|
+| D3.0a–c | CPC passport surface | ✅ | `agents/cpc_passport/loader.py`, canonical ID wired |
+| D3.1 | Passport schema + loader | ✅ | Real Supabase passport + claims |
+| D3.2 | Requirement Spec + proof gate | ✅ | `eval/requirement_spec_proof_gate.md` |
+| D3.3 | Matcher fit/gap/risk/move | ✅ | `matcher.py` + tests |
+| D3.4 | Value translation labels | ✅ | `value_translation.py` + tests |
+| D3.5 | EVTL artifact blocks | ✅ | Diagnose path renders TransferLanes + MatchBench |
+| D3.6 | Sameer validation harness | ✅ | `eval/sameer_validation.md` |
+
+### Phase 3.5 — UI integration (MVP wiring)
+
+| ID | Deliverable | Status | Notes |
+|----|-------------|--------|-------|
+| U1–U12 | Workbench live path | ✅ | See §3.5 table below |
+| — | Stateful artifact augment | ✅ | `context.py` merge_render_models |
+| — | Multi-turn intent routing | ✅ | Follow-up regex + thread context |
+| — | LangGraph message reducer fix | ✅ | `OrchestratorState` + `add_messages` |
+
+### Phase 4 — Expand outcomes
+
+| ID | Deliverable | Status | Notes |
+|----|-------------|--------|-------|
+| D4.0 | Stateful artifact augment | ✅ | Merged in orchestrator context |
+| D4.1 | Orient (landscape) | 🟡 | CPC-scoped Orient builder; NetworkMap edges not fully verified |
+| D4.2 | Connect (opportunities) | 🟡 | `load_cpc_top_opportunities` + match sync; rationale present |
+| D4.3 | Act (decision-ready) | 🟡 | ActionPlan builder; six-field bar not fully gated |
+| D4.4 | Defend quality across all | 🟡 | Defend builder + falsification flag; not enforced on all artifacts |
+| D4.5 | Cutover (flag default ON) | ⬜ | Still opt-in via env |
+| **D4.6** | **Harmonized Evidence Model** | ✅ | `evidence_router`, `external_lane`, `reconcile`, `harmonized` |
+
+### Phase 5 — Harden
+
+| ID | Deliverable | Status | Notes |
+|----|-------------|--------|-------|
+| D5.1 | Latency budget | 🟡 | `eval/latency_budget.py` smoke tests |
+| D5.2 | Encoding guardrail | 🟡 | Stub exists |
+| D5.3 | Render-parity CI | ⬜ | Split-view not in CI |
+| D5.6 | Five-scenario MVP gate | 🟡 | ✅ Local; push for Vercel preview |
+| D5.4 | Tier-3 Dayo review | ⬜ | Blocked on preview sign-off |
+
+### Eval / test summary (local, 2026-06-16)
+
+| Suite | Result |
+|-------|--------|
+| `npm run eval:orchestrator` | 103 passed, 1 skipped |
+| `npm run eval:mvp-gate` | 8 passed |
+| Commit | `b0a12ca` on `main` (not yet pushed to preview) |
+
+### Recommended next sequence
+
+1. **Push + Vercel preview** — close D5.6 on live URL; Dayo checklist in `MVP_RUNBOOK.md`.
+2. **D3.2 proof gate** — document win/lose in `eval/requirement_spec_proof_gate.md`.
+3. **D4.6a→c** — lane router + external retrieval on Connect/policy (highest ROI per Dayo challenge).
+4. **D4.6d→f** — reconciliation UI + OpportunityCandidate.
+5. **D4.5 cutover** — default orchestrator ON after preview stable.
+6. **D5.1–D5.3** — latency + CI parity.
+
+---
+
+*Sequenced from `ATLAS5_BRAIN_ADR.md` (paradigm) for the outcomes in `ATLAS5_NORTH_STAR.md`, within the stack in `CLAUDE.md`. Owner: Dayo. Plan version: 2.1 — 2026-06-16.*

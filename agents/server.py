@@ -181,6 +181,7 @@ async def root() -> dict[str, str]:
         "version": "0.6.0",
         "feature_flags": {
             "orchestrator_v1": _root_flags.orchestrator_v1,
+            "harmonized_evidence_v1": _root_flags.harmonized_evidence_v1,
             "viz_art_director_v1": _root_flags.viz_art_director_v1,
             "generative_viz_v1": _root_flags.generative_viz_v1,
         },

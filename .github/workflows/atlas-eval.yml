@@ -49,6 +49,14 @@ jobs:
       - name: Artifact contract gate (offline)
         run: python eval/test_artifact_contract_live.py
 
+      - name: Orchestrator eval suite
+        env:
+          ATLAS5_ORCHESTRATOR_V1: "true"
+          ATLAS5_HARMONIZED_EVIDENCE_V1: "true"
+        run: |
+          pip install pytest
+          pytest agents/test_evidence_router_lanes.py agents/test_reconcile_harmonized.py agents/test_harmonized_evidence.py -q
+
       - name: Graph compiles
         run: python -m py_compile agents/atlas/graph.py agents/atlas/artifact_qa.py agents/atlas/falsification.py agents/atlas/citation_guard.py
 

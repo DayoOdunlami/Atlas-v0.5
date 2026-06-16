@@ -23,6 +23,7 @@ ATLAS5_VIZ_ART_DIRECTOR_V1      "true" → enable live viz art-director selectio
 ATLAS5_GENERATIVE_VIZ_V1        "true" → enable generative ECharts / MCP viz
                                           (requires encoding guardrail to be wired)
 ATLAS5_FALSIFICATION_LANE_V1    (existing) "true" → enable disconfirming red-team search
+ATLAS5_HARMONIZED_EVIDENCE_V1   "true" → dual-lane corpus + external reconciliation (D4.6)
 
 Note: ATLAS5_FALSIFICATION_LANE_V1 existed before this module; it is read directly
 by agents/spine/falsification.py using os.getenv for backwards compatibility.
@@ -60,6 +61,11 @@ class _Flags:
         encoding guardrail.  When False, only the curated block/chart library
         is used."""
         return _is_on("ATLAS5_GENERATIVE_VIZ_V1")
+
+    @property
+    def harmonized_evidence_v1(self) -> bool:
+        """Dual-lane corpus + external retrieval with reconciliation (D4.6)."""
+        return _is_on("ATLAS5_HARMONIZED_EVIDENCE_V1")
 
     @property
     def falsification_lane_v1(self) -> bool:
