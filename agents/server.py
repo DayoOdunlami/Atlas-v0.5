@@ -46,8 +46,9 @@ if str(_repo_root) not in sys.path:
 # Load env vars before any graph imports (graphs load model keys at import time)
 try:
     from dotenv import load_dotenv
+    load_dotenv(_repo_root / ".env", override=False)
+    load_dotenv(_repo_root / "agents" / ".env", override=False)
     load_dotenv(_repo_root / ".env.local", override=True)
-    load_dotenv(_repo_root / ".env", override=True)
 except ImportError:
     pass
 

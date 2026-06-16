@@ -12,11 +12,33 @@
 
 import { CopilotKit } from "@copilotkit/react-core";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useSurfaceStore } from "@/lib/atlas5/surface-gateway";
 import type { AgentId } from "@/lib/atlas5/types";
 
 const ORCHESTRATOR_V1 =
   process.env.NEXT_PUBLIC_ATLAS5_ORCHESTRATOR_V1 === "true";
+
+const WORKBENCH_THREAD_KEY = "atlas5-workbench-thread-id";
+
+function useStableWorkbenchThreadId(enabled: boolean): string | undefined {
+  const [threadId, setThreadId] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (!enabled) {
+      setThreadId(undefined);
+      return;
+    }
+    let id = sessionStorage.getItem(WORKBENCH_THREAD_KEY);
+    if (!id) {
+      id = crypto.randomUUID();
+      sessionStorage.setItem(WORKBENCH_THREAD_KEY, id);
+    }
+    setThreadId(id);
+  }, [enabled]);
+
+  return threadId;
+}
 
 /** Map from Atlas 5 AgentId (uppercase) to the name registered in CopilotKit. */
 const AGENT_NAME: Record<AgentId, string> = {
@@ -38,15 +60,15 @@ export function CopilotKitProvider({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
   const activeAgent = useSurfaceStore((s) => s.surface.active_agent);
   const surfaceAgent = AGENT_NAME[activeAgent] ?? "atlas";
-  const agentName =
-    ORCHESTRATOR_V1 && isOrchestratorWorkbenchRoute(pathname)
-      ? "workbench"
-      : surfaceAgent;
+  const orchestratorRoute = ORCHESTRATOR_V1 && isOrchestratorWorkbenchRoute(pathname);
+  const agentName = orchestratorRoute ? "workbench" : surfaceAgent;
+  const threadId = useStableWorkbenchThreadId(orchestratorRoute);
 
   return (
     <CopilotKit
       runtimeUrl="/api/copilotkit"
       agent={agentName}
+      threadId={threadId}
       showDevConsole={false}
     >
       {children}

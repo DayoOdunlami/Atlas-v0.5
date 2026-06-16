@@ -11,7 +11,7 @@
  */
 import { expect, test } from "@playwright/test";
 
-const BASE_URL = process.env.TEST_BASE_URL ?? "http://localhost:3000";
+const BASE_URL = process.env.TEST_BASE_URL ?? "http://localhost:3005";
 const CANONICAL =
   "What evidence does CPC have in smart mobility that would transfer to the Innovate UK Smart City Challenge?";
 
@@ -22,8 +22,8 @@ test.describe("U11 — Orchestrator workbench e2e", () => {
   );
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(`${BASE_URL}/workbench`);
-    await page.waitForLoadState("networkidle");
+    await page.goto("/workbench");
+    await page.waitForLoadState("domcontentloaded");
   });
 
   test("workbench loads orchestrator chat panel", async ({ page }) => {

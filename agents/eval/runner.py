@@ -116,43 +116,64 @@ def run_trajectory(
     scenario: dict[str, Any],
     *,
     include_judge: bool = False,
+    use_live_graph: bool = True,
 ) -> dict[str, Any]:
     """Run one multi-turn trajectory scenario."""
+    import asyncio
+
+    from agents.eval.chat_path import chat_result_to_eval_trace, run_workbench_graph_chat
+
     turn_results: list[dict[str, Any]] = []
     failures: list[str] = []
+    thread_id = f"traj-{scenario.get('id', 'anon')}"
 
-    for i, turn in enumerate(scenario.get("turns") or []):
-        trace = run_single_eval(turn["query"], include_judge=include_judge)
-        outcome = trace["summary"]["outcome"]
-        block_types = set(trace["summary"]["block_types"])
-        quality = trace.get("quality") or {}
-        min_q = float(turn.get("min_quality", 0.6))
-        turn_failures: list[str] = []
+    async def _run_turns() -> None:
+        nonlocal failures, turn_results
+        for i, turn in enumerate(scenario.get("turns") or []):
+            if use_live_graph:
+                out = await run_workbench_graph_chat(
+                    turn["query"],
+                    thread_id=thread_id,
+                )
+                trace = chat_result_to_eval_trace(out, query=turn["query"])
+            else:
+                trace = run_single_eval(turn["query"], include_judge=include_judge)
 
-        expected_outcomes = turn.get("expect_outcome") or []
-        if isinstance(expected_outcomes, str):
-            expected_outcomes = [expected_outcomes]
-        if expected_outcomes and outcome not in expected_outcomes:
-            turn_failures.append(
-                f"turn {i + 1}: outcome {outcome} not in {expected_outcomes}"
-            )
+            outcome = trace["summary"]["outcome"]
+            block_types = set(trace["summary"]["block_types"])
+            quality = trace.get("quality") or {}
+            min_q = float(turn.get("min_quality", 0.6))
+            turn_failures: list[str] = []
 
-        for bt in turn.get("expect_blocks") or []:
-            if bt not in block_types:
-                turn_failures.append(f"turn {i + 1}: missing block {bt}")
+            if use_live_graph and out.get("is_conversational"):
+                turn_failures.append(f"turn {i + 1}: routed to conversational not pipeline")
 
-        if quality.get("overall", 0) < min_q:
-            turn_failures.append(
-                f"turn {i + 1}: quality {quality.get('overall')} < {min_q}"
-            )
+            expected_outcomes = turn.get("expect_outcome") or []
+            if isinstance(expected_outcomes, str):
+                expected_outcomes = [expected_outcomes]
+            if expected_outcomes and outcome not in expected_outcomes:
+                turn_failures.append(
+                    f"turn {i + 1}: outcome {outcome} not in {expected_outcomes}"
+                )
 
-        failures.extend(turn_failures)
-        turn_results.append({
-            "turn": i + 1,
-            "query": turn["query"],
-            "trace": trace,
-            "passed": len(turn_failures) == 0,
-        })
+            for bt in turn.get("expect_blocks") or []:
+                if bt not in block_types:
+                    turn_failures.append(f"turn {i + 1}: missing block {bt}")
+
+            if quality.get("overall", 0) < min_q:
+                turn_failures.append(
+                    f"turn {i + 1}: quality {quality.get('overall')} < {min_q}"
+                )
+
+            failures.extend(turn_failures)
+            turn_results.append({
+                "turn": i + 1,
+                "query": turn["query"],
+                "trace": trace,
+                "passed": len(turn_failures) == 0,
+            })
+
+    asyncio.run(_run_turns())
 
     return {
         "id": scenario["id"],

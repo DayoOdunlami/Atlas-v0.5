@@ -50,10 +50,78 @@ def test_orchestrator_graph_importable():
     from agents.orchestrator.graph import orchestrator_graph
     assert orchestrator_graph is not None
     assert "extract_query" in list(orchestrator_graph.nodes)
+    assert "intent_router" in list(orchestrator_graph.nodes)
     assert "triage" in list(orchestrator_graph.nodes)
     assert "loop" in list(orchestrator_graph.nodes)
     assert "verify" in list(orchestrator_graph.nodes)
     assert "format" in list(orchestrator_graph.nodes)
+
+
+def test_node_extract_query_reads_messages_from_state():
+    """Regression: must pass full state dict, not messages list (AG-UI live path)."""
+    from agents.orchestrator.graph import node_extract_query
+
+    state = {
+        "messages": [
+            {"role": "user", "content": "What evidence does CPC have in smart mobility?"},
+        ],
+    }
+    result = node_extract_query(state)
+    assert result["query"] == "What evidence does CPC have in smart mobility?"
+
+
+def test_normalize_citations_handles_ilike_null_similarity():
+    """ILIKE corpus fallback returns similarity=None — must not crash connect builder."""
+    from agents.orchestrator.outcome_builders import _normalize_citations
+
+    rows = [
+        {
+            "id": "00000000-0000-0000-0000-000000000001",
+            "title": "Smart mobility pilot",
+            "organisation": "CPC",
+            "similarity": None,
+        },
+    ]
+    out = _normalize_citations(rows)
+    assert len(out) == 1
+    assert out[0]["score"] == 0.5
+
+
+@pytest.mark.parametrize(
+    "query,expect_substr",
+    [
+        ("hello", "Atlas Workbench"),
+        ("how can you help me?", "Orient"),
+        ("what are your limits?", "Out of scope"),
+        ("how do you work?", "Triage"),
+        ("what's innovative about haribos?", "outside my CPC corpus"),
+        ("tell me about company xyz", "outside my CPC corpus"),
+    ],
+)
+def test_orchestrator_conversational_replies(query, expect_substr):
+    from agents.orchestrator.conversational import (
+        build_conversational_reply,
+        should_reply_conversationally_strict,
+    )
+
+    assert should_reply_conversationally_strict(query)
+    assert expect_substr.lower() in build_conversational_reply(query).lower()
+
+
+def test_strategic_query_not_conversational():
+    from agents.orchestrator.conversational import should_reply_conversationally_strict
+
+    q = (
+        "What evidence does CPC have in smart mobility that would transfer "
+        "to the Innovate UK Smart City Challenge?"
+    )
+    assert not should_reply_conversationally_strict(q)
+
+
+def test_help_me_with_swot_not_conversational():
+    from agents.base import is_conversational
+
+    assert not is_conversational("Help me build a SWOT for CPC smart mobility")
 
 
 def test_feature_flag_off_by_default():

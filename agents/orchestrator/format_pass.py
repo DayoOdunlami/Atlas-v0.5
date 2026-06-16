@@ -220,4 +220,22 @@ def run_format_pass(
         from agents.orchestrator.block_payloads import materialize_render_blocks
         updated["render_blocks"] = materialize_render_blocks(updated, block_ids)
 
+    # D1.4b — chat vs artifact surface hint for frontend + graph ack
+    if not updated.get("chat_surface"):
+        updated["chat_surface"] = _choose_chat_surface(updated, q)
+
     return updated
+
+
+def _choose_chat_surface(model: dict[str, Any], query: str) -> str:
+    """artifact_primary | hybrid | chat_only"""
+    if model.get("chat_surface"):
+        return str(model["chat_surface"])
+    blocks_data = model.get("blocks_data") or {}
+    n_blocks = len(blocks_data)
+    outcome = model.get("outcome", "orient")
+    if n_blocks >= 4 or (outcome in ("diagnose", "connect") and n_blocks >= 2):
+        return "artifact_primary"
+    if n_blocks == 0:
+        return "chat_only"
+    return "hybrid"

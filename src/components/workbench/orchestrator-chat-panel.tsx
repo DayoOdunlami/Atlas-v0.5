@@ -106,7 +106,10 @@ export function OrchestratorChatPanel() {
           variant="ghost"
           size="sm"
           className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
-          onClick={resetSession}
+        onClick={() => {
+          sessionStorage.removeItem("atlas5-workbench-thread-id");
+          resetSession();
+        }}
           title="Start a new chat"
         >
           <Plus className="w-3.5 h-3.5" />

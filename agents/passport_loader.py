@@ -22,6 +22,14 @@ def load_passport_for_query(query: str, limit: int = 1) -> Optional[dict[str, An
     Returns passport row + claims summary, or None if no confident match.
     """
     q = _normalise(query)
+    if any(k in q for k in ("cpc", "catapult", "connected places", "good at", "swot")):
+        try:
+            from agents.cpc_passport.loader import load_cpc_passport_for_query
+
+            return load_cpc_passport_for_query(query)
+        except Exception:
+            pass
+
     if len(q) < 8:
         return None
 

@@ -30,7 +30,8 @@ Outcome = Literal["orient", "connect", "diagnose", "act", "defend"]
 
 _CLARIFY_PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"^\s*(hi|hello|hey|thanks|thank you|ok|okay|yes|no|sure)\s*[!.?]*\s*$", re.I),
-    re.compile(r"^.{0,15}$"),  # very short queries  (<16 chars)
+    # Very short AND no strategic signal — avoid blocking "SWOT for CPC" etc.
+    re.compile(r"^.{1,12}$"),
 ]
 
 _DEEP_PATTERNS: list[re.Pattern[str]] = [
@@ -45,6 +46,8 @@ _OUTCOME_PATTERNS: list[tuple[Outcome, list[re.Pattern[str]]]] = [
         re.compile(r"\blandscape\b|\boverview\b|\bwhat.*exist\b|\bwhat.*happening\b|\bexplore\b|\bsurvey\b", re.I),
         re.compile(r"\bwhat.*is\b.{0,40}\b(sector|space|field|domain|market)\b", re.I),
         re.compile(r"\bover-represented\b|\bportfolio\b|\bwedge\b", re.I),
+        re.compile(r"\bswot\b|\bgood at\b|\bwhat.*cpc\b|\bcapabilit.*profile\b|\bclaims passport\b", re.I),
+        re.compile(r"\bwhat does cpc\b|\bwhat is cpc\b", re.I),
     ]),
     ("act", [
         re.compile(r"\bbusiness case\b|\binvestment (?:case|brief)\b|\beconomic case\b|\bnpv\b|\bwhat.*should.*do\b|\bnext.*step\b|\baction\b|\brecommend", re.I),
@@ -101,15 +104,16 @@ def triage_query(query: str) -> TriageResult:
     q = query.strip()
 
     # 1. clarify — too ambiguous or conversational to proceed
-    for pat in _CLARIFY_PATTERNS:
-        if pat.match(q):
-            return TriageResult(
-                effort="clarify",
-                outcome="orient",
-                needs_gate=False,
-                notes="Query is too short or conversational — ask for more context.",
-                raw_query=q,
-            )
+    if not any(kw in q.lower() for kw in ("cpc", "catapult", "evidence", "swot", "mobility", "rail", "fund")):
+        for pat in _CLARIFY_PATTERNS:
+            if pat.match(q):
+                return TriageResult(
+                    effort="clarify",
+                    outcome="orient",
+                    needs_gate=False,
+                    notes="Query is too short or conversational — ask for more context.",
+                    raw_query=q,
+                )
 
     # 2. deep — needs heavy LLM + external search + falsification
     for pat in _DEEP_PATTERNS:
@@ -148,6 +152,9 @@ def _classify_outcome(query: str) -> Outcome:
     # Phase 3 gate — transfer + evidence queries route connect before broad patterns
     if re.search(r"\btransfer\b", query, re.I) and re.search(r"\bevidence\b", query, re.I):
         return "connect"
+    # Evidence gaps / diagnose signals before broad orient patterns
+    if re.search(r"\bevidence\s+gaps?\b|\bgaps?\b.*\bevidence\b|\bdiagnos", query, re.I):
+        return "diagnose"
     for outcome, patterns in _OUTCOME_PATTERNS:
         for pat in patterns:
             if pat.search(query):

@@ -47,20 +47,36 @@ def _uses_pilot_fixtures(query: str) -> bool:
     )
 
 
-def _resolve_passport(query: str) -> Passport | None:
+def _resolve_passport(query: str) -> Passport:
+    """Load canonical CPC passport from Supabase; fixture only as last resort."""
+    from agents.cpc_passport.loader import load_cpc_passport_for_query
+    from agents.matcher.passport import PassportClaim, validate_passport
+
+    data = load_cpc_passport_for_query(query)
+    if data.get("passport_id") and data.get("claims"):
+        claims = [
+            PassportClaim(
+                domain=c.get("domain") or "general",
+                text=c.get("text") or "",
+                confidence_tier=c.get("confidence_tier") or "Indicative",
+                role=c.get("role") or "asserts",
+            )
+            for c in data["claims"]
+        ]
+        passport = Passport(
+            entity_name=data.get("title") or "Connected Places Catapult",
+            owner_org=data.get("owner_org") or "Connected Places Catapult",
+            sector_origin=",".join(data.get("sector_origin") or []),
+            sector_target=",".join(data.get("sector_target") or []),
+            summary=data.get("summary") or "",
+            claims=claims,
+            passport_id=data.get("passport_id"),
+        )
+        if not validate_passport(passport):
+            return passport
+
     if _uses_pilot_fixtures(query):
         return cpc_smart_mobility_passport()
-
-    try:
-        from agents.passport_loader import load_entity_passport
-
-        raw = load_entity_passport("CPC")
-        if isinstance(raw, dict) and raw.get("passport"):
-            return dict_to_passport(raw["passport"])
-        if isinstance(raw, dict) and raw.get("entity_name"):
-            return dict_to_passport(raw)
-    except Exception:
-        pass
 
     return cpc_smart_mobility_passport()
 
@@ -75,6 +91,8 @@ def _fetch_corpus_citations(query: str, k: int = 5) -> list[dict[str, Any]]:
     try:
         from mcps.cpc_corpus import queries as cq
 
+        from agents.orchestrator.outcome_builders import _citation_score
+
         results = cq.search_projects(query, limit=k)
         if not results:
             return []
@@ -83,7 +101,7 @@ def _fetch_corpus_citations(query: str, k: int = 5) -> list[dict[str, Any]]:
                 "id": r.get("id", ""),
                 "title": r.get("title", r.get("project_title", "")),
                 "organisation": r.get("organisation", r.get("lead_organisation", "")),
-                "score": float(r.get("score", r.get("similarity", 0))),
+                "score": _citation_score(r),
             }
             for r in results
             if r.get("id")
@@ -109,16 +127,13 @@ def run_value_translation_pipeline(
     passport = _resolve_passport(query)
     spec = _resolve_spec(query)
 
-    # When spec extraction fails (sparse follow-ups), use pilot fixtures for VT
     from agents.matcher.passport import validate_passport
     from agents.matcher.requirement_spec import validate_requirement_spec
 
-    if validate_requirement_spec(spec):
+    # Pilot fixtures only when spec extraction fails AND query matches pilot language
+    if validate_requirement_spec(spec) and _uses_pilot_fixtures(query):
         passport = cpc_smart_mobility_passport()
         spec = innovate_uk_smart_mobility_spec()
-
-    if validate_passport(passport):
-        passport = cpc_smart_mobility_passport()
 
     citations = _fetch_corpus_citations(query)
 

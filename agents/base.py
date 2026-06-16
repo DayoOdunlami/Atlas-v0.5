@@ -128,6 +128,7 @@ DOMAIN_KW: frozenset[str] = frozenset({
     # Strategy / analysis
     "strategy", "strategic", "economic", "commercial", "financial",
     "management", "analogue", "transfer", "sector", "gap", "risk",
+    "swot", "pestle", "porter", "competitive",
 })
 
 _GREETING_WORDS: frozenset[str] = frozenset({
@@ -140,7 +141,8 @@ _META_PHRASES: frozenset[str] = frozenset({
     "who are you", "what are you", "what can you do", "what do you do",
     "help", "help me", "whats your name", "what's your name",
     "tell me about yourself", "how do you work", "how does this work",
-    "what is this", "what is atlas",
+    "how can you help", "what are your limits", "what are our limits",
+    "what is this", "what is atlas", "capabilities", "limitations",
     # Complaint / confusion phrases — these are about the agent, not a domain query
     "why are you not", "why aren't you", "why wont you", "why won't you",
     "i dont understand", "i don't understand", "i don't get it", "i dont get it",
@@ -181,20 +183,14 @@ def is_conversational(query: str) -> bool:
     """
     Return True when the query should skip the pipeline and get an instant reply.
 
-    Rules (in priority order):
-    1. Any domain keyword present → False (always run pipeline).
-    2. Empty / whitespace-only query → True.
-    3. Greeting word as first token (≤ 6 words total) → True.
-    4. Thanks word as first token (≤ 5 words total) → True.
-    5. Matches a known meta phrase (substring) → True.
-    6. Short message ≤ 3 words with no domain keyword → True.
-    7. Everything else → False (pipeline runs, possibly producing a
-       low-relevance brief; acceptable trade-off vs a false-negative guard).
+    Meta phrases require word-boundary or whole-query match — not substring
+    (e.g. 'help me build a SWOT' must NOT match 'help me').
     """
     if not query or not query.strip():
         return True
 
     ql = query.lower().strip()
+    normalized = ql.rstrip("?.!").strip()
 
     # Rule 1 — domain keyword overrides everything
     if any(kw in ql for kw in DOMAIN_KW):
@@ -205,11 +201,31 @@ def is_conversational(query: str) -> bool:
     first = words[0].strip(",.!?") if words else ""
 
     is_greeting = n == 0 or (n <= 6 and first in _GREETING_WORDS)
-    is_thanks   = n <= 5 and first in _THANKS_WORDS
-    is_meta     = any(phrase in ql for phrase in _META_PHRASES)
-    is_trivial  = n <= 3
+    is_thanks = n <= 5 and first in _THANKS_WORDS
+    is_meta = _is_meta_query(ql, normalized)
+    is_trivial = n <= 3
 
     return is_greeting or is_thanks or is_meta or is_trivial
+
+
+def _is_meta_query(ql: str, normalized: str) -> bool:
+    """Meta/about-agent queries — strict matching."""
+    _EXACT = {
+        "help", "help?", "help me", "help me?", "who are you", "what are you",
+        "what can you do", "what do you do", "how can you help",
+        "how can you help me", "how do you work", "how does this work",
+        "what are your limits", "what are our limits", "capabilities",
+    }
+    if normalized in _EXACT:
+        return True
+    for phrase in _META_PHRASES:
+        if phrase in {"help", "help me"}:
+            continue  # handled by exact set
+        if normalized == phrase or normalized.startswith(phrase + "?"):
+            return True
+        if len(ql.split()) <= 10 and phrase in ql and phrase.startswith("why "):
+            return True
+    return False
 
 
 def _make_reply(query: str, agent_name: str, agent_description: str) -> str:

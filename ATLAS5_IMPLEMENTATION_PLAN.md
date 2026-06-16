@@ -1,6 +1,20 @@
 # ATLAS5_IMPLEMENTATION_PLAN.md — Sequenced Build (Stage 1.5)
 
-> **Status:** Proposed (awaiting Dayo approval).
+> **Status:** v2.0 — **APPROVED** (Dayo greenlight 2026-06-16). Autonomous build to MVP.
+> **MVP gate:** Five demo scenarios on live `/workbench` — see `MVP_RUNBOOK.md`.
+> **Backlog:** `BACKLOG.md` · **CPC Passport ID:** `67e68525-1da0-4301-8853-04d401107594`
+
+## v2.0 executive summary (canonical)
+
+**MVP** = dynamic multi-turn workbench anchored on real **CPC Capability Passport** (Supabase `cpc_v0_1` corpus), passing **S1–S5** demo scenarios with smart chat/artifact routing.
+
+**Build order:** Phase 1.5 (live path) → Phase 2 (instrument) → Phase 3 (CPC passport + Diagnose) → Phase 4 (Orient/Connect/Act/Defend + stateful artifact) → Phase 5 (harden) → Phase 5.5 (demo ready → Dayo verification).
+
+**New in v2.0:** D3.0a–c CPC passport surface (not synthetic extraction), D1.4b chat/artifact routing, D4.0 stateful artifact augment, D5.6 five-scenario gate, `/workbench/health`.
+
+---
+
+> **Prior header:** Proposed (awaiting Dayo approval) — superseded by v2.0 above.
 > **Date:** 2026-06-15.
 > **Authority:** Sequenced engineering work that realises `ATLAS5_BRAIN_ADR.md` while serving the outcomes in `ATLAS5_NORTH_STAR.md`. Stack and rules in `CLAUDE.md` remain binding.
 > **Supersedes:** the parts of the previous "D0.6 plan" that assumed the workbench hard-router. Substrate deliverables (eval scaffold, Supabase wiring, MCP tools, env/deploy) carry over unchanged.

@@ -14,6 +14,26 @@ from typing import Any
 from agents.registry.render_model import build_atlas_render_model
 
 
+def _is_cpc_query(query: str) -> bool:
+    q = query.lower()
+    return any(k in q for k in ("cpc", "catapult", "connected places"))
+
+
+def _load_cpc_context(query: str, scope: str | None = None) -> dict[str, Any] | None:
+    if not _is_cpc_query(query) and scope is None:
+        # Default CPC passport for strategic workbench queries
+        if not any(k in query.lower() for k in ("opportunit", "rail", "highway", "aviation", "swot", "good at")):
+            return None
+    try:
+        from agents.cpc_passport.loader import load_cpc_passport, load_cpc_passport_for_query
+
+        if scope:
+            return load_cpc_passport(scope)
+        return load_cpc_passport_for_query(query)
+    except Exception:
+        return None
+
+
 def _search_corpus(query: str, k: int = 8) -> list[dict[str, Any]]:
     try:
         from mcps.cpc_corpus import queries as cq
@@ -21,6 +41,19 @@ def _search_corpus(query: str, k: int = 8) -> list[dict[str, Any]]:
         return results or []
     except Exception:
         return []
+
+
+def _citation_score(row: dict[str, Any]) -> float:
+    """Resolve a numeric score; ILIKE fallback rows often have null similarity."""
+    for key in ("score", "similarity", "transport_relevance_score"):
+        val = row.get(key)
+        if val is None:
+            continue
+        try:
+            return float(val)
+        except (TypeError, ValueError):
+            continue
+    return 0.5
 
 
 def _normalize_citations(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -33,7 +66,7 @@ def _normalize_citations(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "id": str(cid),
             "title": r.get("title") or r.get("project_title") or "CPC project",
             "organisation": r.get("organisation") or r.get("lead_organisation") or "CPC",
-            "score": float(r.get("score", r.get("similarity", 0.5))),
+            "score": _citation_score(r),
         })
     return out
 
@@ -48,8 +81,61 @@ def _tier_from_count(n: int) -> str:
     return "Speculative"
 
 
-def build_orient_model(query: str, thread_id: str | None = None) -> dict[str, Any]:
-    """D4.1 — landscape survey from corpus search."""
+def build_orient_model(
+    query: str,
+    thread_id: str | None = None,
+    scope: str | None = None,
+) -> dict[str, Any]:
+    """D4.1 — CPC capability portrait or corpus landscape."""
+    cpc = _load_cpc_context(query, scope=scope)
+    if cpc and cpc.get("claims"):
+        claims = cpc["claims"]
+        tier = "Supported" if len(claims) >= 5 else "Indicative"
+        scope_label = cpc.get("scope") or "all sectors"
+        headline = f"CPC capability — {scope_label}"
+        insight = (
+            f"{cpc.get('owner_org', 'CPC')} — {cpc.get('claim_count', len(claims))} claims "
+            f"from CPC Capability Corpus ({cpc.get('project_evidence_count', 0)} projects)."
+        )
+        claim_rows = [
+            {
+                "id": c.get("id", f"cl-{i}"),
+                "claim_id": c.get("id", f"cl-{i}"),
+                "claim_text": c.get("text", ""),
+                "domain": c.get("domain", "general"),
+                "role": c.get("role", "asserts"),
+                "evidence_state": c.get("claim_state", "stated"),
+                "provenance": c.get("source", "cpc_v0_1"),
+                "confidence_reason": c.get("confidence_tier", "Indicative"),
+            }
+            for i, c in enumerate(claims[:12])
+        ]
+        return build_atlas_render_model(
+            outcome="orient",
+            headline=headline,
+            insight_card=insight,
+            sections={
+                "entity": cpc.get("title") or "Connected Places Catapult",
+                "opportunity": query[:80],
+                "landscape_overview": cpc.get("summary", "")[:600],
+                "key_players": cpc.get("owner_org", "CPC"),
+                "cpc_position": f"Scoped to {scope_label}.",
+            },
+            corpus_citations=[],
+            confidence_tier=tier,  # type: ignore[arg-type]
+            query=query,
+            thread_id=thread_id,
+            canonical_question_id="cq.explore.landscape",
+            extra={
+                "chat_surface": "hybrid",
+                "blocks_data": {
+                    "context_card": {"entity": cpc.get("title"), "scope": scope_label},
+                    "claim_ledger": {"claims": claim_rows},
+                    "recommendation_confidence": {"score": 0.75 if tier == "Supported" else 0.55},
+                },
+            },
+        )
+
     raw = _search_corpus(query)
     citations = _normalize_citations(raw)
     tier = _tier_from_count(len(citations))
@@ -139,8 +225,75 @@ def build_orient_model(query: str, thread_id: str | None = None) -> dict[str, An
     )
 
 
-def build_connect_model(query: str, thread_id: str | None = None) -> dict[str, Any]:
-    """D4.2 — opportunity routes (non-transfer connect queries)."""
+def build_connect_model(
+    query: str,
+    thread_id: str | None = None,
+    scope: str | None = None,
+) -> dict[str, Any]:
+    """D4.2 — opportunity routes from CPC passport × live calls."""
+    cpc = _load_cpc_context(query, scope=scope)
+    if (cpc and _is_cpc_query(query)) or scope or "opportunit" in query.lower():
+        try:
+            from agents.cpc_passport.loader import load_cpc_top_opportunities
+
+            opps = load_cpc_top_opportunities(scope=cpc.get("scope") if cpc else scope, limit=5)
+        except Exception:
+            opps = []
+
+        if opps:
+            opportunities = [
+                {
+                    "id": o.get("live_call_id") or o.get("match_id"),
+                    "title": o.get("title"),
+                    "organisation": o.get("funder") or "Funder TBC",
+                    "score": o.get("score", 0),
+                    "funder": o.get("funder"),
+                    "status": "open",
+                    "abstract": (o.get("summary") or o.get("description") or "")[:200],
+                    "why_now": "Live call in corpus with CPC capability alignment.",
+                    "why_cpc": cpc.get("summary", "")[:120] if cpc else "CPC capability profile match.",
+                }
+                for o in opps
+            ]
+            lanes = [
+                {
+                    "criterion": o.get("title", "")[:80],
+                    "domain": "funding-fit",
+                    "transfer_label": "needs-reframing" if o.get("score", 0) < 0.45 else "travels-as-is",
+                    "note": (o.get("summary") or "")[:160],
+                }
+                for o in opps[:4]
+            ]
+            tier = "Supported" if opps[0].get("score", 0) >= 0.4 else "Indicative"
+            return build_atlas_render_model(
+                outcome="connect",
+                headline=f"Top {len(opps)} opportunity routes for CPC",
+                insight_card=(
+                    f"Ranked live funding calls against the CPC capability passport"
+                    f" ({cpc.get('scope') if cpc else 'all sectors'}). "
+                    f"Top: {opps[0].get('title', '')[:80]}."
+                ),
+                sections={
+                    "entity": "Connected Places Catapult",
+                    "opportunity": query[:80],
+                    "priority_move": opps[0].get("title", ""),
+                },
+                corpus_citations=[],
+                confidence_tier=tier,  # type: ignore[arg-type]
+                query=query,
+                thread_id=thread_id,
+                canonical_question_id="cq.match.workbench",
+                extra={
+                    "chat_surface": "artifact_primary",
+                    "blocks_data": {
+                        "context_card": {},
+                        "opportunity_list": {"items": opportunities},
+                        "transfer_lanes": {"lanes": lanes},
+                        "recommendation_confidence": {"score": opps[0].get("score", 0)},
+                    },
+                },
+            )
+
     raw = _search_corpus(query)
     citations = _normalize_citations(raw)
     tier = _tier_from_count(len(citations))
@@ -348,6 +501,7 @@ def build_outcome_model(
     query: str,
     outcome: str,
     thread_id: str | None = None,
+    scope: str | None = None,
 ) -> dict[str, Any]:
     """Route to the correct deterministic outcome builder."""
     builders = {
@@ -358,5 +512,7 @@ def build_outcome_model(
     }
     builder = builders.get(outcome)
     if builder is None:
-        return build_orient_model(query, thread_id)
+        return build_orient_model(query, thread_id, scope=scope)
+    if outcome in ("orient", "connect"):
+        return builder(query, thread_id, scope=scope)
     return builder(query, thread_id)

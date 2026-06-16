@@ -32,7 +32,10 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from typing import Annotated, Any, Literal
+
+from typing_extensions import TypedDict
 
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langgraph.checkpoint.memory import MemorySaver
@@ -41,6 +44,11 @@ from langgraph.graph.message import add_messages
 from langgraph.types import interrupt
 
 from agents.base import extract_latest_query
+from agents.orchestrator.intent_router import (
+    node_intent_router,
+    route_after_intent_router,
+)
+from agents.orchestrator.context import merge_render_models, node_assemble_context
 from agents.orchestrator.triage import triage_query, TriageResult
 from agents.orchestrator.gate import build_gate_payload, interpret_gate_response
 from agents.orchestrator.tools import STANDARD_TOOLS, DEEP_TOOLS
@@ -52,14 +60,28 @@ from agents.spine.verify import run_verify_spine
 # State
 # ---------------------------------------------------------------------------
 
-class OrchestratorState(dict):
-    """
-    LangGraph state for the orchestrator graph.
+class OrchestratorState(TypedDict, total=False):
+    """LangGraph state — messages use add_messages reducer for multi-turn sessions."""
 
-    TypedDict-style; all keys are optional so partial updates work.
-    Using a plain dict (not TypedDict) so langgraph can handle add_messages.
-    """
-    pass
+    messages: Annotated[list, add_messages]
+    query: str
+    effort: str
+    outcome: str
+    needs_gate: bool
+    gate_confirmed: bool
+    render_model: dict[str, Any] | None
+    _prior_render_model: dict[str, Any] | None
+    error: str | None
+    _triage: dict[str, Any] | None
+    _intent: dict[str, Any] | None
+    _is_conversational: bool
+    _context: dict[str, Any] | None
+    active_scope: str | None
+    thread_id: str | None
+    reasoning_steps: list[dict[str, Any]] | None
+    _pending_clarify: str | None
+    _intent_history: list[dict[str, Any]] | None
+    lens: str | None
 
 
 def _default_state() -> dict[str, Any]:
@@ -81,15 +103,20 @@ def _default_state() -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 def node_extract_query(state: dict[str, Any]) -> dict[str, Any]:
-    """Extract the latest user query from messages and reset per-turn fields."""
-    query = extract_latest_query(state.get("messages", []))
-    return {
+    """Extract the latest user query; stash prior artifact for multi-turn augment."""
+    query = extract_latest_query(state)
+    prior = state.get("render_model")
+    updates: dict[str, Any] = {
         "query": query,
-        "render_model": None,
+        "_prior_render_model": prior if isinstance(prior, dict) else None,
         "error": None,
         "gate_confirmed": False,
         "_triage": None,
     }
+    # Fresh render_model for this turn — merged back in loop after build
+    if prior:
+        updates["render_model"] = None
+    return updates
 
 
 # ---------------------------------------------------------------------------
@@ -98,8 +125,39 @@ def node_extract_query(state: dict[str, Any]) -> dict[str, Any]:
 
 def node_triage(state: dict[str, Any]) -> dict[str, Any]:
     """Classify query effort + outcome without calling a large model."""
-    query = state.get("query", "")
+    query = (state.get("query") or extract_latest_query(state) or "").strip()
     result: TriageResult = triage_query(query)
+
+    intent = state.get("_intent") or {}
+    if intent.get("outcome_hint"):
+        result = TriageResult(
+            effort=intent.get("effort_hint") or result.effort,
+            outcome=intent["outcome_hint"],
+            needs_gate=result.needs_gate,
+            notes=f"{result.notes} Intent hint: {intent.get('outcome_hint')}.",
+            raw_query=query,
+        )
+    elif intent.get("effort_hint"):
+        result = TriageResult(
+            effort=intent["effort_hint"],
+            outcome=result.outcome,
+            needs_gate=result.needs_gate,
+            notes=result.notes,
+            raw_query=query,
+        )
+
+    ctx = state.get("_context") or {}
+    q_lower = query.lower()
+    if any(w in q_lower for w in ("compare", "versus", "vs ", "drill into", "second one", "that one")):
+        if ctx.get("last_outcome") in ("orient", "connect", "diagnose"):
+            result = TriageResult(
+                effort=result.effort if result.effort != "clarify" else "analyze",
+                outcome="diagnose" if "drill" in q_lower or "translation" in q_lower else result.outcome,
+                needs_gate=result.needs_gate,
+                notes="Follow-up on prior turn — routing with session context.",
+                raw_query=query,
+            )
+
     return {
         "effort": result.effort,
         "outcome": result.outcome,
@@ -131,12 +189,22 @@ def _route_after_triage(state: dict[str, Any]) -> str:
 
 def node_clarify(state: dict[str, Any]) -> dict[str, Any]:
     """Return a clarification request message."""
-    triage = state.get("_triage") or {}
-    msg = AIMessage(content=(
-        "I need a bit more detail to help you well. Could you tell me:\n"
-        "- What topic or entity are you researching?\n"
-        "- What kind of output would be most useful (overview, evidence gaps, funding calls)?"
-    ))
+    query = (state.get("query") or "").strip()
+    if re.match(r"^\s*(hi|hello|hey)\s*[!.?]*\s*$", query, re.I):
+        msg = AIMessage(content=(
+            "Hello! I'm the Atlas workbench — I help CPC strategists explore corpus evidence, "
+            "funding fit, and investment cases.\n\n"
+            "Ask something specific, for example:\n"
+            "• What evidence does CPC have in smart mobility that would transfer to the "
+            "Innovate UK Smart City Challenge?\n"
+            "• What are our biggest evidence gaps in rail decarbonisation?"
+        ))
+    else:
+        msg = AIMessage(content=(
+            "I need a bit more detail to help you well. Could you tell me:\n"
+            "- What topic or entity are you researching?\n"
+            "- What kind of output would be most useful (overview, evidence gaps, funding calls)?"
+        ))
     return {"messages": [msg]}
 
 
@@ -238,6 +306,19 @@ async def node_loop(state: dict[str, Any]) -> dict[str, Any]:
     query = state.get("query", "")
     effort = state.get("effort", "analyze")
     outcome = state.get("outcome", "orient")
+    prior = state.get("_prior_render_model")
+    scope = state.get("active_scope")
+
+    def _finalize(model: dict[str, Any], insight: str, steps: list | None = None) -> dict[str, Any]:
+        merged = merge_render_models(prior, model, outcome=outcome) if prior else model
+        if scope and isinstance(merged, dict):
+            merged["active_scope"] = scope
+        chat = _chat_message_for_surface(merged, insight, outcome)
+        return {
+            "render_model": merged,
+            "reasoning_steps": steps or merged.get("reasoning_steps") or [],
+            "messages": [AIMessage(content=chat)],
+        }
 
     # Phase 3 — Value Translation (diagnose + connect+transfer)
     vt_model = run_value_translation_pipeline(
@@ -249,23 +330,20 @@ async def node_loop(state: dict[str, Any]) -> dict[str, Any]:
         insight = vt_model.get("insight_card", "")
         steps = steps_for_pipeline(outcome=outcome, effort=effort, path="value_translation")
         vt_model["reasoning_steps"] = steps
-        return {
-            "render_model": vt_model,
-            "reasoning_steps": steps,
-            "messages": [AIMessage(content=insight)],
-        }
+        return _finalize(vt_model, insight, steps)
 
     # Phase 4 — deterministic outcome builders (all five outcomes except diagnose-only VT)
     if outcome in ("orient", "connect", "act", "defend"):
-        built = build_outcome_model(query=query, outcome=outcome, thread_id=state.get("thread_id"))
+        built = build_outcome_model(
+            query=query,
+            outcome=outcome,
+            thread_id=state.get("thread_id"),
+            scope=scope,
+        )
         insight = built.get("insight_card", "")
         steps = steps_for_pipeline(outcome=outcome, effort=effort, path=f"{outcome}_builder")
         built["reasoning_steps"] = steps
-        return {
-            "render_model": built,
-            "reasoning_steps": steps,
-            "messages": [AIMessage(content=insight)],
-        }
+        return _finalize(built, insight, steps)
 
     tools = DEEP_TOOLS if effort == "deep" else STANDARD_TOOLS
 
@@ -353,6 +431,20 @@ async def node_loop(state: dict[str, Any]) -> dict[str, Any]:
     return {"render_model": render_model, "messages": [AIMessage(content=final_text)]}
 
 
+def _chat_message_for_surface(model: dict[str, Any], insight: str, outcome: str) -> str:
+    """Chat vs artifact routing — short ack for dense artifacts."""
+    surface = model.get("chat_surface") or "hybrid"
+    blocks = model.get("blocks_data") or {}
+    headline = model.get("headline") or insight[:120]
+
+    if surface == "artifact_primary" or len(blocks) >= 4:
+        return f"**{headline}**\n\nSee the artifact panel for the full {outcome} analysis — citations and blocks are updated there."
+    if surface == "chat_only" or not blocks:
+        return insight or headline
+    # hybrid — headline + short insight
+    return f"**{headline}**\n\n{insight[:500]}"
+
+
 def _extract_synthesis(text: str) -> dict[str, Any]:
     """Try to parse a JSON synthesis block from the LLM response."""
     import re
@@ -437,9 +529,11 @@ def node_format(state: dict[str, Any]) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 def _build_graph() -> Any:
-    builder = StateGraph(dict)
+    builder = StateGraph(OrchestratorState)
 
     builder.add_node("extract_query", node_extract_query)
+    builder.add_node("assemble_context", node_assemble_context)
+    builder.add_node("intent_router", node_intent_router)
     builder.add_node("triage", node_triage)
     builder.add_node("clarify", node_clarify)
     builder.add_node("gate", node_gate)
@@ -448,7 +542,17 @@ def _build_graph() -> Any:
     builder.add_node("format", node_format)
 
     builder.add_edge(START, "extract_query")
-    builder.add_edge("extract_query", "triage")
+    builder.add_edge("extract_query", "assemble_context")
+    builder.add_edge("assemble_context", "intent_router")
+
+    builder.add_conditional_edges(
+        "intent_router",
+        route_after_intent_router,
+        {
+            END: END,
+            "triage": "triage",
+        },
+    )
 
     builder.add_conditional_edges(
         "triage",
