@@ -90,7 +90,7 @@ export function ContextCardBlock({ block }: { block: T }) {
   if (isPaired(content)) {
     const { source, target } = content;
     return (
-      <BlockShell headline={block.headline}>
+      <BlockShell headline={block.headline} caption={block.caption}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {source && (
             <div className="rounded-md border border-border bg-muted/10 p-3 space-y-1.5">
@@ -149,7 +149,7 @@ export function ContextCardBlock({ block }: { block: T }) {
   const citations = extractCitations(content);
 
   return (
-    <BlockShell headline={block.headline}>
+    <BlockShell headline={block.headline} caption={block.caption}>
       <div className="rounded-md border border-border bg-background p-4 space-y-2">
         {subject && (
           <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">

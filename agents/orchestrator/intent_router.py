@@ -86,9 +86,14 @@ _INTENT_SYSTEM = """You are the intent router for Atlas Workbench (Connected Pla
 Decide how to handle the user's latest message BEFORE any heavy research runs.
 
 ## Routes
-- **pipeline** — CPC / transport / innovation / evidence / funding / investment / SWOT / strategy questions. Includes mixed messages ("hi, what evidence…") — extract the substantive part and pipeline.
-- **instant_reply** — Pure greeting, thanks, or meta ("who are you", "how do you work", "limits"). Also clearly off-topic trivia (Haribo, random companies with NO CPC angle).
-- **clarify** — Ambiguous but potentially in-scope; ask ONE focused follow-up (not a generic menu).
+- **pipeline** — CPC / transport / innovation / evidence / funding / investment / SWOT / strategy questions. Includes mixed messages ("hi, what evidence…") — extract the substantive part and pipeline. Also: short follow-ups that reference the artifact already shown ("which gap?", "tell me more", "drill into #2").
+- **instant_reply** — Pure greeting, thanks, or meta ("who are you", "how do you work", "limits"). Also clearly off-topic trivia (Haribo, random companies with NO CPC angle). ALSO: artifact-aware meta ("what am I looking at?", "is this real or a sample?", "are you broken?") when an artifact is present — return a summary that references the current artifact, NOT the generic capability menu.
+- **clarify** — Ambiguous but potentially in-scope AND no prior artifact; ask ONE focused follow-up (not a generic menu). If an artifact already exists, prefer pipeline with same outcome over clarify.
+
+## Multi-turn context awareness
+- An artifact may already be on the screen — context block below tells you which one.
+- If user message is short, vague, or pronoun-heavy AND artifact_present is true: treat as follow-up on that artifact. Route pipeline with last_outcome as the hint, OR instant_reply that quotes the artifact's executive summary.
+- NEVER degrade to the generic capability menu when an artifact exists — that confuses the user.
 
 ## Rules
 - Prefer **pipeline** when ANY strategic or CPC-relevant intent exists.
@@ -128,7 +133,7 @@ def _probe_corpus(entity: str, limit: int = 3) -> list[dict[str, Any]]:
         return []
 
 
-def _haiku_route(query: str) -> IntentRouterOutput | None:
+def _haiku_route(query: str, ctx: dict[str, Any] | None = None) -> IntentRouterOutput | None:
     api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
     if not api_key:
         return None
@@ -142,10 +147,16 @@ def _haiku_route(query: str) -> IntentRouterOutput | None:
             temperature=0,
         )
         structured = llm.with_structured_output(IntentRouterOutput)
+        ctx_block = _format_context_block(ctx)
+        user = (
+            f"{ctx_block}\nUser message:\n{query}"
+            if ctx_block
+            else f"User message:\n{query}"
+        )
         return structured.invoke(
             [
                 SystemMessage(content=_INTENT_SYSTEM),
-                HumanMessage(content=f"User message:\n{query}"),
+                HumanMessage(content=user),
             ],
         )
     except Exception as exc:
@@ -153,9 +164,45 @@ def _haiku_route(query: str) -> IntentRouterOutput | None:
         return None
 
 
-def _heuristic_route(query: str) -> IntentDecision:
+def _format_context_block(ctx: dict[str, Any] | None) -> str:
+    if not ctx:
+        return ""
+    bits: list[str] = []
+    last_outcome = ctx.get("last_outcome")
+    last_headline = ctx.get("last_headline")
+    artifact_present = bool(last_outcome or last_headline)
+    if artifact_present:
+        bits.append(f"artifact_present: true")
+        if last_outcome:
+            bits.append(f"last_outcome: {last_outcome}")
+        if last_headline:
+            bits.append(f"last_headline: {str(last_headline)[:140]}")
+    if not bits:
+        return ""
+    return "## Session context\n" + "\n".join(bits) + "\n"
+
+
+def _heuristic_route(query: str, ctx: dict[str, Any] | None = None) -> IntentDecision:
     """Strict fallback — only blocks pure conversational; never blocks SWOT/CPC."""
+    artifact_present = bool(ctx and (ctx.get("last_outcome") or ctx.get("last_headline")))
+
+    if _ARTIFACT_META_RE.search(query) and artifact_present:
+        return IntentDecision(
+            route="instant_reply",
+            instant_reply=build_artifact_meta_reply(query, ctx) or build_conversational_reply(query),
+            reasoning="Artifact-aware meta reply",
+            source="heuristic",
+        )
+
     if should_reply_conversationally_strict(query):
+        # Don't degrade to generic capability menu when artifact exists — point user to it
+        if artifact_present and not _is_pure_greeting(query):
+            return IntentDecision(
+                route="instant_reply",
+                instant_reply=build_artifact_meta_reply(query, ctx) or build_conversational_reply(query),
+                reasoning="Artifact present — meta reply over generic menu",
+                source="heuristic",
+            )
         return IntentDecision(
             route="instant_reply",
             instant_reply=build_conversational_reply(query),
@@ -163,6 +210,14 @@ def _heuristic_route(query: str) -> IntentDecision:
             source="heuristic",
         )
     if len(query.split()) <= 4 and "?" in query:
+        # Short ambiguous with artifact → treat as follow-up, keep last outcome
+        if artifact_present:
+            return IntentDecision(
+                route="pipeline",
+                outcome_hint=ctx.get("last_outcome") if ctx else None,
+                reasoning="Short follow-up with artifact — same outcome lane",
+                source="heuristic",
+            )
         return IntentDecision(
             route="clarify",
             clarify_question=(
@@ -179,7 +234,12 @@ def _heuristic_route(query: str) -> IntentDecision:
     )
 
 
-def route_intent(query: str) -> IntentDecision:
+def _is_pure_greeting(query: str) -> bool:
+    ql = query.lower().strip().strip("?!.,")
+    return ql in {"hi", "hello", "hey", "howdy", "thanks", "thank you", "cheers"}
+
+
+def route_intent(query: str, ctx: dict[str, Any] | None = None) -> IntentDecision:
     """Main entry — Haiku when available, else strict heuristics + corpus probe."""
     q = (query or "").strip()
     if not q:
@@ -189,7 +249,6 @@ def route_intent(query: str) -> IntentDecision:
             source="heuristic",
         )
 
-    # Mixed intent: greeting + substantive question → pipeline
     if re.match(r"^\s*(hi|hello|hey)[\s,—-]+", q, re.I) and len(q.split()) > 6:
         substantive = re.sub(r"^\s*(hi|hello|hey)[\s,—-]+", "", q, flags=re.I).strip()
         if substantive and not should_reply_conversationally_strict(substantive):
@@ -199,9 +258,9 @@ def route_intent(query: str) -> IntentDecision:
                 source="heuristic",
             )
 
-    parsed = _haiku_route(q)
+    parsed = _haiku_route(q, ctx=ctx)
     if parsed is None:
-        return _heuristic_route(q)
+        return _heuristic_route(q, ctx=ctx)
 
     decision = IntentDecision(
         route=parsed.route,
@@ -234,14 +293,116 @@ def route_intent(query: str) -> IntentDecision:
 
 
 _FOLLOW_UP_RE = re.compile(
-    r"\b(compare|versus|vs\.?|that|this|those|these|drill|second|first|#2|number two|the other)\b",
+    r"\b("
+    r"compare|versus|vs\.?|that|this|those|these|drill|second|first|#2|number two|the other|"
+    r"the\s+(?:gap|score|result|verdict|fit|chart|table|list|opportunity|claim|criterion|dimension|lane)|"
+    r"which\s+(?:gap|opportunity|project|claim|criterion|one|of\s+(?:these|those))|"
+    r"tell\s+me\s+more|more\s+on|explain|expand|deeper|why\s+(?:0|zero|is|does|not)|"
+    r"show\s+me\s+(?:the|more)|focus\s+on|zoom\s+in|narrow"
+    r")\b",
+    re.I,
+)
+
+_ARTIFACT_META_RE = re.compile(
+    r"("
+    r"what(?:'s| is| am)?\s+(?:on(?:\s+the)?\s+screen|am\s+i\s+looking\s+at|i\s+looking\s+at|this(?:\s+about)?|that|here)|"
+    r"what(?:\s+just)?\s+happen(?:ed)?|"
+    r"are\s+you\s+(?:broken|stuck|ok|okay|alright)|"
+    r"is\s+this\s+(?:real|right|correct|true|a\s+sample|a\s+demo|fake|made\s+up)|"
+    r"why\s+(?:is\s+)?(?:0|zero|the\s+score)|"
+    r"what(?:'s| is)\s+(?:the\s+)?(?:fit|score|verdict|gap|takeaway|bottom\s+line)|"
+    r"summari[sz]e\s+(?:this|that|the\s+artifact)|"
+    r"in\s+one\s+(?:line|sentence)|"
+    r"did\s+(?:the\s+)?(?:external|web)\s+search\s+(?:find|return|work)"
+    r")",
     re.I,
 )
 
 
+def build_artifact_meta_reply(query: str, ctx: dict[str, Any] | None) -> str | None:
+    """Artifact-aware reply for 'what am I looking at?' style follow-ups."""
+    if not ctx:
+        return None
+    prior = ctx.get("_prior_render_model") or ctx.get("prior_render_model")
+    headline = ctx.get("last_headline") or (prior.get("headline") if isinstance(prior, dict) else "the current artifact")
+    last_outcome = ctx.get("last_outcome") or "analysis"
+    exec_summary = None
+    is_demo = False
+    if isinstance(prior, dict):
+        exec_summary = (
+            prior.get("executive_summary")
+            or (prior.get("blocks_data") or {}).get("executive_summary", {}).get("summary")
+            or prior.get("insight_card")
+        )
+        is_demo = bool(prior.get("is_demo_comparison"))
+
+    q = query.lower()
+
+    if re.search(r"are\s+you\s+(?:broken|stuck)", q):
+        return (
+            f"No, I'm responding correctly. You're currently looking at **{headline}** "
+            f"({last_outcome} outcome).\n\n{exec_summary or 'Use the artifact panel for the full breakdown.'}"
+        )
+    if re.search(r"\b(sample|demo|real|fake|made\s+up)\b", q):
+        if is_demo:
+            return (
+                f"**This is a sample comparison.** The artifact you're looking at uses demo fixtures "
+                f"(passport and/or spec) because the real CPC passport couldn't be matched to a "
+                f"specific call from your query. The fit scores below are illustrative, not your "
+                f"true state of play.\n\nTo get a real analysis, name a specific call (e.g. 'CCAV "
+                f"Connected & Automated Mobility competition') or check that `OPENAI_API_KEY` is "
+                f"set so passport semantic-loading works."
+            )
+        return (
+            f"**This is a real analysis.** Headline: {headline}.\n\n"
+            f"{exec_summary or 'See the artifact panel for citations and verdicts.'}"
+        )
+    if re.search(r"did\s+(?:the\s+)?(?:external|web)\s+search\s+(?:find|return|work)", q):
+        external_count = 0
+        if isinstance(prior, dict):
+            ext = (prior.get("blocks_data") or {}).get("external_evidence", {}).get("items", [])
+            external_count = len(ext) if isinstance(ext, list) else 0
+        if external_count:
+            return f"Yes — external search returned **{external_count}** item(s). See the 'External evidence' block in the artifact."
+        return (
+            "External search **didn't return additional items** for this turn. Reasons: "
+            "(1) the lane router decided corpus-only was sufficient for this outcome, "
+            "(2) sense-checking filtered low-quality hits, or "
+            "(3) `EXA_API_KEY` is not set. Ask 'rerun this with external search' to force the dual lane."
+        )
+
+    return f"**{headline}**\n\n{exec_summary or 'See the artifact panel — the executive summary at the top covers the takeaway.'}"
+
+
 def node_intent_router(state: dict[str, Any]) -> dict[str, Any]:
     query = (state.get("query") or extract_latest_query(state) or "").strip()
-    ctx = state.get("_context") or {}
+    ctx = dict(state.get("_context") or {})
+    # Make prior render model available to artifact-aware replies
+    prior_rm = state.get("_prior_render_model") or state.get("render_model")
+    if prior_rm is not None and "_prior_render_model" not in ctx:
+        ctx["_prior_render_model"] = prior_rm
+
+    artifact_present = bool(ctx.get("last_outcome") or ctx.get("last_headline") or prior_rm)
+
+    # Artifact-aware meta reply takes precedence when artifact exists
+    if query and artifact_present and _ARTIFACT_META_RE.search(query):
+        reply = build_artifact_meta_reply(query, ctx)
+        if reply:
+            decision = IntentDecision(
+                route="instant_reply",
+                instant_reply=reply,
+                reasoning="Artifact-aware meta reply",
+                source="heuristic",
+            )
+            return {
+                "_intent": {
+                    "route": "instant_reply",
+                    "source": "heuristic",
+                    "reasoning": decision.reasoning,
+                },
+                "_is_conversational": True,
+                "messages": [AIMessage(content=reply, id=str(uuid.uuid4()))],
+            }
 
     # Multi-turn follow-ups that reference prior context — keep same lane unless query shifts outcome
     if query and ctx.get("last_outcome") and _FOLLOW_UP_RE.search(query):
@@ -257,7 +418,7 @@ def node_intent_router(state: dict[str, Any]) -> dict[str, Any]:
             source="heuristic",
         )
     else:
-        decision = route_intent(query)
+        decision = route_intent(query, ctx=ctx)
 
     base: dict[str, Any] = {
         "_intent": {

@@ -10,20 +10,27 @@ import { cn } from "@/lib/utils";
  */
 export function BlockShell({
   headline,
+  caption,
   children,
   className,
 }: {
   headline?: string;
+  caption?: string;
   children: React.ReactNode;
   className?: string;
 }) {
   return (
     <div className={cn("rounded-lg border border-border bg-card overflow-hidden", className)}>
-      {headline && (
-        <div className="px-4 py-3 border-b border-border bg-muted/30">
-          <p className="text-sm font-semibold text-foreground leading-snug tracking-tight">
-            {headline}
-          </p>
+      {(headline || caption) && (
+        <div className="px-4 py-3 border-b border-border bg-muted/30 space-y-1">
+          {headline && (
+            <p className="text-sm font-semibold text-foreground leading-snug tracking-tight">
+              {headline}
+            </p>
+          )}
+          {caption && (
+            <p className="text-xs text-muted-foreground leading-snug">{caption}</p>
+          )}
         </div>
       )}
       <div className="p-4">{children}</div>

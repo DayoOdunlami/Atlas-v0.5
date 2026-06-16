@@ -450,17 +450,31 @@ async def node_loop(state: dict[str, Any]) -> dict[str, Any]:
 
 
 def _chat_message_for_surface(model: dict[str, Any], insight: str, outcome: str) -> str:
-    """Chat vs artifact routing — short ack for dense artifacts."""
+    """Chat does heavy lifting: surface executive summary + sample disclosure, never just an ack."""
     surface = model.get("chat_surface") or "hybrid"
     blocks = model.get("blocks_data") or {}
     headline = model.get("headline") or insight[:120]
 
-    if surface == "artifact_primary" or len(blocks) >= 4:
-        return f"**{headline}**\n\nSee the artifact panel for the full {outcome} analysis — citations and blocks are updated there."
+    exec_summary = (
+        model.get("executive_summary")
+        or (blocks.get("executive_summary") or {}).get("summary")
+        or insight
+    )
+    is_demo = bool(model.get("is_demo_comparison") or (blocks.get("executive_summary") or {}).get("is_demo_comparison"))
+    pointer_blocks = [b for b in ("transfer_lanes", "match_bench", "dimension_gap", "opportunity_list") if b in blocks]
+    pointer = (
+        f"_Artifact: {', '.join(pointer_blocks[:3])}_" if pointer_blocks else ""
+    )
+
     if surface == "chat_only" or not blocks:
-        return insight or headline
-    # hybrid — headline + short insight
-    return f"**{headline}**\n\n{insight[:500]}"
+        return exec_summary or headline
+
+    body = f"**{headline}**\n\n{exec_summary}"
+    if is_demo:
+        body += "\n\n_⚠ This is a sample comparison — see the executive summary at the top of the artifact for details._"
+    if pointer:
+        body += f"\n\n{pointer}"
+    return body
 
 
 def _extract_synthesis(text: str) -> dict[str, Any]:

@@ -27,7 +27,28 @@ _VERDICT_TO_EVIDENCE_VERDICT: dict[str, str] = {
     "MOVE": "not mapped",
 }
 
+_BLOCK_DEFAULT_CAPTIONS: dict[str, str] = {
+    "executive_summary": "What this tells you at a glance.",
+    "context_card": "Who and what — entity and scope this artifact covers.",
+    "claim_ledger": "Specific capability claims made by the entity, with tier and role.",
+    "evidence_state_summary": "Evidence quality breakdown — verified vs inferred vs unknown.",
+    "dimension_gap": "Capability dimensions the call needs vs what the passport claims.",
+    "match_bench": "Criterion-by-criterion fit — strong / partial / not-credible / missing.",
+    "transfer_lanes": "Four-lane verdict on what evidence travels as-is.",
+    "recommendation_confidence": "Confidence tier and what would move it up a notch.",
+    "action_plan": "Sequenced next moves — owner, dependency, timeline.",
+    "objection_response": "Likely objections and the rebuttals + evidence to deploy.",
+    "provenance_trace": "How the evidence flowed from corpus → external → reconcile → guard.",
+    "external_evidence": "Web-sourced signals — candidates, not corpus-verified.",
+    "opportunity_candidates": "Opportunities found online not yet in the CPC live calls table.",
+    "comparison_matrix": "Side-by-side comparison of corpus vs external signal.",
+    "opportunity_list": "Ranked funding opportunities from the CPC live calls index.",
+    "network_map": "Connections between entities — projects, organisations, themes.",
+    "economic_case": "Value drivers and economic case at Green Book discounting.",
+}
+
 _BLOCK_TYPE_MAP: dict[str, tuple[str, str]] = {
+    "executive_summary": ("ContextCard", "paired_context_cards"),
     "context_card": ("ContextCard", "paired_context_cards"),
     "claim_ledger": ("ClaimLedger", "claim_audit_ledger"),
     "evidence_state_summary": ("EvidenceStateSummary", "evidence_state_donut"),
@@ -276,7 +297,37 @@ def _build_context_card(model: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _build_executive_summary(model: dict[str, Any], blocks_data: dict[str, Any]) -> dict[str, Any]:
+    """Top-of-canvas exec summary block — promotes the insight + sample-disclosure."""
+    es = blocks_data.get("executive_summary") or {}
+    summary = (
+        es.get("summary")
+        or model.get("executive_summary")
+        or model.get("insight_card", "")
+    )
+    caption = es.get("caption") or ""
+    is_demo = bool(es.get("is_demo_comparison") or model.get("is_demo_comparison"))
+    sections = model.get("sections", {})
+    headline = model.get("headline", "Atlas analysis")
+    return {
+        "source": {
+            "id": "executive-summary",
+            "title": headline,
+            "summary": summary,
+        },
+        "target": {
+            "id": "executive-summary-meta",
+            "title": caption,
+            "funder": sections.get("funder", ""),
+            "status": "Sample comparison" if is_demo else (sections.get("opportunity", "") or "Live"),
+            "abstract": sections.get("opportunity", "")[:200],
+        },
+    }
+
+
 def _content_for_block(block_id: str, model: dict[str, Any], blocks_data: dict[str, Any]) -> Any:
+    if block_id == "executive_summary":
+        return _build_executive_summary(model, blocks_data)
     if block_id == "match_bench":
         return _build_match_bench(blocks_data)
     if block_id == "transfer_lanes":
@@ -319,6 +370,8 @@ _FOCUS_BLOCKS = frozenset({
 
 def _headline_for_block(block_id: str, model: dict[str, Any]) -> str:
     spec = BLOCK_REGISTRY.get(block_id)
+    if block_id == "executive_summary":
+        return "What this tells you"
     if block_id == "transfer_lanes":
         return "Four-lane transfer verdict — does CPC evidence travel to the target call?"
     if block_id == "match_bench":
@@ -374,7 +427,14 @@ def materialize_render_blocks(
         if block_id == "context_card":
             role = "context"
 
-        render_blocks.append({
+        caption = (blocks_data.get(block_id) or {}).get("what_this_means")
+        if not caption and block_id == "executive_summary":
+            es = blocks_data.get("executive_summary") or {}
+            caption = es.get("caption")
+        if not caption:
+            caption = _BLOCK_DEFAULT_CAPTIONS.get(block_id)
+
+        block_payload: dict[str, Any] = {
             "id": block_id.replace("_", "-"),
             "type": block_type,
             "visual": visual,
@@ -382,6 +442,9 @@ def materialize_render_blocks(
             "headline": _headline_for_block(block_id, model),
             "role": role,
             "content": _content_for_block(block_id, model, blocks_data),
-        })
+        }
+        if caption:
+            block_payload["caption"] = caption
+        render_blocks.append(block_payload)
 
     return render_blocks

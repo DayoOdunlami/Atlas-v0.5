@@ -21,7 +21,7 @@ export function NetworkMapBlock({ block, effectiveVisual }: Props) {
   const { nodes, edges } = block.content;
 
   return (
-    <BlockShell headline={block.headline}>
+    <BlockShell headline={block.headline} caption={block.caption}>
       {dominant && atlasVisual ? (
         <WorkbenchRichVisual visual={atlasVisual} className="min-h-[360px]" />
       ) : (

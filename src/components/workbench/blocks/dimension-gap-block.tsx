@@ -54,7 +54,7 @@ export function DimensionGapBlock({
   const dominant = usesDominantAtlasVisual(block.type, effectiveVisual);
 
   return (
-    <BlockShell headline={block.headline}>
+    <BlockShell headline={block.headline} caption={block.caption}>
       {dominant && atlasVisual && (
         <div className="mb-4">
           <WorkbenchRichVisual visual={atlasVisual} />

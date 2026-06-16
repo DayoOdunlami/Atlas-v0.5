@@ -79,7 +79,7 @@ export function TransferLanesBlock({ block }: { block: T }) {
   const grouped = groupByLane(block.content);
 
   return (
-    <BlockShell headline={block.headline}>
+    <BlockShell headline={block.headline} caption={block.caption}>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
         {LANES.map((lane) => {
           const items = grouped[lane.outcome];

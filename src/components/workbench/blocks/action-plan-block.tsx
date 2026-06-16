@@ -5,7 +5,7 @@ export function ActionPlanBlock({ block }: { block: T }) {
   const sorted = [...block.content].sort((a, b) => a.sequence - b.sequence);
 
   return (
-    <BlockShell headline={block.headline}>
+    <BlockShell headline={block.headline} caption={block.caption}>
       <ol className="space-y-3">
         {sorted.map((item) => (
           <li key={item.sequence} className="flex gap-3 items-start">

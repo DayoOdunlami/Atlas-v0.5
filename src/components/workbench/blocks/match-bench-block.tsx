@@ -26,7 +26,7 @@ export function MatchBenchBlock({
   if (loading) return <BlockSkeletonMatchBench />;
 
   return (
-    <BlockShell headline={block.headline}>
+    <BlockShell headline={block.headline} caption={block.caption}>
       <Table>
         <TableHeader>
           <TableRow>

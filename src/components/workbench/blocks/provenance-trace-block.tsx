@@ -12,7 +12,7 @@ export function ProvenanceTraceBlock({
   const c = block.content;
 
   return (
-    <BlockShell headline={block.headline}>
+    <BlockShell headline={block.headline} caption={block.caption}>
       {/* Path breadcrumb */}
       <div className="flex flex-wrap items-center gap-1 mb-4">
         {c.path.map((step, i) => (

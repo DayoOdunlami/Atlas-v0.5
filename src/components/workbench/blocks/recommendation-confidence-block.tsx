@@ -18,7 +18,7 @@ export function RecommendationConfidenceBlock({
   const pct = Math.round(c.score * 100);
 
   return (
-    <BlockShell headline={block.headline}>
+    <BlockShell headline={block.headline} caption={block.caption}>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {/* Recommendation */}
         <div className="md:col-span-2 space-y-2">

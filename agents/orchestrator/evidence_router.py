@@ -43,11 +43,16 @@ def select_lane_mode(
     if outcome == "connect" and _OPPORTUNITY_RE.search(query):
         return "dual"
 
+    # Diagnose with gaps OR all-MOVE verdicts is the strongest signal that the
+    # corpus is incomplete on this topic — fire the external lane to enrich.
+    if outcome == "diagnose" and has_gaps:
+        return "dual"
+
     if outcome == "orient" and not has_gaps and not _intent_external(intent):
         if not _POLICY_RE.search(query) and not _OPPORTUNITY_RE.search(query):
             return "corpus_only"
 
-    if _POLICY_RE.search(query) and outcome in ("orient", "act", "defend"):
+    if _POLICY_RE.search(query) and outcome in ("orient", "act", "defend", "diagnose"):
         return "dual"
 
     if outcome == "connect" or _OPPORTUNITY_RE.search(query):

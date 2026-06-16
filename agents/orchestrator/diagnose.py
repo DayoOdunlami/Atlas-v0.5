@@ -28,6 +28,12 @@ _TRANSFER_PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"\bsmart\s+city\b", re.I),
 ]
 
+_NAMED_CALL_PATTERNS: list[re.Pattern[str]] = [
+    re.compile(r"\binnovate\s+uk\s+smart\s+(mobility|city)\b", re.I),
+    re.compile(r"\bccav\s+(challenge|competition|fund)", re.I),
+    re.compile(r"\bukri\s+(call|fund|competition)\b", re.I),
+]
+
 
 def should_run_value_translation(outcome: str, query: str) -> bool:
     """True when the matcher vertical should run deterministically."""
@@ -38,17 +44,15 @@ def should_run_value_translation(outcome: str, query: str) -> bool:
     return False
 
 
-def _uses_pilot_fixtures(query: str) -> bool:
-    q = query.lower()
-    return (
-        "smart mobility" in q
-        or "innovate uk" in q
-        or "smart city" in q
-    )
+def _names_specific_call(query: str) -> bool:
+    return any(p.search(query) for p in _NAMED_CALL_PATTERNS)
 
 
-def _resolve_passport(query: str) -> Passport:
-    """Load canonical CPC passport from Supabase; fixture only as last resort."""
+def _resolve_passport(query: str) -> tuple[Passport, bool]:
+    """
+    Load canonical CPC passport from Supabase. Returns (passport, used_fixture).
+    Fixture only used when real passport unavailable or invalid.
+    """
     from agents.cpc_passport.loader import load_cpc_passport_for_query
     from agents.matcher.passport import PassportClaim, validate_passport
 
@@ -73,18 +77,22 @@ def _resolve_passport(query: str) -> Passport:
             passport_id=data.get("passport_id"),
         )
         if not validate_passport(passport):
-            return passport
+            return passport, False
 
-    if _uses_pilot_fixtures(query):
-        return cpc_smart_mobility_passport()
-
-    return cpc_smart_mobility_passport()
+    return cpc_smart_mobility_passport(), True
 
 
-def _resolve_spec(query: str) -> RequirementSpec:
-    if _uses_pilot_fixtures(query):
-        return innovate_uk_smart_mobility_spec()
-    return extract_requirement_spec(query)
+def _resolve_spec(query: str) -> tuple[RequirementSpec, bool]:
+    """
+    Returns (spec, used_fixture). Real extraction preferred — fixture only when
+    heuristic extraction fails to produce a substantively valid spec.
+    """
+    from agents.matcher.requirement_spec import validate_requirement_spec
+
+    extracted = extract_requirement_spec(query)
+    if not validate_requirement_spec(extracted):
+        return extracted, False
+    return innovate_uk_smart_mobility_spec(), True
 
 
 def _fetch_corpus_citations(query: str, k: int = 5) -> list[dict[str, Any]]:
@@ -120,29 +128,28 @@ def run_value_translation_pipeline(
     Run the full Value Translation report builder for a user query.
 
     Returns None when the query is not eligible for this path.
+    Honestly labels fixture-driven comparisons so the UI/chat can disclose them.
     """
     if not should_run_value_translation(outcome, query):
         return None
 
-    passport = _resolve_passport(query)
-    spec = _resolve_spec(query)
-
-    from agents.matcher.passport import validate_passport
-    from agents.matcher.requirement_spec import validate_requirement_spec
-
-    # Pilot fixtures only when spec extraction fails AND query matches pilot language
-    if validate_requirement_spec(spec) and _uses_pilot_fixtures(query):
-        passport = cpc_smart_mobility_passport()
-        spec = innovate_uk_smart_mobility_spec()
+    passport, passport_is_fixture = _resolve_passport(query)
+    spec, spec_is_fixture = _resolve_spec(query)
+    is_demo_comparison = passport_is_fixture or spec_is_fixture
 
     citations = _fetch_corpus_citations(query)
 
     cq_id = "cq.match.workbench" if outcome in ("diagnose", "connect") else None
 
-    return build_value_translation_report(
+    model = build_value_translation_report(
         passport=passport,
         spec=spec,
         corpus_citations=citations,
         thread_id=thread_id,
         canonical_question_id=cq_id,
+        is_demo_comparison=is_demo_comparison,
+        passport_is_fixture=passport_is_fixture,
+        spec_is_fixture=spec_is_fixture,
+        original_query=query,
     )
+    return model

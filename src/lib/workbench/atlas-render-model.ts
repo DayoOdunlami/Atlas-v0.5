@@ -317,6 +317,12 @@ interface BaseBlock {
    * Decides which canvas zone renders this block.
    */
   role?: BlockRole;
+  /**
+   * D6.x — Optional one-line caption shown directly below the block headline.
+   * Sourced from `blocks_data[block_id].what_this_means` in Python.
+   * Lets users grasp what a dense visual is telling them at a glance.
+   */
+  caption?: string;
 }
 
 export interface RecommendationConfidenceBlock extends BaseBlock {

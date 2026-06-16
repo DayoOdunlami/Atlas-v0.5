@@ -36,6 +36,7 @@ from agents.registry.blocks import get_blocks_for_outcome, BlockSpec
 RenderMode = Literal["blocks", "document", "chart"]
 
 _MATCHER_BLOCK_IDS = frozenset({
+    "executive_summary",
     "match_bench",
     "transfer_lanes",
     "dimension_gap",
@@ -208,6 +209,10 @@ def run_format_pass(
             if bid not in preferred:
                 preferred.append(bid)
         block_ids = preferred if preferred else block_ids
+
+    # Executive summary always renders first when present
+    if "executive_summary" in (blocks_data or {}):
+        block_ids = ["executive_summary"] + [b for b in block_ids if b != "executive_summary"]
 
     # D4.6 — append harmonized evidence blocks when populated
     if blocks_data.get("external_evidence", {}).get("items"):

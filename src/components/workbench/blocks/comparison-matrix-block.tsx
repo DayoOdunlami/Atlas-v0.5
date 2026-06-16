@@ -118,7 +118,7 @@ export function ComparisonMatrixBlock({
   const visual = block.visual as string;
   if (visual === "quadrant_grid" || isQuadrantContent(content)) {
     return (
-      <BlockShell headline={block.headline}>
+      <BlockShell headline={block.headline} caption={block.caption}>
         <QuadrantGrid content={isQuadrantContent(content) ? content : { quadrants: [] }} />
       </BlockShell>
     );
@@ -129,7 +129,7 @@ export function ComparisonMatrixBlock({
   const dominant = usesDominantAtlasVisual(block.type, effectiveVisual);
 
   return (
-    <BlockShell headline={block.headline}>
+    <BlockShell headline={block.headline} caption={block.caption}>
       {dominant && atlasVisual && (
         <div className="mb-4">
           <WorkbenchRichVisual visual={atlasVisual} />
