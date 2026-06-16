@@ -40,6 +40,8 @@ export function WorkbenchAgentBridge({ children, forceLegacy = false }: Workbenc
     setLastRoute,
     setLastCitations,
     setLiveModelFromOrchestrator,
+    setRenderMode,
+    setDocumentSections,
   } = useWorkbench();
 
   const handleOrchestratorModel = useCallback(
