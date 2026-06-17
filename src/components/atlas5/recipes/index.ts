@@ -6,3 +6,4 @@ export { OrientSurface } from "./orient-surface";
 export { ConnectSurface } from "./connect-surface";
 export { DefendSurface } from "./defend-surface";
 export { DiagnoseSurface } from "./diagnose-surface";
+export { OrganisationProfileSurface } from "./organisation-profile-surface";

@@ -137,6 +137,19 @@ Use only when data has a genuine time dimension (year, quarter, month) and
 trend direction is the point. Do not use area for proportions.
 Library: Recharts
 
+### `stakeholder_map`
+Use when: programme or policy question where power, influence, and relationships
+between actors are the finding (object routing / organisation profile).
+Required: `{ nodes: [{ id, label, role?, influence? }], edges: [{ source, target }] }`
+Minimum 3 nodes. Do not use when a ranked list suffices.
+Library: Custom
+
+### `evidence_aware_swot`
+Use when: strategic position for an entity where each SWOT item must carry
+`claim_state` (stated | inferred | unknown | contested).
+Required: `{ strengths, weaknesses, opportunities, threats }` — each item `{ text, claim_state }`
+Library: Custom
+
 ---
 
 ## Conflict Resolution — When Two Blocks Could Apply

@@ -137,6 +137,11 @@ function getMissingFields(
         missing.push("sections.Headline");
       break;
     }
+    case "organisation_profile":
+      if (!artifact.sections || Object.keys(artifact.sections).length === 0)
+        missing.push("sections");
+      if (!artifact.headline) missing.push("headline");
+      break;
     case null:
       // legacy BriefView — sections should exist
       if (!artifact.sections || Object.keys(artifact.sections).length === 0)

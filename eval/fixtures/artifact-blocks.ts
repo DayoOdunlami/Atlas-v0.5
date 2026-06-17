@@ -718,6 +718,91 @@ export const FIXTURE_DEFEND_SPINE: DecisionSpine = {
 };
 
 // ---------------------------------------------------------------------------
+// Sprint 5 — object-layer visual blocks (lab / tier1)
+// ---------------------------------------------------------------------------
+
+export const FIXTURE_STAKEHOLDER_MAP_BLOCK = {
+  type: "stakeholder_map",
+  title: "A14 autonomous freight — stakeholder network",
+  data: {
+    nodes: [
+      { id: "cpc", label: "Connected Places Catapult", role: "Programme lead", influence: "high" },
+      { id: "dft", label: "DfT CCAV", role: "Regulator", influence: "high" },
+      { id: "nh", label: "National Highways", role: "Infrastructure", influence: "medium" },
+      { id: "fleet", label: "Fleet operators", role: "Trial participants", influence: "medium" },
+    ],
+    edges: [
+      { source: "dft", target: "cpc", relationship: "funds" },
+      { source: "cpc", target: "fleet", relationship: "commissions" },
+      { source: "nh", target: "cpc", relationship: "permits corridor" },
+    ],
+  },
+};
+
+export const FIXTURE_EVIDENCE_AWARE_SWOT_BLOCK = {
+  type: "evidence_aware_swot",
+  title: "CPC strategic position — evidence-aware SWOT",
+  data: {
+    strengths: [
+      { text: "National connected-mobility convening role", claim_state: "stated" as const },
+    ],
+    weaknesses: [
+      { text: "Thin open-road HGV trial precedent in corpus", claim_state: "stated" as const },
+    ],
+    opportunities: [
+      { text: "A14 regulatory sandbox alignment", claim_state: "inferred" as const },
+    ],
+    threats: [
+      { text: "Workforce automation narrative risk", claim_state: "contested" as const },
+    ],
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Organisation profile (Sprint 5 — fixture-only)
+// ---------------------------------------------------------------------------
+
+export const FIXTURE_ORGANISATION_PROFILE: ArtifactBlock = {
+  type: "brief",
+  recipe: "organisation_profile",
+  confidence_tier: "Indicative",
+  headline: "Connected Places Catapult — organisation profile",
+  insight_card:
+    "CPC operates as the UK's national convenor for connected-mobility innovation, " +
+    "with strongest corpus density in freight automation and urban mobility programmes.",
+  sections: {
+    Profile:
+      "Connected Places Catapult (CPC) is a UK innovation agency focused on connected places, " +
+      "transport, and built-environment innovation. This fixture profile is synthetic for lab validation.",
+    Capabilities:
+      "Programme delivery, evidence synthesis, stakeholder convening, and trial design support " +
+      "across rail, highways, and urban mobility.",
+    Partnerships:
+      "DfT CCAV, Innovate UK, National Highways, and operator consortia feature in recent corpus-linked work.",
+  },
+  visual_blocks: [
+    FIXTURE_STAKEHOLDER_MAP_BLOCK,
+    FIXTURE_EVIDENCE_AWARE_SWOT_BLOCK,
+  ],
+  corpus_citations: [
+    {
+      id: "00000000-0000-4000-8000-000000000101",
+      title: "Freight Innovation Fund — Round 2",
+      organisation: "Innovate UK",
+      score: 0.82,
+      claim_state: "stated",
+    },
+    {
+      id: "00000000-0000-4000-8000-000000000102",
+      title: "MOVE-UK Programme",
+      organisation: "DfT CCAV",
+      score: 0.76,
+      claim_state: "stated",
+    },
+  ],
+} as unknown as ArtifactBlock;
+
+// ---------------------------------------------------------------------------
 // Named map — used by fixture API route
 // ---------------------------------------------------------------------------
 
@@ -730,6 +815,7 @@ export const FIXTURE_MAP = {
   orient: FIXTURE_ORIENT,
   connect: FIXTURE_CONNECT,
   defend: FIXTURE_DEFEND,
+  organisation_profile: FIXTURE_ORGANISATION_PROFILE,
 } as const;
 
 export type FixtureName = keyof typeof FIXTURE_MAP;

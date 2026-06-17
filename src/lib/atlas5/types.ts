@@ -114,7 +114,8 @@ export type RecipeType =
   | "diagnose"
   | "act"
   | "defend"
-  | "cpc_defend";
+  | "cpc_defend"
+  | "organisation_profile";
 
 // ---------------------------------------------------------------------------
 // Claim state — Principle 3 (claim states are first-class citizens)
@@ -129,6 +130,17 @@ export type RecipeType =
  * contested = sources conflict
  */
 export type ClaimState = "stated" | "inferred" | "unknown" | "contested";
+
+/**
+ * Evidence-backed assertion in object-layer blocks (SWOT items, profile claims).
+ * Python mirror: use same claim_state strings in build_visual_blocks payloads.
+ */
+export interface EvidenceState {
+  text: string;
+  claim_state: ClaimState;
+  rationale?: string;
+  source_id?: string;
+}
 
 // ---------------------------------------------------------------------------
 // CPC Capability Intelligence types
