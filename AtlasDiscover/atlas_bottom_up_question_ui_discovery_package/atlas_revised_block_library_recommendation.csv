@@ -1,0 +1,21 @@
+block_or_component,recommendation,notes
+ContextCard,Keep,Source/target/object identity.
+OpportunityList,Keep,"Add filters, status, clusters."
+ClaimLedger,Keep,"Add summary, audit, evidence-upgrade variants."
+EvidenceStateSummary,Keep,Core trust block.
+ProvenanceTrace,Keep,Add SourceManifest variant.
+MatchBench,Keep,Keep target-requirement oriented.
+DimensionGap,Keep,Rows and matrix.
+ComparisonMatrix,Keep,Add quadrant/scatter visuals.
+NetworkMap,Keep,Specialist partner/ecosystem block.
+TransferLanes,Keep,Signature value-transfer block.
+RecommendationConfidence,Keep,Core decision block.
+ActionPlan,Keep,Gap-to-action variants.
+ObjectionResponse,Keep,Defend signature block.
+SnapshotBrief,Make explicit,Workflow/export object.
+EconomicCaseBlock,Add,Needed for Five Case/value questions.
+ReasoningTrace,Add as shell,Streaming/progress/explainability component.
+AnswerabilityCard,Consider,Useful before overclaiming.
+CommercialRouteCard,Consider variant,Route-to-market analysis.
+PriorityQuadrant,Add as visual,Portfolio prioritisation.
+GeoMap,Add as visual,Only when spatial variable changes decision.

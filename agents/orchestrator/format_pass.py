@@ -36,6 +36,7 @@ from agents.registry.blocks import get_blocks_for_outcome, BlockSpec
 RenderMode = Literal["blocks", "document", "chart"]
 
 _MATCHER_BLOCK_IDS = frozenset({
+    "decision_spine",
     "executive_summary",
     "match_bench",
     "transfer_lanes",
@@ -134,18 +135,25 @@ def _select_blocks(
 def _attach_chart_spec(
     model: dict[str, Any],
     render_mode: RenderMode,
+    block_ids: list[str] | None = None,
 ) -> list[dict[str, Any]] | None:
     """
     Attach a chart spec when appropriate.
 
-    When ATLAS5_GENERATIVE_VIZ_V1=true, the spec is passed through the
-    encoding guardrail before being attached.
+    Phase F PR3: connect/act with live external evidence may attach comparison charts
+    when the viz registry returns specs (guardrail applies when generative flag on).
     """
     if model.get("chart_spec"):
         raw_specs = model["chart_spec"]
         return _apply_guardrail(raw_specs)
 
-    if render_mode not in ("blocks", "chart"):
+    outcome = model.get("outcome", "")
+    meta = model.get("retrieval_meta") or {}
+    prefer_chart = (
+        outcome in ("connect", "act")
+        and (meta.get("external_count") or meta.get("candidate_count"))
+    )
+    if render_mode not in ("blocks", "chart") and not prefer_chart:
         return None
 
     query = model.get("query", "")
@@ -210,9 +218,10 @@ def run_format_pass(
                 preferred.append(bid)
         block_ids = preferred if preferred else block_ids
 
-    # Executive summary always renders first when present
-    if "executive_summary" in (blocks_data or {}):
-        block_ids = ["executive_summary"] + [b for b in block_ids if b != "executive_summary"]
+    # Decision spine + executive summary always render first when present
+    for first_block in ("decision_spine", "executive_summary"):
+        if first_block in (blocks_data or {}):
+            block_ids = [first_block] + [b for b in block_ids if b != first_block]
 
     # D4.6 — append harmonized evidence blocks when populated
     if blocks_data.get("external_evidence", {}).get("items"):
@@ -223,7 +232,7 @@ def run_format_pass(
             idx = block_ids.index("opportunity_list") + 1 if "opportunity_list" in block_ids else len(block_ids)
             block_ids.insert(idx, "opportunity_candidates")
 
-    chart_spec = _attach_chart_spec(model, render_mode)
+    chart_spec = _attach_chart_spec(model, render_mode, block_ids=block_ids)
 
     updated = dict(model)
     updated["blocks"] = block_ids
@@ -237,14 +246,34 @@ def run_format_pass(
         updated["render_blocks"] = materialize_render_blocks(updated, block_ids)
 
     # D1.4b — chat vs artifact surface hint for frontend + graph ack
-    if not updated.get("chat_surface"):
-        updated["chat_surface"] = _choose_chat_surface(updated, q)
+    turn_lane = str(updated.get("turn_lane") or model.get("turn_lane") or "analyze")
+    from agents.orchestrator.presentation import (
+        apply_presentation_to_render_blocks,
+        compose_presentation,
+    )
+
+    plan = compose_presentation(
+        updated,
+        query=q,
+        render_mode=render_mode,
+        block_ids=block_ids,
+        turn_lane=turn_lane,
+    )
+    updated["presentation_plan"] = plan
+    updated["chat_surface"] = plan["chat_surface"]
+
+    if updated.get("render_blocks"):
+        updated["render_blocks"] = apply_presentation_to_render_blocks(
+            updated["render_blocks"],
+            plan,
+        )
 
     return updated
 
 
 def _choose_chat_surface(model: dict[str, Any], query: str) -> str:
-    """artifact_primary | hybrid | chat_only"""
+    """artifact_primary | hybrid | chat_only — legacy fallback."""
+    _ = query
     if model.get("chat_surface"):
         return str(model["chat_surface"])
     blocks_data = model.get("blocks_data") or {}

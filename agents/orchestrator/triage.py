@@ -46,7 +46,7 @@ _OUTCOME_PATTERNS: list[tuple[Outcome, list[re.Pattern[str]]]] = [
         re.compile(r"\blandscape\b|\boverview\b|\bwhat.*exist\b|\bwhat.*happening\b|\bexplore\b|\bsurvey\b", re.I),
         re.compile(r"\bwhat.*is\b.{0,40}\b(sector|space|field|domain|market)\b", re.I),
         re.compile(r"\bover-represented\b|\bportfolio\b|\bwedge\b", re.I),
-        re.compile(r"\bswot\b|\bgood at\b|\bwhat.*cpc\b|\bcapabilit.*profile\b|\bclaims passport\b", re.I),
+        re.compile(r"\bswot\b|\bgood at\b|\bcapabilit.*profile\b|\bclaims passport\b", re.I),
         re.compile(r"\bwhat does cpc\b|\bwhat is cpc\b", re.I),
     ]),
     ("act", [
@@ -118,9 +118,23 @@ def triage_query(query: str) -> TriageResult:
     # 2. deep — needs heavy LLM + external search + falsification
     for pat in _DEEP_PATTERNS:
         if pat.search(q):
+            outcome = _classify_outcome(q)
+            # Deterministic act builder (Five Case) — skip HITL gate; no external search required
+            if outcome == "act" and re.search(
+                r"\bfive\s+case\b|\bbusiness\s+case\b|\binvestment\s+brief\b",
+                q,
+                re.I,
+            ):
+                return TriageResult(
+                    effort="analyze",
+                    outcome="act",
+                    needs_gate=False,
+                    notes="Five Case / act brief — deterministic builder, no gate.",
+                    raw_query=q,
+                )
             return TriageResult(
                 effort="deep",
-                outcome=_classify_outcome(q),
+                outcome=outcome,
                 needs_gate=True,
                 notes="Detected deep-research signal — will gate before external search.",
                 raw_query=q,
@@ -149,14 +163,32 @@ def triage_query(query: str) -> TriageResult:
 
 
 def _classify_outcome(query: str) -> Outcome:
+    q = query
+    # Connect / funding-fit before broad orient patterns (what…cpc steals these)
+    if re.search(
+        r"\bopportunit|\bfunding\s+call|\blive\s+call|\btop\b.*\broute|\bclosest\b.*\b(?:call|fit|profile)\b",
+        q,
+        re.I,
+    ):
+        return "connect"
     # Phase 3 gate — transfer + evidence queries route connect before broad patterns
-    if re.search(r"\btransfer\b", query, re.I) and re.search(r"\bevidence\b", query, re.I):
+    if re.search(r"\btransfer\b", q, re.I) and re.search(r"\bevidence\b", q, re.I):
         return "connect"
     # Evidence gaps / diagnose signals before broad orient patterns
-    if re.search(r"\bevidence\s+gaps?\b|\bgaps?\b.*\bevidence\b|\bdiagnos", query, re.I):
+    if re.search(r"\bevidence\s+gaps?\b|\bgaps?\b.*\bevidence\b|\bdiagnos", q, re.I):
         return "diagnose"
+    # Corpus evidence search — orient with corpus builder (not passport portrait)
+    if re.search(
+        r"\bfind\b.*\b(?:corpus|evidence)\b|\bcorpus\b.*\b(?:evidence|project)\b|"
+        r"\bsearch\b.*\bproject|\bprojects\b.*\b(?:working|on)\b",
+        q,
+        re.I,
+    ):
+        return "orient"
+    if re.search(r"\bcompare\b.*\bproject|\bproject\b.*\bcompare\b|\bany two\b.*\bproject", q, re.I):
+        return "orient"
     for outcome, patterns in _OUTCOME_PATTERNS:
         for pat in patterns:
-            if pat.search(query):
+            if pat.search(q):
                 return outcome
     return "orient"  # default fallback

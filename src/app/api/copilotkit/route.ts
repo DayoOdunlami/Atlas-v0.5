@@ -50,6 +50,9 @@ const agentRuntime = new CopilotRuntime({
     workbench: new HttpAgent({
       url: `${AGENT_BASE}/workbench`,
     }),
+    atlas_v5: new HttpAgent({
+      url: `${AGENT_BASE}/atlas-v5`,
+    }),
   },
 });
 

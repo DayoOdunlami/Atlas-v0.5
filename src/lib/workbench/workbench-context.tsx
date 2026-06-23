@@ -24,6 +24,7 @@ import type {
 } from "./atlas-render-model";
 import type { ModelPatchProposal, ModelPatchOp } from "./workbench-agent-contract";
 import { normalizePatchProposal } from "./patch-normalize";
+import type { PresentationPlan } from "./presentation-plan";
 import renderModels from "@/data/atlas-v10-render-models.json";
 
 const MODELS = renderModels as RenderModelMap;
@@ -191,6 +192,9 @@ interface WorkbenchState {
   /** Prose sections when render_mode=document */
   documentSections: Record<string, string>;
   setDocumentSections: (s: Record<string, string>) => void;
+  /** Phase A — progressive canvas layout from format_pass */
+  presentationPlan: PresentationPlan | null;
+  setPresentationPlan: (plan: PresentationPlan | null) => void;
   /** True while a DB-backed model is being fetched */
   isLoading: boolean;
   /** Error message from the last failed fetch, or null */
@@ -461,6 +465,7 @@ export function WorkbenchProvider({
   const [liveModelOverride, setLiveModelOverride] = React.useState<AtlasRenderModel | null>(null);
   const [renderMode, setRenderMode] = React.useState<"blocks" | "document" | "chart">("blocks");
   const [documentSections, setDocumentSections] = React.useState<Record<string, string>>({});
+  const [presentationPlan, setPresentationPlan] = React.useState<PresentationPlan | null>(null);
 
   // Base model resolution priority (highest first):
   //   1. demo fixture (initialModel)  — overrides everything; seeds all CQs
@@ -487,6 +492,7 @@ export function WorkbenchProvider({
 
   const clearLiveModelOverride = React.useCallback(() => {
     setLiveModelOverride(null);
+    setPresentationPlan(null);
   }, []);
 
   // Clear patch history + stage history when cq or match changes so stale state doesn't persist
@@ -567,10 +573,22 @@ export function WorkbenchProvider({
     }));
   }, [model, cqId, initialMatchId]);
 
-  // "New Chat" — clears messages and resets thread, keeps match context
+  // "New Chat" — clears messages, canvas override, and rotates CopilotKit thread
   const resetSession = React.useCallback(() => {
-    setSessionState((prev) => ({ ...prev, sessionId: null }));
+    setSessionState((prev) => ({
+      ...prev,
+      sessionId: crypto.randomUUID(),
+    }));
     setMessages([]);
+    setLiveModelOverride(null);
+    setPresentationPlan(null);
+    setAppliedPatches([]);
+    setRedoStack([]);
+    setStageHistory([]);
+    setPendingBranch(null);
+    setReasoningSteps([]);
+    setLastRoute(null);
+    setLastCitations([]);
   }, []);
 
   const addMessage = React.useCallback((msg: WorkbenchChatMessage) => {
@@ -794,6 +812,8 @@ export function WorkbenchProvider({
         setRenderMode,
         documentSections,
         setDocumentSections,
+        presentationPlan,
+        setPresentationPlan,
         isLoading,
         error,
         isDbBacked,

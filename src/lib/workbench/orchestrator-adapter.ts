@@ -11,6 +11,7 @@ import type {
   ConfidenceTier,
   RenderBlock,
 } from "./atlas-render-model";
+import { parsePresentationPlan } from "./presentation-plan";
 import renderModels from "@/data/atlas-v10-render-models.json";
 import type { RenderModelMap } from "./atlas-render-model";
 
@@ -54,6 +55,8 @@ export function orchestratorToAtlasRenderModel(
 ): AtlasRenderModel {
   const base = structuredClone(MODELS[baseCq]);
   const renderBlocks = (raw.render_blocks as RenderBlock[] | undefined) ?? [];
+  const plan = parsePresentationPlan(raw.presentation_plan);
+  const visibleBlocks = renderBlocks.filter((b) => b.state !== "hidden");
   const tier = asTier(raw.confidence_tier);
   const headline = typeof raw.headline === "string" ? raw.headline : base.decision_spine.recommendation;
   const insight =
@@ -100,16 +103,19 @@ export function orchestratorToAtlasRenderModel(
           : base.decision_spine.confidence_cap_reason,
       score,
     },
-    blocks: renderBlocks.length > 0 ? renderBlocks : base.blocks,
+    blocks: visibleBlocks.length > 0 ? visibleBlocks : base.blocks,
     snapshot: {
       ...base.snapshot,
       title: headline,
-      included_blocks: renderBlocks.map((b) => b.id),
+      included_blocks: visibleBlocks.map((b) => b.id),
     },
     data_quality_notes: [
       ...(base.data_quality_notes ?? []),
       `Orchestrator outcome: ${String(raw.outcome ?? "unknown")}`,
       `Render mode: ${String(raw.render_mode ?? "blocks")}`,
+      ...(plan?.dominant_visual_id
+        ? [`Dominant visual: ${plan.dominant_visual_id.replace(/_/g, " ")}`]
+        : []),
       ...(Array.isArray(raw.external_evidence) && raw.external_evidence.length > 0
         ? [`External evidence: ${raw.external_evidence.length} candidate source(s)`]
         : []),

@@ -130,17 +130,15 @@ def test_meta_reply_returns_none_without_context():
 # ---------------------------------------------------------------------------
 
 
-def test_node_routes_meta_to_instant_reply_when_artifact_present():
+def test_node_routes_meta_to_clarify_lane_when_artifact_present():
     state = {
         "query": "what am I looking at?",
         "_context": PRIOR_CTX,
         "_prior_render_model": PRIOR_DIAGNOSE_MODEL,
     }
     result = node_intent_router(state)
-    assert result["_is_conversational"] is True
-    assert result["_intent"]["route"] == "instant_reply"
-    text = str(result["messages"][0].content)
-    assert "Sample comparison" in text or "diagnose" in text or "CPC" in text
+    assert result["_is_conversational"] is False
+    assert result["_intent"]["route"] == "pipeline"
 
 
 def test_node_routes_follow_up_to_pipeline_with_inherited_outcome():

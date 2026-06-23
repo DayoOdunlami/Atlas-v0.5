@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Libre+Franklin:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { background: #e7e5df; font-family: 'Libre Franklin', sans-serif; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+</style>
+</helmet>
+
+<div style="width: max-content; min-width: 100%; min-height: 100vh; box-sizing: border-box; padding: 56px; background: #e7e5df;">
+
+  <template id="__bundler_thumbnail" data-bg-color="#e7e5df">
+    <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+      <rect width="1200" height="800" fill="#e7e5df"></rect>
+      <rect x="360" y="200" width="480" height="400" rx="10" fill="#FBFAF7"></rect>
+      <line x1="470" y1="400" x2="600" y2="400" stroke="#8AA7C2" stroke-width="3" stroke-dasharray="5 6"></line>
+      <line x1="600" y1="400" x2="730" y2="400" stroke="#3F7A52" stroke-width="6"></line>
+      <circle cx="470" cy="400" r="15" fill="#CFE6D6" stroke="#3F7A52" stroke-width="3"></circle>
+      <circle cx="730" cy="400" r="20" fill="#BFE0C9" stroke="#3F7A52" stroke-width="3"></circle>
+      <circle cx="600" cy="400" r="22" fill="#211E1A" stroke="#B07A2E" stroke-width="3" stroke-dasharray="4 4"></circle>
+    </svg>
+  </template>
+
+  <!-- header -->
+  <div style="max-width:1000px; margin-bottom:40px;">
+    <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:18px;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; color:#94908A; text-transform:uppercase;">Direction A · Journey 4 · Turn 2 · deep pass</div>
+      <div style="height:1px; flex:1; background:#d4d0c8;"></div>
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#94908A;">connect · two networks, reconciled · each source supplies what the other can't</div>
+    </div>
+    <h1 style="font-family:'Newsreader',serif; font-weight:500; font-size:30px; line-height:1.2; color:#211E1A; margin:0 0 14px; max-width:830px; letter-spacing:-0.01em;">There are <span style="font-style:italic; color:#3F7A52;">two</span> real networks here, and they answer different questions — so Turn 2 puts them on the same surface and shows the material grammar <span style="font-style:italic; color:#B07A2E;">invert</span>: the web owns the actor-edges, the corpus owns the mode-edges, neither owns both.</h1>
+    <div style="display:flex; gap:36px; max-width:880px;">
+      <p style="flex:1; margin:0; font-size:13px; line-height:1.6; color:#6B6760;"><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#211E1A;">INSTRUMENT — </span>a dual-network view. Left: the <em style="font-style:italic;">actor network</em> (web, dashed blue) — who already works together, carried unchanged from Turn 1, with CPC the articulation point between two clusters that share only it. Right: the <em style="font-style:italic;">mode network</em> (corpus, solid green, weighted to scale) — where decarbonisation proof transfers.</p>
+      <p style="flex:1; margin:0; font-size:13px; line-height:1.6; color:#6B6760;"><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#211E1A;">HONEST-TO-DATA — </span>the mode graph is a real weighted graph, but only maritime's two edges are <strong style="color:#46423C;">drawn to scale</strong> (width ∝ shared objects); the rest show structure, not claimed magnitude. And the 418 "bridges" are a <strong style="color:#46423C;">node property, not an actor edge</strong> — characterised, never mis-drawn as collaboration.</p>
+    </div>
+  </div>
+
+  <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.08em; color:#56524C; margin-bottom:12px;">FULL PRODUCT SURFACE — CONNECT → RECONCILE THE TWO NETWORKS</div>
+
+  <div style="width:1440px; height:1030px; background:#FBFAF7; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 16px 50px rgba(0,0,0,.07); overflow:hidden; display:flex;">
+
+    <!-- LEFT RAIL -->
+    <div style="width:60px; flex:none; background:#F4F1EB; border-right:1px solid #E7E3DC; display:flex; flex-direction:column; align-items:center; padding:14px 0;">
+      <div style="width:30px; height:30px; border-radius:7px; background:#211E1A; color:#FBFAF7; font-family:'Newsreader',serif; font-weight:600; font-size:18px; display:flex; align-items:center; justify-content:center;">A</div>
+      <div style="height:22px;"></div>
+      <div style="display:flex; flex-direction:column; gap:4px; align-items:center;">
+        <div style="width:32px; height:32px; border-radius:8px; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#A39E96;">Mp</div>
+        <div style="width:32px; height:32px; border-radius:8px; background:#E7E0D4; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#211E1A; font-weight:600;">Cn</div>
+        <div style="width:32px; height:32px; border-radius:8px; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#A39E96;">Dg</div>
+        <div style="width:32px; height:32px; border-radius:8px; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#A39E96;">Df</div>
+      </div>
+      <div style="flex:1;"></div>
+      <div style="width:28px; height:28px; border-radius:50%; background:#8FA98C;"></div>
+    </div>
+
+    <!-- MAIN -->
+    <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+
+      <!-- TOPBAR -->
+      <div style="height:54px; flex:none; border-bottom:1px solid #E7E3DC; display:flex; align-items:center; padding:0 24px; gap:16px; background:#FBFAF7; position:relative; z-index:5;">
+        <div style="font-size:15px; font-weight:600; color:#211E1A; white-space:nowrap;">Maritime decarbonisation — partnership network</div>
+        <div style="width:1px; height:18px; background:#E7E3DC;"></div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.06em; color:#8C887F;">CORPUS + WEB · NETWORK PASS · 20 JUN 2026</div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.08em; color:#3F7A52;">· RECONCILE THE NETWORKS</div>
+        <div style="flex:1;"></div>
+        <div style="display:flex; background:#F0EDE7; border-radius:7px; padding:3px; gap:2px;">
+          <div style="font-size:12px; padding:5px 12px; border-radius:5px; background:#FFFFFF; color:#211E1A; font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,.06);">Read</div>
+          <div style="font-size:12px; padding:5px 12px; border-radius:5px; color:#8C887F;">Workbench</div>
+          <div style="font-size:12px; padding:5px 12px; border-radius:5px; color:#8C887F;">Present</div>
+        </div>
+      </div>
+
+      <!-- BODY -->
+      <div style="flex:1; display:flex; min-height:0;">
+
+        <!-- CANVAS -->
+        <div style="flex:1; min-width:0; overflow:hidden; display:flex; flex-direction:column;">
+
+          <!-- CONFIDENCE CEILING -->
+          <div style="flex:none; padding:13px 44px 12px; background:linear-gradient(180deg,#EFF3EE 0%,#FBFAF7 100%); border-bottom:1px solid #D3E0D5; box-shadow:0 7px 14px -10px rgba(47,92,62,.20); position:relative; z-index:3;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.13em; color:#2F5C3E; text-transform:uppercase;">▔ Confidence ceiling</div>
+              <div style="display:flex; align-items:center; gap:6px; padding:2px 8px; border-radius:4px; background:#EEF4EE; border:1px solid #CFE0D4;"><div style="width:5px; height:5px; border-radius:50%; background:#3F7A52;"></div><div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#2F5C3E; font-weight:600;">SUPPORTED</div></div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.06em; color:#7FA88A;">⌃ held flat from T1 — both networks are well-grounded; the actor net's currency is still the open check, so the ceiling doesn't rise yet</div>
+              <div style="flex:1; height:1px; background:repeating-linear-gradient(90deg,#C2D3C4 0 6px,transparent 6px 11px);"></div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#7FA88A;">⌃ reconciling sources adds insight, not certainty</div>
+            </div>
+          </div>
+
+          <!-- canvas content -->
+          <div style="flex:1; overflow:hidden; padding:16px 44px 0; position:relative; display:flex; flex-direction:column;">
+
+            <!-- carried-forward trace -->
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:11px; padding:6px 12px; background:#F4F1EB; border-left:2px solid #CFC8BC; border-radius:0 6px 6px 0; max-width:760px;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.1em; color:#A39E96; text-transform:uppercase;">↑ carried from Turn 1</div>
+              <div style="font-size:12px; color:#8C887F;">the actor network — <strong style="color:#6B6760; font-weight:600;">re-used, not re-derived</strong> · zero new actor searches this turn <span style="font-family:'IBM Plex Mono',monospace; font-size:10px;">[W1·W2·W4]</span></div>
+            </div>
+
+            <!-- HERO -->
+            <h2 style="font-family:'Newsreader',serif; font-weight:500; font-size:27px; line-height:1.15; letter-spacing:-0.018em; color:#1A1714; margin:0 0 7px; max-width:880px;">The <span style="font-style:italic; color:#5E7E9C;">actor network</span> tells you who already works together; the <span style="font-style:italic; color:#3F7A52;">mode network</span> tells you where proof transfers. Used together they give a convening strategy neither gives alone.</h2>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#3F7A52; margin-bottom:13px;">Supported on both networks <span style="color:#A39E96;">[W1·W2 · S2]</span> · the harmonisation is the insight — complementary sources, not corroborating ones.</div>
+
+            <!-- THE DUAL-NETWORK INSTRUMENT -->
+            <div style="display:flex; align-items:stretch; gap:14px;">
+
+              <!-- LEFT : actor network (web) -->
+              <div style="flex:1; min-width:0;">
+                <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:7px;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; color:#5E7E9C; text-transform:uppercase;">Actor network · web</div>
+                  <div style="font-size:11px; color:#A39E96;">who already works together · ┄ borrowed</div>
+                </div>
+                <div style="position:relative; height:368px; border:1px solid #D7E0E8; border-radius:9px; background:#FCFDFE; overflow:hidden;">
+                  <div style="position:absolute; inset:0; background-image:radial-gradient(circle, #EEF2F6 1px, transparent 1px); background-size:20px 20px; opacity:0.7;"></div>
+                  <div id="atlas-actor" style="position:absolute; inset:0; width:100%; height:100%;"></div>
+                  <div style="position:absolute; left:13px; top:12px; display:flex; align-items:center; gap:7px; background:rgba(252,253,254,0.92); border:1px solid #D7E0E8; border-radius:6px; padding:4px 9px;">
+                    <span style="font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:700; color:#5E7E9C;">A &amp; B share ONLY CPC</span>
+                  </div>
+                  <div style="position:absolute; left:13px; bottom:11px; right:13px; font-family:'IBM Plex Mono',monospace; font-size:9px; line-height:1.5; color:#7E94A8;">CPC = articulation point · remove it and the two clusters disconnect. ABP cluster sits apart.</div>
+                </div>
+                <div style="margin-top:8px; font-size:12px; line-height:1.46; color:#5E7E9C;"><strong style="color:#3F5E78;">Aberdeen (ops/infra) · Irish Sea (academic/corridor).</strong> CPC is the single bridge — valuable but fragile. <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#9DB0C2;">[W1·W2·W4]</span></div>
+              </div>
+
+              <!-- CENTRE : inversion note -->
+              <div style="flex:none; width:62px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:9px;">
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:8.5px; letter-spacing:0.06em; color:#8C887F; text-align:center; line-height:1.5; text-transform:uppercase;">two<br>networks</div>
+                <div style="width:1px; flex:1; max-height:90px; background:repeating-linear-gradient(180deg,#D6D0C6 0 5px,transparent 5px 10px);"></div>
+                <div style="font-size:17px; color:#B6B0A6;">⇄</div>
+                <div style="width:1px; flex:1; max-height:90px; background:repeating-linear-gradient(180deg,#D6D0C6 0 5px,transparent 5px 10px);"></div>
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:8px; color:#A39E96; text-align:center; line-height:1.5;">complementary,<br>not redundant</div>
+              </div>
+
+              <!-- RIGHT : mode network (corpus) -->
+              <div style="flex:1; min-width:0;">
+                <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:7px;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; color:#2F5C3E; text-transform:uppercase;">Mode network · corpus</div>
+                  <div style="font-size:11px; color:#A39E96;">where proof transfers · ▬ owned, weighted</div>
+                </div>
+                <div style="position:relative; height:368px; border:1px solid #CFE0D4; border-radius:9px; background:#FBFCFB; overflow:hidden;">
+                  <div style="position:absolute; inset:0; background-image:radial-gradient(circle, #EDF3EE 1px, transparent 1px); background-size:20px 20px; opacity:0.7;"></div>
+                  <div id="atlas-mode" style="position:absolute; inset:0; width:100%; height:100%;"></div>
+                  <div style="position:absolute; left:13px; top:12px; display:flex; align-items:center; gap:7px; background:rgba(251,252,251,0.92); border:1px solid #CFE0D4; border-radius:6px; padding:4px 9px;">
+                    <span style="font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:700; color:#2F5C3E;">highways = hub · maritime fewest-but-strongest</span>
+                  </div>
+                  <div style="position:absolute; left:13px; bottom:11px; right:13px; font-family:'IBM Plex Mono',monospace; font-size:9px; line-height:1.5; color:#7FA88A;">maritime's 2 edges drawn to scale (width ∝ shared objects); other edges = structure, weights not all retrieved.</div>
+                </div>
+                <div style="margin-top:8px; font-size:12px; line-height:1.46; color:#2F5C3E;"><strong style="color:#1A2E20;">Maritime links strongest to highways (40·q0.83) &amp; digital (32·q0.87)</strong> — fewest connections, highest edge quality. <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#7FA88A;">[S2]</span></div>
+              </div>
+            </div>
+
+            <!-- BOTTOM ROW : the synthesis + the differentiator caveat -->
+            <div style="display:flex; gap:13px; margin-top:14px; flex:1; align-items:stretch;">
+
+              <!-- THE COMBINED STRATEGY (the reconciliation verdict) -->
+              <div style="flex:1.5; border:1px solid #CFE0D4; border-left:3px solid #3F7A52; border-radius:7px; background:linear-gradient(135deg,#F4F8F4 0%,#FAFCFA 100%); padding:13px 16px; display:flex; flex-direction:column;">
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.1em; color:#2F5C3E; text-transform:uppercase; margin-bottom:9px;">✦ What the two networks give together</div>
+                <div style="display:flex; gap:14px; align-items:stretch; flex:1;">
+                  <div style="flex:1; border:1px solid #D7E0E8; border-radius:7px; background:#FCFDFE; padding:10px 12px;">
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:8.5px; color:#5E7E9C; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:5px;">actor net says →</div>
+                    <div style="font-size:12.5px; line-height:1.46; color:#3F5E78;">CPC already bridges the two maritime consortia. <strong style="color:#2C4A60;">The relationships exist.</strong></div>
+                  </div>
+                  <div style="flex:none; display:flex; align-items:center; font-family:'IBM Plex Mono',monospace; font-size:15px; color:#A8B6A2;">+</div>
+                  <div style="flex:1; border:1px solid #CFE0D4; border-radius:7px; background:#F7FAF7; padding:10px 12px;">
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:8.5px; color:#2F5C3E; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:5px;">mode net says →</div>
+                    <div style="font-size:12.5px; line-height:1.46; color:#2E3A30;">Transferable proof lives in highways &amp; digital. <strong style="color:#1A2E20;">The missing-but-valuable links.</strong></div>
+                  </div>
+                  <div style="flex:none; display:flex; align-items:center; font-family:'IBM Plex Mono',monospace; font-size:15px; color:#A8B6A2;">=</div>
+                  <div style="flex:1.1; border:1px solid #BBD3C0; border-radius:7px; background:#EEF4EE; padding:10px 12px;">
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:8.5px; color:#2F5C3E; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:5px;">the convening move</div>
+                    <div style="font-size:12.5px; line-height:1.46; color:#1A2E20;"><strong>Connect your two consortia, and import highways/digital actors</strong> into the combined room.</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- THE DIFFERENTIATOR CAVEAT : bridges = node property -->
+              <div style="flex:1; position:relative; border-left:3px solid #B07A2E; border-right:1px solid #E3CDA4; border-bottom:1px solid #E3CDA4; border-radius:0 0 7px 7px; background:#FBF6EE; padding:12px 15px; overflow:hidden; clip-path:polygon(0 6px, 6% 0, 13% 6px, 20% 0, 27% 6px, 34% 0, 41% 6px, 48% 0, 55% 6px, 62% 0, 69% 6px, 76% 0, 83% 6px, 90% 0, 97% 6px, 100% 3px, 100% 100%, 0 100%);">
+                <div style="position:absolute; inset:0; background-image:repeating-linear-gradient(135deg,rgba(176,122,46,.07) 0 1px,transparent 1px 9px); pointer-events:none;"></div>
+                <div style="position:relative;">
+                  <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:7px;">
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.1em; color:#B07A2E; text-transform:uppercase;">⊘ Differentiator · honestly characterised</div>
+                    <div style="flex:1;"></div>
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:8px; color:#B89A6A;">⌖ threads T1→T4</div>
+                  </div>
+                  <div style="font-size:12.5px; line-height:1.46; color:#5A4A2E;">The 418 cross-modal "bridges" are a <strong style="color:#3A332A;">node property, not an actor edge</strong> — 251 projects + 167 live-calls each spanning 3–4 modes <span style="font-family:'IBM Plex Mono',monospace; font-size:9.5px;">[S3]</span>. Real and important — but never drawn as collaboration it isn't.</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="height:14px;"></div>
+          </div>
+        </div>
+
+        <!-- CHAT : so-what decision rail -->
+        <div style="width:396px; flex:none; border-left:1px solid #E7E3DC; background:#FFFFFF; display:flex; flex-direction:column;">
+          <div style="height:54px; flex:none; border-bottom:1px solid #EFEBE4; display:flex; align-items:center; padding:0 20px; gap:9px;">
+            <div style="width:7px;height:7px;border-radius:50%;background:#3F7A52;"></div>
+            <div style="font-size:12.5px; font-weight:600; color:#211E1A;">Atlas</div>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#A39E96;">· so-what</div>
+            <div style="flex:1;"></div>
+            <!-- turn spine 2/4 -->
+            <div style="display:flex; align-items:center; gap:5px;">
+              <div style="width:7px; height:7px; border-radius:50%; background:#3F7A52;"></div>
+              <div style="width:12px; height:2px; background:#3F7A52;"></div>
+              <div style="width:8px; height:8px; border-radius:50%; background:#3F7A52;"></div>
+              <div style="width:14px; height:2px; background:#E0DCD3;"></div>
+              <div style="width:7px; height:7px; border-radius:50%; border:1.5px solid #D8D3CA;"></div>
+              <div style="width:14px; height:2px; background:#E0DCD3;"></div>
+              <div style="width:7px; height:7px; border-radius:50%; border:1.5px solid #D8D3CA;"></div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#A39E96; margin-left:4px;">2/4</div>
+            </div>
+          </div>
+
+          <div style="flex:1; padding:22px 20px; overflow:hidden; display:flex; flex-direction:column; gap:16px;">
+            <div style="align-self:flex-end; max-width:300px; background:#F0EDE7; border-radius:12px 12px 4px 12px; padding:11px 14px; font-size:13px; line-height:1.5; color:#46423C;">Show me how the actor network and the cross-modal map fit together.</div>
+
+            <div style="max-width:316px;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.12em; color:#A39E96; text-transform:uppercase; margin-bottom:8px;">What you're looking at</div>
+              <p style="margin:0 0 14px; font-size:13.5px; line-height:1.58; color:#2E2A24;">Two networks, not one. The <strong>actor net</strong> (web) has the relationships; the <strong>mode net</strong> (corpus) has the transfer routes. The grammar inverts — and that's the proof they're <em style="font-style:italic;">complementary</em>, not duplicates.</p>
+
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.12em; color:#2F5C3E; text-transform:uppercase; margin-bottom:8px;">The one decision</div>
+              <div style="background:#F1F6F1; border:1px solid #CFE0D4; border-radius:9px; padding:12px 13px; margin-bottom:14px;">
+                <p style="margin:0; font-size:13.5px; line-height:1.5; color:#1A2E20;">Plan the convening as <strong>connect-then-import</strong>: bridge Aberdeen ↔ Irish Sea (CPC already in both), then add highways/digital actors — the strongest transfer-neighbours.</p>
+              </div>
+
+              <div style="display:flex; gap:9px; align-items:flex-start; border-left:2px solid #E3CDA4; padding-left:11px;">
+                <div style="font-size:13px; line-height:1.5; color:#7A6A50;"><span style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#B07A2E; text-transform:uppercase; letter-spacing:0.08em;">Gate · </span>the "bridges" are a <strong>node property</strong>, not observed collaboration — don't read the mode net as actor ties. And confirm both consortia are still live.</div>
+              </div>
+            </div>
+
+            <div style="flex:1;"></div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <div style="font-size:12px; color:#2F5C3E; background:#EEF4EE; border:1px solid #CFE0D4; border-radius:14px; padding:5px 12px;">Diagnose the convening gap →</div>
+              <div style="font-size:12px; color:#6B6760; background:#F4F1EB; border:1px solid #E7E3DC; border-radius:14px; padding:5px 12px;">Show the mode-edge weights</div>
+            </div>
+          </div>
+
+          <div style="flex:none; padding:14px 16px; border-top:1px solid #EFEBE4;">
+            <div style="border:1px solid #E0DCD3; border-radius:9px; padding:10px 13px; font-size:12.5px; color:#A39E96; display:flex; align-items:center; justify-content:space-between;">Ask a follow-up…<span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#C4BFB6;">⏎</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- motion / legend annotations -->
+  <div style="max-width:1000px; margin-top:30px; display:flex; gap:30px;">
+    <div style="flex:1;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#56524C; text-transform:uppercase; margin-bottom:10px;">Turn 1 → Turn 2 · the canvas accretes</div>
+      <div style="display:flex; flex-direction:column; gap:7px; font-size:12.5px; color:#6B6760; line-height:1.5;">
+        <div><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#3F7A52;">⇄ swaps </span> the corpus→web diptych → the dual-network reconciliation. The actor net is carried in unchanged; the mode net joins it. The verdict-sentence persists and evolves.</div>
+        <div><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#8AA7C2;">⇋ inverts </span> the material grammar: web owns the actor-edges (dashed blue), corpus owns the mode-edges (solid green). Neither source alone holds both — the cleanest demonstration that they're complementary.</div>
+        <div><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#8A6322;">↳ threads </span> the under-count blind-spot — now joined by the differentiator caveat (bridges = node property), both carried honestly into T3.</div>
+      </div>
+    </div>
+    <div style="flex:1;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#56524C; text-transform:uppercase; margin-bottom:10px;">Material legend · provenance = state</div>
+      <div style="display:flex; flex-direction:column; gap:7px; font-size:12.5px; color:#6B6760; line-height:1.5;">
+        <div><span style="display:inline-block; width:22px; border-bottom:2px dashed #8AA7C2; vertical-align:middle; margin-right:8px;"></span>web — dashed blue · actor-edges <strong style="color:#6B6760;">borrowed</strong> (who works together)</div>
+        <div><span style="display:inline-block; width:22px; border-bottom:4px solid #3F7A52; vertical-align:middle; margin-right:8px;"></span>corpus — solid green · mode-edges <strong style="color:#6B6760;">owned</strong>, weighted to scale (where proof transfers)</div>
+        <div><span style="display:inline-block; width:22px; height:8px; background:repeating-linear-gradient(135deg,#F7F0E2 0 3px,#FBFAF7 3px 6px); vertical-align:middle; margin-right:8px;"></span>gap — torn amber · differentiator is a node property, not an edge</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() { this._tries = 0; this._tryInit(); }
+  componentDidUpdate() { if (!this._charts) this._tryInit(); }
+
+  _tryInit() {
+    if (typeof window === 'undefined') return;
+    if (!window.echarts) { if (this._tries++ > 120) return; setTimeout(() => this._tryInit(), 60); return; }
+    const a = document.getElementById('atlas-actor');
+    const b = document.getElementById('atlas-mode');
+    if (!a || !b || a.clientWidth === 0 || b.clientWidth === 0) { if (this._tries++ > 120) return; setTimeout(() => this._tryInit(), 60); return; }
+    this._render(a, b);
+  }
+
+  _render(elA, elB) {
+    const echarts = window.echarts;
+    const GREEN = '#3F7A52', FILL = '#CFE6D6', INK = '#211E1A', BLUE = '#8AA7C2',
+          AMBER = '#B07A2E', ANCHOR = '#BFE0C9', ABP_FILL = '#E6EDE4', ABP_BD = '#A8B6A2';
+
+    // ---------- ACTOR NETWORK (web, dashed blue) — carried from T1, CPC = articulation point ----------
+    const aN = (name, x, y, o) => Object.assign({ name, x, y }, o);
+    const memB = { color: '#E2ECF3', borderColor: BLUE, borderWidth: 2 };
+    const aLbl = (pos, c, s) => ({ show: true, position: pos || 'bottom', distance: 5, fontFamily: 'Libre Franklin, sans-serif', fontSize: s || 10, color: c || '#4A6076' });
+
+    const actorNodes = [
+      aN('CPC', 300, 270, { symbolSize: 44, itemStyle: { color: INK, borderColor: AMBER, borderWidth: 2.5, borderType: 'dashed' },
+        label: { show: true, position: 'inside', color: '#FBFAF7', fontWeight: 700, fontSize: 12, fontFamily: 'Libre Franklin, sans-serif' },
+        prov: 'articulation point — the only link between Aberdeen and Irish Sea clusters' }),
+      // Aberdeen cluster (left)
+      aN('PoA', 150, 270, { symbolSize: 26, itemStyle: { color: '#D2E2EE', borderColor: BLUE, borderWidth: 2.5 }, label: aLbl('left', '#3F5E78', 10.5), prov: 'Port of Aberdeen — Shore Power lead [W1]' }),
+      aN('DOF', 60, 185, { symbolSize: 17, itemStyle: memB, label: aLbl('left'), prov: 'DOF Subsea — Aberdeen [W1]' }),
+      aN('Tidewater', 70, 350, { symbolSize: 17, itemStyle: memB, label: aLbl('bottom'), prov: 'Tidewater — Aberdeen [W1]' }),
+      aN('Tyndall', 175, 410, { symbolSize: 17, itemStyle: memB, label: aLbl('bottom'), prov: 'Tyndall Centre — Aberdeen academic [W1]' }),
+      aN('Happold', 60, 270, { symbolSize: 16, itemStyle: memB, label: aLbl('left'), prov: 'Buro Happold — Aberdeen [W1]' }),
+      aN('ESC', 230, 380, { symbolSize: 16, itemStyle: memB, label: aLbl('right'), prov: 'Energy Systems Catapult — Aberdeen [W1]' }),
+      // Irish Sea cluster (right)
+      aN('Haskoning', 470, 270, { symbolSize: 24, itemStyle: { color: '#D2E2EE', borderColor: BLUE, borderWidth: 2.5 }, label: aLbl('right', '#3F5E78', 10.5), prov: 'Royal HaskoningDHV — Irish Sea [W2]' }),
+      aN('LJMU', 565, 190, { symbolSize: 17, itemStyle: memB, label: aLbl('right'), prov: 'LJMU — Irish Sea [W2]' }),
+      aN('Liverpool', 575, 340, { symbolSize: 17, itemStyle: memB, label: aLbl('right'), prov: 'U. Liverpool — Irish Sea [W2]' }),
+      aN('QUB', 470, 410, { symbolSize: 17, itemStyle: memB, label: aLbl('bottom'), prov: 'Queen\u2019s University Belfast — Irish Sea [W2]' }),
+      // ABP cluster (top, disconnected from CPC)
+      aN('ABP', 300, 95, { symbolSize: 22, itemStyle: { color: ABP_FILL, borderColor: ABP_BD, borderWidth: 2 }, label: aLbl('top', '#5A6B54', 10), prov: 'ABP North Sea CO\u2082 — separate cluster, no CPC [W4]' }),
+      aN('LBC', 215, 70, { symbolSize: 14, itemStyle: { color: '#EEF2EC', borderColor: '#B6C2B0', borderWidth: 1.5 }, label: aLbl('left', '#6B6760', 9.5), prov: 'LBC — ABP corridor [W4]' }),
+      aN('N. Sea Port', 390, 70, { symbolSize: 14, itemStyle: { color: '#EEF2EC', borderColor: '#B6C2B0', borderWidth: 1.5 }, label: aLbl('right', '#6B6760', 9.5), prov: 'North Sea Port — ABP corridor [W4]' }),
+    ];
+    const aE = (s, t, bridge) => ({ source: s, target: t, lineStyle: { width: bridge ? 2.8 : 1.6, color: bridge ? '#5E7E9C' : BLUE, type: 'dashed', opacity: bridge ? 0.95 : 0.72, curveness: 0.05 },
+      label: bridge ? { show: true, formatter: (t === 'PoA' || s === 'PoA') ? '∈ Aberdeen' : '∈ Irish Sea', fontFamily: 'IBM Plex Mono, monospace', fontSize: 8.5, color: '#5E7E9C', backgroundColor: 'rgba(252,253,254,0.9)', padding: [1, 3] } : undefined });
+    const actorLinks = [
+      aE('PoA', 'DOF'), aE('PoA', 'Tidewater'), aE('PoA', 'Tyndall'), aE('PoA', 'Happold'), aE('PoA', 'ESC'), aE('PoA', 'CPC', true),
+      aE('Haskoning', 'LJMU'), aE('Haskoning', 'Liverpool'), aE('Haskoning', 'QUB'), aE('Haskoning', 'CPC', true),
+      aE('ABP', 'LBC'), aE('ABP', 'N. Sea Port'),
+    ];
+
+    // ---------- MODE NETWORK (corpus, solid green, weighted) — highways hub ----------
+    const mN = (name, x, y, o) => Object.assign({ name, x, y }, o);
+    const mLbl = (pos, c, s) => ({ show: true, position: pos || 'bottom', distance: 6, fontFamily: 'Libre Franklin, sans-serif', fontSize: s || 11, color: c || '#2F5C3E', fontWeight: 600 });
+    const modeNodes = [
+      mN('Highways', 300, 250, { symbolSize: 50, itemStyle: { color: ANCHOR, borderColor: GREEN, borderWidth: 3 }, label: { show: true, position: 'inside', fontFamily: 'Libre Franklin, sans-serif', fontSize: 11, fontWeight: 700, color: '#1A2E20' }, prov: 'hub — most connections; the centre of cross-modal transfer [S2]' }),
+      mN('Maritime', 130, 320, { symbolSize: 38, itemStyle: { color: '#A9D4B8', borderColor: '#2F5C3E', borderWidth: 3 }, label: mLbl('bottom', '#1A2E20', 12), prov: 'subject — fewest connections, highest edge quality (0.83–0.87) [S2]' }),
+      mN('Digital', 150, 130, { symbolSize: 30, itemStyle: { color: FILL, borderColor: GREEN, borderWidth: 2 }, label: mLbl('top'), prov: 'strong transfer-neighbour of maritime [S2]' }),
+      mN('Rail', 320, 90, { symbolSize: 28, itemStyle: { color: FILL, borderColor: GREEN, borderWidth: 2 }, label: mLbl('top'), prov: 'mode node [S2]' }),
+      mN('Aviation', 480, 150, { symbolSize: 26, itemStyle: { color: FILL, borderColor: GREEN, borderWidth: 2 }, label: mLbl('right'), prov: 'mode node [S2]' }),
+      mN('Buses & Active', 470, 360, { symbolSize: 24, itemStyle: { color: FILL, borderColor: GREEN, borderWidth: 2 }, label: mLbl('bottom'), prov: 'mode node [S2]' }),
+    ];
+    const mE = (s, t, w, label) => ({ source: s, target: t, value: w,
+      lineStyle: { width: w, color: GREEN, opacity: w >= 5 ? 0.92 : 0.5, curveness: 0 },
+      label: label ? { show: true, formatter: label, fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, fontWeight: 600, color: '#2F5C3E', backgroundColor: 'rgba(251,252,251,0.92)', padding: [1, 4] } : undefined });
+    const modeLinks = [
+      mE('Maritime', 'Highways', 6.7, '40 · q0.83'),
+      mE('Maritime', 'Digital', 5.3, '32 · q0.87'),
+      mE('Highways', 'Rail', 2.8), mE('Highways', 'Aviation', 2.8), mE('Highways', 'Digital', 2.8), mE('Highways', 'Buses & Active', 2.4),
+      mE('Rail', 'Digital', 1.8), mE('Aviation', 'Buses & Active', 1.6), mE('Digital', 'Aviation', 1.8),
+    ];
+
+    const opt = (nodes, links, edgeColor) => ({
+      animationDuration: 700,
+      tooltip: {
+        backgroundColor: '#FFFFFF', borderColor: '#DCD7CE', borderWidth: 1, padding: [9, 12],
+        textStyle: { color: '#3A332A', fontFamily: 'IBM Plex Mono, monospace', fontSize: 11 },
+        extraCssText: 'box-shadow:0 8px 26px rgba(40,34,26,.16); border-radius:8px; max-width:240px; white-space:normal;',
+        formatter: (p) => {
+          if (p.dataType === 'edge') {
+            if (edgeColor === 'green') return '<b>' + p.data.source + ' \u2014 ' + p.data.target + '</b><br/><span style="color:#5A5249">corpus mode-edge' + (p.data.value >= 5 ? ' · drawn to scale' : ' · structure (weight not retrieved)') + '</span>';
+            return '<b>web-borrowed edge</b><br/><span style="color:#5E7E9C">' + p.data.source + ' \u2014 ' + p.data.target + '</span>';
+          }
+          if (!p.data.prov) return '';
+          return '<b>' + p.data.name + '</b><br/><span style="color:#5A5249">' + p.data.prov + '</span>';
+        },
+      },
+      series: [{ type: 'graph', layout: 'none', roam: true, nodes, links, scaleLimit: { min: 0.7, max: 3 },
+        emphasis: { focus: 'adjacency', scale: 1.04, lineStyle: { width: 4 } } }],
+    });
+
+    [this._cA, this._cB].forEach((c) => { if (c) c.dispose(); });
+    const cA = echarts.init(elA, null, { renderer: 'svg' });
+    const cB = echarts.init(elB, null, { renderer: 'svg' });
+    cA.setOption(opt(actorNodes, actorLinks, 'blue'));
+    cB.setOption(opt(modeNodes, modeLinks, 'green'));
+    this._cA = cA; this._cB = cB; this._charts = true;
+
+    this._onResize = () => { cA.resize(); cB.resize(); };
+    window.addEventListener('resize', this._onResize);
+  }
+
+  componentWillUnmount() {
+    if (this._onResize) window.removeEventListener('resize', this._onResize);
+    [this._cA, this._cB].forEach((c) => { if (c) c.dispose(); });
+  }
+}
+</script>
+</body>
+</html>

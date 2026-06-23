@@ -146,7 +146,9 @@ def run_trajectory(
             turn_failures: list[str] = []
 
             if use_live_graph and out.get("is_conversational"):
-                turn_failures.append(f"turn {i + 1}: routed to conversational not pipeline")
+                has_blocks = bool((trace.get("render_model") or {}).get("render_blocks"))
+                if not has_blocks:
+                    turn_failures.append(f"turn {i + 1}: routed to conversational not pipeline")
 
             expected_outcomes = turn.get("expect_outcome") or []
             if isinstance(expected_outcomes, str):

@@ -1,0 +1,37 @@
+sample_id,question,intent,answer_shape,best_visual_treatment,recommended_blocks,missing_or_variant,rendering_strategy
+A01,What is CPC genuinely strong at?,read.object,Profile + trust breakdown,Capability cards + evidence-state bar + ClaimLedger,ContextCard; ClaimLedger; EvidenceStateSummary,None,Controlled
+A02,Which CPC capabilities are proven vs self-reported?,read.trust,Evidence inventory,EvidenceStateSummary + sortable ClaimLedger,EvidenceStateSummary; ClaimLedger; ProvenanceTrace,EvidenceUpgradeQueue variant,Controlled
+A03,What climate-resilience opportunities are relevant?,explore.pipeline,Ranked opportunity landscape,OpportunityList with filters and clusters,OpportunityList; ComparisonMatrix,PipelineFilterBar variant,Controlled with GenUI summaries
+A04,Which opportunities are high value but low fit?,prioritise,2x2 prioritisation,Value-fit quadrant + confidence badges,OpportunityList; ComparisonMatrix,PriorityQuadrant visual,Controlled
+A05,How does GPS-denied UAS fit RAPPID?,assess.fit,Decision spine + evidence map + gaps,Recommendation + MatchBench + DimensionGap,RecommendationConfidence; MatchBench; DimensionGap; ClaimLedger,None,Controlled
+A06,What is the biggest gap in RAPPID match?,diagnose.gap,Gap ranking,Sorted DimensionGap + what-would-change,DimensionGap; ActionPlan,None,Controlled
+A07,Can UAS evidence transfer to ground-based inspection?,translate,Transfer lane verdict,TransferLanes + claim audit,TransferLanes; ClaimLedger; DimensionGap,None,Controlled
+A08,Should CPC pursue climate physical risk procurement?,decide,Decision + caveats + threshold,Recommendation + DimensionGap + ActionPlan,RecommendationConfidence; DimensionGap; ActionPlan,CommercialReadiness variant,Controlled
+A09,Why is confidence capped?,explain.why,Reasoning trace + trust summary,ReasoningTrace + EvidenceStateSummary + Inspector,EvidenceStateSummary; ProvenanceTrace,ReasoningTrace shell,Controlled trace
+A10,How defend this to a board?,defend,Objection-response + proof trail,ObjectionResponse + ClaimLedger + ProvenanceTrace,ObjectionResponse; ClaimLedger; ProvenanceTrace,None,Controlled
+A11,What should happen next?,act,Gap-to-action plan,ActionPlan timeline linked to gaps,ActionPlan; DimensionGap,OwnerMap variant,Controlled
+A12,What is the economic case?,economic,Economic case with assumptions,EconomicCaseBlock with value cards / waterfall,EconomicCaseBlock; ClaimLedger,EconomicCaseBlock,Controlled
+A13,What assumptions dominate the value case?,economic.sensitivity,Assumption sensitivity,Assumptions ledger + sensitivity/tornado,EconomicCaseBlock; ClaimLedger,Sensitivity visual,Controlled
+A14,Which partners reduce evidence gap fastest?,connect,Partner map + gap coverage,NetworkMap + coverage matrix,NetworkMap; DimensionGap,PartnerCoverageMatrix,Hybrid
+A15,What data did Atlas use?,explain.sources,Source manifest,ProvenanceTrace + source table,ProvenanceTrace; ClaimLedger,SourceManifest variant,Controlled
+A16,When should Atlas ask a clarifying question?,workflow,Routing policy,Decision tree / policy table,Not user block,None,Backend logic
+A17,What should be in board snapshot?,package,Snapshot contents,SnapshotPreview + appendix manifest,SnapshotBrief; Recommendation; EvidenceSummary,SnapshotBrief explicit,Controlled
+A18,Which blocks are doing too much work?,ui.meta,Component critique,Block coverage matrix,ComparisonMatrix,Block states clearer,Controlled
+A19,Where is a chart better than table?,visual.meta,Visual decision rule,Visual registry table,VisualRegistry,None,Controlled
+A20,Where should GenUI remain?,architecture,Architecture principle,Comparison table,Not product block,None,Both
+A21,Which funders appear repeatedly?,pipeline.analysis,Aggregation table,Funder leaderboard + status bars,OpportunityList; ComparisonMatrix,PipelineAnalytics variant,Controlled
+A22,High gap value but low confidence matches?,portfolio,Portfolio triage,Quadrant/scatter + sortable table,ComparisonMatrix; EvidenceSummary,PriorityQuadrant visual,Controlled
+A23,"Should we lead, partner, advise or pass?",decide.role,Role decision,Role lanes + next actions,Recommendation; ActionPlan,RoleDecision visual,Controlled
+A24,Which stakeholder would challenge this?,defend.stakeholder,Challenge map,ObjectionResponse grouped by stakeholder,ObjectionResponse; NetworkMap,StakeholderChallenge variant,Controlled
+A25,Where should a map replace list?,regional.visual,Visual rule,Map only when geography changes decision,GeoMap; OpportunityList,GeoMap visual,Controlled
+A26,What is route to market?,commercial,Commercial route analysis,Route-to-market canvas + risks,Recommendation; ActionPlan; DimensionGap,CommercialRouteCard variant,Hybrid
+A27,What evidence upgrade first?,evidence.upgrade,Evidence upgrade queue,ClaimLedger sorted by confidence impact,ClaimLedger; ActionPlan,EvidenceUpgradeQueue variant,Controlled
+A28,Can Atlas answer this?,meta.capability,Answerability check,Answerability card + data gaps,Recommendation; ProvenanceTrace,AnswerabilityCard,Controlled
+A29,What is the one-slide version?,package.slide,Executive summary,One-slide snapshot layout,SnapshotBrief; Recommendation,Snapshot layout variant,Controlled
+A30,Best near-term wedge for rail AI?,strategy,Strategic thesis,Thesis + opportunity cluster + ledger,Recommendation; OpportunityList; NetworkMap,ThesisCard variant,Hybrid
+A31,What should agent do before artifact?,workflow,Process flow,Router flowchart,Not user block,None,Backend logic
+A32,What if answer does not fit blocks?,architecture.exception,Exception policy,Decision tree,Not product block,None,Both
+A33,EconomicCaseBlock when numbers weak?,economic.visual,Qualitative economic case,Value drivers + assumptions ledger,EconomicCaseBlock,EconomicCaseBlock,Controlled
+A34,EconomicCaseBlock when numbers strong?,economic.visual,Quantified economic case,NPV waterfall + sensitivity + assumptions,EconomicCaseBlock; ProvenanceTrace,EconomicCaseBlock,Controlled
+A35,How should colour be used?,design.system,Token policy,Semantic token table,Design system,None,Design system
+A36,What should persist for return later?,persistence,Persistence model,Session model table,Snapshot; ChatHistory later,ChatHistory/SessionDrawer later,Controlled

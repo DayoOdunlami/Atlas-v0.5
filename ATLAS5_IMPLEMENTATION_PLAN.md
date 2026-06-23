@@ -624,4 +624,55 @@ Legend: ✅ Done · 🟡 Partial · ⬜ Not started · 🚫 Deferred
 
 ---
 
-*Sequenced from `ATLAS5_BRAIN_ADR.md` (paradigm) for the outcomes in `ATLAS5_NORTH_STAR.md`, within the stack in `CLAUDE.md`. Owner: Dayo. Plan version: 2.1 — 2026-06-16.*
+## 10. Sprint 2 — High-value backbone (D6.x)
+
+> All items land on the current `/workbench` + `/lab` surfaces. Minimal new UI.
+
+**D6.0 — Multi-turn context-aware routing (CRITICAL — fixes "feels broken after first question")**
+- **Symptom:** follow-ups ("what's needed to close the gap?", "what am I looking at?") degrade to clarify/generic menus because the intent router decides from the bare latest message; assembled context (`last_outcome`, prior artifact) only feeds a narrow deictic keyword regex, and conversational replies are artifact-blind.
+- **What:**
+  1. Pass session context (`last_outcome`, `last_headline`, artifact-exists flag, prior query) into both the Haiku intent prompt and the heuristic router.
+  2. Broaden follow-up detection: when an artifact exists, route short/elliptical messages to pipeline in the current outcome (not clarify).
+  3. Make conversational/meta replies artifact-aware — "what am I looking at / on screen?" summarises the current render_model (headline, outcome, key blocks) instead of denying screen access.
+  4. Never degrade to a generic capability menu once a pipeline turn has run in the thread.
+- **Where:** `agents/orchestrator/intent_router.py`, `agents/orchestrator/conversational.py`, `agents/orchestrator/context.py`.
+- **Acceptance:** the exact failing transcript (gap follow-up, "what you just presented", "what am I looking at") returns context-aware answers; no "I don't have context" when an artifact exists.
+- **Tests:** `agents/test_multiturn_context.py` — elliptical follow-ups + meta/screen questions against a live in-process thread with a prior artifact.
+
+**D6.1 — Finish ingest loop (D4.6e)**
+- **What:** `ingest-candidate` route → `atlas.live_calls` upsert → re-run matcher → promote candidate to corpus citation.
+- **UI:** "Verify & add to corpus" button on OpportunityCandidate rows.
+- **Acceptance:** discovered external call → ingest → appears as corpus match in next Connect turn.
+- **Tests:** `test_discover_ingest_promotion.py`.
+
+**D6.2 — Reconciliation confidence scoring**
+- **What:** replace hardcoded conflict patterns in `reconcile.py` with embedding similarity + recency-delta agreement score.
+- **UI:** score badge on ComparisonMatrix/conflict rows.
+- **Tests:** `test_reconcile_scoring.py`.
+
+**D6.3 — Instrumentation dashboard (finish D2)**
+- **What:** wire `signals.py` emitters on every node; aggregate via `gap_report.py`; lift `/lab/capability-gaps` to real data.
+- **Acceptance:** report shows low-tier queries, prose fallbacks, intent misses per CQ.
+- **Tests:** `test_gap_report_aggregation.py`.
+
+**D6.4 — Latency enforcement + streamed trace**
+- **What:** P95 budget gating; stream reasoning trace during dual-lane fetch.
+- **Tests:** extend `eval/latency_budget.py` to assert P95.
+
+**D6.5 — Citation parity CI (D5.3)**
+- **What:** Playwright — every rendered citation resolves to a live Supabase row, both render modes.
+- **Tests:** `eval/citation_parity.spec.ts`.
+
+**D6.6 — Multi-turn hardening tests**
+- **What:** adversarial follow-ups (topic switch, "go back two steps", ellipsis); meta/screen questions; lock D6.0 against regression.
+- **Tests:** extend `test_multiturn_context.py`.
+
+**Sprint 2 order:** D6.0 → D6.1 → D6.2 → D6.3 → (D6.4, D6.5, D6.6 parallel).
+
+## 11. Sprint 3 — Blue ocean (backlogged)
+
+Specced in `BACKLOG.md` → "Blue Ocean". Build order: **E** (red-team button) → **A** (provenance tab) → **C** (`prepare` mode) → **D** phase-1 (2nd passport, prose). `D` phase-2 (`/network` marketplace page) is Sprint 4. Everything except D is an uplift on the current workbench.
+
+---
+
+*Sequenced from `ATLAS5_BRAIN_ADR.md` (paradigm) for the outcomes in `ATLAS5_NORTH_STAR.md`, within the stack in `CLAUDE.md`. Owner: Dayo. Plan version: 2.2 — 2026-06-16.*

@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style data-omelette-print-defaults>
+@media print {
+  @page { margin: 0; }
+  body { padding: 0.5in; box-sizing: border-box; }
+  h1, h2, h3, h4, h5, h6 { break-after: avoid; }
+  figure, table, pre, blockquote, img, svg, tr, [class~="card" i] { break-inside: avoid; }
+  img, svg { max-width: 100%; }
+  p { orphans: 3; widows: 3; }
+}
+</style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Libre+Franklin:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { background: #e7e5df; font-family: 'Libre Franklin', sans-serif; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+</style>
+</helmet>
+
+<div style="width: max-content; min-width: 100%; min-height: 100vh; box-sizing: border-box; padding: 56px; background: #e7e5df;">
+
+  <!-- ===== MASTHEAD / RATIONALE ===== -->
+  <div style="max-width: 1180px; margin-bottom: 64px;">
+    <div style="display:flex; align-items:baseline; gap:16px; margin-bottom:28px;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.16em; color:#94908A; text-transform:uppercase;">Atlas v5 — the mouth</div>
+      <div style="height:1px; flex:1; background:#d4d0c8;"></div>
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.08em; color:#94908A;">Journey 1 · Rail decarbonisation · 18 Jun 2026</div>
+    </div>
+    <h1 style="font-family:'Newsreader',serif; font-weight:500; font-size:38px; line-height:1.18; color:#211E1A; margin:0 0 20px; max-width:880px; letter-spacing:-0.01em;">Rendering a world-class analytical answer — where trust is a visible material state, not a label.</h1>
+    <div style="display:flex; gap:40px; max-width:1080px;">
+      <div style="flex:1;">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.14em; color:#B07A2E; text-transform:uppercase; margin-bottom:10px;">Hierarchy — 60 / 30 / 10</div>
+        <p style="margin:0; font-size:13.5px; line-height:1.62; color:#6B6760;">The verdict is a full <em style="color:#211E1A; font-style:italic;">sentence</em> carrying the nuance — set in serif at headline scale so the eye lands there in under a second. Supporting analysis (stats, the two-tier prose, the ranked list) reads medium. Citations and provenance are mono, small, on-demand. The canvas holds the durable <em style="font-style:italic;">what</em>; the chat carries only the <em style="font-style:italic;">so-what</em> — it orients, never duplicates.</p>
+      </div>
+      <div style="flex:1;">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.14em; color:#3F7A52; text-transform:uppercase; margin-bottom:10px;">Organic healing — epistemics as material</div>
+        <p style="margin:0; font-size:13.5px; line-height:1.62; color:#6B6760;">A <span style="color:#3F7A52; border-left:2px solid #3F7A52; padding-left:5px;">corpus</span> claim sits on a solid green rule — owned, healed. A <span style="color:#3E6B8C; border-left:2px dashed #3E6B8C; padding-left:5px;">web</span> claim sits on a dashed blue rule — borrowed context, not corpus fact. A <span style="color:#B07A2E;">floor</span> number fades out at its base: the real value continues below. The blind-spot is a torn, hatched <em style="font-style:italic;">absent</em> zone next to the verdict — never a footer. Confidence is a literal ceiling line above the headline.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 1 ===== -->
+  <div style="margin-bottom:18px; display:flex; align-items:baseline; gap:14px;">
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.12em; color:#56524C; text-transform:uppercase;">01 — Two directions · Turn 1 (Orient)</div>
+    <div style="font-size:12.5px; color:#94908A;">Same content, same structure — two philosophies of what wins attention.</div>
+  </div>
+
+  <div style="display:flex; gap:56px; align-items:flex-start; margin-bottom:88px;">
+
+    <!-- ---------- DIRECTION A : TEXT-LED ---------- -->
+    <div style="flex:none; width:1440px;">
+      <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:12px;">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.1em; color:#56524C;">DIRECTION A</div>
+        <div style="font-size:13px; color:#211E1A; font-weight:600;">Text-led · confident typography</div>
+        <div style="font-size:12px; color:#94908A;">— restraint, the verdict wins by scale &amp; air (Stripe-ish)</div>
+      </div>
+
+      <div style="width:1440px; height:940px; background:#FBFAF7; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 12px 40px rgba(0,0,0,.06); overflow:hidden; display:flex;">
+
+        <!-- left rail -->
+        <div style="width:60px; flex:none; background:#F4F1EB; border-right:1px solid #E7E3DC; display:flex; flex-direction:column; align-items:center; padding:14px 0;">
+          <div style="width:30px; height:30px; border-radius:7px; background:#211E1A; color:#FBFAF7; font-family:'Newsreader',serif; font-weight:600; font-size:18px; display:flex; align-items:center; justify-content:center;">A</div>
+          <div style="height:22px;"></div>
+          <div style="display:flex; flex-direction:column; gap:4px; align-items:center;">
+            <div style="width:32px; height:32px; border-radius:8px; background:#E7E0D4; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#211E1A; font-weight:600;">Or</div>
+            <div style="width:32px; height:32px; border-radius:8px; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#A39E96;">Cn</div>
+            <div style="width:32px; height:32px; border-radius:8px; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#A39E96;">Dg</div>
+            <div style="width:32px; height:32px; border-radius:8px; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#A39E96;">Ac</div>
+            <div style="width:32px; height:32px; border-radius:8px; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#A39E96;">Df</div>
+          </div>
+          <div style="flex:1;"></div>
+          <div style="width:28px; height:28px; border-radius:50%; background:#CDBBA5;"></div>
+        </div>
+
+        <!-- main -->
+        <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+
+          <!-- topbar -->
+          <div style="height:54px; flex:none; border-bottom:1px solid #E7E3DC; display:flex; align-items:center; padding:0 24px; gap:16px; background:#FBFAF7;">
+            <div style="font-size:15px; font-weight:600; color:#211E1A; white-space:nowrap;">Rail decarbonisation</div>
+            <div style="width:1px; height:18px; background:#E7E3DC;"></div>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.06em; color:#8C887F;">CORPUS + WEB · 55 OBJECTS · 18 JUN 2026</div>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.08em; color:#3F7A52;">· ORIENT</div>
+            <div style="flex:1;"></div>
+            <div style="display:flex; background:#F0EDE7; border-radius:7px; padding:3px; gap:2px;">
+              <div style="font-size:12px; padding:5px 12px; border-radius:5px; background:#FFFFFF; color:#211E1A; font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,.06);">Browse</div>
+              <div style="font-size:12px; padding:5px 12px; border-radius:5px; color:#8C887F;">Workbench</div>
+              <div style="font-size:12px; padding:5px 12px; border-radius:5px; color:#8C887F;">Act</div>
+              <div style="font-size:12px; padding:5px 12px; border-radius:5px; color:#8C887F;">Defend</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:7px; padding:5px 11px; border-radius:6px; background:#EEF4EE; border:1px solid #CFE0D4;">
+              <div style="width:7px; height:7px; border-radius:50%; background:#3F7A52;"></div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#2F5C3E; font-weight:600;">SUPPORTED</div>
+            </div>
+          </div>
+
+          <!-- body: canvas + chat -->
+          <div style="flex:1; display:flex; min-height:0;">
+
+            <!-- CANVAS -->
+            <div style="flex:1; min-width:0; overflow:hidden; padding:40px 48px 0;">
+
+              <!-- confidence ceiling -->
+              <div style="display:flex; align-items:center; gap:12px; margin-bottom:22px;">
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#8C887F; text-transform:uppercase;">Confidence ceiling</div>
+                <div style="flex:1; height:1px; background:repeating-linear-gradient(90deg,#C9C4BB 0 6px,transparent 6px 11px);"></div>
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.06em; color:#8C887F;">Supported — corpus layer only · web tier is context</div>
+              </div>
+
+              <!-- VERDICT (hero) -->
+              <h2 style="font-family:'Newsreader',serif; font-weight:500; font-size:39px; line-height:1.16; letter-spacing:-0.015em; color:#1A1714; margin:0 0 18px; max-width:680px;">The corpus sees a busy but small-money field — and it's <span style="font-style:italic; color:#B07A2E;">blind to the part that matters most.</span></h2>
+
+              <p style="font-size:17.5px; line-height:1.55; color:#46423C; margin:0 0 14px; max-width:660px;">Rail decarbonisation shows <strong style="color:#1A1714; font-weight:600;">55 projects</strong> but only <strong style="color:#1A1714; font-weight:600;">£8.2m</strong> of recorded funding across 30 organisations, 27 still live past 2024 — the signature of an <em style="font-style:italic;">early-stage, fragmented</em> innovation space, not a consolidated one.</p>
+
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#8C887F; margin-bottom:26px;">Supported on the corpus layer · the national-programme layer is web-sourced context, not corpus fact.</div>
+
+              <!-- AnswerabilityCard : absent zone, near the verdict -->
+              <div style="position:relative; border:1.5px dashed #D9B68A; border-radius:6px; padding:16px 18px; margin-bottom:30px; max-width:660px; background:linear-gradient(135deg,#FBF6EE 0 100%); overflow:hidden;">
+                <div style="position:absolute; inset:0; background-image:repeating-linear-gradient(135deg,rgba(176,122,46,.07) 0 1px,transparent 1px 9px); pointer-events:none;"></div>
+                <div style="position:relative;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#B07A2E; text-transform:uppercase; margin-bottom:7px;">⚠ What this answer can't see</div>
+                  <div style="font-size:14px; line-height:1.5; color:#5A5249;">CPC's own <strong style="color:#3A332A;">TRIG grants are entirely absent from the corpus</strong> — so the £8.2m is the SME grant tier only, not CPC's prior rail work. This is a declared blind-spot, <strong style="color:#3A332A;">closable by ingestion</strong> — not an empty field.</div>
+                </div>
+              </div>
+
+              <!-- StatStrip (understated/supporting) -->
+              <div style="display:flex; gap:0; margin-bottom:34px; border-top:1px solid #E7E3DC; border-bottom:1px solid #E7E3DC;">
+                <div style="flex:1; padding:16px 20px 16px 0;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:27px; font-weight:500; color:#1A1714; line-height:1;">55</div>
+                  <div style="font-size:12px; color:#8C887F; margin-top:7px;">projects</div>
+                </div>
+                <div style="flex:1; padding:16px 20px; border-left:1px solid #E7E3DC; position:relative;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:27px; font-weight:500; color:#1A1714; line-height:1; -webkit-mask-image:linear-gradient(180deg,#000 64%,transparent 122%); mask-image:linear-gradient(180deg,#000 64%,transparent 122%);">£8.2m</div>
+                  <div style="display:flex; align-items:center; gap:6px; margin-top:7px;"><span style="font-size:12px; color:#8C887F;">recorded funding</span><span style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.06em; color:#B07A2E; background:#F7F0E2; padding:1.5px 5px; border-radius:3px;">FLOOR</span></div>
+                </div>
+                <div style="flex:1; padding:16px 20px; border-left:1px solid #E7E3DC;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:27px; font-weight:500; color:#1A1714; line-height:1;">27</div>
+                  <div style="font-size:12px; color:#8C887F; margin-top:7px;">live past 2024</div>
+                </div>
+                <div style="flex:1; padding:16px 0 16px 20px; border-left:1px solid #E7E3DC;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:27px; font-weight:500; color:#1A1714; line-height:1;">30</div>
+                  <div style="font-size:12px; color:#8C887F; margin-top:7px;">organisations</div>
+                </div>
+              </div>
+
+              <!-- connective prose : the two-tier field (web register) -->
+              <div style="max-width:660px; border-left:2px dashed #B6CADB; padding-left:18px; margin-bottom:30px;">
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#3E6B8C; text-transform:uppercase; margin-bottom:9px;">The two-tier field · web context</div>
+                <p style="font-size:14.5px; line-height:1.62; color:#46423C; margin:0;">The £8.2m the corpus sees is a rounding error against the real national programme. Network Rail's Traction Decarbonisation Network Strategy targets electrifying ~11,700 single-track-km at roughly £1m/km <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#3E6B8C; vertical-align:1px;">[W1·W2]</span>, government has committed to removing all diesel-only trains by 2040 <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#3E6B8C; vertical-align:1px;">[W3]</span>, and this month Network Rail signed renewable deals covering ~80% of non-traction electricity <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#3E6B8C; vertical-align:1px;">[W4]</span>. The corpus shows the <em style="font-style:italic;">SME innovation layer</em>; the web shows the <em style="font-style:italic;">multi-billion-pound infrastructure programme above it.</em></p>
+              </div>
+
+              <!-- OpportunityList (corpus register) -->
+              <div style="border-left:2px solid #3F7A52; padding-left:18px; max-width:680px;">
+                <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:12px;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#3F7A52; text-transform:uppercase;">Top of corpus · ranked by funding</div>
+                  <div style="font-size:11.5px; color:#A39E96;">55 projects · showing 5</div>
+                </div>
+                <div style="display:flex; flex-direction:column;">
+                  <div style="display:grid; grid-template-columns:1fr 130px 64px 92px; gap:10px; align-items:center; padding:9px 0; border-bottom:1px solid #EFEBE4;">
+                    <div style="font-size:13.5px; color:#211E1A; font-weight:500;">25kV Battery Train Charging Station Demo</div>
+                    <div style="font-size:12px; color:#A39E96; font-style:italic;">(unnamed lead)</div>
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#8C887F;">IUK</div>
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:13px; color:#211E1A; text-align:right;">£740k</div>
+                  </div>
+                  <div style="display:grid; grid-template-columns:1fr 130px 64px 92px; gap:10px; align-items:center; padding:9px 0; border-bottom:1px solid #EFEBE4;">
+                    <div style="font-size:13.5px; color:#211E1A; font-weight:500;">Composite Twin Track Cantilever (CTTC)</div>
+                    <div style="font-size:12px; color:#6B6760;">U. Huddersfield</div>
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#8C887F;">IUK</div>
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:13px; color:#211E1A; text-align:right;">£533k</div>
+                  </div>
+                  <div style="display:grid; grid-template-columns:1fr 130px 64px 92px; gap:10px; align-items:center; padding:9px 0; border-bottom:1px solid #EFEBE4;">
+                    <div style="font-size:13.5px; color:#211E1A; font-weight:500;">Intelligent Multimodal Logistics Brokerage</div>
+                    <div style="font-size:12px; color:#6B6760;">Rockshore</div>
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#8C887F;">IUK</div>
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:13px; color:#211E1A; text-align:right;">£520k</div>
+                  </div>
+                  <div style="display:grid; grid-template-columns:1fr 130px 64px 92px; gap:10px; align-items:center; padding:9px 0; border-bottom:1px solid #EFEBE4;">
+                    <div style="font-size:13.5px; color:#211E1A; font-weight:500;">ICAGE greener electrification cantilever</div>
+                    <div style="font-size:12px; color:#6B6760;">Furrer+Frey GB</div>
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#8C887F;">IUK</div>
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:13px; color:#211E1A; text-align:right;">£408k</div>
+                  </div>
+                  <div style="display:grid; grid-template-columns:1fr 130px 64px 92px; gap:10px; align-items:center; padding:9px 0;">
+                    <div style="font-size:13.5px; color:#211E1A; font-weight:500;">Zero Emission Rail Freight Power</div>
+                    <div style="font-size:12px; color:#6B6760;">Steamology Motion</div>
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#8C887F;">IUK</div>
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:13px; color:#211E1A; text-align:right;">£400k</div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="height:40px;"></div>
+            </div>
+
+            <!-- CHAT (so-what) -->
+            <div style="width:392px; flex:none; border-left:1px solid #E7E3DC; background:#FFFFFF; display:flex; flex-direction:column;">
+              <div style="height:46px; flex:none; border-bottom:1px solid #EFEBE4; display:flex; align-items:center; padding:0 20px; gap:9px;">
+                <div style="width:7px;height:7px;border-radius:50%;background:#3F7A52;"></div>
+                <div style="font-size:12.5px; font-weight:600; color:#211E1A;">Atlas</div>
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#A39E96;">· so-what</div>
+              </div>
+              <div style="flex:1; padding:22px 20px; overflow:hidden; display:flex; flex-direction:column; gap:18px;">
+                <div style="align-self:flex-end; max-width:260px; background:#F0EDE7; border-radius:12px 12px 4px 12px; padding:11px 14px; font-size:13px; line-height:1.5; color:#46423C;">Give me the state of play on rail decarbonisation in our corpus.</div>
+                <div style="max-width:300px;">
+                  <p style="margin:0 0 12px; font-size:13.5px; line-height:1.58; color:#2E2A24;">The headline is on the canvas — but the thing to take away: it's a <strong>two-tier field</strong>, and which tier you're entering decides everything downstream.</p>
+                  <p style="margin:0 0 12px; font-size:13.5px; line-height:1.58; color:#2E2A24;">The £8.2m is real but it's the <em style="font-style:italic;">SME grant layer only</em>. The national programme above it is orders of magnitude bigger and sits entirely outside what we can see.</p>
+                  <div style="border-left:2px solid #D9B68A; padding-left:11px; margin-top:14px;">
+                    <p style="margin:0; font-size:13px; line-height:1.5; color:#7A6A50;">⚠ Flagged on the canvas: we're blind to your own TRIG grants. Worth closing before you commit budget.</p>
+                  </div>
+                  <div style="margin-top:16px; font-size:13px; color:#46423C;"><strong>Decide next →</strong> which tier are we playing in?</div>
+                </div>
+              </div>
+              <div style="flex:none; padding:14px 16px; border-top:1px solid #EFEBE4;">
+                <div style="border:1px solid #E0DCD3; border-radius:9px; padding:10px 13px; font-size:12.5px; color:#A39E96; display:flex; align-items:center; justify-content:space-between;">Ask a follow-up…<span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#C4BFB6;">⏎</span></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---------- DIRECTION B : DATA-LED ---------- -->
+    <div style="flex:none; width:1440px;">
+      <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:12px;">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.1em; color:#56524C;">DIRECTION B</div>
+        <div style="font-size:13px; color:#211E1A; font-weight:600;">Data-led · the instrument</div>
+        <div style="font-size:12px; color:#94908A;">— the numbers and the two-tier visual carry the eye (Palantir-ish)</div>
+      </div>
+
+      <div style="width:1440px; height:940px; background:#FBFAF7; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 12px 40px rgba(0,0,0,.06); overflow:hidden; display:flex;">
+
+        <!-- left rail (graphite, instrument) -->
+        <div style="width:60px; flex:none; background:#232A2E; display:flex; flex-direction:column; align-items:center; padding:14px 0;">
+          <div style="width:30px; height:30px; border-radius:7px; background:#FBFAF7; color:#232A2E; font-family:'Newsreader',serif; font-weight:600; font-size:18px; display:flex; align-items:center; justify-content:center;">A</div>
+          <div style="height:22px;"></div>
+          <div style="display:flex; flex-direction:column; gap:4px; align-items:center;">
+            <div style="width:32px; height:32px; border-radius:8px; background:#36424A; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#EAF3EC; font-weight:600;">Or</div>
+            <div style="width:32px; height:32px; border-radius:8px; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#6B7880;">Cn</div>
+            <div style="width:32px; height:32px; border-radius:8px; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#6B7880;">Dg</div>
+            <div style="width:32px; height:32px; border-radius:8px; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#6B7880;">Ac</div>
+            <div style="width:32px; height:32px; border-radius:8px; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#6B7880;">Df</div>
+          </div>
+          <div style="flex:1;"></div>
+          <div style="width:28px; height:28px; border-radius:50%; background:#5A6B62;"></div>
+        </div>
+
+        <!-- main -->
+        <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+
+          <!-- topbar -->
+          <div style="height:54px; flex:none; border-bottom:1px solid #E7E3DC; display:flex; align-items:center; padding:0 24px; gap:16px; background:#FFFFFF;">
+            <div style="font-size:15px; font-weight:600; color:#211E1A; white-space:nowrap;">Rail decarbonisation</div>
+            <div style="width:1px; height:18px; background:#E7E3DC;"></div>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.06em; color:#8C887F;">CORPUS + WEB · 55 OBJECTS · 18 JUN 2026</div>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.08em; color:#3F7A52;">· ORIENT</div>
+            <div style="flex:1;"></div>
+            <div style="display:flex; background:#232A2E; border-radius:7px; padding:3px; gap:2px;">
+              <div style="font-size:12px; padding:5px 12px; border-radius:5px; background:#3C4A52; color:#FFFFFF; font-weight:600;">Browse</div>
+              <div style="font-size:12px; padding:5px 12px; border-radius:5px; color:#8A969C;">Workbench</div>
+              <div style="font-size:12px; padding:5px 12px; border-radius:5px; color:#8A969C;">Act</div>
+              <div style="font-size:12px; padding:5px 12px; border-radius:5px; color:#8A969C;">Defend</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:7px; padding:5px 11px; border-radius:6px; background:#EEF4EE; border:1px solid #CFE0D4;">
+              <div style="width:7px; height:7px; border-radius:50%; background:#3F7A52;"></div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#2F5C3E; font-weight:600;">SUPPORTED</div>
+            </div>
+          </div>
+
+          <!-- body -->
+          <div style="flex:1; display:flex; min-height:0;">
+
+            <!-- CANVAS -->
+            <div style="flex:1; min-width:0; overflow:hidden; padding:30px 40px 0; background:#FBFAF7;">
+
+              <!-- compressed verdict band -->
+              <div style="display:flex; align-items:flex-start; gap:16px; padding-bottom:22px; margin-bottom:24px; border-bottom:1px solid #E7E3DC;">
+                <div style="flex:1;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#8C887F; text-transform:uppercase; margin-bottom:8px;">Verdict — ceiling: Supported, corpus layer only</div>
+                  <div style="font-family:'Newsreader',serif; font-weight:500; font-size:23px; line-height:1.32; letter-spacing:-0.01em; color:#1A1714;">A busy but small-money field — <span style="font-style:italic; color:#B07A2E;">blind to the part that matters most:</span> a two-tier field, thin SME layer beneath a multi-billion national programme.</div>
+                </div>
+                <div style="flex:none; display:flex; align-items:center; gap:7px; padding:6px 11px; border-radius:6px; background:#EEF4EE; border:1px solid #CFE0D4; margin-top:22px;">
+                  <div style="width:7px; height:7px; border-radius:50%; background:#3F7A52;"></div>
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#2F5C3E; font-weight:600;">SUPPORTED</div>
+                </div>
+              </div>
+
+              <!-- BIG StatStrip (dominant) -->
+              <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:#E7E3DC; border:1px solid #E7E3DC; border-radius:8px; overflow:hidden; margin-bottom:26px;">
+                <div style="background:#FFFFFF; padding:20px 22px;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:50px; font-weight:500; color:#1A1714; line-height:0.95; letter-spacing:-0.02em;">55</div>
+                  <div style="font-size:12.5px; color:#8C887F; margin-top:12px;">projects</div>
+                </div>
+                <div style="background:#FFFFFF; padding:20px 22px; position:relative;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:50px; font-weight:500; color:#1A1714; line-height:0.95; letter-spacing:-0.02em; -webkit-mask-image:linear-gradient(180deg,#000 70%,transparent 116%); mask-image:linear-gradient(180deg,#000 70%,transparent 116%);">£8.2m</div>
+                  <div style="display:flex; align-items:center; gap:7px; margin-top:12px;"><span style="font-size:12.5px; color:#8C887F;">recorded funding</span><span style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.06em; color:#B07A2E; background:#F7F0E2; padding:2px 5px; border-radius:3px;">FLOOR · NULLS</span></div>
+                </div>
+                <div style="background:#FFFFFF; padding:20px 22px;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:50px; font-weight:500; color:#1A1714; line-height:0.95; letter-spacing:-0.02em;">27</div>
+                  <div style="font-size:12.5px; color:#8C887F; margin-top:12px;">live past 2024</div>
+                </div>
+                <div style="background:#FFFFFF; padding:20px 22px;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:50px; font-weight:500; color:#1A1714; line-height:0.95; letter-spacing:-0.02em;">30</div>
+                  <div style="font-size:12.5px; color:#8C887F; margin-top:12px;">organisations</div>
+                </div>
+              </div>
+
+              <!-- KEY VISUAL : the two-tier field -->
+              <div style="margin-bottom:24px;">
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#56524C; text-transform:uppercase; margin-bottom:12px;">The two-tier field — the gap is the finding</div>
+
+                <!-- top tier: national programme (web, dashed/borrowed) -->
+                <div style="border:1.5px dashed #B6CADB; border-radius:8px 8px 0 0; background:linear-gradient(180deg,#F2F6FA 0%,#EDF1F6 100%); padding:16px 20px; display:flex; align-items:center; gap:20px;">
+                  <div style="flex:none; width:188px;">
+                    <div style="font-size:14px; font-weight:600; color:#2C4F68;">National electrification programme</div>
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#5C7E96; margin-top:4px;">WEB · not in corpus</div>
+                  </div>
+                  <div style="flex:1; display:flex; gap:26px;">
+                    <div><div style="font-family:'IBM Plex Mono',monospace; font-size:19px; color:#2C4F68;">~£multi-bn</div><div style="font-size:11px; color:#5C7E96; margin-top:3px;">TDNS capital spend</div></div>
+                    <div><div style="font-family:'IBM Plex Mono',monospace; font-size:19px; color:#2C4F68;">11,700 STK</div><div style="font-size:11px; color:#5C7E96; margin-top:3px;">@ ~£1m/km</div></div>
+                    <div><div style="font-family:'IBM Plex Mono',monospace; font-size:19px; color:#2C4F68;">2040</div><div style="font-size:11px; color:#5C7E96; margin-top:3px;">diesel-free target</div></div>
+                  </div>
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#5C7E96;">[W1·W2·W3]</div>
+                </div>
+
+                <!-- the gap -->
+                <div style="background:repeating-linear-gradient(135deg,#F7F0E2 0 7px,#FBFAF7 7px 14px); border-left:1.5px dashed #B6CADB; border-right:1.5px dashed #B6CADB; padding:7px 20px; display:flex; align-items:center; gap:10px;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.08em; color:#B07A2E; text-transform:uppercase;">↕ the corpus is blind to this tier — the gap between tiers is the finding</div>
+                </div>
+
+                <!-- bottom tier: SME layer (corpus, solid/healed) -->
+                <div style="border:1.5px solid #CFE0D4; border-top:none; border-radius:0 0 8px 8px; background:linear-gradient(180deg,#F1F6F1 0%,#EEF4EE 100%); padding:16px 20px; display:flex; align-items:center; gap:20px;">
+                  <div style="flex:none; width:188px;">
+                    <div style="font-size:14px; font-weight:600; color:#2F5C3E;">SME innovation layer</div>
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#4F7C5E; margin-top:4px;">CORPUS · what CPC sees</div>
+                  </div>
+                  <div style="flex:1; display:flex; gap:26px;">
+                    <div><div style="font-family:'IBM Plex Mono',monospace; font-size:19px; color:#2F5C3E;">55 projects</div><div style="font-size:11px; color:#4F7C5E; margin-top:3px;">small bets</div></div>
+                    <div><div style="font-family:'IBM Plex Mono',monospace; font-size:19px; color:#2F5C3E;">£8.2m</div><div style="font-size:11px; color:#4F7C5E; margin-top:3px;">floor</div></div>
+                    <div><div style="font-family:'IBM Plex Mono',monospace; font-size:19px; color:#2F5C3E;">Innovate UK</div><div style="font-size:11px; color:#4F7C5E; margin-top:3px;">monopoly funder</div></div>
+                  </div>
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#4F7C5E;">[S1·S2]</div>
+                </div>
+              </div>
+
+              <!-- AnswerabilityCard compact + OpportunityList condensed -->
+              <div style="display:flex; gap:16px; align-items:stretch;">
+                <div style="flex:none; width:236px; border:1.5px dashed #D9B68A; border-radius:8px; padding:14px 15px; background:#FBF6EE; position:relative; overflow:hidden;">
+                  <div style="position:absolute; inset:0; background-image:repeating-linear-gradient(135deg,rgba(176,122,46,.07) 0 1px,transparent 1px 9px); pointer-events:none;"></div>
+                  <div style="position:relative;">
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.1em; color:#B07A2E; text-transform:uppercase; margin-bottom:7px;">⚠ Can't see</div>
+                    <div style="font-size:12.5px; line-height:1.46; color:#5A5249;">CPC's own <strong style="color:#3A332A;">TRIG grants absent</strong> from the corpus. £8.2m is the SME tier only. Closable by ingestion.</div>
+                  </div>
+                </div>
+                <div style="flex:1; border-left:2px solid #3F7A52; padding-left:16px;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.1em; color:#3F7A52; text-transform:uppercase; margin-bottom:9px;">Top of corpus · ranked</div>
+                  <div style="display:flex; flex-direction:column; gap:0;">
+                    <div style="display:grid; grid-template-columns:1fr 120px 80px; gap:8px; padding:6px 0; border-bottom:1px solid #EFEBE4;"><div style="font-size:12.5px; color:#211E1A;">25kV Battery Train Charging</div><div style="font-size:11.5px; color:#A39E96; font-style:italic;">(unnamed)</div><div style="font-family:'IBM Plex Mono',monospace; font-size:12px; text-align:right; color:#211E1A;">£740k</div></div>
+                    <div style="display:grid; grid-template-columns:1fr 120px 80px; gap:8px; padding:6px 0; border-bottom:1px solid #EFEBE4;"><div style="font-size:12.5px; color:#211E1A;">Composite Twin Track Cantilever</div><div style="font-size:11.5px; color:#6B6760;">U. Huddersfield</div><div style="font-family:'IBM Plex Mono',monospace; font-size:12px; text-align:right; color:#211E1A;">£533k</div></div>
+                    <div style="display:grid; grid-template-columns:1fr 120px 80px; gap:8px; padding:6px 0; border-bottom:1px solid #EFEBE4;"><div style="font-size:12.5px; color:#211E1A;">ICAGE electrification cantilever</div><div style="font-size:11.5px; color:#6B6760;">Furrer+Frey GB</div><div style="font-family:'IBM Plex Mono',monospace; font-size:12px; text-align:right; color:#211E1A;">£408k</div></div>
+                    <div style="display:grid; grid-template-columns:1fr 120px 80px; gap:8px; padding:6px 0;"><div style="font-size:12.5px; color:#211E1A;">Zero Emission Rail Freight Power</div><div style="font-size:11.5px; color:#6B6760;">Steamology</div><div style="font-family:'IBM Plex Mono',monospace; font-size:12px; text-align:right; color:#211E1A;">£400k</div></div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="height:30px;"></div>
+            </div>
+
+            <!-- CHAT -->
+            <div style="width:392px; flex:none; border-left:1px solid #E7E3DC; background:#FFFFFF; display:flex; flex-direction:column;">
+              <div style="height:46px; flex:none; border-bottom:1px solid #EFEBE4; display:flex; align-items:center; padding:0 20px; gap:9px;">
+                <div style="width:7px;height:7px;border-radius:50%;background:#3F7A52;"></div>
+                <div style="font-size:12.5px; font-weight:600; color:#211E1A;">Atlas</div>
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#A39E96;">· so-what</div>
+              </div>
+              <div style="flex:1; padding:22px 20px; overflow:hidden; display:flex; flex-direction:column; gap:18px;">
+                <div style="align-self:flex-end; max-width:260px; background:#F0EDE7; border-radius:12px 12px 4px 12px; padding:11px 14px; font-size:13px; line-height:1.5; color:#46423C;">Give me the state of play on rail decarbonisation in our corpus.</div>
+                <div style="max-width:300px;">
+                  <p style="margin:0 0 12px; font-size:13.5px; line-height:1.58; color:#2E2A24;">Look at the gap in the diagram — that's the whole story. Two tiers: a thin SME layer we can see, a multi-billion programme we can't.</p>
+                  <p style="margin:0 0 12px; font-size:13.5px; line-height:1.58; color:#2E2A24;">The four numbers up top are the SME layer only. Trustworthy for "how much SME innovation funding," misleading for "how big is rail decarb."</p>
+                  <div style="border-left:2px solid #D9B68A; padding-left:11px; margin-top:14px;">
+                    <p style="margin:0; font-size:13px; line-height:1.5; color:#7A6A50;">⚠ We can't see TRIG — your own grants. Close that before budget.</p>
+                  </div>
+                  <div style="margin-top:16px; font-size:13px; color:#46423C;"><strong>Decide next →</strong> which tier are we playing in?</div>
+                </div>
+              </div>
+              <div style="flex:none; padding:14px 16px; border-top:1px solid #EFEBE4;">
+                <div style="border:1px solid #E0DCD3; border-radius:9px; padding:10px 13px; font-size:12.5px; color:#A39E96; display:flex; align-items:center; justify-content:space-between;">Ask a follow-up…<span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#C4BFB6;">⏎</span></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== SECTION 2 : BEFORE / AFTER ===== -->
+  <div style="margin-bottom:6px; display:flex; align-items:baseline; gap:14px;">
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.12em; color:#56524C; text-transform:uppercase;">02 — Before / after · Turn 1 → Turn 2</div>
+    <div style="font-size:12.5px; color:#94908A;">Orient → Diagnose · Direction A language · the dynamic behaviour made visible without animating it.</div>
+  </div>
+  <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#8C887F; margin-bottom:26px; display:flex; gap:20px;">
+    <span><span style="color:#3F7A52;">●</span> hero persists &amp; evolves</span>
+    <span><span style="color:#B07A2E;">⇄</span> supporting blocks swap</span>
+    <span><span style="color:#3E6B8C;">▲</span> blind-spot promoted to action</span>
+    <span><span style="color:#A39E96;">↓</span> shape degraded honestly</span>
+    <span style="color:#A39E96;">// the canvas accretes — it does not redraw</span>
+  </div>
+
+  <div style="display:flex; gap:40px; align-items:flex-start; margin-bottom:88px;">
+
+    <!-- TURN 1 (before) -->
+    <div style="flex:none; width:900px;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.08em; color:#56524C; margin-bottom:12px;">TURN 1 · ORIENT — "state of play"</div>
+      <div style="width:900px; height:600px; background:#FBFAF7; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 8px 28px rgba(0,0,0,.05); overflow:hidden; display:flex; flex-direction:column;">
+        <div style="height:46px; flex:none; border-bottom:1px solid #E7E3DC; display:flex; align-items:center; padding:0 22px; gap:14px;">
+          <div style="font-size:14px; font-weight:600; color:#211E1A; white-space:nowrap;">Rail decarbonisation</div>
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.08em; color:#3F7A52;">· ORIENT</div>
+          <div style="flex:1;"></div>
+          <div style="display:flex; align-items:center; gap:6px; padding:4px 10px; border-radius:6px; background:#EEF4EE; border:1px solid #CFE0D4;"><div style="width:6px; height:6px; border-radius:50%; background:#3F7A52;"></div><div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#2F5C3E; font-weight:600;">SUPPORTED</div></div>
+        </div>
+        <div style="flex:1; padding:30px 36px; overflow:hidden;">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.12em; color:#8C887F; text-transform:uppercase;">Ceiling · Supported</div>
+            <div style="flex:1; height:1px; background:repeating-linear-gradient(90deg,#C9C4BB 0 5px,transparent 5px 9px);"></div>
+          </div>
+          <div style="position:relative;">
+            <div style="position:absolute; top:-2px; right:0; font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.06em; color:#3F7A52; background:#EEF4EE; border:1px solid #CFE0D4; padding:2px 7px; border-radius:4px;">● HERO</div>
+            <h3 style="font-family:'Newsreader',serif; font-weight:500; font-size:29px; line-height:1.18; letter-spacing:-0.01em; color:#1A1714; margin:0 0 24px; max-width:560px;">The corpus sees a busy but small-money field — and it's <span style="font-style:italic; color:#B07A2E;">blind to the part that matters most.</span></h3>
+          </div>
+          <div style="position:relative; margin-bottom:24px;">
+            <div style="position:absolute; top:-2px; right:0; font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.06em; color:#B07A2E; background:#F7F0E2; padding:2px 7px; border-radius:4px;">⇄ SWAPS OUT</div>
+            <div style="display:flex; gap:0; border-top:1px solid #E7E3DC; border-bottom:1px solid #E7E3DC; max-width:620px;">
+              <div style="flex:1; padding:14px 16px 14px 0;"><div style="font-family:'IBM Plex Mono',monospace; font-size:23px; color:#1A1714;">55</div><div style="font-size:11px; color:#8C887F; margin-top:5px;">projects</div></div>
+              <div style="flex:1; padding:14px 16px; border-left:1px solid #E7E3DC;"><div style="font-family:'IBM Plex Mono',monospace; font-size:23px; color:#1A1714; -webkit-mask-image:linear-gradient(180deg,#000 64%,transparent 122%); mask-image:linear-gradient(180deg,#000 64%,transparent 122%);">£8.2m</div><div style="font-size:11px; color:#8C887F; margin-top:5px;">funding · floor</div></div>
+              <div style="flex:1; padding:14px 16px; border-left:1px solid #E7E3DC;"><div style="font-family:'IBM Plex Mono',monospace; font-size:23px; color:#1A1714;">27</div><div style="font-size:11px; color:#8C887F; margin-top:5px;">live</div></div>
+              <div style="flex:1; padding:14px 0 14px 16px; border-left:1px solid #E7E3DC;"><div style="font-family:'IBM Plex Mono',monospace; font-size:23px; color:#1A1714;">30</div><div style="font-size:11px; color:#8C887F; margin-top:5px;">orgs</div></div>
+            </div>
+          </div>
+          <div style="position:relative;">
+            <div style="position:absolute; top:-2px; right:0; font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.06em; color:#3E6B8C; background:#EDF1F6; padding:2px 7px; border-radius:4px;">▲ PROMOTED NEXT</div>
+            <div style="border:1.5px dashed #D9B68A; border-radius:6px; padding:13px 16px; max-width:560px; background:#FBF6EE; position:relative; overflow:hidden;">
+              <div style="position:absolute; inset:0; background-image:repeating-linear-gradient(135deg,rgba(176,122,46,.06) 0 1px,transparent 1px 9px);"></div>
+              <div style="position:relative;"><div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.1em; color:#B07A2E; text-transform:uppercase; margin-bottom:6px;">⚠ What this answer can't see · quiet</div><div style="font-size:13px; line-height:1.46; color:#5A5249;">CPC's own <strong style="color:#3A332A;">TRIG grants are absent</strong> — £8.2m is the SME tier only. Closable by ingestion.</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- arrow -->
+    <div style="flex:none; align-self:center; display:flex; flex-direction:column; align-items:center; gap:8px; padding-top:40px;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.08em; color:#8C887F; writing-mode:vertical-rl; transform:rotate(180deg);">"why so thin?"</div>
+      <div style="font-size:26px; color:#94908A;">→</div>
+    </div>
+
+    <!-- TURN 2 (after) -->
+    <div style="flex:none; width:900px;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.08em; color:#56524C; margin-bottom:12px;">TURN 2 · DIAGNOSE — "real gap or just not seeing it?"</div>
+      <div style="width:900px; height:600px; background:#FBFAF7; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 8px 28px rgba(0,0,0,.05); overflow:hidden; display:flex; flex-direction:column;">
+        <div style="height:46px; flex:none; border-bottom:1px solid #E7E3DC; display:flex; align-items:center; padding:0 22px; gap:14px;">
+          <div style="font-size:14px; font-weight:600; color:#211E1A; white-space:nowrap;">Rail decarbonisation</div>
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.08em; color:#3F7A52;">· DIAGNOSE</div>
+          <div style="flex:1;"></div>
+          <div style="display:flex; align-items:center; gap:6px; padding:4px 10px; border-radius:6px; background:#E8F1EA; border:1px solid #BBD6C2;"><div style="width:6px; height:6px; border-radius:50%; background:#2F6B43;"></div><div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#27583A; font-weight:600;">ROBUST ↑</div></div>
+        </div>
+        <div style="flex:1; padding:30px 36px; overflow:hidden;">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.12em; color:#2F6B43; text-transform:uppercase;">Ceiling rises · Robust on the diagnosis</div>
+            <div style="flex:1; height:1px; background:#BBD6C2;"></div>
+          </div>
+          <div style="position:relative;">
+            <div style="position:absolute; top:-2px; right:0; font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.06em; color:#3F7A52; background:#EEF4EE; border:1px solid #CFE0D4; padding:2px 7px; border-radius:4px;">● HERO · EVOLVED</div>
+            <h3 style="font-family:'Newsreader',serif; font-weight:500; font-size:29px; line-height:1.18; letter-spacing:-0.01em; color:#1A1714; margin:0 0 24px; max-width:560px;">It's both — and separating the two is <span style="font-style:italic; color:#B07A2E;">the whole diagnosis.</span></h3>
+          </div>
+          <div style="position:relative; margin-bottom:22px;">
+            <div style="position:absolute; top:-2px; right:0; font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.06em; color:#B07A2E; background:#F7F0E2; padding:2px 7px; border-radius:4px;">⇄ SWAPPED IN</div>
+            <div style="display:flex; gap:14px; max-width:600px;">
+              <div style="flex:1; border-left:2px solid #3F7A52; padding:2px 0 2px 13px;"><div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.1em; color:#3F7A52; text-transform:uppercase; margin-bottom:6px;">The real part</div><div style="font-size:12.5px; line-height:1.5; color:#46423C;">55 projects averaging <strong style="color:#1A1714;">≈£149k</strong> each, almost all Innovate-UK grants — a true picture of the SME grant tier. Not a measurement error.</div></div>
+              <div style="flex:1; border-left:2px dashed #B6CADB; padding:2px 0 2px 13px;"><div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.1em; color:#3E6B8C; text-transform:uppercase; margin-bottom:6px;">The artefact part</div><div style="font-size:12.5px; line-height:1.5; color:#46423C;">Structurally blind to three funding channels — NR/DfT capital, the GBR 30-yr programme, and CPC's own TRIG. Out of frame, not absent from the world.</div></div>
+            </div>
+          </div>
+          <div style="position:relative; margin-bottom:16px;">
+            <div style="position:absolute; top:-2px; right:0; font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.06em; color:#3E6B8C; background:#EDF1F6; padding:2px 7px; border-radius:4px;">▲ PROMOTED · ACTION</div>
+            <div style="border:1px solid #CFE0D4; border-left:3px solid #3F7A52; border-radius:6px; padding:14px 16px; max-width:560px; background:linear-gradient(135deg,#F4F8F4 0%,#EEF4EE 100%);">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.1em; color:#2F5C3E; text-transform:uppercase; margin-bottom:6px;">↳ The one move · ActionPlan</div>
+              <div style="font-size:14px; line-height:1.5; color:#2E3A30;"><strong style="color:#1A2E20;">Ingest TRIG into the corpus.</strong> The fix isn't analytical, it's ingestion — it closes the one blind-spot CPC actually controls. The other two tiers are external and stay as web-context.</div>
+            </div>
+          </div>
+          <div style="position:relative;">
+            <div style="position:absolute; top:-4px; right:0; font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.06em; color:#A39E96; background:#F0EDE7; padding:2px 7px; border-radius:4px;">↓ DEGRADED TO PROSE</div>
+            <div style="font-size:12.5px; line-height:1.5; color:#8C887F; max-width:540px; padding-top:4px;">Funder concentration → <em style="font-style:italic;">no chart.</em> Innovate UK is a monopoly funder in-corpus; a one-category "distribution" isn't a distribution. Degraded by choice.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 3 : TURNS 3–4 ===== -->
+  <div style="margin-bottom:6px; display:flex; align-items:baseline; gap:14px;">
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.12em; color:#56524C; text-transform:uppercase;">03 — Coverage check · Turns 3–4</div>
+    <div style="font-size:12.5px; color:#94908A;">Less polished — proving the language stretches across answer-shapes (a network, a ledger).</div>
+  </div>
+  <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#8C887F; margin-bottom:26px;">// same hero · supporting shape changes every turn: stat-strip → blind-spot → <span style="color:#56524C;">network</span> → <span style="color:#56524C;">audit ledger</span></div>
+
+  <div style="display:flex; gap:40px; align-items:flex-start; margin-bottom:40px;">
+
+    <!-- TURN 3 · DECIDE -->
+    <div style="flex:none; width:680px;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.08em; color:#56524C; margin-bottom:12px;">TURN 3 · DECIDE — "where's our angle, and who with?"</div>
+      <div style="width:680px; height:580px; background:#FBFAF7; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 8px 28px rgba(0,0,0,.05); overflow:hidden; display:flex; flex-direction:column;">
+        <div style="height:44px; flex:none; border-bottom:1px solid #E7E3DC; display:flex; align-items:center; padding:0 22px; gap:14px;">
+          <div style="font-size:13.5px; font-weight:600; color:#211E1A; white-space:nowrap;">Rail decarbonisation</div>
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.08em; color:#3F7A52;">· ACT</div>
+          <div style="flex:1;"></div>
+          <div style="display:flex; align-items:center; gap:6px; padding:4px 10px; border-radius:6px; background:#EEF4EE; border:1px solid #CFE0D4;"><div style="width:6px; height:6px; border-radius:50%; background:#3F7A52;"></div><div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#2F5C3E; font-weight:600;">SUPPORTED</div></div>
+        </div>
+        <div style="flex:1; padding:26px 30px; overflow:hidden;">
+          <h3 style="font-family:'Newsreader',serif; font-weight:500; font-size:25px; line-height:1.2; letter-spacing:-0.01em; color:#1A1714; margin:0 0 18px; max-width:520px;">Your angle is the bridge, not the mode — enter through <span style="font-style:italic; color:#B07A2E;">highways,</span> anchor on electrification, not freight.</h3>
+
+          <!-- NetworkMap : density-honest -->
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.1em; color:#56524C; text-transform:uppercase; margin-bottom:8px;">Cross-modal bridges · rendered honest-to-density</div>
+          <div style="position:relative; height:212px; border:1px solid #EFEBE4; border-radius:8px; background:#FFFFFF; margin-bottom:18px; overflow:hidden;">
+            <svg width="620" height="212" viewBox="0 0 620 212" style="position:absolute; inset:0;">
+              <line x1="150" y1="106" x2="320" y2="106" stroke="#3F7A52" stroke-width="7" stroke-linecap="round" opacity="0.85"></line>
+              <line x1="320" y1="106" x2="470" y2="46" stroke="#B6CADB" stroke-width="1.5" stroke-dasharray="4 4"></line>
+              <line x1="320" y1="106" x2="470" y2="166" stroke="#B6CADB" stroke-width="1.5" stroke-dasharray="4 4"></line>
+            </svg>
+            <div style="position:absolute; left:96px; top:84px; width:108px; height:44px; border-radius:8px; background:#EEF4EE; border:1.5px solid #3F7A52; display:flex; flex-direction:column; align-items:center; justify-content:center;"><div style="font-size:12.5px; font-weight:600; color:#2F5C3E;">Highways</div></div>
+            <div style="position:absolute; left:282px; top:80px; width:76px; height:52px; border-radius:9px; background:#211E1A; display:flex; align-items:center; justify-content:center;"><div style="font-size:13px; font-weight:600; color:#FBFAF7;">Rail</div></div>
+            <div style="position:absolute; left:444px; top:26px; width:92px; height:40px; border-radius:8px; background:#FBFAF7; border:1px dashed #C4BFB6; display:flex; flex-direction:column; align-items:center; justify-content:center;"><div style="font-size:12px; color:#8C887F;">Digital</div></div>
+            <div style="position:absolute; left:444px; top:146px; width:92px; height:40px; border-radius:8px; background:#FBFAF7; border:1px dashed #C4BFB6; display:flex; flex-direction:column; align-items:center; justify-content:center;"><div style="font-size:12px; color:#8C887F;">Aviation</div></div>
+            <div style="position:absolute; left:206px; top:74px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#2F5C3E; background:#FFFFFF; padding:1px 5px;">121 · 0.80</div>
+            <div style="position:absolute; left:392px; top:48px; font-family:'IBM Plex Mono',monospace; font-size:9px; color:#A39E96;">7 · sparse</div>
+            <div style="position:absolute; left:392px; top:150px; font-family:'IBM Plex Mono',monospace; font-size:9px; color:#A39E96;">4 · sparse</div>
+            <div style="position:absolute; right:12px; bottom:9px; font-family:'IBM Plex Mono',monospace; font-size:9px; color:#C4BFB6;">maritime–rail: absent</div>
+          </div>
+
+          <div style="display:flex; gap:14px; margin-bottom:14px;">
+            <div style="flex:1; border-left:2px solid #3F7A52; padding-left:12px;"><div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.1em; color:#3F7A52; text-transform:uppercase; margin-bottom:5px;">Live partner anchors</div><div style="font-size:12.5px; line-height:1.5; color:#46423C;"><strong style="color:#1A1714;">Furrer + Frey GB</strong> · <strong style="color:#1A1714;">U. Huddersfield</strong> — funded now, live to 2025, on the electrification-cost problem.</div></div>
+          </div>
+          <div style="font-size:12px; line-height:1.5; color:#8C887F; max-width:560px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#B07A2E; background:#F7F0E2; padding:1px 5px; border-radius:3px;">HONEST LIMIT</span> &nbsp;Strong for highways, too sparse to chart for other modes — a single-bridge bet, not a diversified one.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TURN 4 · DEFEND -->
+    <div style="flex:none; width:680px;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.08em; color:#56524C; margin-bottom:12px;">TURN 4 · DEFEND — "betting on one cluster and one bridge. Hold or fold?"</div>
+      <div style="width:680px; height:580px; background:#FBFAF7; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 8px 28px rgba(0,0,0,.05); overflow:hidden; display:flex; flex-direction:column;">
+        <div style="height:44px; flex:none; border-bottom:1px solid #E7E3DC; display:flex; align-items:center; padding:0 22px; gap:14px;">
+          <div style="font-size:13.5px; font-weight:600; color:#211E1A; white-space:nowrap;">Rail decarbonisation</div>
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.08em; color:#3F7A52;">· DEFEND</div>
+          <div style="flex:1;"></div>
+          <div style="display:flex; align-items:center; gap:6px; padding:4px 10px; border-radius:6px; background:#F7F0E2; border:1px solid #E3CDA4;"><div style="width:6px; height:6px; border-radius:50%; background:#B07A2E;"></div><div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#8A6322; font-weight:600;">SUPPORTED · COND.</div></div>
+        </div>
+        <div style="flex:1; padding:26px 30px; overflow:hidden;">
+          <h3 style="font-family:'Newsreader',serif; font-weight:500; font-size:25px; line-height:1.2; letter-spacing:-0.01em; color:#1A1714; margin:0 0 6px; max-width:520px;">Hold — but concede the shape of the bet honestly.</h3>
+          <div style="font-size:13px; line-height:1.45; color:#7A6A50; margin:0 0 18px; max-width:500px; border-left:2px solid #E3CDA4; padding-left:11px;"><em style="font-style:italic;">…conditional on closing the TRIG blind-spot before committing budget.</em> <span style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#B07A2E;">— the condition is part of the verdict, not below it</span></div>
+
+          <!-- ClaimLedger survive/concede -->
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.1em; color:#56524C; text-transform:uppercase; margin-bottom:8px;">Claim ledger · survive / concede</div>
+          <div style="border:1px solid #EFEBE4; border-radius:8px; overflow:hidden; margin-bottom:16px;">
+            <div style="display:grid; grid-template-columns:1fr 96px; gap:0; align-items:center; padding:10px 14px; background:#F4F8F4; border-bottom:1px solid #EFEBE4;"><div style="font-size:12.5px; color:#2E3A30;">Electrification targets the £1m/km national cost problem, with live partners <span style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#3E6B8C;">[W1·W2·S2]</span></div><div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#2F5C3E; font-weight:600; text-align:right;">SURVIVES</div></div>
+            <div style="display:grid; grid-template-columns:1fr 96px; gap:0; align-items:center; padding:10px 14px; background:#F4F8F4; border-bottom:1px solid #EFEBE4;"><div style="font-size:12.5px; color:#2E3A30;">Highways bridge is the strongest available — 121 @ 0.80 <span style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#3F7A52;">[S3]</span></div><div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#2F5C3E; font-weight:600; text-align:right;">SURVIVES</div></div>
+            <div style="display:grid; grid-template-columns:1fr 96px; gap:0; align-items:center; padding:10px 14px; background:#FBF6EE; border-bottom:1px solid #EFEBE4;"><div style="font-size:12.5px; color:#5A5249;">Concentrated — non-highways bridges too thin to diversify <span style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#3F7A52;">[S3]</span></div><div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#8A6322; font-weight:600; text-align:right;">CONCEDE</div></div>
+            <div style="display:grid; grid-template-columns:1fr 96px; gap:0; align-items:center; padding:10px 14px; background:#FBF6EE;"><div style="font-size:12.5px; color:#5A5249;">CPC's own prior work invisible — no TRIG <span style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#B07A2E;">[GAP]</span> <span style="color:#8A6322;">— caps confidence</span></div><div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#8A6322; font-weight:600; text-align:right;">CONCEDE</div></div>
+          </div>
+          <div style="font-size:12px; line-height:1.5; color:#8C887F; max-width:560px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#3F7A52; background:#EEF4EE; padding:1px 5px; border-radius:3px;">STATE ACCRETES</span> &nbsp;Defend ran <strong style="color:#46423C;">zero new searches</strong> — it re-used the evidence Turns 1–3 grounded. The canvas carries state; the agent doesn't re-fetch.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="max-width:760px; font-size:12.5px; line-height:1.6; color:#8C887F; border-top:1px solid #d4d0c8; padding-top:20px;">
+    <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; color:#56524C; text-transform:uppercase;">Note</span> &nbsp;Before/after and Turns 3–4 are shown in Direction A's language as the canonical read; Direction B carries the same hierarchy with the numbers and key visual taking the lead. Pick a direction and I'll take it to full fidelity — chat behaviour, all four turns, and the healing motifs animated (hero persists, blocks swap, canvas accretes).
+
+</div>
+</x-dc>
+<script>
+(async () => {
+  if (!document.title || !document.title.trim()) document.title = "Atlas Answer Surface";
+  // Prepend so page-supplied @page / break rules (deck-stage's margin:0,
+  // author CSS) keep source-order precedence over the baseline.
+  const baseCss = document.createElement('style');
+  baseCss.textContent = "@media print {\n  @page { margin: 0.5cm; }\n  figure, table { break-inside: avoid; }\n  *, *::before, *::after {\n    print-color-adjust: exact; -webkit-print-color-adjust: exact;\n    backdrop-filter: none !important; -webkit-backdrop-filter: none !important;\n    animation-delay: -99s !important; animation-duration: .001s !important;\n    animation-iteration-count: 1 !important; animation-fill-mode: both !important;\n    animation-play-state: running !important; transition-duration: 0s !important;\n  }\n}";
+  document.head.prepend(baseCss);
+  if (document.readyState === 'loading') {
+    await new Promise((r) => document.addEventListener('DOMContentLoaded', r, { once: true }));
+  }
+  let ds = document.querySelector('deck-stage');
+  // whenDefined never resolves when nothing registers the element, so only
+  // await it when a <deck-stage> tag exists (and race a timeout regardless).
+  if (ds && !customElements.get('deck-stage')) {
+    try {
+      await Promise.race([
+        customElements.whenDefined('deck-stage'),
+        new Promise((r) => setTimeout(r, 3000)),
+      ]);
+    } catch (e) {}
+    ds = document.querySelector('deck-stage');
+  }
+  // dc-runtime assigns window.DCLogic at init and mounts into #dc-root on
+  // DOMContentLoaded; settle on that subtree so React has rendered before
+  // print(). Non-DC pages fall through to weighing body.
+  const isDc = !ds && 'DCLogic' in window;
+  const settleRoot = ds || (isDc ? document.getElementById('dc-root') : null) || document.body;
+  if (settleRoot) {
+    // Weigh only content children — skip script/style/template so inline
+    // Babel/CSS doesn't register as stable "content" before the framework
+    // has mounted anything.
+    const MEDIA = 'img,svg,canvas,video,picture,iframe,embed,object';
+    const weigh = () => {
+      let text = 0, media = 0;
+      for (const c of settleRoot.children) {
+        const t = c.tagName;
+        if (t === 'SCRIPT' || t === 'STYLE' || t === 'TEMPLATE') continue;
+        text += (c.textContent || '').trim().length;
+        media += c.querySelectorAll(MEDIA).length + (c.matches(MEDIA) ? 1 : 0);
+      }
+      return text + media * 100;
+    };
+    // "Non-zero and stable" alone is not sufficient to mean rendered: generic
+    // body can carry a static shell while async main content is pending, and
+    // #dc-root can carry the root DC's static text while child refs are still
+    // .sc-placeholder boxes. Gate generic on readyState 'complete', and never
+    // accept stability while a dc-runtime placeholder is present.
+    const isGeneric = settleRoot === document.body;
+    const deadline = Date.now() + 15000;
+    let last = -1, stable = 0;
+    while (Date.now() < deadline) {
+      const n = weigh();
+      const ready =
+        (!isGeneric || document.readyState === 'complete') &&
+        !settleRoot.querySelector('.sc-placeholder');
+      if (n > 0 && n === last && ready) { if (++stable >= 2) break; } else { stable = 0; }
+      last = n;
+      await new Promise((r) => setTimeout(r, 250));
+    }
+  }
+  // Reveal content gated on scroll or visibility before printing. Lazy <img>,
+  // IntersectionObserver fade-ins, and collapsed <details> don't render while
+  // off-screen, so a long page would print with them blank or closed. Open
+  // every <details>, force native-lazy images eager, and scroll the document
+  // through its full height to trip lazy-load + IO; then wait (bounded) for the
+  // newly-triggered images. Inert for deck-stage (slides aren't scroll-gated).
+  try {
+    for (const d of document.querySelectorAll('details')) d.open = true;
+    for (const img of document.querySelectorAll('img[loading="lazy"]'))
+      img.loading = 'eager';
+    const scroller = document.scrollingElement || document.documentElement;
+    const full = Math.max(scroller.scrollHeight, document.body.scrollHeight);
+    const step = window.innerHeight || 800;
+    for (let y = 0; y <= full; y += step) {
+      window.scrollTo(0, y);
+      await new Promise((r) => requestAnimationFrame(r));
+    }
+    window.scrollTo(0, 0);
+    await Promise.race([
+      Promise.all(
+        [...document.images].map((img) =>
+          img.complete
+            ? null
+            : new Promise((res) => {
+                img.addEventListener('load', res, { once: true });
+                img.addEventListener('error', res, { once: true });
+              })
+        )
+      ),
+      new Promise((r) => setTimeout(r, 4000)),
+    ]);
+  } catch (e) {}
+  try { await document.fonts.ready; } catch (e) {}
+  // Jump every animation to its end state so print() never captures a slide
+  // mid-entrance. Ordering matters: the 0s-transition style must be live
+  // BEFORE data-deck-active is set so attribute-keyed transitions don't
+  // start a (now-0s) run from the pre-active base.
+  const st = document.createElement('style');
+  st.textContent = '*,*::before,*::after{animation-delay:-99s !important;animation-duration:.001s !important;animation-iteration-count:1 !important;animation-fill-mode:both !important;animation-play-state:running !important;transition-duration:0s !important}';
+  document.head.appendChild(st);
+  for (const d of document.querySelectorAll('deck-stage')) {
+    for (const c of d.children) {
+      const t = c.tagName;
+      if (t === 'SCRIPT' || t === 'STYLE' || t === 'TEMPLATE') continue;
+      c.setAttribute('data-deck-active', '');
+    }
+  }
+  // Re-append deck-stage's @page last so no author @page can add a margin and
+  // spill each full-bleed slide onto two sheets. Backstop for old copies.
+  if (ds) {
+    let pg = document.getElementById('deck-stage-print-page');
+    if (!pg) {
+      pg = document.createElement('style');
+      pg.textContent = '@page{size:' + (+ds.getAttribute('width') || 1920) +
+        'px ' + (+ds.getAttribute('height') || 1080) + 'px;margin:0}';
+    }
+    document.body.appendChild(pg);
+  }
+  try {
+    const sweep = () => {
+      for (const a of document.getAnimations()) {
+        try { a.finish(); } catch (e) {
+          try { a.currentTime = (a.effect && a.effect.getComputedTiming().duration) || 0; a.pause(); } catch (e2) {}
+        }
+      }
+    };
+    sweep();
+    await new Promise((r) => requestAnimationFrame(r));
+    sweep();
+    await new Promise((r) => requestAnimationFrame(r));
+  } catch (e) {}
+  // Relax break-inside on oversized elements. An element taller than a
+  // printable page can't honor break-inside: avoid — browsers either overflow
+  // it or push it whole to the next page, leaving a blank gap, then break it
+  // anyway at an arbitrary point. After the final layout (content revealed,
+  // animations jumped), find elements taller than a page that still compute
+  // break-inside: avoid and reset them to auto, so the browser breaks them at
+  // their children's boundaries instead (children keep their own avoid). PAGE_PX
+  // is a conservative portrait estimate at 96 CSS px/in — Letter/A4 usable
+  // height minus our 0.5in margins — so only clearly-oversized elements are
+  // touched and under-page elements still stay whole. Skipped for decks, whose
+  // slides are sized to the page.
+  try {
+    if (!document.querySelector('deck-stage')) {
+      const PAGE_PX = 1024;
+      // Our print defaults add a body padding inset only when we also zero the
+      // @page margin; computed style can't tell us (it reports screen media),
+      // so read the injected rule directly.
+      const defaults = document.querySelector('style[data-omelette-print-defaults]');
+      const pageInset = /body\s*\{[^}]*padding/.test(defaults ? defaults.textContent || '' : '');
+      const SEL = 'section,article,figure,table,pre,blockquote,[class~="card" i],[class~="page" i],[class~="sheet" i]';
+      for (const el of document.body.querySelectorAll(SEL)) {
+        if (el instanceof HTMLElement && el.offsetHeight > PAGE_PX) {
+          el.setAttribute('data-om-oversized', '');
+          // Fake-paged docs simulate sheets with over-tall break-after:page
+          // boxes; honoring the break spills half-blank pages and ends a
+          // colored box mid-sheet. Flow them, and (only when we own the page
+          // inset) drop the redundant padding/background via the rule below.
+          const cs = getComputedStyle(el);
+          if (cs.breakAfter === 'page' || cs.pageBreakAfter === 'always') {
+            el.setAttribute('data-om-fakepage', '');
+          }
+        }
+      }
+      const ost = document.createElement('style');
+      ost.textContent = '@media print{' +
+        '[data-om-oversized]{break-inside:auto !important;page-break-inside:auto !important}' +
+        '[data-om-fakepage]{break-after:auto !important;page-break-after:auto !important}' +
+        (pageInset ? '[data-om-fakepage]{padding:0 !important;background:none !important}' : '') +
+        '}';
+      document.head.appendChild(ost);
+    }
+  } catch (e) {}
+  // macOS Preview renders Skia-PDF Luminosity soft-masks as opaque grey boxes;
+  // swap the CSS that triggers them for Preview-safe forms.
+  try {
+    for (const el of document.body.querySelectorAll('*')) {
+      const cs = getComputedStyle(el);
+
+      if (cs.boxShadow !== 'none' && cs.filter === 'none') {
+        const outs = [], kept = [];
+        for (const s of cs.boxShadow.split(/,(?![^(]*[)])/)) {
+          const t = s.trim();
+          const m = t.match(/^(rgba?[(][^)]+[)]) (-?[0-9.]+px) (-?[0-9.]+px) ([0-9.]+px) -?[0-9.]+px$/);
+          if (m && parseFloat(m[4]) > 0) outs.push('drop-shadow(' + m[2] + ' ' + m[3] + ' ' + m[4] + ' ' + m[1] + ')');
+          else kept.push(t);
+        }
+        if (outs.length) {
+          el.style.setProperty('filter', outs.join(' '), 'important');
+          el.style.setProperty('box-shadow', kept.join(', ') || 'none', 'important');
+        }
+      }
+
+      const mask = cs.maskImage && cs.maskImage !== 'none' ? cs.maskImage : cs.webkitMaskImage;
+      if (mask && mask !== 'none' && cs.filter === 'none') el.style.setProperty('filter', 'opacity(1)', 'important');
+    }
+  } catch (e) {}
+  setTimeout(() => { try { window.print(); } catch (e) {} }, 200);
+})();
+</script>
+</body>
+</html>

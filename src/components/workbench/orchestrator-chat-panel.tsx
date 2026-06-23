@@ -14,6 +14,7 @@ import { TextMessage, MessageRole } from "@copilotkit/runtime-client-gql";
 import { FileText, Lightbulb, Plus } from "lucide-react";
 import { useWorkbench } from "@/lib/workbench/workbench-context";
 import { cn } from "@/lib/utils";
+import { startNewWorkbenchThread } from "@/components/copilotkit-provider";
 import { Button } from "@/components/ui/button";
 
 const CANONICAL_SUGGESTIONS = [
@@ -58,7 +59,16 @@ function ArtifactSummaryCard() {
 }
 
 export function OrchestratorChatPanel() {
-  const { session, resetSession, cqId, setReasoningSteps } = useWorkbench();
+  const {
+    session,
+    resetSession,
+    cqId,
+    setCqId,
+    setReasoningSteps,
+    clearLiveModelOverride,
+    setLastRoute,
+    setLastCitations,
+  } = useWorkbench();
   const { appendMessage, isLoading } = useCopilotChat();
   const isHome = cqId === "cq.home";
   const [pendingDeep, setPendingDeep] = React.useState<string | null>(null);
@@ -92,6 +102,16 @@ export function OrchestratorChatPanel() {
     );
   }
 
+  function handleNewChat() {
+    startNewWorkbenchThread();
+    resetSession();
+    clearLiveModelOverride();
+    setReasoningSteps([]);
+    setLastRoute(null);
+    setLastCitations([]);
+    setCqId("cq.home");
+  }
+
   return (
     <div className="flex flex-col h-full bg-background border-r border-border">
       {/* Header */}
@@ -106,10 +126,7 @@ export function OrchestratorChatPanel() {
           variant="ghost"
           size="sm"
           className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
-        onClick={() => {
-          sessionStorage.removeItem("atlas5-workbench-thread-id");
-          resetSession();
-        }}
+          onClick={handleNewChat}
           title="Start a new chat"
         >
           <Plus className="w-3.5 h-3.5" />
@@ -160,7 +177,7 @@ export function OrchestratorChatPanel() {
       )}
 
       {/* CopilotKit chat */}
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden" key={session.sessionId ?? "default"}>
         <CopilotChat
           className="h-full"
           labels={{

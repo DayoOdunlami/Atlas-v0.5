@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atlas · Funding Density</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Libre+Franklin:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --canvas:#FBFAF7; --page:#e7e5df; --ink:#1A1714; --ink-soft:#5A5249; --ink-faint:#94908A;
+    --rule:#d4d0c8; --rule-soft:#EFEBE4;
+    --corpus:#3F7A52; --corpus-wash:#EEF4EE; --web:#B6CADB; --gap:#B07A2E; --gap-wash:#FBF4E8;
+    --serif:'Newsreader',Georgia,serif; --sans:'Libre Franklin',system-ui,sans-serif; --mono:'IBM Plex Mono',monospace;
+  }
+  body{background:var(--page);font-family:var(--sans);-webkit-font-smoothing:antialiased;color:var(--ink);padding:40px}
+  .wrap{max-width:1200px;margin:0 auto;display:flex;gap:28px;align-items:flex-start}
+  .canvas{flex:1;min-width:0}
+  .mono{font-family:var(--mono)}
+  /* scope bar */
+  .scope{display:flex;align-items:center;gap:16px;padding-bottom:16px;border-bottom:1px solid var(--rule);margin-bottom:26px}
+  .pips{display:flex;gap:5px}
+  .pip{font-family:var(--mono);font-size:11px;width:26px;height:26px;border-radius:6px;display:grid;place-items:center;color:var(--ink-faint);border:1px solid var(--rule-soft)}
+  .pip.on{background:var(--ink);color:var(--canvas);border:none}
+  .obj{font-family:var(--serif);font-size:17px;font-weight:500}
+  .scope-meta{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--ink-faint)}
+  .tier{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--corpus);border:1px solid var(--corpus);border-radius:4px;padding:3px 8px;text-transform:uppercase;margin-left:auto}
+  /* ceiling frame */
+  .frame{position:relative;background:var(--canvas);border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,.07),0 12px 36px rgba(0,0,0,.06);padding:28px}
+  .ceiling{position:absolute;left:0;right:0;border-top:1.5px dashed var(--ink-faint);pointer-events:none}
+  .ceiling-lbl{position:absolute;right:10px;top:-9px;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--ink-faint);background:var(--canvas);padding:0 6px;text-transform:uppercase}
+  /* hero */
+  h1{font-family:var(--serif);font-weight:500;font-size:29px;line-height:1.28;letter-spacing:-.01em;max-width:740px;margin-bottom:14px}
+  .tail{font-size:14.5px;line-height:1.6;color:var(--ink-soft);max-width:720px;margin-bottom:22px}
+  /* statstrip */
+  .strip{display:flex;border:1px solid var(--rule-soft);border-radius:10px;overflow:hidden;margin-bottom:22px}
+  .stat{flex:1;padding:14px 16px;border-left:1px solid var(--rule-soft)}
+  .stat:first-child{border-left:none}
+  .stat .v{font-family:var(--serif);font-weight:500;font-size:25px;color:var(--corpus);line-height:1}
+  .stat .l{font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-top:6px;letter-spacing:.04em}
+  /* instrument */
+  .inst-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px}
+  .inst-title{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--ink-soft);text-transform:uppercase}
+  .inst-note{font-family:var(--mono);font-size:10px;color:var(--gap)}
+  #chart{width:100%;height:340px}
+  .legend{display:flex;gap:18px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin:10px 0 0}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .sw{width:10px;height:10px;border-radius:2px}
+  /* answerability */
+  .answer{position:relative;background:var(--gap-wash);border-radius:8px;padding:16px 18px;margin-top:22px;border:1px solid rgba(176,122,46,.2);
+    background-image:repeating-linear-gradient(135deg,transparent 0 9px,rgba(176,122,46,.05) 9px 10px)}
+  .answer .torn{position:absolute;left:0;right:0;top:-1px;height:4px;opacity:.5;background:repeating-linear-gradient(90deg,var(--gap) 0 4px,transparent 4px 9px)}
+  .answer .k{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--gap);text-transform:uppercase;margin-bottom:8px}
+  .answer .b{font-size:13.5px;line-height:1.55;color:var(--ink-soft)}
+  .prov{font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-top:14px;line-height:1.5}
+  /* chat rail */
+  .rail{width:320px;flex:0 0 320px;border-left:1px solid var(--rule);padding-left:24px}
+  .rail-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+  .rail-head .t{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--ink-soft);text-transform:uppercase}
+  .rail-head .n{font-family:var(--mono);font-size:10px;color:var(--ink-faint)}
+  .row{margin-bottom:18px}
+  .row .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--ink-faint);text-transform:uppercase;margin-bottom:6px}
+  .row .b{font-size:13px;line-height:1.55;color:var(--ink-soft)}
+  .gate{background:var(--gap-wash);border-radius:8px;padding:12px 14px;margin-bottom:18px;border:1px solid rgba(176,122,46,.13)}
+  .gate .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--gap);text-transform:uppercase;margin-bottom:6px}
+  .gate .b{font-size:12.5px;line-height:1.5;color:var(--ink-soft)}
+  .cta{width:100%;font-size:13px;font-weight:600;color:var(--canvas);background:var(--ink);border:none;border-radius:8px;padding:12px 14px;cursor:pointer;text-align:left}
+  .ask{width:100%;margin-top:12px;font-size:13px;color:var(--ink);background:#fff;border:1px solid var(--rule-soft);border-radius:8px;padding:11px 13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <main class="canvas">
+    <!-- scope bar -->
+    <div class="scope">
+      <div class="pips">
+        <div class="pip on" title="Orient">Or</div>
+        <div class="pip" title="Connect">Cn</div>
+        <div class="pip" title="Diagnose">Dg</div>
+        <div class="pip" title="Act">Ac</div>
+        <div class="pip" title="Defend">Df</div>
+      </div>
+      <div class="obj">Transport decarbonisation</div>
+      <div class="scope-meta">CORPUS + WEB · 595 OBJECTS · ORIENT</div>
+      <div class="tier">Supported</div>
+    </div>
+
+    <div class="frame" id="frame">
+      <div class="ceiling" id="ceiling"><div class="ceiling-lbl">▔ Supported ceiling — canvas can’t certify above this line</div></div>
+
+      <h1>Same theme, 8× the money per project — the gap isn’t priority, it’s whether a deployment programme sits behind the mode.</h1>
+      <p class="tail">Across decarbonisation, maritime’s average project carries £1.73m; rail’s carries £221k — both real corpus aggregates over the same theme. The difference isn’t how much each mode matters. It’s structural: maritime has a national deployment programme behind it; rail decarbonisation runs through electrification capital that never reaches the innovation corpus.</p>
+
+      <div class="strip">
+        <div class="stat"><div class="v">7.9×</div><div class="l">spread, mode to mode</div></div>
+        <div class="stat"><div class="v">£1.73m</div><div class="l">maritime · biggest bets</div></div>
+        <div class="stat"><div class="v">£221k</div><div class="l">rail · many tiny pilots</div></div>
+        <div class="stat"><div class="v">595</div><div class="l">projects sampled</div></div>
+      </div>
+
+      <div class="inst-head">
+        <div class="inst-title">Funding density by mode · decarbonisation</div>
+        <div class="inst-note">£ per project · drawn to scale · count = bar label</div>
+      </div>
+      <div id="chart"></div>
+      <div class="legend">
+        <span><span class="sw" style="background:#3F7A52"></span>avg £ per project (height, to scale)</span>
+        <span><span class="sw" style="background:#9FE1CB"></span>thinner field</span>
+        <span style="color:var(--gap)"><span class="sw" style="background:#B07A2E;opacity:.5"></span>rail — floor, under-counted</span>
+      </div>
+
+      <div class="answer">
+        <div class="torn"></div>
+        <div class="k">⚠ What this answer can’t see</div>
+        <div class="b">Rail’s £221k is a <strong style="color:var(--ink)">floor, not a verdict on rail</strong>. 18 of 55 rail projects carry no funding figure, and rail’s real decarbonisation spend lives in electrification capital — outside the innovation corpus entirely. A short bar here means “few innovation grants reached the corpus”, never “little decarbonisation effort”. The instrument measures the innovation tier, not the mode.</div>
+      </div>
+
+      <div class="prov">corpus — atlas.projects · decarbonisation theme · avg over funded projects · live query &nbsp;·&nbsp; web — UK SHORE / CMDC programme scale (£708m), gov.uk + Innovate UK Funding Service &nbsp;·&nbsp; the corpus shows the <em>what</em>, the web pass supplies the <em>why</em></div>
+    </div>
+
+    <div class="prov" style="margin-top:14px;display:flex;gap:18px">
+      <span style="color:var(--corpus)">● corpus — solid, owned</span>
+      <span style="color:var(--web)">┄ web — dashed, borrowed</span>
+      <span style="color:var(--gap)">⌁ gap — torn, under-count</span>
+    </div>
+  </main>
+
+  <!-- chat rail -->
+  <aside class="rail">
+    <div class="rail-head"><div class="t">Atlas · so-what</div><div class="n">1 / 4</div></div>
+    <div class="row"><div class="k">What you’re looking at</div><div class="b">A density read, not a volume read. The bar height is money-per-project — so the story is which modes make big bets and which spread thin, regardless of how many projects each has.</div></div>
+    <div class="row"><div class="k">The one decision</div><div class="b">If CPC wants to back a mode where a single intervention can move real deployment money, maritime’s structure rewards it. Rail rewards a different play — many small pilots, no big-ticket route.</div></div>
+    <div class="gate"><div class="k">Gate</div><div class="b">Don’t read rail’s short bar as “rail doesn’t matter”. Confirm where rail decarbonisation capital actually sits (electrification, off-corpus) before any priority call.</div></div>
+    <button class="cta">Diagnose the rail floor → trace off-corpus spend →</button>
+    <input class="ask" placeholder="Ask a follow-up…">
+  </aside>
+</div>
+
+<script>
+(function(){
+  function init(){
+    if(!window.echarts){return setTimeout(init,60);}
+    var el=document.getElementById('chart');
+    if(!el||el.clientWidth===0){return setTimeout(init,60);}
+    var chart=echarts.init(el);
+
+    var modes=['Maritime','Aviation','Highways','Digital','Rail'];
+    var avg=[1.73,1.21,0.94,0.90,0.22];
+    var count=[38,73,205,224,55];
+    // corpus green ramp: strong for big bets, fading toward the thin/under-counted rail
+    var colors=['#3F7A52','#3F7A52','#5DCAA5','#5DCAA5','#B07A2E'];
+
+    chart.setOption({
+      grid:{left:64,right:24,top:18,bottom:40},
+      xAxis:{type:'category',data:modes,
+        axisLine:{lineStyle:{color:'#d4d0c8'}},
+        axisTick:{show:false},
+        axisLabel:{fontFamily:'Libre Franklin',fontSize:12,color:'#5A5249'}},
+      yAxis:{type:'value',name:'£m / project',nameTextStyle:{fontFamily:'IBM Plex Mono',fontSize:10,color:'#94908A'},
+        axisLabel:{fontFamily:'IBM Plex Mono',fontSize:10,color:'#94908A',formatter:function(v){return '£'+v.toFixed(1)+'m';}},
+        splitLine:{lineStyle:{color:'rgba(148,144,138,.14)'}}},
+      tooltip:{trigger:'item',backgroundColor:'#fff',borderColor:'#EFEBE4',borderWidth:1,
+        textStyle:{color:'#3A332A',fontFamily:'IBM Plex Mono',fontSize:11},
+        extraCssText:'box-shadow:0 8px 26px rgba(40,34,26,.16);border-radius:8px;',
+        formatter:function(p){
+          var i=p.dataIndex;
+          var floor = i===4 ? '<br/><span style="color:#B07A2E">floor · 18/55 unfunded · spend off-corpus</span>' : '';
+          return '<b>'+modes[i]+'</b><br/>£'+avg[i].toFixed(2)+'m per project<br/><span style="color:#8C887F">'+count[i]+' projects · drawn to scale</span>'+floor;
+        }},
+      series:[{
+        type:'bar', data:avg.map(function(v,i){return {value:v,itemStyle:{color:colors[i],borderRadius:[4,4,0,0]}};}),
+        barWidth:'52%',
+        label:{show:true,position:'top',fontFamily:'IBM Plex Mono',fontSize:10,color:'#94908A',
+          formatter:function(p){return count[p.dataIndex]+' proj';}},
+        markLine: i_floor()
+      }]
+    });
+
+    function i_floor(){
+      return {silent:true,symbol:'none',
+        lineStyle:{color:'#B07A2E',type:'dashed',width:1,opacity:.55},
+        data:[{yAxis:0.22,label:{show:true,position:'insideEndTop',formatter:'rail floor',
+          fontFamily:'IBM Plex Mono',fontSize:9,color:'#B07A2E'}}]};
+    }
+
+    window.addEventListener('resize',function(){chart.resize();});
+  }
+  init();
+
+  // ceiling derived from tier: Supported = 0.66 of frame height
+  function place(){
+    var frame=document.getElementById('frame'),c=document.getElementById('ceiling');
+    if(!frame)return;
+    c.style.top=((1-0.66)*100)+'%';
+  }
+  place(); window.addEventListener('resize',place);
+})();
+</script>
+</body>
+</html>

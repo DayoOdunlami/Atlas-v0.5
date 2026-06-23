@@ -10,6 +10,8 @@ Atlas 5 is a multi-agent strategic intelligence platform for Connected Places Ca
 
 **One sentence:** A CPC strategist asks a question and gets a structured brief with real corpus citations, a confidence tier, and optionally a chart or canvas scene in under 8 seconds.
 
+**Atlas v5 runtime blueprint (peer evidence + render fork):** [`docs/ATLAS_V5_BLUEPRINT.md`](docs/ATLAS_V5_BLUEPRINT.md)
+
 ---
 
 ## Repository and branch

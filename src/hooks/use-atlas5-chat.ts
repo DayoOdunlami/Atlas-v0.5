@@ -36,17 +36,22 @@ export function useAtlas5Chat() {
   const { visibleMessages, appendMessage, isLoading } = useCopilotChat();
 
   const messages: UIMessage[] = visibleMessages.map((msg) => {
-    // Use the isTextMessage() type guard to safely access content
     const content = msg.isTextMessage() ? msg.content : "";
-
     return {
       id: msg.id,
-      role: msg.isTextMessage() && msg.role === MessageRole.User
-        ? "user"
-        : "assistant",
+      role:
+        msg.isTextMessage() && msg.role === MessageRole.User ? "user" : "assistant",
       parts: [{ type: "text" as const, text: content }],
     };
   });
+
+  // CopilotKit may surface newest-first; Atlas chat reads oldest-first (standard scroll-up history).
+  const chronological =
+    messages.length >= 2 &&
+    messages[0]?.role === "assistant" &&
+    messages[messages.length - 1]?.role === "user"
+      ? [...messages].reverse()
+      : messages;
 
   const sendMessage = (msg: {
     role: "user";
@@ -58,5 +63,5 @@ export function useAtlas5Chat() {
 
   const status: ChatStatus = isLoading ? "streaming" : "idle";
 
-  return { messages, sendMessage, status };
+  return { messages: chronological, sendMessage, status };
 }

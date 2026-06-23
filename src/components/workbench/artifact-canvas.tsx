@@ -9,6 +9,9 @@ import { ReasoningTrace, DEMO_REASONING_STEPS } from "./reasoning-trace";
 import { ResearchDocument } from "./research-document";
 import { BranchConfirmChip } from "./branch-confirm-chip";
 import { StageHistoryBreadcrumb } from "./stage-history-breadcrumb";
+import { EvidenceStrip } from "./evidence-strip";
+import { PrimaryActionChip } from "./primary-action-chip";
+import { CollapsedBlockSection } from "./collapsed-block-section";
 import {
   BlockSkeletonRecommendation,
   BlockSkeletonDimensionGap,
@@ -32,7 +35,15 @@ export function ArtifactCanvas() {
     renderMode,
     documentSections,
     lastCitations,
+    presentationPlan,
   } = useWorkbench();
+
+  const isProgressive = presentationPlan != null;
+  const [evidenceExpanded, setEvidenceExpanded] = React.useState(false);
+
+  React.useEffect(() => {
+    setEvidenceExpanded(false);
+  }, [presentationPlan?.dominant_visual_id, model.artifact_id]);
 
   // Live agent steps when available; fall back to demo steps so the
   // trace panel always shows something meaningful in static/demo mode.
@@ -42,32 +53,48 @@ export function ArtifactCanvas() {
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
-      {/* Canvas subheader — context + CQ morph bar (no duplicate source title, that's in WorkbenchHeader) */}
-      <div className="flex items-center gap-2 px-6 py-3 border-b border-border bg-muted/10 shrink-0 overflow-x-auto">
-        <span className="text-[11px] uppercase tracking-wider text-muted-foreground/80 shrink-0 font-semibold">
-          View
-        </span>
-        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-        {MATCH_CQ_IDS.map((id: CanonicalQuestionId) => (
-          <button
-            key={id}
-            onClick={() => setCqId(id)}
-            disabled={isLoading}
-            className={cn(
-              "px-3 py-1.5 rounded-md text-[13px] font-medium transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed",
-              id === cqId
-                ? "bg-primary text-primary-foreground"
-                : "bg-background border border-border text-muted-foreground hover:text-foreground hover:border-primary/40",
-            )}
-          >
-            {CQ_LABELS[id]}
-          </button>
-        ))}
-        <div className="flex-1" />
-        <span className="text-[11px] text-muted-foreground/70 shrink-0 truncate max-w-[240px]">
-          {model.mode} · {model.layout_template}
-        </span>
-      </div>
+      {/* Canvas subheader — CQ morph bar hidden when orchestrator composes the surface */}
+      {!isProgressive && (
+        <div className="flex items-center gap-2 px-6 py-3 border-b border-border bg-muted/10 shrink-0 overflow-x-auto">
+          <span className="text-[11px] uppercase tracking-wider text-muted-foreground/80 shrink-0 font-semibold">
+            View
+          </span>
+          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+          {MATCH_CQ_IDS.map((id: CanonicalQuestionId) => (
+            <button
+              key={id}
+              onClick={() => setCqId(id)}
+              disabled={isLoading}
+              className={cn(
+                "px-3 py-1.5 rounded-md text-[13px] font-medium transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed",
+                id === cqId
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-background border border-border text-muted-foreground hover:text-foreground hover:border-primary/40",
+              )}
+            >
+              {CQ_LABELS[id]}
+            </button>
+          ))}
+          <div className="flex-1" />
+          <span className="text-[11px] text-muted-foreground/70 shrink-0 truncate max-w-[240px]">
+            {model.mode} · {model.layout_template}
+          </span>
+        </div>
+      )}
+
+      {isProgressive && !error && (
+        <div className="flex items-center gap-2 px-6 py-2.5 border-b border-border bg-muted/10 shrink-0">
+          <span className="text-[11px] uppercase tracking-wider text-muted-foreground/80 font-semibold">
+            Workbench
+          </span>
+          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+          <span className="text-[13px] font-medium text-foreground capitalize">{model.mode}</span>
+          <div className="flex-1" />
+          <span className="text-[11px] text-muted-foreground/70">
+            {presentationPlan.citation_count} sources · {presentationPlan.chat_surface.replace(/_/g, " ")}
+          </span>
+        </div>
+      )}
 
       {/* Error state — DB fetch failed */}
       {error && (
@@ -84,11 +111,31 @@ export function ArtifactCanvas() {
 
       {/* Decision spine strip — hidden while loading a DB model */}
       {!(isLoading && isDbBacked) && !error && (
-        <div className="px-5 pt-4 shrink-0">
+        <div className="px-5 pt-4 shrink-0 space-y-3">
+          {isProgressive && (
+            <div className="rounded-xl border border-border bg-card p-4 space-y-2">
+              <p className="text-lg font-semibold leading-snug text-foreground">
+                {model.decision_spine.recommendation}
+              </p>
+              <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">
+                {model.decision_spine.summary}
+              </p>
+            </div>
+          )}
           <DecisionSpineStrip
             spine={model.decision_spine}
             onInspectConfidence={() => openInspector("confidence")}
           />
+          {isProgressive && presentationPlan.evidence_collapsed && (
+            <EvidenceStrip
+              citations={lastCitations}
+              collapsed={!evidenceExpanded}
+              onExpand={() => setEvidenceExpanded(true)}
+            />
+          )}
+          {isProgressive && presentationPlan.primary_action && (
+            <PrimaryActionChip label={presentationPlan.primary_action} />
+          )}
         </div>
       )}
 
@@ -137,7 +184,11 @@ export function ArtifactCanvas() {
             citations={lastCitations}
           />
         ) : (
-          <StageZones blocks={model.blocks} onInspect={openInspector} />
+          <StageZones
+            blocks={model.blocks}
+            onInspect={openInspector}
+            progressive={isProgressive}
+          />
         )}
 
         {/* Data quality notes */}
@@ -177,16 +228,19 @@ export function ArtifactCanvas() {
 function StageZones({
   blocks,
   onInspect,
+  progressive = false,
 }: {
   blocks: RenderBlock[];
   onInspect: (kind: string, payload?: unknown) => void;
+  progressive?: boolean;
 }) {
+  const visible = blocks.filter((b) => b.state !== "hidden");
   const groups = React.useMemo(() => {
     const focus: RenderBlock[] = [];
     const context: RenderBlock[] = [];
     const reference: RenderBlock[] = [];
     const archived: RenderBlock[] = [];
-    for (const b of blocks) {
+    for (const b of visible) {
       const role = b.role ?? "focus";
       if (role === "context") context.push(b);
       else if (role === "reference") reference.push(b);
@@ -194,7 +248,7 @@ function StageZones({
       else focus.push(b);
     }
     return { focus, context, reference, archived };
-  }, [blocks]);
+  }, [visible]);
 
   // Show "ready for work" hint when canvas is empty but on a match CQ
   const isEmpty =
@@ -221,15 +275,21 @@ function StageZones({
   return (
     <LayoutGroup>
       <div className="space-y-8">
-        {/* FOCUS zone — primary content, full cards arranged via content-aware grid */}
+        {/* FOCUS zone — dominant visual(s) above the fold */}
         {groups.focus.length > 0 && (
           <AnimatePresence mode="popLayout">
             <FocusGrid blocks={groups.focus} onInspect={onInspect} />
           </AnimatePresence>
         )}
 
-        {/* CONTEXT strip — condensed, kept around to ground the focus */}
-        {groups.context.length > 0 && (
+        {/* CONTEXT — collapsed supporting detail in progressive mode */}
+        {groups.context.length > 0 && progressive ? (
+          <CollapsedBlockSection
+            title="Supporting detail"
+            blocks={groups.context}
+            onInspect={onInspect}
+          />
+        ) : groups.context.length > 0 ? (
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 mb-2.5 px-1">
               Context
@@ -252,7 +312,7 @@ function StageZones({
               </div>
             </AnimatePresence>
           </div>
-        )}
+        ) : null}
 
         {/* REFERENCE rail — tiny chips, click to recall */}
         {groups.reference.length > 0 && (

@@ -8,6 +8,31 @@ from __future__ import annotations
 from typing import Any
 
 
+def build_artifact_summary(model: dict[str, Any] | None) -> dict[str, Any]:
+    """Slim summary pushed from frontend coAgent state each turn."""
+    if not model or not isinstance(model, dict):
+        return {}
+    blocks_data = model.get("blocks_data") or {}
+    block_ids = model.get("blocks") or list(blocks_data.keys())
+    es = (
+        model.get("executive_summary")
+        or (blocks_data.get("executive_summary") or {}).get("summary")
+        or (blocks_data.get("decision_spine") or {}).get("summary")
+        or model.get("insight_card")
+        or ""
+    )
+    return {
+        "headline": model.get("headline", ""),
+        "outcome": model.get("outcome", ""),
+        "confidence_tier": model.get("confidence_tier", ""),
+        "is_demo_comparison": bool(model.get("is_demo_comparison")),
+        "executive_summary": es[:600] if es else "",
+        "block_ids": block_ids[:16],
+        "citation_count": len(model.get("corpus_citations") or []),
+        "artifact_id": model.get("artifact_id") or model.get("thread_id") or "",
+    }
+
+
 def assemble_thread_context(state: dict[str, Any]) -> dict[str, Any]:
     """
     Build context_packet fragment from LangGraph state + prior render_model.
@@ -16,6 +41,9 @@ def assemble_thread_context(state: dict[str, Any]) -> dict[str, Any]:
     """
     messages = state.get("messages") or []
     prior_model = state.get("_prior_render_model") or state.get("render_model")
+    artifact_summary = state.get("artifact_summary") or build_artifact_summary(
+        prior_model if isinstance(prior_model, dict) else None
+    )
 
     # Last N user/assistant snippets
     history: list[dict[str, str]] = []
@@ -46,8 +74,10 @@ def assemble_thread_context(state: dict[str, Any]) -> dict[str, Any]:
         "session_history": history,
         "last_outcome": prior_model.get("outcome") if isinstance(prior_model, dict) else None,
         "last_headline": prior_model.get("headline") if isinstance(prior_model, dict) else None,
+        "artifact_summary": artifact_summary,
         "active_scope": state.get("active_scope"),
         "pending_clarify": state.get("_pending_clarify"),
+        "_prior_render_model": prior_model if isinstance(prior_model, dict) else None,
     }
 
 
@@ -80,27 +110,20 @@ def merge_render_models(
     outcome: str,
 ) -> dict[str, Any]:
     """
-    Stateful artifact: augment prior blocks_data rather than replace wholesale.
+    Session artifact merge — replace on outcome change or analyze lane.
+
+    Refine lane patches in place via refine_artifact.py; analyze always replaces.
     """
     if not prior or not isinstance(prior, dict):
         return new
-
+    prior_outcome = prior.get("outcome")
+    new_outcome = new.get("outcome") or outcome
+    if prior_outcome and new_outcome and prior_outcome != new_outcome:
+        return new
+    if new.get("refined"):
+        return new
+    # Same outcome: replace blocks (no accumulation pollution)
     merged = dict(new)
-    prior_blocks = prior.get("blocks_data") or {}
-    new_blocks = new.get("blocks_data") or {}
-    combined_blocks = {**prior_blocks, **new_blocks}
-
-    # Carry forward citations union
-    seen: set[str] = set()
-    citations: list[dict[str, Any]] = []
-    for c in (prior.get("corpus_citations") or []) + (new.get("corpus_citations") or []):
-        cid = str(c.get("id", ""))
-        if cid and cid not in seen:
-            seen.add(cid)
-            citations.append(c)
-
-    merged["blocks_data"] = combined_blocks
-    merged["corpus_citations"] = citations
-    merged["prior_outcome"] = prior.get("outcome")
-    merged["augmented"] = True
+    if prior.get("thread_id") and not merged.get("thread_id"):
+        merged["thread_id"] = prior.get("thread_id")
     return merged

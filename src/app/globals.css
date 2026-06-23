@@ -355,3 +355,55 @@ html {
     white-space: normal !important;
   }
 }
+
+/* Atlas v5 — canvas morph on AnswerSpec revision change */
+.atlas-canvas-morph {
+  animation: atlas-canvas-in 0.35s ease-out;
+}
+
+@keyframes atlas-canvas-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Atlas entry — Canvas at Rest v3 */
+.atlas-q-input::placeholder {
+  color: #b7b1a8;
+}
+.atlas-cmd:focus-within {
+  border-color: #3f7a52 !important;
+}
+.atlas-starter {
+  transition: padding-left 0.18s ease, color 0.18s ease;
+}
+.atlas-starter:hover {
+  padding-left: 8px !important;
+}
+@keyframes atlasPulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.atlas-pulse-dot {
+  animation: atlasPulse 2.4s ease-in-out infinite;
+}
+.atlas-pulse-dot-fast {
+  animation: atlasPulse 1.4s ease-in-out infinite;
+}
+@media (max-width: 1480px) {
+  .atlas-entry-instrument-wrap {
+    transform-origin: top left;
+    transform: scale(calc(min(1, (100vw - 112px) / 1440)));
+    height: calc(864px * min(1, (100vw - 112px) / 1440));
+  }
+}

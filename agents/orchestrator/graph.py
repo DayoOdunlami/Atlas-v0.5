@@ -9,19 +9,13 @@ Activated when ATLAS5_ORCHESTRATOR_V1=true (agents/feature_flags.py).
 
 Graph topology
 --------------
-    extract_query
+    extract_query → assemble_context → intent_router
          ↓
-      triage
+    classify_turn_lane  (clarify | refine | analyze)
          ↓
-      [gate]  ← HITL interrupt (effort=deep + needs_gate=True only)
+    clarify_artifact → END   |   refine_artifact → format → END
          ↓
-       loop   ← tool-calling loop (claude-sonnet-4-6 with bound tools)
-         ↓
-      verify  ← trust spine: citation_guard + [falsification] + artifact_qa
-         ↓
-      format  ← block/document layout selection (render registry)
-         ↓
-        END
+      triage → [gate] → loop → verify → format → END
 
 State fields
 ------------
@@ -49,6 +43,12 @@ from agents.orchestrator.intent_router import (
     route_after_intent_router,
 )
 from agents.orchestrator.context import merge_render_models, node_assemble_context
+from agents.orchestrator.turn_lanes import (
+    node_classify_turn_lane,
+    route_after_turn_lane,
+)
+from agents.orchestrator.clarify_artifact import node_clarify_artifact
+from agents.orchestrator.refine_artifact import node_refine_artifact
 from agents.orchestrator.triage import triage_query, TriageResult
 from agents.orchestrator.gate import build_gate_payload, interpret_gate_response
 from agents.orchestrator.tools import STANDARD_TOOLS, DEEP_TOOLS
@@ -82,6 +82,8 @@ class OrchestratorState(TypedDict, total=False):
     _pending_clarify: str | None
     _intent_history: list[dict[str, Any]] | None
     lens: str | None
+    turn_lane: str | None
+    artifact_summary: dict[str, Any] | None
 
 
 def _default_state() -> dict[str, Any]:
@@ -112,6 +114,8 @@ def node_extract_query(state: dict[str, Any]) -> dict[str, Any]:
         "error": None,
         "gate_confirmed": False,
         "_triage": None,
+        "_is_conversational": False,
+        "turn_lane": None,
     }
     # Fresh render_model for this turn — merged back in loop after build
     if prior:
@@ -143,6 +147,27 @@ def node_triage(state: dict[str, Any]) -> dict[str, Any]:
             outcome=result.outcome,
             needs_gate=result.needs_gate,
             notes=result.notes,
+            raw_query=query,
+        )
+
+    # Re-triage wins over stale intent hints when query clearly shifts outcome
+    fresh = triage_query(query)
+    if fresh.outcome != result.outcome and fresh.outcome in ("connect", "act", "defend"):
+        result = TriageResult(
+            effort=fresh.effort if fresh.effort != "clarify" else result.effort,
+            outcome=fresh.outcome,
+            needs_gate=fresh.needs_gate if fresh.outcome != "act" else False,
+            notes=f"Outcome override: {fresh.notes}",
+            raw_query=query,
+        )
+
+    # Act / Five Case never needs external-search gate
+    if result.outcome == "act":
+        result = TriageResult(
+            effort="analyze",
+            outcome="act",
+            needs_gate=False,
+            notes="Act brief — deterministic builder.",
             raw_query=query,
         )
 
@@ -313,11 +338,10 @@ async def node_loop(state: dict[str, Any]) -> dict[str, Any]:
         merged = merge_render_models(prior, model, outcome=outcome) if prior else model
         if scope and isinstance(merged, dict):
             merged["active_scope"] = scope
-        chat = _chat_message_for_surface(merged, insight, outcome)
         return {
             "render_model": merged,
             "reasoning_steps": steps or merged.get("reasoning_steps") or [],
-            "messages": [AIMessage(content=chat)],
+            "turn_lane": state.get("turn_lane") or "analyze",
         }
 
     # Phase 3 — Value Translation (diagnose + connect+transfer)
@@ -327,14 +351,17 @@ async def node_loop(state: dict[str, Any]) -> dict[str, Any]:
         thread_id=state.get("thread_id"),
     )
     if vt_model is not None:
-        from agents.orchestrator.harmonized import enrich_with_harmonized_evidence
+        from agents.orchestrator.evidence_pipeline import run_harmonized_turn
 
-        vt_model = enrich_with_harmonized_evidence(
-            vt_model,
+        intent = state.get("_intent") if isinstance(state.get("_intent"), dict) else None
+        vt_model = run_harmonized_turn(
             query=query,
             outcome=outcome,
-            intent=state.get("_intent") if isinstance(state.get("_intent"), dict) else None,
             scope=scope,
+            intent=intent,
+            effort=effort,
+            build_model=lambda _bag: vt_model,
+            pre_built=vt_model,
         )
         insight = vt_model.get("insight_card", "")
         steps = steps_for_pipeline(outcome=outcome, effort=effort, path="value_translation")
@@ -342,21 +369,23 @@ async def node_loop(state: dict[str, Any]) -> dict[str, Any]:
         return _finalize(vt_model, insight, steps)
 
     # Phase 4 — deterministic outcome builders (all five outcomes except diagnose-only VT)
-    if outcome in ("orient", "connect", "act", "defend"):
-        built = build_outcome_model(
-            query=query,
-            outcome=outcome,
-            thread_id=state.get("thread_id"),
-            scope=scope,
-        )
-        from agents.orchestrator.harmonized import enrich_with_harmonized_evidence
+    if outcome in ("orient", "connect", "act", "defend", "diagnose"):
+        from agents.orchestrator.evidence_pipeline import run_harmonized_turn
 
-        built = enrich_with_harmonized_evidence(
-            built,
+        intent = state.get("_intent") if isinstance(state.get("_intent"), dict) else None
+        built = run_harmonized_turn(
             query=query,
             outcome=outcome,
-            intent=state.get("_intent") if isinstance(state.get("_intent"), dict) else None,
             scope=scope,
+            intent=intent,
+            effort=effort,
+            build_model=lambda bag: build_outcome_model(
+                query=query,
+                outcome=outcome,
+                thread_id=state.get("thread_id"),
+                scope=scope,
+                evidence_bag=bag,
+            ),
         )
         insight = built.get("insight_card", "")
         steps = steps_for_pipeline(outcome=outcome, effort=effort, path=f"{outcome}_builder")
@@ -446,34 +475,37 @@ async def node_loop(state: dict[str, Any]) -> dict[str, Any]:
     if budget.is_exceeded():
         render_model = budget.early_exit_model(render_model)
 
-    return {"render_model": render_model, "messages": [AIMessage(content=final_text)]}
+    return {"render_model": render_model, "turn_lane": state.get("turn_lane") or "analyze"}
 
 
 def _chat_message_for_surface(model: dict[str, Any], insight: str, outcome: str) -> str:
-    """Chat does heavy lifting: surface executive summary + sample disclosure, never just an ack."""
+    """Legacy fallback when presentation_plan unavailable."""
+    _ = outcome
+    plan = model.get("presentation_plan")
+    if plan:
+        from agents.orchestrator.presentation import compose_analyze_chat_message
+        return compose_analyze_chat_message(model, plan)
+
     surface = model.get("chat_surface") or "hybrid"
     blocks = model.get("blocks_data") or {}
     headline = model.get("headline") or insight[:120]
-
     exec_summary = (
         model.get("executive_summary")
         or (blocks.get("executive_summary") or {}).get("summary")
         or insight
     )
     is_demo = bool(model.get("is_demo_comparison") or (blocks.get("executive_summary") or {}).get("is_demo_comparison"))
-    pointer_blocks = [b for b in ("transfer_lanes", "match_bench", "dimension_gap", "opportunity_list") if b in blocks]
-    pointer = (
-        f"_Artifact: {', '.join(pointer_blocks[:3])}_" if pointer_blocks else ""
-    )
 
     if surface == "chat_only" or not blocks:
         return exec_summary or headline
 
-    body = f"**{headline}**\n\n{exec_summary}"
+    tier = model.get("confidence_tier", "Indicative")
+    n_citations = len(model.get("corpus_citations") or [])
+    body = f"**{headline}**\n\n{exec_summary}\n\n_{tier} tier · {n_citations} verified sources_"
     if is_demo:
-        body += "\n\n_⚠ This is a sample comparison — see the executive summary at the top of the artifact for details._"
-    if pointer:
-        body += f"\n\n{pointer}"
+        body += "\n\n_⚠ This is a sample comparison — see the workbench for details._"
+    if surface != "chat_only":
+        body += "\n\n→ Full analysis is on the workbench canvas."
     return body
 
 
@@ -520,10 +552,17 @@ def node_verify(state: dict[str, Any]) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 def node_format(state: dict[str, Any]) -> dict[str, Any]:
-    """Apply the format pass: select blocks, render mode, chart spec, and gap signals."""
+    """Apply the format pass: select blocks, render mode, chart spec, gap signals."""
     model = state.get("render_model")
     if not model:
         return {}
+
+    from agents.orchestrator.decision_spine import ensure_decision_spine
+
+    model = ensure_decision_spine(model)
+
+    turn_lane = str(state.get("turn_lane") or model.get("turn_lane") or "analyze")
+    model["turn_lane"] = turn_lane
 
     from agents.orchestrator.format_pass import run_format_pass
     updated = run_format_pass(model, query=state.get("query", ""))
@@ -553,11 +592,33 @@ def node_format(state: dict[str, Any]) -> dict[str, Any]:
     if steps:
         updated["reasoning_steps"] = steps
 
-    return {"render_model": updated, "reasoning_steps": steps or []}
+    # Phase C — chat composed after presentation plan (analyze / refine lanes)
+    from agents.orchestrator.presentation import (
+        compose_analyze_chat_message,
+        compose_refine_chat_message,
+    )
+
+    plan = updated.get("presentation_plan") or {}
+    if turn_lane == "refine" or updated.get("refined"):
+        chat = compose_refine_chat_message(updated, plan)
+    elif turn_lane == "analyze":
+        chat = compose_analyze_chat_message(updated, plan)
+    else:
+        chat = _chat_message_for_surface(updated, updated.get("insight_card", ""), updated.get("outcome", "orient"))
+
+    return {
+        "render_model": updated,
+        "reasoning_steps": steps or [],
+        "messages": [AIMessage(content=chat)],
+    }
 
 
-# ---------------------------------------------------------------------------
-# Graph assembly
+def _route_after_refine(state: dict[str, Any]) -> str:
+    if state.get("turn_lane") == "analyze":
+        return "triage"
+    return "format"
+
+
 # ---------------------------------------------------------------------------
 
 def _build_graph() -> Any:
@@ -566,6 +627,9 @@ def _build_graph() -> Any:
     builder.add_node("extract_query", node_extract_query)
     builder.add_node("assemble_context", node_assemble_context)
     builder.add_node("intent_router", node_intent_router)
+    builder.add_node("classify_turn_lane", node_classify_turn_lane)
+    builder.add_node("clarify_artifact", node_clarify_artifact)
+    builder.add_node("refine_artifact", node_refine_artifact)
     builder.add_node("triage", node_triage)
     builder.add_node("clarify", node_clarify)
     builder.add_node("gate", node_gate)
@@ -582,6 +646,26 @@ def _build_graph() -> Any:
         route_after_intent_router,
         {
             END: END,
+            "classify_turn_lane": "classify_turn_lane",
+        },
+    )
+
+    builder.add_conditional_edges(
+        "classify_turn_lane",
+        route_after_turn_lane,
+        {
+            "clarify_artifact": "clarify_artifact",
+            "refine_artifact": "refine_artifact",
+            "triage": "triage",
+        },
+    )
+
+    builder.add_edge("clarify_artifact", END)
+    builder.add_conditional_edges(
+        "refine_artifact",
+        _route_after_refine,
+        {
+            "format": "format",
             "triage": "triage",
         },
     )

@@ -79,7 +79,10 @@ def test_canonical_sameer_prompt_transfer_quality():
 
 
 def test_diagnose_essential_criteria_all_verdicted():
-    query = "What evidence gaps does CPC have in smart mobility?"
+    query = (
+        "What evidence does CPC have in smart mobility that would transfer "
+        "to the Innovate UK Smart City Challenge?"
+    )
     model = run_golden_prompt_pipeline(query, "diagnose")
     blocks_data = model.get("blocks_data", {})
     matches = blocks_data.get("match_bench", {}).get("matches", [])

@@ -11,7 +11,7 @@ import { defineConfig, devices } from "@playwright/test";
  */
 export default defineConfig({
   testDir: ".",
-  testMatch: ["orchestrator_workbench.spec.ts", "mvp_gate.spec.ts"],
+  testMatch: ["orchestrator_workbench.spec.ts", "mvp_gate.spec.ts", "pic_session.spec.ts"],
   fullyParallel: false,
   workers: 1,
   timeout: 120_000,

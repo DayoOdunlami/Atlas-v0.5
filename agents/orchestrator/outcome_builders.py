@@ -9,9 +9,47 @@ an LLM call.  Falls back to structured stubs when corpus is unreachable.
 """
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from agents.registry.render_model import build_atlas_render_model
+
+
+def _is_corpus_search_query(query: str) -> bool:
+    q = query.lower()
+    return bool(
+        re.search(
+            r"\bfind\b.*\b(?:corpus|evidence)\b|\bcorpus\b.*\b(?:evidence|project)\b|"
+            r"\bsearch\b.*\bproject|\bevidence\b.*\bproject",
+            q,
+        )
+    )
+
+
+def _is_compare_projects_query(query: str) -> bool:
+    q = query.lower()
+    return bool(
+        re.search(
+            r"\bcompare\b.*\bproject|\bproject\b.*\bcompare\b|\bany two\b.*\bproject|\bpick any two\b",
+            q,
+        )
+    )
+
+
+def _is_capability_portrait_query(query: str) -> bool:
+    q = query.lower()
+    return any(
+        k in q
+        for k in (
+            "good at",
+            "swot",
+            "capability",
+            "what is cpc",
+            "what does cpc",
+            "claims passport",
+            "capabilit",
+        )
+    )
 
 
 def _is_cpc_query(query: str) -> bool:
@@ -20,10 +58,13 @@ def _is_cpc_query(query: str) -> bool:
 
 
 def _load_cpc_context(query: str, scope: str | None = None) -> dict[str, Any] | None:
-    if not _is_cpc_query(query) and scope is None:
-        # Default CPC passport for strategic workbench queries
-        if not any(k in query.lower() for k in ("opportunit", "rail", "highway", "aviation", "swot", "good at")):
+    if _is_corpus_search_query(query) or _is_compare_projects_query(query):
+        return None
+    if not _is_capability_portrait_query(query) and not scope:
+        if "opportunit" not in query.lower():
             return None
+    if not _is_cpc_query(query) and scope is None and not _is_capability_portrait_query(query):
+        return None
     try:
         from agents.cpc_passport.loader import load_cpc_passport, load_cpc_passport_for_query
 
@@ -34,7 +75,13 @@ def _load_cpc_context(query: str, scope: str | None = None) -> dict[str, Any] | 
         return None
 
 
-def _search_corpus(query: str, k: int = 8) -> list[dict[str, Any]]:
+def _search_corpus(
+    query: str,
+    k: int = 8,
+    prefetched: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    if prefetched is not None:
+        return prefetched[:k]
     try:
         from mcps.cpc_corpus import queries as cq
         results = cq.search_projects(query, limit=k)
@@ -81,14 +128,192 @@ def _tier_from_count(n: int) -> str:
     return "Speculative"
 
 
+def build_corpus_evidence_model(
+    query: str,
+    thread_id: str | None = None,
+    prefetched_corpus: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Corpus-first evidence pack — real Supabase project citations, not passport portrait."""
+    raw = _search_corpus(query, k=10, prefetched=prefetched_corpus)
+    citations = _normalize_citations(raw)
+    tier = _tier_from_count(len(citations))
+
+    claims = [
+        {
+            "id": c["id"],
+            "claim_id": c["id"],
+            "claim_text": c["title"],
+            "domain": "corpus",
+            "role": "evidence",
+            "evidence_state": "stored",
+            "provenance": "corpus_search",
+            "confidence_reason": f"Similarity {c['score']:.0%}",
+        }
+        for c in citations[:8]
+    ]
+    opportunities = [
+        {
+            "id": c["id"],
+            "title": c["title"],
+            "organisation": c["organisation"],
+            "score": c["score"],
+            "abstract": f"Corpus match ({c['score']:.0%})",
+        }
+        for c in citations[:6]
+    ]
+
+    headline = (
+        f"Corpus evidence — {len(citations)} projects"
+        if citations
+        else "Corpus evidence — no matches yet"
+    )
+    insight = (
+        f"Live semantic search against atlas.projects returned {len(citations)} "
+        f"verified project(s). Confidence tier: {tier}."
+        if citations
+        else "No corpus hits — try a broader topic or check Supabase connectivity."
+    )
+
+    return build_atlas_render_model(
+        outcome="orient",
+        headline=headline,
+        insight_card=insight,
+        sections={
+            "entity": "CPC corpus",
+            "opportunity": query[:80],
+            "landscape_overview": insight,
+        },
+        corpus_citations=citations,
+        confidence_tier=tier,  # type: ignore[arg-type]
+        query=query,
+        thread_id=thread_id,
+        canonical_question_id="cq.explore.landscape",
+        extra={
+            "chat_surface": "artifact_primary",
+            "is_demo_comparison": False,
+            "blocks_data": {
+                "executive_summary": {
+                    "summary": insight,
+                    "is_demo_comparison": False,
+                    "caption": "Live corpus search — not a sample comparison.",
+                },
+                "context_card": {"entity": "CPC corpus", "scope": "semantic search"},
+                "claim_ledger": {"claims": claims or [{
+                    "id": "no-hits",
+                    "claim_text": "No corpus projects matched — broaden the query.",
+                    "domain": "corpus",
+                    "role": "evidence",
+                    "evidence_state": "unknown",
+                    "provenance": "corpus_search",
+                    "confidence_reason": "Speculative",
+                }]},
+                "opportunity_list": {"items": opportunities},
+                "recommendation_confidence": {"score": citations[0]["score"] if citations else 0.1},
+            },
+        },
+    )
+
+
+def build_compare_projects_model(
+    query: str,
+    thread_id: str | None = None,
+    prefetched_corpus: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Pick top-two corpus projects and compare — no clarify loop."""
+    topic = re.sub(
+        r"\b(compare|contrast|two|project?s?|any|pick|surprise|test|your|capability|just|me|would|like|to)\b",
+        " ",
+        query,
+        flags=re.I,
+    )
+    topic = re.sub(r"\s+", " ", topic).strip() or query
+    raw = _search_corpus(topic, k=8, prefetched=prefetched_corpus)
+    citations = _normalize_citations(raw)
+
+    if len(citations) < 2:
+        return build_corpus_evidence_model(
+            query,
+            thread_id=thread_id,
+        )
+
+    a, b = citations[0], citations[1]
+    tier = _tier_from_count(len(citations))
+    comparisons = [
+        {
+            "match_id": a["id"],
+            "passport": a["title"],
+            "target": b["title"],
+            "score": a["score"],
+            "funder": a["organisation"],
+            "status": "corpus",
+        },
+        {
+            "match_id": b["id"],
+            "passport": b["title"],
+            "target": a["title"],
+            "score": b["score"],
+            "funder": b["organisation"],
+            "status": "corpus",
+        },
+    ]
+    stronger = a if a["score"] >= b["score"] else b
+    headline = f"Stronger corpus match: {stronger['title'][:60]}"
+    insight = (
+        f"Compared **{a['title'][:50]}** ({a['score']:.0%}) vs "
+        f"**{b['title'][:50]}** ({b['score']:.0%}). "
+        f"Stronger signal: {stronger['title'][:50]}."
+    )
+
+    return build_atlas_render_model(
+        outcome="orient",
+        headline=headline,
+        insight_card=insight,
+        sections={
+            "entity": "CPC corpus comparison",
+            "opportunity": query[:80],
+        },
+        corpus_citations=citations[:6],
+        confidence_tier=tier,  # type: ignore[arg-type]
+        query=query,
+        thread_id=thread_id,
+        canonical_question_id="cq.explore.landscape",
+        extra={
+            "chat_surface": "artifact_primary",
+            "is_demo_comparison": False,
+            "blocks_data": {
+                "executive_summary": {"summary": insight, "is_demo_comparison": False},
+                "comparison_matrix": {"items": comparisons},
+                "opportunity_list": {
+                    "items": [
+                        {
+                            "id": c["id"],
+                            "title": c["title"],
+                            "organisation": c["organisation"],
+                            "score": c["score"],
+                        }
+                        for c in citations[:4]
+                    ],
+                },
+                "recommendation_confidence": {"score": stronger["score"]},
+            },
+        },
+    )
+
+
 def build_orient_model(
     query: str,
     thread_id: str | None = None,
     scope: str | None = None,
+    prefetched_corpus: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """D4.1 — CPC capability portrait or corpus landscape."""
+    if _is_compare_projects_query(query):
+        return build_compare_projects_model(query, thread_id=thread_id, prefetched_corpus=prefetched_corpus)
+    if _is_corpus_search_query(query):
+        return build_corpus_evidence_model(query, thread_id=thread_id, prefetched_corpus=prefetched_corpus)
+
     cpc = _load_cpc_context(query, scope=scope)
-    if cpc and cpc.get("claims"):
+    if cpc and cpc.get("claims") and _is_capability_portrait_query(query):
         claims = cpc["claims"]
         tier = "Supported" if len(claims) >= 5 else "Indicative"
         scope_label = cpc.get("scope") or "all sectors"
@@ -136,7 +361,7 @@ def build_orient_model(
             },
         )
 
-    raw = _search_corpus(query)
+    raw = _search_corpus(query, prefetched=prefetched_corpus)
     citations = _normalize_citations(raw)
     tier = _tier_from_count(len(citations))
 
@@ -229,6 +454,7 @@ def build_connect_model(
     query: str,
     thread_id: str | None = None,
     scope: str | None = None,
+    prefetched_corpus: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """D4.2 — opportunity routes from CPC passport × live calls."""
     cpc = _load_cpc_context(query, scope=scope)
@@ -294,7 +520,7 @@ def build_connect_model(
                 },
             )
 
-    raw = _search_corpus(query)
+    raw = _search_corpus(query, prefetched=prefetched_corpus)
     citations = _normalize_citations(raw)
     tier = _tier_from_count(len(citations))
 
@@ -366,25 +592,78 @@ def build_connect_model(
     )
 
 
-def build_act_model(query: str, thread_id: str | None = None) -> dict[str, Any]:
-    """D4.3 — decision-ready brief scaffold."""
-    raw = _search_corpus(query)
+def build_act_model(
+    query: str,
+    thread_id: str | None = None,
+    prefetched_corpus: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """D4.3 — decision-ready brief scaffold (Five Case when requested)."""
+    import re
+
+    q_lower = query.lower()
+    is_five_case = bool(
+        re.search(r"\bfive\s+case\b|\bbusiness\s+case\b|\binvestment\s+brief\b|\beconomic\s+case\b", q_lower)
+    )
+    raw = _search_corpus(query, prefetched=prefetched_corpus)
     citations = _normalize_citations(raw)
     tier = _tier_from_count(len(citations))
 
+    headline = (
+        f"Five Case investment brief — {query[:50]}"
+        if is_five_case
+        else f"Recommendation: proceed with evidence-backed pilot for '{query[:40]}'"
+    )
+    sections: dict[str, str] = {
+        "entity": "Connected Places Catapult",
+        "opportunity": query[:80],
+        "strategic_case": "Aligns with CPC connected-places mission and national transport priorities.",
+        "delivery_approach": "Phase 1: evidence audit. Phase 2: pilot scoping. Phase 3: investment decision.",
+    }
+    if is_five_case:
+        sections.update({
+            "strategic_case": "Strategic fit with CPC capability passport and funder priorities.",
+            "economic_case": f"Indicative appraisal at HMT STPR 3.5% — {len(citations)} corpus evidence projects.",
+            "commercial_case": "Revenue/cost sharing to be scoped with delivery partners.",
+            "financial_case": "Affordability and funding stack TBC pending business case gate.",
+            "management_case": "CPC programme lead with partner delivery consortium.",
+        })
+
+    value_drivers = [
+        {
+            "name": "Evidence base",
+            "description": f"{len(citations)} supporting corpus projects",
+            "direction": "benefit",
+            "magnitude": "medium",
+            "evidence_state": "self-reported",
+        },
+    ]
+    if is_five_case:
+        value_drivers.extend([
+            {
+                "name": "Strategic value",
+                "description": "Connected-places innovation aligned to funder mission",
+                "direction": "benefit",
+                "magnitude": "high",
+                "evidence_state": "inferred",
+            },
+            {
+                "name": "Delivery risk",
+                "description": "Pilot scope and partner capacity unverified",
+                "direction": "cost",
+                "magnitude": "medium",
+                "evidence_state": "unknown",
+            },
+        ])
+
     return build_atlas_render_model(
         outcome="act",
-        headline=f"Recommendation: proceed with evidence-backed pilot for '{query[:40]}'",
+        headline=headline,
         insight_card=(
-            "Structured action brief from corpus evidence. "
-            "Economic case uses HMT STPR 3.5% discount rate."
+            "Structured Five Case brief from corpus evidence at HMT STPR 3.5%."
+            if is_five_case
+            else "Structured action brief from corpus evidence. Economic case uses HMT STPR 3.5% discount rate."
         ),
-        sections={
-            "entity": "Connected Places Catapult",
-            "opportunity": query[:80],
-            "strategic_case": "Aligns with CPC connected-places mission.",
-            "delivery_approach": "Phase 1: evidence audit. Phase 2: pilot scoping.",
-        },
+        sections=sections,
         corpus_citations=citations,
         confidence_tier=tier,  # type: ignore[arg-type]
         query=query,
@@ -397,32 +676,34 @@ def build_act_model(query: str, thread_id: str | None = None) -> dict[str, Any]:
                     "verdict": "indicative" if citations else "insufficient_data",
                     "npv_value": None,
                     "discount_rate": 0.035,
-                    "value_drivers": [
-                        {
-                            "name": "Evidence base",
-                            "description": f"{len(citations)} supporting corpus projects",
-                            "direction": "benefit",
-                            "magnitude": "medium",
-                            "evidence_state": "self-reported",
-                        },
-                    ],
+                    "five_case": is_five_case,
+                    "value_drivers": value_drivers,
                 },
                 "action_plan": {
                     "items": [
                         {"action": "Audit corpus evidence", "linked_gap": "evidence", "owner": "CPC", "sequence": 1},
                         {"action": "Scope pilot programme", "linked_gap": "delivery", "owner": "Programme lead", "sequence": 2},
                         {"action": "Prepare investment brief", "linked_gap": "economic", "owner": "ATLAS", "sequence": 3},
+                        *(
+                            [{"action": "Complete Five Case sections", "linked_gap": "management", "owner": "Programme lead", "sequence": 4}]
+                            if is_five_case
+                            else []
+                        ),
                     ],
                 },
-                "recommendation_confidence": {"score": 0.6 if citations else 0.2},
+                "recommendation_confidence": {"score": 0.65 if citations and is_five_case else (0.6 if citations else 0.2)},
             },
         },
     )
 
 
-def build_defend_model(query: str, thread_id: str | None = None) -> dict[str, Any]:
+def build_defend_model(
+    query: str,
+    thread_id: str | None = None,
+    prefetched_corpus: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     """D4.4 — scrutiny-ready evidence pack."""
-    raw = _search_corpus(query)
+    raw = _search_corpus(query, prefetched=prefetched_corpus)
     citations = _normalize_citations(raw)
     tier = _tier_from_count(len(citations))
 
@@ -502,8 +783,17 @@ def build_outcome_model(
     outcome: str,
     thread_id: str | None = None,
     scope: str | None = None,
+    evidence_bag: Any | None = None,
 ) -> dict[str, Any]:
     """Route to the correct deterministic outcome builder."""
+    prefetched = evidence_bag.corpus_raw if evidence_bag is not None else None
+
+    if _is_compare_projects_query(query):
+        return build_compare_projects_model(query, thread_id=thread_id, prefetched_corpus=prefetched)
+    if _is_corpus_search_query(query):
+        return build_corpus_evidence_model(query, thread_id=thread_id, prefetched_corpus=prefetched)
+    if outcome == "diagnose":
+        return build_corpus_evidence_model(query, thread_id=thread_id, prefetched_corpus=prefetched)
     builders = {
         "orient": build_orient_model,
         "connect": build_connect_model,
@@ -512,7 +802,7 @@ def build_outcome_model(
     }
     builder = builders.get(outcome)
     if builder is None:
-        return build_orient_model(query, thread_id, scope=scope)
+        return build_orient_model(query, thread_id, scope=scope, prefetched_corpus=prefetched)
     if outcome in ("orient", "connect"):
-        return builder(query, thread_id, scope=scope)
-    return builder(query, thread_id)
+        return builder(query, thread_id, scope=scope, prefetched_corpus=prefetched)
+    return builder(query, thread_id, prefetched_corpus=prefetched)

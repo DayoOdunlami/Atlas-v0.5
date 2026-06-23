@@ -188,9 +188,9 @@ def _heuristic_route(query: str, ctx: dict[str, Any] | None = None) -> IntentDec
 
     if _ARTIFACT_META_RE.search(query) and artifact_present:
         return IntentDecision(
-            route="instant_reply",
-            instant_reply=build_artifact_meta_reply(query, ctx) or build_conversational_reply(query),
-            reasoning="Artifact-aware meta reply",
+            route="pipeline",
+            outcome_hint=ctx.get("last_outcome") if ctx else None,
+            reasoning="Artifact meta — clarify lane will answer from prior artifact",
             source="heuristic",
         )
 
@@ -292,6 +292,32 @@ def route_intent(query: str, ctx: dict[str, Any] | None = None) -> IntentDecisio
     return decision
 
 
+_FORCE_PIPELINE_RE = re.compile(
+    r"\bfive\s+case\b|\bbusiness\s+case\b|\binvestment\s+brief\b|"
+    r"\btop\b.*\bopportunit|\bopportunit.*\broute\b|"
+    r"\bcompare\b.*\bproject|\bproject\b.*\bcompare\b|"
+    r"\bfind\b.*\bcorpus\b.*\bevidence\b|\bcorpus\b.*\bevidence\b.*\bproject",
+    re.I,
+)
+
+
+def _forced_pipeline_decision(query: str) -> IntentDecision | None:
+    """Never clarify-loop substantive analysis requests."""
+    q = query.strip()
+    if not q or not _FORCE_PIPELINE_RE.search(q):
+        return None
+    from agents.orchestrator.triage import triage_query
+
+    triage = triage_query(q)
+    return IntentDecision(
+        route="pipeline",
+        outcome_hint=triage.outcome,
+        effort_hint=triage.effort if triage.effort != "clarify" else "analyze",
+        reasoning="Forced pipeline — substantive analysis request",
+        source="heuristic",
+    )
+
+
 _FOLLOW_UP_RE = re.compile(
     r"\b("
     r"compare|versus|vs\.?|that|this|those|these|drill|second|first|#2|number two|the other|"
@@ -309,6 +335,9 @@ _ARTIFACT_META_RE = re.compile(
     r"what(?:\s+just)?\s+happen(?:ed)?|"
     r"are\s+you\s+(?:broken|stuck|ok|okay|alright)|"
     r"is\s+this\s+(?:real|right|correct|true|a\s+sample|a\s+demo|fake|made\s+up)|"
+    r"why\s+(?:isn't|is\s+not|won't|doesn't)\s+(?:the\s+)?(?:artifact|canvas|screen|panel)\b|"
+    r"artifact\s+not\s+updat|"
+    r"isn't\s+this\s+chang|"
     r"why\s+(?:is\s+)?(?:0|zero|the\s+score)|"
     r"what(?:'s| is)\s+(?:the\s+)?(?:fit|score|verdict|gap|takeaway|bottom\s+line)|"
     r"summari[sz]e\s+(?:this|that|the\s+artifact)|"
@@ -337,6 +366,26 @@ def build_artifact_meta_reply(query: str, ctx: dict[str, Any] | None) -> str | N
         is_demo = bool(prior.get("is_demo_comparison"))
 
     q = query.lower()
+
+    if re.search(r"why.*confidence|confidence.*(?:only|tier|indicative|speculative|capped)", q):
+        tier = "Indicative"
+        cap = ""
+        if isinstance(prior, dict):
+            tier = str(prior.get("confidence_tier") or tier)
+            spine = prior.get("decision_spine") or {}
+            cap = str(spine.get("key_assumption") or spine.get("confidence_cap_reason") or "")
+            n_cits = len(prior.get("corpus_citations") or [])
+            if not cap:
+                cap = (
+                    f"Based on {n_cits} corpus citation(s). "
+                    "Passport claims are mostly self-reported until verified in Supabase."
+                )
+        return (
+            f"**Confidence is {tier}** on *{headline}*.\n\n"
+            f"{cap}\n\n"
+            "To move up a tier: add verified corpus project citations, close essential gaps, "
+            "or name a specific live funding call so we can run a real match (not the sample VT demo)."
+        )
 
     if re.search(r"are\s+you\s+(?:broken|stuck)", q):
         return (
@@ -384,25 +433,35 @@ def node_intent_router(state: dict[str, Any]) -> dict[str, Any]:
 
     artifact_present = bool(ctx.get("last_outcome") or ctx.get("last_headline") or prior_rm)
 
-    # Artifact-aware meta reply takes precedence when artifact exists
+    forced = _forced_pipeline_decision(query)
+    if forced:
+        return {
+            "_intent": {
+                "route": "pipeline",
+                "source": forced.source,
+                "reasoning": forced.reasoning,
+                "outcome_hint": forced.outcome_hint,
+                "effort_hint": forced.effort_hint,
+            },
+            "_is_conversational": False,
+            "outcome": forced.outcome_hint,
+            "effort": forced.effort_hint,
+        }
+
+    # Artifact-aware meta → clarify lane (not instant_reply — preserves canvas)
     if query and artifact_present and _ARTIFACT_META_RE.search(query):
-        reply = build_artifact_meta_reply(query, ctx)
-        if reply:
-            decision = IntentDecision(
-                route="instant_reply",
-                instant_reply=reply,
-                reasoning="Artifact-aware meta reply",
-                source="heuristic",
-            )
-            return {
-                "_intent": {
-                    "route": "instant_reply",
-                    "source": "heuristic",
-                    "reasoning": decision.reasoning,
-                },
-                "_is_conversational": True,
-                "messages": [AIMessage(content=reply, id=str(uuid.uuid4()))],
-            }
+        from agents.orchestrator.triage import triage_query
+
+        triage = triage_query(query)
+        return {
+            "_intent": {
+                "route": "pipeline",
+                "source": "heuristic",
+                "reasoning": "Artifact meta — clarify lane",
+            },
+            "_is_conversational": False,
+            "outcome": ctx.get("last_outcome") or triage.outcome,
+        }
 
     # Multi-turn follow-ups that reference prior context — keep same lane unless query shifts outcome
     if query and ctx.get("last_outcome") and _FOLLOW_UP_RE.search(query):
@@ -450,4 +509,4 @@ def node_intent_router(state: dict[str, Any]) -> dict[str, Any]:
 def route_after_intent_router(state: dict[str, Any]) -> str:
     from langgraph.graph import END
 
-    return END if state.get("_is_conversational") else "triage"
+    return END if state.get("_is_conversational") else "classify_turn_lane"

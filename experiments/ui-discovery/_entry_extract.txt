@@ -1,0 +1,702 @@
+
+=== What do you want @ 30805 ===
+2 style="font-family:'Newsreader',serif; font-weight:500; font-size:54px; line-height:1.02; letter-spacing:-0.025em; color:#16130F; margin:0 0 34px;">What do you want to <span style="font-style:italic;">understand</span>?</h2>
+
+                <div class="atlas-cmd" style="display:flex; align-items:center; gap:14px; border-bottom:1.5px solid #D4CFC6; padding:10px 2px 12px; transition:border-color .2s;">
+                  <span style="font-family:'IBM Plex Mono',monospace; font-size:20px; color:#3F7A52; line-height:1;">›</span>
+                  <input class="atlas-q-input" type="text" value="{
+=== atlas-cmd @ 18466 ===
+tlasPulse { 0%,100% { opacity:.5; } 50% { opacity:1; } }
+  .atlas-q-input::placeholder { color:#B7B1A8; }
+  .atlas-q-input:focus { outline:none; }
+  .atlas-cmd:focus-within { border-color:#3F7A52 !important; }
+  .atlas-starter { transition: padding-left .18s ease, color .18s ease; }
+  .atlas-starter:hover { padding-left:8px !important; }
+</style>
+</helmet>
+
+<div style="width: max-content; min-width: 100%; min-height: 100vh; box-sizing: border-box; padding: 56px; background: #e7e5df;">
+
+  
+
+  <!-- header -->
+  <div style="max-width:1020px; margin-bottom:30px;">
+    <div style="display:flex; ali
+=== atlas-cmd @ 30911 ===
+:-0.025em; color:#16130F; margin:0 0 34px;">What do you want to <span style="font-style:italic;">understand</span>?</h2>
+
+                <div class="atlas-cmd" style="display:flex; align-items:center; gap:14px; border-bottom:1.5px solid #D4CFC6; padding:10px 2px 12px; transition:border-color .2s;">
+                  <span style="font-family:'IBM Plex Mono',monospace; font-size:20px; color:#3F7A52; line-height:1;">›</span>
+                  <input class="atlas-q-input" type="text" value="{{ query }}" oninput="{{ onInput }}" onkeydown="{{ onKeyDown }}" onfocus="{{ onFocus }}" onblur="{{ onBlur 
+=== atlas-starter @ 18529 ===
+as-q-input::placeholder { color:#B7B1A8; }
+  .atlas-q-input:focus { outline:none; }
+  .atlas-cmd:focus-within { border-color:#3F7A52 !important; }
+  .atlas-starter { transition: padding-left .18s ease, color .18s ease; }
+  .atlas-starter:hover { padding-left:8px !important; }
+</style>
+</helmet>
+
+<div style="width: max-content; min-width: 100%; min-height: 100vh; box-sizing: border-box; padding: 56px; background: #e7e5df;">
+
+  
+
+  <!-- header -->
+  <div style="max-width:1020px; margin-bottom:30px;">
+    <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:18px;">
+      <div s
+=== atlas-starter @ 18603 ===
+e:none; }
+  .atlas-cmd:focus-within { border-color:#3F7A52 !important; }
+  .atlas-starter { transition: padding-left .18s ease, color .18s ease; }
+  .atlas-starter:hover { padding-left:8px !important; }
+</style>
+</helmet>
+
+<div style="width: max-content; min-width: 100%; min-height: 100vh; box-sizing: border-box; padding: 56px; background: #e7e5df;">
+
+  
+
+  <!-- header -->
+  <div style="max-width:1020px; margin-bottom:30px;">
+    <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:18px;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacin
+=== atlas-starter @ 32445 ===
+flex; flex-direction:column;">
+                    <sc-for list="{{ starters }}" as="s" hint-placeholder-count="3">
+                      <div class="atlas-starter" onclick="{{ s.onClick }}" onmouseenter="{{ s.onEnter }}" onmouseleave="{{ s.onLeave }}" style="display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid #ECE7DE; cursor:pointer;">
+                        <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#8FA98C;">→</span>
+                        <span style="font-size:14px; color:#46423C; line-height:1.4;">{{ s.q }}</span>
+            
+=== atlas-q-input @ 18376 ===
+ -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  @keyframes atlasPulse { 0%,100% { opacity:.5; } 50% { opacity:1; } }
+  .atlas-q-input::placeholder { color:#B7B1A8; }
+  .atlas-q-input:focus { outline:none; }
+  .atlas-cmd:focus-within { border-color:#3F7A52 !important; }
+  .atlas-starter { transition: padding-left .18s ease, color .18s ease; }
+  .atlas-starter:hover { padding-left:8px !important; }
+</style>
+</helmet>
+
+<div style="width: max-content; min-width: 100%; min-height: 100vh; box-sizing: border-box; padding: 56px; background: #e7e5df;">
+
+  
+
+  <!-- header -
+=== atlas-q-input @ 18425 ===
+ing: optimizeLegibility; }
+  @keyframes atlasPulse { 0%,100% { opacity:.5; } 50% { opacity:1; } }
+  .atlas-q-input::placeholder { color:#B7B1A8; }
+  .atlas-q-input:focus { outline:none; }
+  .atlas-cmd:focus-within { border-color:#3F7A52 !important; }
+  .atlas-starter { transition: padding-left .18s ease, color .18s ease; }
+  .atlas-starter:hover { padding-left:8px !important; }
+</style>
+</helmet>
+
+<div style="width: max-content; min-width: 100%; min-height: 100vh; box-sizing: border-box; padding: 56px; background: #e7e5df;">
+
+  
+
+  <!-- header -->
+  <div style="max-width:1020px; margin-bottom:
+=== atlas-q-input @ 31220 ===
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:20px; color:#3F7A52; line-height:1;">›</span>
+                  <input class="atlas-q-input" type="text" value="{{ query }}" oninput="{{ onInput }}" onkeydown="{{ onKeyDown }}" onfocus="{{ onFocus }}" onblur="{{ onBlur }}" placeholder="{{ placeholder }}" style="flex:1; min-width:0; border:none; background:transparent; font-family:'Libre Franklin',sans-serif; font-size:19px; color:#16130F; padding:2px 0;">
+                  <div onclick="{{ submit }}" style="flex:none; display:flex; align-items:center; gap:7px; cursor:point
+=== atlasPulse @ 18315 ===
+ckground: #e7e5df; font-family: 'Libre Franklin', sans-serif; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  @keyframes atlasPulse { 0%,100% { opacity:.5; } 50% { opacity:1; } }
+  .atlas-q-input::placeholder { color:#B7B1A8; }
+  .atlas-q-input:focus { outline:none; }
+  .atlas-cmd:focus-within { border-color:#3F7A52 !important; }
+  .atlas-starter { transition: padding-left .18s ease, color .18s ease; }
+  .atlas-starter:hover { padding-left:8px !important; }
+</style>
+</helmet>
+
+<div style="width: max-content; min-width: 100%; min-height: 100vh; box-sizing: border-bo
+=== atlasPulse @ 24359 ===
+ding:5px 11px; border-radius:6px; background:#F0EDE7;">
+          <div style="width:7px; height:7px; border-radius:50%; background:#8FA98C; animation:atlasPulse 2.4s ease-in-out infinite;"></div>
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#56524C; font-weight:600;">READY</div>
+        </div>
+      </div>
+
+      <!-- MATERIALS PRIMER (slim, collapsible) -->
+      <sc-if value="{{ primerOpen }}" hint-placeholder-val="{{ true }}">
+        <div style="flex:none; padding:9px 32px; background:#F8F6F1; border-bottom:1px solid #EAE5DC; display:flex; align-items:
+=== atlasPulse @ 33429 ===
+se; margin-bottom:18px; display:flex; align-items:center; gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:#3F7A52; animation:atlasPulse 1.4s ease-in-out infinite;"></span>composing the canvas</div>
+                <h2 style="font-family:'Newsreader',serif; font-weight:500; font-size:34px; line-height:1.16; letter-spacing:-0.02em; color:#16130F; margin:0 0 22px; font-style:italic;">“{{ query }}”</h2>
+                <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:24px;">
+                  <div style="display:flex; align-items:center; gap:10px; b
+=== atlasPulse @ 34016 ===
+; gap:10px; border-left:3px solid #3F7A52; padding:6px 0 6px 13px;"><span style="width:7px;height:7px;border-radius:50%;background:#3F7A52; animation:atlasPulse 1.5s ease-in-out infinite;"></span><div style="font-size:13px; color:#2E3A30; line-height:1.4;"><strong style="color:#1A2E20;">Querying the corpus</strong> — 711 projects, 418 bridges, drawn to scale.</div></div>
+                  <div style="display:flex; align-items:center; gap:10px; border-left:3px dashed #9DBAD2; padding:6px 0 6px 13px;"><span style="width:7px;height:7px;border-radius:50%;background:#3E6B8C; animation:atlasPulse 1.
+=== atlasPulse @ 34453 ===
+ gap:10px; border-left:3px dashed #9DBAD2; padding:6px 0 6px 13px;"><span style="width:7px;height:7px;border-radius:50%;background:#3E6B8C; animation:atlasPulse 1.5s ease-in-out infinite;"></span><div style="font-size:13px; color:#3F5567; line-height:1.4;"><strong style="color:#2C4760;">Running live web</strong> — adding what the corpus under-records, kept dashed.</div></div>
+                </div>
+                <div onclick="{{ reset }}" style="display:inline-flex; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#94908A; cursor:pointer; padding:7px 14px; border:1px solid #E0DBD
+=== atlasPulse @ 35281 ===
+6px 16px; display:flex; align-items:center; gap:10px;">
+          <div style="width:6px; height:6px; border-radius:50%; background:#8FA98C; animation:atlasPulse 2.4s ease-in-out infinite;"></div>
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.08em; color:#A39E96;">CORPUS CALIBRATED 22 JUN 2026 · LAST INGEST 3H AGO</div>
+          <div style="flex:1;"></div>
+          <sc-if value="{{ isWebLine }}" hint-placeholder-val="{{ false }}">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#6E8AA3;">+ live web augments
+=== starters @ 32363 ===
+ottom:11px;">or start from the corpus</div>
+                  <div style="display:flex; flex-direction:column;">
+                    <sc-for list="{{ starters }}" as="s" hint-placeholder-count="3">
+                      <div class="atlas-starter" onclick="{{ s.onClick }}" onmouseenter="{{ s.onEnter }}" onmouseleave="{{ s.onLeave }}" style="display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid #ECE7DE; cursor:pointer;">
+                        <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#8FA98C;">→</span>
+                        <span sty
+=== starters @ 46007 ===
+losed: !primerOpen,
+      openPrimer: () => this.setState({ primerOpen: true }),
+      closePrimer: () => this.setState({ primerOpen: false }),
+      starters: [
+        mk('Which transport mode should we prioritise for decarbonisation?', 'corpus'),
+        mk('Where is our funding thinnest against the national picture?', 'thin'),
+        mk('Who should we convene on maritime — and who is missing?', 'maritime'),
+      ],
+    };
+  }
+
+  componentDidMount() {
+    this._tries = 0;
+    this._raf = null;
+    this._wasActive = false;
+    this._webOn = -10;
+    this._initField();
+    this._phTimer = s
+=== starter @ 18535 ===
+nput::placeholder { color:#B7B1A8; }
+  .atlas-q-input:focus { outline:none; }
+  .atlas-cmd:focus-within { border-color:#3F7A52 !important; }
+  .atlas-starter { transition: padding-left .18s ease, color .18s ease; }
+  .atlas-starter:hover { padding-left:8px !important; }
+</style>
+</helmet>
+
+<div style="width: max-content; min-width: 100%; min-height: 100vh; box-sizing: border-box; padding: 56px; background: #e7e5df;">
+
+  
+
+  <!-- header -->
+  <div style="max-width:1020px; margin-bottom:30px;">
+    <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:18px;">
+      <div style="
+=== starter @ 18609 ===
+; }
+  .atlas-cmd:focus-within { border-color:#3F7A52 !important; }
+  .atlas-starter { transition: padding-left .18s ease, color .18s ease; }
+  .atlas-starter:hover { padding-left:8px !important; }
+</style>
+</helmet>
+
+<div style="width: max-content; min-width: 100%; min-height: 100vh; box-sizing: border-box; padding: 56px; background: #e7e5df;">
+
+  
+
+  <!-- header -->
+  <div style="max-width:1020px; margin-bottom:30px;">
+    <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:18px;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14
+=== starter @ 21353 ===
+ht:1.45; color:#46423C;"><span style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#8A6322; min-width:84px;">PROBE</span><span>hover a starter and the cluster it concerns lights up; the command bar cycles real example asks. <span style="color:#94908A;">No shimmer, no blobs.</span></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.08em; color:#56524C; margin-bottom:12px;">FULL PRODUCT SURFACE — THE INSTRUMENT, AT REST</div>
+
+  <div style="width:1440px; height:864px; background:#FBFAF7; border-radiu
+=== starter @ 32363 ===
+ottom:11px;">or start from the corpus</div>
+                  <div style="display:flex; flex-direction:column;">
+                    <sc-for list="{{ starters }}" as="s" hint-placeholder-count="3">
+                      <div class="atlas-starter" onclick="{{ s.onClick }}" onmouseenter="{{ s.onEnter }}" onmouseleave="{{ s.onLeave }}" style="display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid #ECE7DE; cursor:pointer;">
+                        <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#8FA98C;">→</span>
+                        <span sty
+=== starter @ 32451 ===
+flex-direction:column;">
+                    <sc-for list="{{ starters }}" as="s" hint-placeholder-count="3">
+                      <div class="atlas-starter" onclick="{{ s.onClick }}" onmouseenter="{{ s.onEnter }}" onmouseleave="{{ s.onLeave }}" style="display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid #ECE7DE; cursor:pointer;">
+                        <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#8FA98C;">→</span>
+                        <span style="font-size:14px; color:#46423C; line-height:1.4;">{{ s.q }}</span>
+                  
+=== starter @ 43387 ===
+ive evidence stream in from off-frame.</div>
+        <div><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#56524C;">hover a starter </span> to light the cluster it concerns — funding-thinnest lights aviation, maritime lights the maritime cluster.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script="" data-props="{
+  &quot;$preview&quot;: { &quot;width&quot;: 1600, &quot;height&quot;: 1040 },
+  &quot;webLane&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;demonstrate&quot;, &quot;line&quot;], &quot;d
+=== starter @ 46007 ===
+losed: !primerOpen,
+      openPrimer: () => this.setState({ primerOpen: true }),
+      closePrimer: () => this.setState({ primerOpen: false }),
+      starters: [
+        mk('Which transport mode should we prioritise for decarbonisation?', 'corpus'),
+        mk('Where is our funding thinnest against the national picture?', 'thin'),
+        mk('Who should we convene on maritime — and who is missing?', 'maritime'),
+      ],
+    };
+  }
+
+  componentDidMount() {
+    this._tries = 0;
+    this._raf = null;
+    this._wasActive = false;
+    this._webOn = -10;
+    this._initField();
+    this._phTimer = s
+=== 100vh @ 18737 ===
+.18s ease; }
+  .atlas-starter:hover { padding-left:8px !important; }
+</style>
+</helmet>
+
+<div style="width: max-content; min-width: 100%; min-height: 100vh; box-sizing: border-box; padding: 56px; background: #e7e5df;">
+
+  
+
+  <!-- header -->
+  <div style="max-width:1020px; margin-bottom:30px;">
+    <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:18px;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; color:#94908A; text-transform:uppercase;">Atlas · entry screen</div>
+      <div style="height:1px; flex:1; background:#d4d0c
+=== CORPUS @ 23833 ===
+18px; background:#E7E3DC;"></div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.06em; color:#8C887F;">CORPUS + LIVE WEB</div>
+        <div style="flex:1;"></div>
+        <sc-if value="{{ primerClosed }}" hint-placeholder-val="{{ false }}">
+          <div onclick="{{ openPrimer }}" style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#A39E96; cursor:pointer;">▦ materials</div>
+        </sc-if>
+        <div style="display:flex; align-items:center; gap:7px; padding:5px 11px; border-radius:6px; background:#F0EDE7;">
+          <div sty
+=== CORPUS @ 35444 ===
+4s ease-in-out infinite;"></div>
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.08em; color:#A39E96;">CORPUS CALIBRATED 22 JUN 2026 · LAST INGEST 3H AGO</div>
+          <div style="flex:1;"></div>
+          <sc-if value="{{ isWebLine }}" hint-placeholder-val="{{ false }}">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#6E8AA3;">+ live web augments on ask — borrowed, never faked</div>
+          </sc-if>
+        </div>
+      </div>
+
+      <!-- bottom owned-figures strip -->
+      <div style="flex:none; border
+=== nodes @ 42247 ===
+span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#3E6B8C;">◇ ad-polish is fine when it's true </span> the streaming-in of web nodes feels premium <em style="font-style:italic;">and</em> it's literally the product's core move. Polish that communicates competence earns its keep.</div>
+        <div><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#8A6322;">◇ still cut </span> shimmer buttons, gradient blobs, parallax, bounce — they'd trade the instrument's credibility for decoration.</div>
+      </div>
+    </div>
+    <div style="flex:1;">
+      <di
+=== nodes @ 47585 ===
+n: 1.6, smax: 5.0 },
+      { key: 'thin',     cx: 0.60, cy: 0.20, sx: 0.08, sy: 0.07, n: 22, kind: 'thin',   smin: 1.2, smax: 3.0 },
+    ];
+    const nodes = [];
+    clusters.forEach(c => {
+      for (let i = 0; i < c.n; i++) {
+        const x = (c.cx + gauss() * c.sx) * w;
+        const y = (c.cy + gauss() * c.sy) * h;
+        const r = c.smin + rnd() * (c.smax - c.smin);
+        nodes.push({ x, y, r, kind: c.kind, cl: c.key, base: 0.22 + rnd() * 0.22, amp: 0.10 + rnd() * 0.14, ph: rnd() * 6.28, sp: 0.5 + rnd() * 0.9, appear: Math.min(1, (c.cx + gauss() * c.sx)) * 0.66 + rnd() * 0.18 });
+    
+=== nodes @ 47819 ===
+  const x = (c.cx + gauss() * c.sx) * w;
+        const y = (c.cy + gauss() * c.sy) * h;
+        const r = c.smin + rnd() * (c.smax - c.smin);
+        nodes.push({ x, y, r, kind: c.kind, cl: c.key, base: 0.22 + rnd() * 0.22, amp: 0.10 + rnd() * 0.14, ph: rnd() * 6.28, sp: 0.5 + rnd() * 0.9, appear: Math.min(1, (c.cx + gauss() * c.sx)) * 0.66 + rnd() * 0.18 });
+      }
+    });
+    const web = [];
+    for (let i = 0; i < 9; i++) {
+      const y = (0.30 + rnd() * 0.5) * h;
+      web.push({ y, x0: (1.06 + rnd() * 0.06) * w, xT: (0.74 + rnd() * 0.20) * w, r: 2.6 + rnd() * 3.4, ph: rnd() * 6.28, sp: 
+=== nodes @ 48316 ===
+ (1.06 + rnd() * 0.06) * w, xT: (0.74 + rnd() * 0.20) * w, r: 2.6 + rnd() * 3.4, ph: rnd() * 6.28, sp: 0.6 + rnd() * 0.8 });
+    }
+    const corpus = nodes.filter(n => n.kind === 'corpus');
+    const bridges = [];
+    for (let i = 0; i < 150; i++) {
+      const a = corpus[(rnd() * corpus.length) | 0];
+      const b = corpus[(rnd() * corpus.length) | 0];
+      if (!a || !b || a === b) continue;
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (d < w * 0.13) bridges.push([a, b]);
+    }
+    this._nodes = nodes; this._web = web; this._bridges = bridges;
+  }
+
+  _initField() {
+    if (type
+=== nodes @ 48675 ===
+   if (!a || !b || a === b) continue;
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (d < w * 0.13) bridges.push([a, b]);
+    }
+    this._nodes = nodes; this._web = web; this._bridges = bridges;
+  }
+
+  _initField() {
+    if (typeof window === 'undefined') return;
+    const cv = document.getElementById('corpus-field');
+    if (!cv || cv.clientWidth === 0) {
+      if (this._tries++ > 120) return;
+      setTimeout(() => this._initField(), 60);
+      return;
+    }
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = cv.clientWidth, h = cv.clientHeight;
+    cv.width 
+=== nodes @ 48683 ===
+a || !b || a === b) continue;
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (d < w * 0.13) bridges.push([a, b]);
+    }
+    this._nodes = nodes; this._web = web; this._bridges = bridges;
+  }
+
+  _initField() {
+    if (typeof window === 'undefined') return;
+    const cv = document.getElementById('corpus-field');
+    if (!cv || cv.clientWidth === 0) {
+      if (this._tries++ > 120) return;
+      setTimeout(() => this._initField(), 60);
+      return;
+    }
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = cv.clientWidth, h = cv.clientHeight;
+    cv.width = w * dp
+=== nodes @ 51159 ===
+'rgba(63,122,82,' + fl.toFixed(3) + ')';
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    }
+
+    // corpus + thin nodes
+    for (const n of this._nodes) {
+      const breathe = n.base + n.amp * Math.sin(t * n.sp + n.ph);
+      const appearF = this._ease((intro - n.appear) / 0.28);
+      let a = Math.max(0.04, breathe) * appearF;
+      if (hl) {
+        const match = (hl === 'corpus' && n.kind === 'corpus') || (hl === n.cl) || (hl === 'thin' && n.kind === 'thin');
+        a *= match ? 1.85 : 0.30;
+      }
+      a = Math.min(0.92, a);
+      const r = n.r * (0.
+=== nodes @ 51191 ===
+) + ')';
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    }
+
+    // corpus + thin nodes
+    for (const n of this._nodes) {
+      const breathe = n.base + n.amp * Math.sin(t * n.sp + n.ph);
+      const appearF = this._ease((intro - n.appear) / 0.28);
+      let a = Math.max(0.04, breathe) * appearF;
+      if (hl) {
+        const match = (hl === 'corpus' && n.kind === 'corpus') || (hl === n.cl) || (hl === 'thin' && n.kind === 'thin');
+        a *= match ? 1.85 : 0.30;
+      }
+      a = Math.min(0.92, a);
+      const r = n.r * (0.6 + 0.4 * appearF);
+      ctx.fi
+=== nodes @ 51841 ===
+ + a.toFixed(3) + ')' : 'rgba(63,122,82,' + a.toFixed(3) + ')';
+      ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, 6.2832); ctx.fill();
+    }
+
+    // web nodes — dormant ticks at rest; stream in from off-frame when active
+    const sinceWeb = t - this._webOn;
+    for (const n of this._web) {
+      const pulse = 0.5 + 0.5 * Math.sin(t * n.sp + n.ph);
+      if (active) {
+        const p = this._ease(sinceWeb / 0.9);
+        const x = n.x0 + (n.xT - n.x0) * p;
+        // arriving trail
+        ctx.strokeStyle = 'rgba(62,107,140,' + (0.18 * p).toFixed(3) + ')';
+        ctx.setLineDash([4, 4]); ctx.lin
+=== position:absolute @ 26726 ===
+div style="flex:1; position:relative; overflow:hidden; display:flex; flex-direction:column; min-height:0;">
+
+        <canvas id="corpus-field" style="position:absolute; inset:0; width:100%; height:100%; display:block;"></canvas>
+        <div style="position:absolute; inset:0; pointer-events:none; background:linear-gradient(90deg,#FBFAF7 0%,#FBFAF7 30%,rgba(251,250,247,0.82) 48%,rgba(251,250,247,0) 76%);"></div>
+
+        <!-- field annotations -->
+        <div style="position:absolute; inset:0; z-index:2; pointer-events:none;">
+          <div style="position:absolute; left:60%; top:54%;">
+     
+=== position:absolute @ 26825 ===
+ght:0;">
+
+        <canvas id="corpus-field" style="position:absolute; inset:0; width:100%; height:100%; display:block;"></canvas>
+        <div style="position:absolute; inset:0; pointer-events:none; background:linear-gradient(90deg,#FBFAF7 0%,#FBFAF7 30%,rgba(251,250,247,0.82) 48%,rgba(251,250,247,0) 76%);"></div>
+
+        <!-- field annotations -->
+        <div style="position:absolute; inset:0; z-index:2; pointer-events:none;">
+          <div style="position:absolute; left:60%; top:54%;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#2F5C3E; letter-spa
+=== position:absolute @ 27047 ===
+ent(90deg,#FBFAF7 0%,#FBFAF7 30%,rgba(251,250,247,0.82) 48%,rgba(251,250,247,0) 76%);"></div>
+
+        <!-- field annotations -->
+        <div style="position:absolute; inset:0; z-index:2; pointer-events:none;">
+          <div style="position:absolute; left:60%; top:54%;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#2F5C3E; letter-spacing:0.04em;">711 projects · £352m mapped</div>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:8.5px; color:#5C9070; margin-top:2px;">319 orgs · 418 bridges — owned, to scale</div>
+          </div
+=== position:absolute @ 27131 ===
+;"></div>
+
+        <!-- field annotations -->
+        <div style="position:absolute; inset:0; z-index:2; pointer-events:none;">
+          <div style="position:absolute; left:60%; top:54%;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#2F5C3E; letter-spacing:0.04em;">711 projects · £352m mapped</div>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:8.5px; color:#5C9070; margin-top:2px;">319 orgs · 418 bridges — owned, to scale</div>
+          </div>
+          <div style="position:absolute; left:55%; top:17%;">
+            <div sty
+=== position:absolute @ 27521 ===
+no',monospace; font-size:8.5px; color:#5C9070; margin-top:2px;">319 orgs · 418 bridges — owned, to scale</div>
+          </div>
+          <div style="position:absolute; left:55%; top:17%;">
+            <div style="display:flex; align-items:center; gap:6px;"><span style="width:13px; height:8px; background:repeating-linear-gradient(135deg,#F3E7D0 0 3px,#FBF4E8 3px 6px); border:1px solid #E3CDA4; border-radius:2px;"></span><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#8A6322;">aviation — 49% null</span></div>
+            <div style="font-family:'IBM Plex Mono',monospa
+=== position:absolute @ 28197 ===
+nt, shown before you ask</div>
+          </div>
+          <sc-if value="{{ isWebColumn }}" hint-placeholder-val="{{ true }}">
+            <div style="position:absolute; right:3.5%; top:70%; text-align:right;">
+              <sc-if value="{{ isRest }}" hint-placeholder-val="{{ true }}">
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#6E8AA3;">live web · dormant ⇢</div>
+              </sc-if>
+              <sc-if value="{{ isActive }}" hint-placeholder-val="{{ false }}">
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; c
+=== STYLES ===
+/* cyrillic-ext */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("a84cb83a-fec0-4839-8aa6-7baf59e5965c") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("9be53019-d320-4f6e-a796-baec5f810724") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("720ed502-88e2-4c33-842d-59a349ae4039") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("c639d6e3-95b7-4879-8faa-8571733b8814") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("914fd9c5-dbd5-44f6-8a0d-3d97f2847ed1") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("e2206cd8-26cf-4536-b854-60de415d5757") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("7af5ab7f-e7d2-4e62-ac21-6dad7b3bd300") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("2a7feb49-4261-4568-a1ee-7ab097b99a5f") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("1d7a385b-deba-48d2-8ec5-203b9cfd40af") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("2343cdb9-a047-4120-b50a-6de3eba8d332") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("3b4cd7ec-c7b6-40ed-a550-ba45c1689779") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("8f2dbfa6-fe6e-4087-9e9b-61a51adb53b2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("53c0c339-c880-4584-b956-9a3ca0ceef5c") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("2e4091c7-067c-428e-b716-de90255e34fc") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("eeda857c-4ec4-4edb-ba49-cfd65d799040") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Libre Franklin';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("31b172ab-d2bf-4a3f-9853-92f520540e04") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Libre Franklin';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("7616951c-c47d-4e30-b94c-7f7baae32a39") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Libre Franklin';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("5cb1f453-b1c9-4800-8afa-f3642a85bf9a") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Libre Franklin';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("4473f24a-9f5f-45c7-91d5-ed0d15ba23e5") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Libre Franklin';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("2b374c6a-22d8-453f-8061-668eb79cb6f7") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Libre Franklin';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("31b172ab-d2bf-4a3f-9853-92f520540e04") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Libre Franklin';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("7616951c-c47d-4e30-b94c-7f7baae32a39") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Libre Franklin';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("5cb1f453-b1c9-4800-8afa-f3642a85bf9a") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Libre Franklin';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("4473f24a-9f5f-45c7-91d5-ed0d15ba23e5") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5

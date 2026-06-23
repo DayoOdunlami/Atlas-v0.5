@@ -226,6 +226,86 @@ except Exception as _jarvis_err:
 
 
 # ---------------------------------------------------------------------------
+# ATLAS V5 — /atlas-v5 (GATE 2 — AnswerSpec brain, parallel to workbench)
+# ---------------------------------------------------------------------------
+
+def _load_atlas_v5():
+    from agents.atlas_v5.graph import atlas_v5_graph
+    return atlas_v5_graph
+
+
+try:
+    _atlas_v5_graph = _load_atlas_v5()
+    atlas_v5_agent = LangGraphAgent(
+        name="atlas_v5",
+        graph=_atlas_v5_graph,
+        description=(
+            "Atlas v5 brain for /atlas route. Emits AnswerSpec envelope for J1T1 orient. "
+            "Thin LangGraph shell around run_turn() — not orchestrator cognition."
+        ),
+    )
+    add_langgraph_fastapi_endpoint(app, atlas_v5_agent, path="/atlas-v5")
+    print("[server] Atlas v5 brain registered at /atlas-v5")
+
+    from pydantic import BaseModel
+
+    class TurnBody(BaseModel):
+        message: str
+        thread_id: str | None = None
+        current_spec: dict | None = None
+
+    @app.post("/atlas-v5/turn")
+    async def atlas_v5_turn(body: TurnBody) -> dict:
+        """Unified turn — chat reply; optional AnswerSpec when canvas updates."""
+        from agents.atlas_v5.run_turn import run_turn_response
+
+        return await run_turn_response(
+            body.message.strip(),
+            thread_id=body.thread_id,
+            current_spec=body.current_spec,
+        )
+
+    @app.post("/atlas-v5/turn/stream")
+    async def atlas_v5_turn_stream(body: TurnBody):
+        """NDJSON stream — partial skeleton then final AnswerSpec."""
+        from fastapi.responses import StreamingResponse
+
+        from agents.atlas_v5.run_turn import run_turn_stream
+
+        return StreamingResponse(
+            run_turn_stream(
+                body.message.strip(),
+                thread_id=body.thread_id,
+                current_spec=body.current_spec,
+            ),
+            media_type="application/x-ndjson",
+        )
+
+    @app.get("/atlas-v5/j1t1")
+    async def atlas_v5_j1t1_spec() -> dict:
+        """REST seam for Next.js /atlas page (GATE 2 contract proof)."""
+        from agents.atlas_v5.j1t1_corpus import J1T1_QUERY_PHRASE
+        from agents.atlas_v5.run_turn import run_turn
+
+        spec = await run_turn(J1T1_QUERY_PHRASE)
+        return spec.model_dump(mode="json")
+
+    class FollowUpBody(BaseModel):
+        message: str
+
+    @app.post("/atlas-v5/follow-up")
+    async def atlas_v5_follow_up(body: FollowUpBody) -> dict:
+        """Legacy alias — delegates to /atlas-v5/turn."""
+        from agents.atlas_v5.run_turn import run_turn_response
+
+        return await run_turn_response(body.message.strip())
+
+    print("[server] Atlas v5 REST at GET /atlas-v5/j1t1, POST /atlas-v5/turn")
+except Exception as _atlas_v5_err:
+    print(f"[server] WARNING: Atlas v5 brain failed to load: {_atlas_v5_err}")
+
+
+# ---------------------------------------------------------------------------
 # ATLAS — /atlas (AG-UI streaming endpoint)
 # ---------------------------------------------------------------------------
 

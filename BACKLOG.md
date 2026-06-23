@@ -30,4 +30,23 @@
 | Item | Why deferred | Trigger |
 |------|--------------|---------|
 | Notion harmonisation | MCP was offline | Notion MCP restored |
-| Harmonized external evidence (D4.6) | In plan v2.1 — not yet built | After MVP preview sign-off; Connect + policy first |
+| Harmonized external evidence (D4.6) | Built (v2.1) | — |
+
+## Blue Ocean (Sprint 3+ — prototype after high-value backbone)
+
+> Higher-risk, higher-differentiation. Build with prose / existing-block reuse first; only add dedicated UI after the logic proves valuable.
+
+| Idea | What it is | Surface | UI cost | Trigger |
+|------|-----------|---------|---------|---------|
+| **A. Provenance as the product** | Interactive evidence graph (corpus ↔ external ↔ synthesized), click a claim to see what produced it | New tab on workbench artifact panel | Contained — reuse NetworkMap primitive; Phase 1 = enriched list + badges | After D6 backbone |
+| **C. Bid-readiness simulation** | Run matcher in reverse: "what would make CPC fit?" — missing evidence, partners, metrics | New `prepare` outcome mode on workbench | Low — new format-pass recipe over ActionPlan + DimensionGap + prose | After A |
+| **E. Red-team / counterfactual** | "Steelman the opposite" button → disconfirming external search → rewrite under strongest counter-evidence (reuse `spine/falsification.py`) | Button on existing artifact panel | Lowest — button + reuse ObjectionResponse/RecommendationConfidence | Do FIRST in Sprint 3 |
+| **D. Cross-org passport network** | Many passports (partners, SMEs, funders); Atlas brokers matches — two-sided evidence marketplace | **New `/network` page** (Sprint 4) + new data model | High — phase it: prove with a 2nd passport + prose on workbench first | After C validates |
+
+**Blue-ocean build order:** E (button) → A (provenance tab) → C (prepare mode) → D phase-1 (2nd passport, prose) → D phase-2 (`/network` page, Sprint 4).
+
+**Also deferred (from sprint analysis):**
+
+| Item | Why | Trigger |
+|------|-----|---------|
+| Proactive opportunity radar (nightly external scan + alerts) | Needs scheduler + alert UX | After ingest loop (D6.1) stable |

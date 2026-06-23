@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Libre+Franklin:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { background: #e7e5df; font-family: 'Libre Franklin', sans-serif; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  input[type=range].sw { -webkit-appearance:none; appearance:none; height:4px; border-radius:3px; outline:none; }
+  input[type=range].sw::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:22px; height:22px; border-radius:50%; background:#FBFAF7; border:2px solid #211E1A; box-shadow:0 2px 6px rgba(0,0,0,.22); cursor:grab; }
+  input[type=range].sw::-moz-range-thumb { width:22px; height:22px; border-radius:50%; background:#FBFAF7; border:2px solid #211E1A; box-shadow:0 2px 6px rgba(0,0,0,.22); cursor:grab; }
+</style>
+</helmet>
+
+<div style="width: max-content; min-width: 100%; min-height: 100vh; box-sizing: border-box; padding: 56px; background: #e7e5df;">
+
+  <template id="__bundler_thumbnail" data-bg-color="#e7e5df">
+    <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+      <rect width="1200" height="800" fill="#e7e5df"></rect>
+      <rect x="360" y="220" width="480" height="360" rx="10" fill="#FBFAF7"></rect>
+      <path d="M410 520 L600 360 L790 300" fill="none" stroke="#3F7A52" stroke-width="5"></path>
+      <path d="M410 320 L600 420 L790 500" fill="none" stroke="#B07A2E" stroke-width="5"></path>
+      <line x1="600" y1="260" x2="600" y2="560" stroke="#211E1A" stroke-width="3" stroke-dasharray="6 6"></line>
+      <circle cx="600" cy="390" r="9" fill="#211E1A"></circle>
+    </svg>
+  </template>
+
+  <!-- header -->
+  <div style="max-width:1000px; margin-bottom:40px;">
+    <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:18px;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; color:#94908A; text-transform:uppercase;">Direction A · Journey 3 · Turn 3 · deep pass</div>
+      <div style="height:1px; flex:1; background:#d4d0c8;"></div>
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#94908A;">sensitivity · don't defend the rank — find what flips it</div>
+    </div>
+    <h1 style="font-family:'Newsreader',serif; font-weight:500; font-size:30px; line-height:1.2; color:#211E1A; margin:0 0 14px; max-width:810px; letter-spacing:-0.01em;">The signature move: don't defend the ranking — <span style="font-style:italic; color:#B07A2E;">find the one weight that flips it.</span> And that weight turns out to be a question about what CPC is for.</h1>
+    <div style="display:flex; gap:36px; max-width:880px;">
+      <p style="flex:1; margin:0; font-size:13px; line-height:1.6; color:#6B6760;"><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#211E1A;">INSTRUMENT — </span>a switching-weight sweep. Drag the single contested weight from <em style="font-style:italic;">seed-thin</em> (reward distinctive value) to <em style="font-style:italic;">amplify-concentrated</em> (reward raw scale) and the rank reorders live. Maritime and highways trade places at one crossing point — drawn to scale from the two real poles.</p>
+      <p style="flex:1; margin:0; font-size:13px; line-height:1.6; color:#6B6760;"><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#211E1A;">THE FINDING — </span>maritime holds under four of five weightings; only up-weighting raw-scale flips it to highways. That's not a rounding flip — it's a complete reversal. So the whole decision reduces to one judgement: <strong style="color:#8A6322;">is CPC's job to seed thin fields or amplify concentrated ones?</strong> A question above the data's pay grade.</p>
+    </div>
+  </div>
+
+  <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.08em; color:#56524C; margin-bottom:12px;">FULL PRODUCT SURFACE — TRANSLATE → TEST THE RANKING</div>
+
+  <div style="width:1440px; height:1030px; background:#FBFAF7; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 16px 50px rgba(0,0,0,.07); overflow:hidden; display:flex;">
+
+    <!-- LEFT RAIL -->
+    <div style="width:60px; flex:none; background:#F4F1EB; border-right:1px solid #E7E3DC; display:flex; flex-direction:column; align-items:center; padding:14px 0;">
+      <div style="width:30px; height:30px; border-radius:7px; background:#211E1A; color:#FBFAF7; font-family:'Newsreader',serif; font-weight:600; font-size:18px; display:flex; align-items:center; justify-content:center;">A</div>
+      <div style="height:22px;"></div>
+      <div style="display:flex; flex-direction:column; gap:4px; align-items:center;">
+        <div style="width:32px; height:32px; border-radius:8px; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#A39E96;">Fr</div>
+        <div style="width:32px; height:32px; border-radius:8px; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#A39E96;">Sc</div>
+        <div style="width:32px; height:32px; border-radius:8px; background:#E7E0D4; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#211E1A; font-weight:600;">Te</div>
+        <div style="width:32px; height:32px; border-radius:8px; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#A39E96;">Ap</div>
+      </div>
+      <div style="flex:1;"></div>
+      <div style="width:28px; height:28px; border-radius:50%; background:#8FA98C;"></div>
+    </div>
+
+    <!-- MAIN -->
+    <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+
+      <!-- TOPBAR -->
+      <div style="height:54px; flex:none; border-bottom:1px solid #E7E3DC; display:flex; align-items:center; padding:0 24px; gap:16px; background:#FBFAF7; position:relative; z-index:5;">
+        <div style="font-size:15px; font-weight:600; color:#211E1A; white-space:nowrap;">Transport decarbonisation — mode priority</div>
+        <div style="width:1px; height:18px; background:#E7E3DC;"></div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.06em; color:#8C887F;">CORPUS + WEB · GREEN BOOK · 19 JUN 2026</div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.08em; color:#3F7A52;">· TEST THE RANKING</div>
+        <div style="flex:1;"></div>
+        <div style="display:flex; background:#F0EDE7; border-radius:7px; padding:3px; gap:2px;">
+          <div style="font-size:12px; padding:5px 12px; border-radius:5px; background:#FFFFFF; color:#211E1A; font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,.06);">Read</div>
+          <div style="font-size:12px; padding:5px 12px; border-radius:5px; color:#8C887F;">Workbench</div>
+          <div style="font-size:12px; padding:5px 12px; border-radius:5px; color:#8C887F;">Present</div>
+        </div>
+      </div>
+
+      <!-- BODY -->
+      <div style="flex:1; display:flex; min-height:0;">
+
+        <!-- CANVAS -->
+        <div style="flex:1; min-width:0; overflow:hidden; display:flex; flex-direction:column;">
+
+          <!-- CONFIDENCE CEILING (rises toward ROBUST) -->
+          <div style="flex:none; padding:13px 44px 12px; background:linear-gradient(180deg,#ECF2EC 0%,#FBFAF7 100%); border-bottom:1px solid #CDDDCF; box-shadow:0 8px 16px -10px rgba(47,92,62,.26); position:relative; z-index:3;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.13em; color:#2F5C3E; text-transform:uppercase;">▔ Confidence ceiling</div>
+              <div style="display:flex; align-items:center; gap:6px; padding:2px 8px; border-radius:4px; background:#E4EFE6; border:1px solid #BBD3C0;"><div style="width:5px; height:5px; border-radius:50%; background:#2F5C3E;"></div><div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#24492F; font-weight:700;">ROBUST</div></div>
+              <div style="display:flex; align-items:center; gap:5px; font-family:'IBM Plex Mono',monospace; font-size:9px; color:#3F7A52;"><span style="font-size:11px;">↑</span> rose from <span style="text-decoration:line-through; color:#9DB6A4;">Supported</span> — surviving the sensitivity sweep raised it</div>
+              <div style="display:flex; align-items:center; gap:6px; padding:2px 8px; border-radius:4px; background:#FBF6EE; border:1px solid #E3CDA4;"><div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#8A6322; font-weight:600;">· CONDITIONAL ON THE IDENTITY GATE</div></div>
+              <div style="flex:1; height:1px; background:repeating-linear-gradient(90deg,#B7CCBA 0 7px,transparent 7px 12px);"></div>
+            </div>
+          </div>
+
+          <!-- canvas content -->
+          <div style="flex:1; overflow:hidden; padding:15px 44px 20px; position:relative; display:flex; flex-direction:column; min-height:0;">
+
+            <!-- carried-forward trace -->
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px; padding:7px 12px; background:#F4F1EB; border-left:2px solid #CFC8BC; border-radius:0 6px 6px 0; max-width:880px;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.1em; color:#A39E96; text-transform:uppercase;">↑ carried from Turns 1–2</div>
+              <div style="font-size:12px; color:#8C887F;">the scored matrix is <strong style="color:#6B6760; font-weight:600;">re-weighted, not re-derived</strong> — no new searches · sensitivity re-uses T2's cells <span style="font-family:'IBM Plex Mono',monospace; font-size:10px;">[S1·S2·W1·W2]</span></div>
+            </div>
+
+            <!-- HERO -->
+            <h2 style="font-family:'Newsreader',serif; font-weight:500; font-size:28px; line-height:1.14; letter-spacing:-0.018em; color:#1A1714; margin:0 0 6px; max-width:840px;">Robust to most re-weightings — but not all. The <span style="font-style:italic; color:#3F7A52;">one</span> weight that flips it is itself the real strategic question.</h2>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#8A6322; margin-bottom:14px;">switching-value logic, applied to a comparison · the honest defence isn't "the number says so" — it's "it holds unless your identity changes"</div>
+
+            <!-- INSTRUMENT ROW -->
+            <div style="display:flex; gap:24px; align-items:stretch; flex:1; min-height:0;">
+
+              <!-- SIGNATURE : switching-weight sweep -->
+              <div style="flex:none; width:646px; display:flex; flex-direction:column; min-height:0;">
+                <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:9px;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#56524C; text-transform:uppercase;">The switching-weight sweep · drag the weight, watch the rank flip</div>
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#8C887F;">1-D sweep on the contested axis — not a composite score</div>
+                </div>
+
+                <div style="position:relative; width:646px; flex:1; min-height:200px; border:1px solid #EFEBE4; border-radius:9px; background:#FFFFFF;">
+                  <div id="sweep-chart" style="position:absolute; inset:6px 10px 4px 6px;"></div>
+                </div>
+
+                <!-- the weight slider -->
+                <div style="margin-top:13px; border:1px solid #EFEBE4; border-radius:9px; background:#FBFAF7; padding:13px 16px;">
+                  <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:9px;">
+                    <div style="font-size:11px; font-weight:600; color:#3F7A52; display:flex; align-items:center; gap:5px;">◂ seed thin <span style="font-family:'IBM Plex Mono',monospace; font-size:8.5px; color:#7FA88A; font-weight:400;">reward distinctive value</span></div>
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#94908A;">criterion weight</div>
+                    <div style="font-size:11px; font-weight:600; color:#8A6322; display:flex; align-items:center; gap:5px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:8.5px; color:#B0946A; font-weight:400;">reward raw scale</span> amplify concentrated ▸</div>
+                  </div>
+                  <input type="range" class="sw" min="0" max="100" value="20" oninput="{{ onSlide }}" style="width:100%; background:{{ trackGradient }};">
+                  <div style="display:flex; align-items:center; justify-content:space-between; margin-top:9px;">
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#94908A;">weight on raw-scale: <span style="color:#211E1A; font-weight:600;">{{ wPct }}</span></div>
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#8A6322;">⌖ rank flips at {{ switchPct }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- RIGHT : live winner + sensitivity table + escalation -->
+              <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:12px;">
+
+                <!-- LIVE WINNER readout -->
+                <div style="border:1px solid {{ winBorder }}; border-left:3px solid {{ winAccent }}; border-radius:8px; background:{{ winBg }}; padding:12px 15px;">
+                  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.1em; color:#94908A; text-transform:uppercase;">under this weight, the winner is</div>
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:8.5px; color:{{ winAccent }};">{{ winTag }}</div>
+                  </div>
+                  <div style="display:flex; align-items:baseline; gap:9px;">
+                    <div style="font-family:'Newsreader',serif; font-weight:500; font-size:27px; line-height:1; color:{{ winAccent }};">{{ winnerName }}</div>
+                    <div style="font-size:12px; color:#6B6760;">{{ winnerNote }}</div>
+                  </div>
+                  <!-- live mini rank -->
+                  <div style="display:flex; gap:5px; margin-top:11px; align-items:center; flex-wrap:wrap;">{{ liveRank }}</div>
+                </div>
+
+                <!-- TORNADO : per-criterion sensitivity -->
+                <div style="border:1px solid #EFEBE4; border-radius:8px; background:#FBFAF7; padding:12px 15px;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.1em; color:#56524C; text-transform:uppercase; margin-bottom:10px;">Up-weight each criterion → who wins</div>
+                  <div style="display:flex; flex-direction:column; gap:6px;">
+                    <div style="display:flex; align-items:center; gap:9px;"><div style="flex:none; width:118px; font-size:11.5px; color:#46423C;">Policy-driver</div><div style="flex:1; height:9px; border-radius:3px; background:#E4EFE6;"></div><div style="flex:none; width:66px; font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#2F5C3E; text-align:right;">Maritime</div></div>
+                    <div style="display:flex; align-items:center; gap:9px;"><div style="flex:none; width:118px; font-size:11.5px; color:#46423C;">Transferability</div><div style="flex:1; height:9px; border-radius:3px; background:#E4EFE6;"></div><div style="flex:none; width:66px; font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#2F5C3E; text-align:right;">Maritime</div></div>
+                    <div style="display:flex; align-items:center; gap:9px;"><div style="flex:none; width:118px; font-size:11.5px; color:#46423C;">Strategic fit</div><div style="flex:1; height:9px; border-radius:3px; background:#E4EFE6;"></div><div style="flex:none; width:66px; font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#2F5C3E; text-align:right;">Maritime</div></div>
+                    <div style="display:flex; align-items:center; gap:9px;"><div style="flex:none; width:118px; font-size:11.5px; color:#46423C;">Value-add</div><div style="flex:1; height:9px; border-radius:3px; background:#E4EFE6;"></div><div style="flex:none; width:66px; font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#2F5C3E; text-align:right;">Maritime</div></div>
+                    <div style="display:flex; align-items:center; gap:9px; padding:5px 7px; margin:1px -7px 0; border-radius:6px; background:#FBF1E2; box-shadow:inset 3px 0 0 #B07A2E;"><div style="flex:none; width:111px; font-size:11.5px; font-weight:700; color:#8A6322;">Raw scale / maturity</div><div style="flex:1; height:9px; border-radius:3px; background:#EAD7B6;"></div><div style="flex:none; width:66px; font-family:'IBM Plex Mono',monospace; font-size:9.5px; font-weight:700; color:#8A6322; text-align:right;">Highways ⚑</div></div>
+                  </div>
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:8.5px; color:#B0946A; margin-top:9px;">⚑ the only flip · 4 of 5 weightings hold maritime</div>
+                </div>
+
+                <!-- ESCALATION : the identity gate -->
+                <div style="flex:1; border-left:3px solid #B07A2E; border-radius:0 8px 8px 0; background:#FBF6EE; padding:12px 15px; display:flex; flex-direction:column; justify-content:center;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.1em; color:#B07A2E; text-transform:uppercase; margin-bottom:7px;">⊘ escalated — above the data's pay grade</div>
+                  <div style="font-size:13px; line-height:1.5; color:#5A4A2E;">The flip-criterion isn't in the corpus at all. <strong style="color:#3A332A;">Is CPC an innovation accelerator (seed thin) or a delivery body (scale concentrated)?</strong> That's CPC's call — and it's the one thing that overturns the rank.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CHAT : so-what decision rail -->
+        <div style="width:396px; flex:none; border-left:1px solid #E7E3DC; background:#FFFFFF; display:flex; flex-direction:column;">
+          <div style="height:54px; flex:none; border-bottom:1px solid #EFEBE4; display:flex; align-items:center; padding:0 20px; gap:9px;">
+            <div style="width:7px;height:7px;border-radius:50%;background:#3F7A52;"></div>
+            <div style="font-size:12.5px; font-weight:600; color:#211E1A;">Atlas</div>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#A39E96;">· so-what</div>
+            <div style="flex:1;"></div>
+            <!-- turn spine 3/4 -->
+            <div style="display:flex; align-items:center; gap:5px;">
+              <div style="width:7px; height:7px; border-radius:50%; background:#3F7A52;"></div>
+              <div style="width:14px; height:2px; background:#3F7A52;"></div>
+              <div style="width:7px; height:7px; border-radius:50%; background:#3F7A52;"></div>
+              <div style="width:14px; height:2px; background:#3F7A52;"></div>
+              <div style="width:8px; height:8px; border-radius:50%; background:#3F7A52;"></div>
+              <div style="width:14px; height:2px; background:#E0DCD3;"></div>
+              <div style="width:7px; height:7px; border-radius:50%; border:1.5px solid #D8D3CA;"></div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#A39E96; margin-left:4px;">3/4</div>
+            </div>
+          </div>
+
+          <div style="flex:1; padding:22px 20px; overflow:hidden; display:flex; flex-direction:column; gap:16px;">
+            <div style="align-self:flex-end; max-width:300px; background:#F0EDE7; border-radius:12px 12px 4px 12px; padding:11px 14px; font-size:13px; line-height:1.5; color:#46423C;">How sensitive is "maritime wins" to your assumptions? Convince me it's not just your weighting.</div>
+
+            <div style="max-width:316px;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.12em; color:#A39E96; text-transform:uppercase; margin-bottom:8px;">What you're looking at</div>
+              <p style="margin:0 0 14px; font-size:13.5px; line-height:1.58; color:#2E2A24;">I'm not defending the rank — I'm <strong>attacking it</strong>. It survives four of five re-weightings. Only "reward raw scale" flips it, to highways. Drag the weight yourself and watch.</p>
+
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.12em; color:#2F5C3E; text-transform:uppercase; margin-bottom:8px;">The one decision</div>
+              <div style="background:#F1F6F1; border:1px solid #CFE0D4; border-radius:9px; padding:12px 13px; margin-bottom:14px;">
+                <p style="margin:0; font-size:13.5px; line-height:1.5; color:#1A2E20;">Answer one question: <strong>does CPC seed thin fields or amplify concentrated ones?</strong> "Seed" → maritime. "Amplify" → highways. Everything else is settled.</p>
+              </div>
+
+              <div style="display:flex; gap:9px; align-items:flex-start; border-left:2px solid #E3CDA4; padding-left:11px;">
+                <div style="font-size:13px; line-height:1.5; color:#7A6A50;"><span style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#B07A2E; text-transform:uppercase; letter-spacing:0.08em;">Gate · </span>that's a judgement about CPC's identity — not a number I can compute. Ceiling rose to <strong>Robust</strong>, conditional on it.</div>
+              </div>
+            </div>
+
+            <div style="flex:1;"></div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <div style="font-size:12px; color:#2F5C3E; background:#EEF4EE; border:1px solid #CFE0D4; border-radius:14px; padding:5px 12px;">Write the board one-pager →</div>
+              <div style="font-size:12px; color:#6B6760; background:#F4F1EB; border:1px solid #E7E3DC; border-radius:14px; padding:5px 12px;">Assume seed-thin</div>
+            </div>
+          </div>
+
+          <div style="flex:none; padding:14px 16px; border-top:1px solid #EFEBE4;">
+            <div style="border:1px solid #E0DCD3; border-radius:9px; padding:10px 13px; font-size:12.5px; color:#A39E96; display:flex; align-items:center; justify-content:space-between;">Ask a follow-up…<span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#C4BFB6;">⏎</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- motion / legend annotations -->
+  <div style="max-width:1000px; margin-top:30px; display:flex; gap:30px;">
+    <div style="flex:1;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#56524C; text-transform:uppercase; margin-bottom:10px;">Turn 2 → Turn 3 · what moved</div>
+      <div style="display:flex; flex-direction:column; gap:7px; font-size:12.5px; color:#6B6760; line-height:1.5;">
+        <div><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#3F7A52;">⇄ swaps </span> the scored heatmap → a switching-weight sweep — the comparison analogue of a tornado / switching-value chart.</div>
+        <div><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#2F5C3E;">↑ ceiling rises </span> Supported → Robust — the rank survived a hostile sensitivity sweep. The ceiling moves with evidence, not decoration.</div>
+        <div><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#8A6322;">↳ threads </span> the contested dimension is now the explicit decision: seed-thin (maritime) vs amplify-concentrated (highways). T4 packages it as the board gate.</div>
+      </div>
+    </div>
+    <div style="flex:1;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#56524C; text-transform:uppercase; margin-bottom:10px;">Why this is honest, not rigged</div>
+      <div style="display:flex; flex-direction:column; gap:7px; font-size:12.5px; color:#6B6760; line-height:1.5;">
+        <div><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#3F7A52;">✓ </span>the sweep is a 1-D sensitivity on the one contested axis — explicitly <em style="font-style:italic;">not</em> the composite score T2 refused.</div>
+        <div><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#8A6322;">⊘ </span>the flip-criterion (CPC identity) is escalated as a judgement, not faked into the data. Drawn to scale from the two real poles.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  // Two real poles, normalised 0–1.
+  //   valueAdd = room to add distinctive value (thin field)
+  //   scale    = raw £ + project count + funding maturity
+  // composite(w) = (1-w)*valueAdd + w*scale ; w = weight on raw-scale
+  OPTIONS = [
+    { name: 'Maritime',  valueAdd: 0.90, scale: 0.45, color: '#3F7A52' },
+    { name: 'Highways',  valueAdd: 0.25, scale: 0.95, color: '#B07A2E' },
+    { name: 'Aviation',  valueAdd: 0.50, scale: 0.55, color: '#8C887F' },
+    { name: 'Rail',      valueAdd: 0.75, scale: 0.20, color: '#B0A48F' },
+    { name: 'Do-nothing',valueAdd: 0.20, scale: 0.10, color: '#C4A36A' },
+  ];
+
+  state = { w: 0.20 };
+
+  // switching weight where Maritime and Highways cross
+  _switch() {
+    const m = this.OPTIONS[0], h = this.OPTIONS[1];
+    // (1-w)mV + w mS = (1-w)hV + w hS  → w = (mV-hV)/((mV-hV)+(hS-mS))
+    const num = m.valueAdd - h.valueAdd;
+    const den = (m.valueAdd - h.valueAdd) + (h.scale - m.scale);
+    return num / den;
+  }
+
+  _score(o, w) { return (1 - w) * o.valueAdd + w * o.scale; }
+
+  _ranked(w) {
+    return this.OPTIONS
+      .map(o => ({ ...o, s: this._score(o, w) }))
+      .sort((a, b) => b.s - a.s);
+  }
+
+  renderVals() {
+    const w = this.state.w;
+    const sw = this._switch();
+    const ranked = this._ranked(w);
+    const winner = ranked[0];
+    const isMaritime = winner.name === 'Maritime';
+    const seedColor = '#3F7A52', ampColor = '#B07A2E';
+
+    const liveRank = React.createElement(React.Fragment, null,
+      ranked.map((o, i) => React.createElement('div', {
+        key: o.name,
+        style: {
+          display: 'flex', alignItems: 'center', gap: '5px',
+          padding: '3px 8px', borderRadius: '6px',
+          background: i === 0 ? (isMaritime ? '#E4EFE6' : '#FBF1E2') : '#F4F1EB',
+          border: '1px solid ' + (i === 0 ? (isMaritime ? '#BBD3C0' : '#E3CDA4') : '#E7E3DC'),
+        },
+      },
+        React.createElement('span', { style: { fontFamily: 'IBM Plex Mono, monospace', fontSize: '8px', color: '#A39E96' } }, i + 1),
+        React.createElement('span', { style: { fontSize: '11px', fontWeight: i === 0 ? 700 : 500, color: i === 0 ? (isMaritime ? '#2F5C3E' : '#8A6322') : '#6B6760' } }, o.name),
+      )),
+    );
+
+    const trackGradient = `linear-gradient(90deg, ${seedColor} 0%, #CFE0D4 ${(sw*100).toFixed(0)}%, #E3CDA4 ${(sw*100).toFixed(0)}%, ${ampColor} 100%)`;
+
+    return {
+      onSlide: (e) => this.setState({ w: Math.max(0, Math.min(1, e.target.value / 100)) }),
+      wPct: Math.round(w * 100) + '%',
+      switchPct: Math.round(sw * 100) + '%',
+      trackGradient,
+      winnerName: winner.name,
+      winnerNote: isMaritime ? 'seed-thin reading — its lead in distinctive value dominates' : 'amplify-concentrated reading — raw scale dominates',
+      winAccent: isMaritime ? seedColor : ampColor,
+      winBg: isMaritime ? 'linear-gradient(135deg,#F4F8F4 0%,#FAFCFA 100%)' : 'linear-gradient(135deg,#FBF6EE 0%,#FDFBF6 100%)',
+      winBorder: isMaritime ? '#CFE0D4' : '#E3CDA4',
+      winTag: isMaritime ? 'w < ' + Math.round(sw * 100) + '%' : 'w ≥ ' + Math.round(sw * 100) + '%',
+      liveRank,
+    };
+  }
+
+  componentDidMount() { this._tries = 0; this._tryInit(); }
+  componentDidUpdate() { this._updateMark(); }
+
+  _tryInit() {
+    if (typeof window === 'undefined') return;
+    const el = document.getElementById('sweep-chart');
+    if (!(window.echarts && el && el.clientWidth > 0)) {
+      if (this._tries++ > 100) return;
+      setTimeout(() => this._tryInit(), 60);
+      return;
+    }
+    this._render();
+  }
+
+  _render() {
+    const echarts = window.echarts;
+    const el = document.getElementById('sweep-chart');
+    if (this._chart) this._chart.dispose();
+    this._chart = echarts.init(el, null, { renderer: 'svg' });
+    const sw = this._switch();
+    const xs = [];
+    for (let i = 0; i <= 50; i++) xs.push(i / 50);
+
+    const series = this.OPTIONS.map(o => ({
+      name: o.name,
+      type: 'line',
+      smooth: false,
+      showSymbol: false,
+      lineStyle: { color: o.color, width: (o.name === 'Maritime' || o.name === 'Highways') ? 2.6 : 1.4, type: (o.name === 'Do-nothing') ? 'dashed' : 'solid' },
+      emphasis: { focus: 'series' },
+      data: xs.map(w => [w * 100, +(this._score(o, w) * 100).toFixed(1)]),
+      endLabel: { show: true, formatter: o.name, fontFamily: 'IBM Plex Mono, monospace', fontSize: 9.5, color: o.color },
+      z: (o.name === 'Maritime' || o.name === 'Highways') ? 5 : 2,
+    }));
+
+    // switching markLine on the Maritime series
+    series[0].markLine = {
+      symbol: 'none', silent: true,
+      label: { show: true, position: 'insideEndTop', formatter: 'rank flips', fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#211E1A' },
+      lineStyle: { color: '#211E1A', width: 1.2, type: 'dashed' },
+      data: [{ xAxis: +(sw * 100).toFixed(0) }],
+    };
+
+    this._chart.setOption({
+      grid: { left: 40, right: 64, top: 36, bottom: 30 },
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: '#FFFFFF', borderColor: '#DCD7CE', borderWidth: 1,
+        textStyle: { color: '#3A332A', fontFamily: 'IBM Plex Mono, monospace', fontSize: 10 },
+        extraCssText: 'box-shadow:0 8px 26px rgba(40,34,26,.16); border-radius:8px;',
+        formatter: (ps) => {
+          const w = ps[0].axisValue;
+          let s = `<b>weight on raw-scale: ${Math.round(w)}%</b><br/>`;
+          ps.slice().sort((a,b)=>b.data[1]-a.data[1]).forEach((p,i) => { s += `${i+1}. ${p.seriesName} · ${p.data[1].toFixed(0)}<br/>`; });
+          return s;
+        },
+      },
+      xAxis: {
+        type: 'value', min: 0, max: 100,
+        name: 'weight on raw-scale  →', nameLocation: 'middle', nameGap: 20,
+        nameTextStyle: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#8C887F' },
+        axisLine: { lineStyle: { color: '#D8D3CA' } },
+        axisLabel: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 8.5, color: '#A39E96', formatter: '{value}%' },
+        splitLine: { show: false },
+      },
+      yAxis: {
+        type: 'value', min: 0, max: 100,
+        name: 'score', nameTextStyle: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#8C887F' },
+        axisLine: { show: false }, axisTick: { show: false },
+        axisLabel: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 8.5, color: '#A39E96' },
+        splitLine: { lineStyle: { color: '#F1EEE8' } },
+      },
+      series,
+    });
+
+    this._updateMark();
+    this._onResize = () => this._chart && this._chart.resize();
+    window.addEventListener('resize', this._onResize);
+  }
+
+  // live vertical marker tracking the slider position
+  _updateMark() {
+    if (!this._chart) return;
+    const w = this.state.w * 100;
+    this._chart.setOption({
+      series: [{
+        name: 'Maritime',
+        markArea: {
+          silent: true,
+          itemStyle: { color: 'rgba(33,30,26,0.05)' },
+          data: [[{ xAxis: 0 }, { xAxis: w }]],
+        },
+        markPoint: {
+          symbol: 'circle', symbolSize: 9, silent: true,
+          itemStyle: { color: '#211E1A' },
+          data: [{ coord: [w, +(this._score(this.OPTIONS[0], this.state.w) * 100).toFixed(1)] }],
+        },
+      }],
+    });
+  }
+
+  componentWillUnmount() {
+    if (this._onResize) window.removeEventListener('resize', this._onResize);
+    if (this._chart) this._chart.dispose();
+  }
+}
+</script>
+</body>
+</html>

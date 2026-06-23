@@ -76,7 +76,7 @@ export const CorpusCitationSchema = z.object({
    * Required on artefact citations; optional for context-only prior_citations.
    */
   score: z.number().min(0).max(1).optional(),
-  source_type: SourceTypeSchema.optional(),
+  source_type: SourceTypeSchema.nullish(),
   organisation: z.string().optional(),
   relevance_note: z.string().optional(),
   funder: z.string().optional(),

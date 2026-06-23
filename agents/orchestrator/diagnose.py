@@ -35,12 +35,46 @@ _NAMED_CALL_PATTERNS: list[re.Pattern[str]] = [
 ]
 
 
-def should_run_value_translation(outcome: str, query: str) -> bool:
-    """True when the matcher vertical should run deterministically."""
-    if outcome == "diagnose":
+_OPPORTUNITY_ONLY_PATTERNS: list[re.Pattern[str]] = [
+    re.compile(r"\b(?:top|closest|best|which).*(?:opportunit|funding\s+call|live\s+call)\b", re.I),
+    re.compile(r"\bopportunit.*(?:route|match|fit|for\s+cpc)\b", re.I),
+    re.compile(r"\bwhat are the top\b.*\b(?:opportunit|route)\b", re.I),
+]
+
+
+def _is_opportunity_only(query: str) -> bool:
+    return any(p.search(query) for p in _OPPORTUNITY_ONLY_PATTERNS)
+
+
+def _requires_transfer_analysis(query: str) -> bool:
+    """True when VT matcher vertical is the right tool."""
+    if re.search(r"\bevidence\b.*\btransfer\b|\btransfer\b.*\bevidence\b", query, re.I):
         return True
+    if _names_specific_call(query):
+        return True
+    if re.search(r"\bcompare\b.*\b(?:passport|capabilit|cpc|evidence)\b", query, re.I):
+        return True
+    if re.search(r"\bsmart\s+mobility\b.*\btransfer\b|\btransfer\b.*\bsmart\s+mobility\b", query, re.I):
+        return True
+    return False
+
+
+def should_run_value_translation(outcome: str, query: str) -> bool:
+    """True when the matcher VT vertical should run — not generic corpus search."""
     if outcome == "connect":
-        return any(pat.search(query) for pat in _TRANSFER_PATTERNS)
+        if _is_opportunity_only(query) and not _requires_transfer_analysis(query):
+            return False
+        return _requires_transfer_analysis(query) or any(
+            pat.search(query) for pat in _TRANSFER_PATTERNS
+        )
+    if outcome == "diagnose":
+        return _requires_transfer_analysis(query) or bool(
+            re.search(
+                r"\btransfer\b.*\b(?:fit|gap|lane|match)\b|\bgaps?\b.*\b(?:transfer|target|call)\b",
+                query,
+                re.I,
+            )
+        )
     return False
 
 

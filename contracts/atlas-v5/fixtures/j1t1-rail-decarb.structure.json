@@ -1,0 +1,97 @@
+{
+  "$schema": "./answer-spec-v0.2.fixture.schema.json",
+  "_comment": "STRUCTURE ONLY — bind all numbers and UUIDs from live J1T1 query at GATE 0b/1. Do not ship literals.",
+  "specVersion": "0.2.1",
+  "object": "Rail decarbonisation",
+  "scope": "CORPUS · {{corpus_count}} OBJECTS · ORIENT",
+  "mode": "Orient",
+  "tier": "Supported",
+  "tierCapReason": "3+ verified corpus citations; web context capped at candidate",
+  "verdict": {
+    "sentence": "The corpus sees a busy but small-money field — and it's blind to the part that matters most.",
+    "tail": "A thin, Innovate-UK-funded SME innovation layer sits beneath a national electrification programme the corpus can't see."
+  },
+  "stats": [
+    { "value": "{{project_count}}", "label": "projects", "provId": "stat-corpus", "tone": "corpus" },
+    { "value": "{{funding_floor_display}}", "label": "known funding · a floor", "provId": "stat-corpus", "tone": "corpus" },
+    { "value": "{{live_since_2024}}", "label": "live since 2024", "provId": "stat-corpus", "tone": "corpus" },
+    { "value": "{{org_count}}", "label": "lead organisations", "provId": "stat-corpus", "tone": "corpus" }
+  ],
+  "blindspot": {
+    "sign": "undercount",
+    "gap": "{{blindspot_primary}}",
+    "closable": "{{blindspot_closable}}",
+    "secondary": "{{null_funding_note}}",
+    "structure": {
+      "pattern": "{{null_structure_pattern}}",
+      "implication": "{{null_structure_implication}}"
+    }
+  },
+  "instrument": {
+    "recipe": "IncommensurableMagnitudes",
+    "data": {
+      "upper": { "label": "National electrification programme", "display": "~£11.7bn", "source": "web" },
+      "lower": { "label": "SME innovation layer (corpus)", "display": "{{funding_floor_display}}", "source": "corpus" },
+      "ratioLabel": "≈ {{ratio_label}}",
+      "ratioNote": "three orders of magnitude — the gap is the finding"
+    },
+    "honesty": { "toScale": false, "label": "axis compressed at the gap" }
+  },
+  "claims": [],
+  "corpus_citations": [
+    {
+      "_comment": "Replace with live UUIDs from search — each must pass citation_guard DB verify",
+      "id": "00000000-0000-4000-8000-000000000001",
+      "title": "{{example_project_title}}",
+      "organisation": "{{example_org}}",
+      "score": 0.85
+    }
+  ],
+  "hive_citations": [],
+  "web_evidence": [
+    {
+      "id": "ext-placeholder",
+      "title": "TDNS / GBR strategy context",
+      "url": "https://www.gov.uk/",
+      "publisher": "DfT",
+      "verification_state": "candidate",
+      "provenance": "external"
+    }
+  ],
+  "provenance": {
+    "stat-corpus": {
+      "ref": "atlas.projects · aggregate",
+      "scope": "rail + decarbonisation · live",
+      "trust": "corpus",
+      "trustNote": "funding_amount null on {{null_count}}/{{project_count}} → floor not total",
+      "row": "corpus aggregate"
+    },
+    "mag-upper": {
+      "ref": "web context · TDNS / GBR strategy",
+      "scope": "national programme",
+      "trust": "web",
+      "trustNote": "Order-of-magnitude only — compressed axis",
+      "row": "[W1·W2·W3]"
+    }
+  },
+  "reconciliation": {
+    "notes": [],
+    "retrieval": {
+      "lane_mode": "dual",
+      "corpus_count": 0,
+      "external_count": 0,
+      "candidate_count": 0,
+      "conflict_count": 0,
+      "errors": [],
+      "external_skipped": false
+    }
+  },
+  "soWhat": {
+    "lookingAt": "Rail decarb portfolio concentration vs national programme scale",
+    "oneDecision": "Which tier is CPC entering — SME innovation or programme-scale?",
+    "gate": "Supported tier requires corpus citations; national £ context stays web-candidate",
+    "primaryAction": "Diagnose fit for a specific Innovate UK call →",
+    "turn": "1 of 4"
+  },
+  "query": "State of play on rail decarbonisation in our corpus"
+}

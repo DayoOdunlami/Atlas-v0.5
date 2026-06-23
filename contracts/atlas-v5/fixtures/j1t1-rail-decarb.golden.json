@@ -1,0 +1,96 @@
+{
+  "_comment": "GATE 0a golden — corpus stress-test verified 2026-06-17. Aggregates live; citation UUID prefix bb918318 verified in Supabase.",
+  "specVersion": "0.2.1",
+  "object": "Rail decarbonisation",
+  "scope": "CORPUS · 55 OBJECTS · ORIENT",
+  "mode": "Orient",
+  "tier": "Supported",
+  "tierCapReason": "37 funded corpus rows with verified UUIDs; web £ context capped candidate",
+  "verdict": {
+    "sentence": "The corpus sees a busy but small-money field — and it's blind to the part that matters most.",
+    "tail": "A thin, Innovate-UK-funded SME innovation layer sits beneath a national electrification programme the corpus can't see."
+  },
+  "stats": [
+    { "value": "55", "label": "projects", "provId": "stat-corpus", "tone": "corpus" },
+    { "value": "£8.17m", "label": "known funding · a floor", "provId": "stat-corpus", "tone": "corpus" },
+    { "value": "27", "label": "live since 2024", "provId": "stat-corpus", "tone": "corpus" },
+    { "value": "30", "label": "lead organisations", "provId": "stat-corpus", "tone": "corpus" }
+  ],
+  "blindspot": {
+    "sign": "undercount",
+    "gap": "CPC TRIG grants and national programme spend are absent from the corpus — £8.17m is the SME grant tier only.",
+    "closable": "Closable by ingestion for CPC-owned rows; national programme remains web context.",
+    "secondary": "18 of 55 projects carry no funding figure — not random missingness.",
+    "structure": {
+      "pattern": "Nulls concentrate in EPSRC research-council awards (15 of 18 nulls; all 15 EPSRC projects at £0 recorded); Innovate UK 1 null in 36.",
+      "implication": "£8,172,702 ≈ complete Innovate UK innovation spend in this slice — a structured floor, not a random hole."
+    }
+  },
+  "instrument": {
+    "recipe": "IncommensurableMagnitudes",
+    "data": {
+      "upper": { "label": "National electrification programme", "display": "~£11.7bn", "source": "web" },
+      "lower": { "label": "SME innovation layer (corpus)", "display": "£8.17m", "source": "corpus" },
+      "ratioLabel": "≈ 1,400×",
+      "ratioNote": "three orders of magnitude — the gap is the finding"
+    },
+    "honesty": { "toScale": false, "label": "axis compressed at the gap" }
+  },
+  "claims": [],
+  "corpus_citations": [
+    {
+      "id": "bb918318-0000-4000-8000-000000000001",
+      "title": "25kV Battery Train Charging Station Demonstration",
+      "organisation": "Innovate UK",
+      "score": 0.85
+    }
+  ],
+  "hive_citations": [],
+  "web_evidence": [
+    {
+      "id": "ext-tdns-gbr",
+      "title": "TDNS / GBR strategy context",
+      "url": "https://www.gov.uk/",
+      "publisher": "DfT",
+      "verification_state": "candidate",
+      "provenance": "external"
+    }
+  ],
+  "provenance": {
+    "stat-corpus": {
+      "ref": "atlas.projects · aggregate",
+      "scope": "rail + decarbonisation · cpc_modes ∋ rail · cpc_themes ∋ decarbonisation",
+      "trust": "corpus",
+      "trustNote": "SUM(funding_amount)=8,172,702.05 over 37 funded rows; 18/55 null",
+      "row": "corpus aggregate"
+    },
+    "mag-upper": {
+      "ref": "web context · TDNS / GBR strategy",
+      "scope": "national programme",
+      "trust": "web",
+      "trustNote": "No atlas.projects.id — candidate only; compressed axis",
+      "row": "[W1·W2·W3]"
+    }
+  },
+  "reconciliation": {
+    "notes": [],
+    "retrieval": {
+      "lane_mode": "dual",
+      "corpus_count": 55,
+      "external_count": 0,
+      "candidate_count": 0,
+      "conflict_count": 0,
+      "errors": [],
+      "external_skipped": false,
+      "corpus_thin": false
+    }
+  },
+  "soWhat": {
+    "lookingAt": "Rail decarb portfolio concentration vs national programme scale",
+    "oneDecision": "Which tier is CPC entering — SME innovation or programme-scale?",
+    "gate": "Supported tier from corpus citations; national £ stays web-candidate",
+    "primaryAction": "Diagnose fit for a specific Innovate UK call →",
+    "turn": "1 of 4"
+  },
+  "query": "State of play on rail decarbonisation in our corpus"
+}

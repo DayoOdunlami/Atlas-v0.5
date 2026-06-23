@@ -1,0 +1,144 @@
+width:1440px; height:864px; background:#FBFAF7; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 16px 50px rgba(0,0,0,.07); overflow:hidden; display:flex;">
+
+    <!-- LEFT RAIL -->
+    <div style="width:60px; flex:none; background:#F4F1EB; border-right:1px solid #E7E3DC; display:flex; flex-direction:column; align-items:center; padding:14px 0;">
+      <div style="width:30px; height:30px; border-radius:7px; background:#211E1A; color:#FBFAF7; font-family:'Newsreader',serif; font-weight:600; font-size:18px; display:flex; align-items:center; justify-content:center;">A</div>
+      <div style="height:22px;"></div>
+      <div style="display:flex; flex-direction:column; gap:4px; align-items:center;">
+        <div style="width:32px; height:32px; border-radius:8px; background:#E7E0D4; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#211E1A; font-weight:600;">Ho</div>
+        <div style="width:32px; height:32px; border-radius:8px; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#A39E96;">Jn</div>
+        <div style="width:32px; height:32px; border-radius:8px; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#A39E96;">Cp</div>
+      </div>
+      <div style="flex:1;"></div>
+      <div style="width:28px; height:28px; border-radius:50%; background:#8FA98C;"></div>
+    </div>
+
+    <!-- MAIN -->
+    <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+
+      <!-- TOPBAR -->
+      <div style="height:54px; flex:none; border-bottom:1px solid #E7E3DC; display:flex; align-items:center; padding:0 24px; gap:16px; background:#FBFAF7; position:relative; z-index:5;">
+        <div style="font-size:15px; font-weight:600; color:#211E1A; white-space:nowrap;">Atlas</div>
+        <div style="width:1px; height:18px; background:#E7E3DC;"></div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.06em; color:#8C887F;">CORPUS + LIVE WEB</div>
+        <div style="flex:1;"></div>
+        <sc-if value="{{ primerClosed }}" hint-placeholder-val="{{ false }}">
+          <div onclick="{{ openPrimer }}" style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#A39E96; cursor:pointer;">▦ materials</div>
+        </sc-if>
+        <div style="display:flex; align-items:center; gap:7px; padding:5px 11px; border-radius:6px; background:#F0EDE7;">
+          <div style="width:7px; height:7px; border-radius:50%; background:#8FA98C; animation:atlasPulse 2.4s ease-in-out infinite;"></div>
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#56524C; font-weight:600;">READY</div>
+        </div>
+      </div>
+
+      <!-- MATERIALS PRIMER (slim, collapsible) -->
+      <sc-if value="{{ primerOpen }}" hint-placeholder-val="{{ true }}">
+        <div style="flex:none; padding:9px 32px; background:#F8F6F1; border-bottom:1px solid #EAE5DC; display:flex; align-items:center; gap:18px;">
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.12em; color:#56524C; text-transform:uppercase; flex:none;">Materials →</div>
+          <div style="display:flex; align-items:center; gap:6px;"><span style="width:16px; border-bottom:3px solid #3F7A52;"></span><span style="font-size:11px; color:#46423C;"><strong style="color:#2F5C3E;">solid green</strong> · owned</span></div>
+          <div style="display:flex; align-items:center; gap:6px;"><span style="width:16px; border-bottom:2px dashed #6E94B8;"></span><span style="font-size:11px; color:#46423C;"><strong style="color:#3E6B8C;">dashed blue</strong> · borrowed</span></div>
+          <div style="display:flex; align-items:center; gap:6px;"><span style="width:14px; height:9px; border-radius:2px; background-image:repeating-linear-gradient(135deg,#B9B1A4 0 1.5px,transparent 1.5px 4px); border:1px solid #B9B1A4;"></span><span style="font-size:11px; color:#46423C;"><strong style="color:#7A736A;">hatched</strong> · judged</span></div>
+          <div style="display:flex; align-items:center; gap:6px;"><span style="width:14px; height:9px; background:repeating-linear-gradient(135deg,#F3E7D0 0 3px,#FBF4E8 3px 6px); border:1px solid #E3CDA4; border-radius:2px;"></span><span style="font-size:11px; color:#46423C;"><strong style="color:#8A6322;">torn amber</strong> · missing</span></div>
+          <div style="flex:1;"></div>
+          <div onclick="{{ closePrimer }}" style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#94908A; cursor:pointer; padding:3px 9px; border:1px solid #E0DBD1; border-radius:6px;">got it ✕</div>
+        </div>
+      </sc-if>
+
+      <!-- CANVAS AREA : focal column over the living corpus field -->
+      <div style="flex:1; position:relative; overflow:hidden; display:flex; flex-direction:column; min-height:0;">
+
+        <canvas id="corpus-field" style="position:absolute; inset:0; width:100%; height:100%; display:block;"></canvas>
+        <div style="position:absolute; inset:0; pointer-events:none; background:linear-gradient(90deg,#FBFAF7 0%,#FBFAF7 30%,rgba(251,250,247,0.82) 48%,rgba(251,250,247,0) 76%);"></div>
+
+        <!-- field annotations -->
+        <div style="position:absolute; inset:0; z-index:2; pointer-events:none;">
+          <div style="position:absolute; left:60%; top:54%;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#2F5C3E; letter-spacing:0.04em;">711 projects · £352m mapped</div>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:8.5px; color:#5C9070; margin-top:2px;">319 orgs · 418 bridges — owned, to scale</div>
+          </div>
+          <div style="position:absolute; left:55%; top:17%;">
+            <div style="display:flex; align-items:center; gap:6px;"><span style="width:13px; height:8px; background:repeating-linear-gradient(135deg,#F3E7D0 0 3px,#FBF4E8 3px 6px); border:1px solid #E3CDA4; border-radius:2px;"></span><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#8A6322;">aviation — 49% null</span></div>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:8.5px; color:#B0946A; margin-top:2px;">thinnest · an under-count, shown before you ask</div>
+          </div>
+          <sc-if value="{{ isWebColumn }}" hint-placeholder-val="{{ true }}">
+            <div style="position:absolute; right:3.5%; top:70%; text-align:right;">
+              <sc-if value="{{ isRest }}" hint-placeholder-val="{{ true }}">
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#6E8AA3;">live web · dormant ⇢</div>
+              </sc-if>
+              <sc-if value="{{ isActive }}" hint-placeholder-val="{{ false }}">
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#3E6B8C;">live web · arriving ⇠</div>
+              </sc-if>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:8.5px; color:#8FA3B8; margin-top:2px;">augments on ask — borrowed, never faked</div>
+            </div>
+          </sc-if>
+        </div>
+
+        <!-- dormant confidence ceiling -->
+        <div style="position:relative; z-index:3; flex:none; padding:12px 56px 0; display:flex; align-items:center; gap:12px;">
+          <sc-if value="{{ isRest }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex; align-items:center; gap:10px; width:100%;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.12em; color:#B7B1A8; text-transform:uppercase;">Confidence ceiling · — awaiting</div>
+              <div style="flex:1; height:1px; background:repeating-linear-gradient(90deg,#DAD5CC 0 6px,transparent 6px 11px);"></div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isActive }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; align-items:center; gap:10px; width:100%;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.12em; color:#2F5C3E; text-transform:uppercase;">Confidence ceiling · forming</div>
+              <div style="flex:1; height:1px; background:repeating-linear-gradient(90deg,#9FC0A8 0 6px,transparent 6px 11px);"></div>
+            </div>
+          </sc-if>
+        </div>
+
+        <!-- FOCAL COLUMN -->
+        <div style="position:relative; z-index:3; flex:1; display:flex; align-items:center; min-height:0;">
+          <div style="padding:0 56px; width:100%; max-width:620px;">
+
+            <sc-if value="{{ notSubmitted }}" hint-placeholder-val="{{ true }}">
+              <div>
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.2em; color:#A39E96; text-transform:uppercase; margin-bottom:20px;">Atlas · ready</div>
+                <h2 style="font-family:'Newsreader',serif; font-weight:500; font-size:54px; line-height:1.02; letter-spacing:-0.025em; color:#16130F; margin:0 0 34px;">What do you want to <span style="font-style:italic;">understand</span>?</h2>
+
+                <div class="atlas-cmd" style="display:flex; align-items:center; gap:14px; border-bottom:1.5px solid #D4CFC6; padding:10px 2px 12px; transition:border-color .2s;">
+                  <span style="font-family:'IBM Plex Mono',monospace; font-size:20px; color:#3F7A52; line-height:1;">›</span>
+                  <input class="atlas-q-input" type="text" value="{{ query }}" oninput="{{ onInput }}" onkeydown="{{ onKeyDown }}" onfocus="{{ onFocus }}" onblur="{{ onBlur }}" placeholder="{{ placeholder }}" style="flex:1; min-width:0; border:none; background:transparent; font-family:'Libre Franklin',sans-serif; font-size:19px; color:#16130F; padding:2px 0;">
+                  <div onclick="{{ submit }}" style="flex:none; display:flex; align-items:center; gap:7px; cursor:pointer; padding:5px 4px;">
+                    <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:#56524C; letter-spacing:0.04em;">Ask</span>
+                    <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; color:#B7B1A8;">⏎</span>
+                  </div>
+                </div>
+
+                <div style="margin-top:22px;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.14em; color:#C0BAB0; text-transform:uppercase; margin-bottom:11px;">or start from the corpus</div>
+                  <div style="display:flex; flex-direction:column;">
+                    <sc-for list="{{ starters }}" as="s" hint-placeholder-count="3">
+                      <div class="atlas-starter" onclick="{{ s.onClick }}" onmouseenter="{{ s.onEnter }}" onmouseleave="{{ s.onLeave }}" style="display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid #ECE7DE; cursor:pointer;">
+                        <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#8FA98C;">→</span>
+                        <span style="font-size:14px; color:#46423C; line-height:1.4;">{{ s.q }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isSubmitted }}" hint-placeholder-val="{{ false }}">
+              <div>
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.18em; color:#5C9070; text-transform:uppercase; margin-bottom:18px; display:flex; align-items:center; gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:#3F7A52; animation:atlasPulse 1.4s ease-in-out infinite;"></span>composing the canvas</div>
+                <h2 style="font-family:'Newsreader',serif; font-weight:500; font-size:34px; line-height:1.16; letter-spacing:-0.02em; color:#16130F; margin:0 0 22px; font-style:italic;">“{{ query }}”</h2>
+                <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:24px;">
+                  <div style="display:flex; align-items:center; gap:10px; border-left:3px solid #3F7A52; padding:6px 0 6px 13px;"><span style="width:7px;height:7px;border-radius:50%;background:#3F7A52; animation:atlasPulse 1.5s ease-in-out infinite;"></span><div style="font-size:13px; color:#2E3A30; line-height:1.4;"><strong style="color:#1A2E20;">Querying the corpus</strong> — 711 projects, 418 bridges, drawn to scale.</div></div>
+                  <div style="display:flex; align-items:center; gap:10px; border-left:3px dashed #9DBAD2; padding:6px 0 6px 13px;"><span style="width:7px;height:7px;border-radius:50%;background:#3E6B8C; animation:atlasPulse 1.5s ease-in-out infinite;"></span><div style="font-size:13px; color:#3F5567; line-height:1.4;"><strong style="color:#2C4760;">Running live web</strong> — adding what the corpus under-records, kept dashed.</div></div>
+                </div>
+                <div onclick="{{ reset }}" style="display:inline-flex; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#94908A; cursor:pointer; padding:7px 14px; border:1px solid #E0DBD1; border-radius:8px;">← back to rest</div>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+
+        <!-- live status line -->
+        <div style="position:relative; z-index:3; flex:none; padding:12px 56px 16px; display:flex; align-items:center; gap:10px;">
+          <div style="width:6px; height:6px; border-radius:50%; background:#8FA98C; animation:atlasPulse 2.4s ease-in-out infinite;"></div>
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.08em; color:#A39E96;">CORPUS CALIBRATED 22 JUN 2026 · LAST INGEST 3H AGO</div>
+          <div style="flex:1;"></div>
+          <sc-if value="{{ isWebLine }}" hint-placeholder-val="{{ false }}">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#6E8AA3;">+ live web augments on ask — bo

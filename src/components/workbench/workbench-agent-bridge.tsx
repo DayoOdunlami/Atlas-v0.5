@@ -14,6 +14,7 @@ import {
 } from "./workbench-runtime-provider";
 import { OrchestratorRuntimeProvider } from "./orchestrator-runtime-provider";
 import { orchestratorToAtlasRenderModel } from "@/lib/workbench/orchestrator-adapter";
+import { parsePresentationPlan } from "@/lib/workbench/presentation-plan";
 import type { WorkbenchAgentState } from "@/lib/workbench/workbench-agent-contract";
 import type { ModelPatchProposal } from "@/lib/workbench/workbench-agent-contract";
 import { extractAgentOutput } from "@/lib/workbench/extract-agent-output";
@@ -42,6 +43,7 @@ export function WorkbenchAgentBridge({ children, forceLegacy = false }: Workbenc
     setLiveModelFromOrchestrator,
     setRenderMode,
     setDocumentSections,
+    setPresentationPlan,
   } = useWorkbench();
 
   const handleOrchestratorModel = useCallback(
@@ -54,6 +56,8 @@ export function WorkbenchAgentBridge({ children, forceLegacy = false }: Workbenc
       if (Object.keys(sections).length > 0) {
         setDocumentSections(sections);
       }
+
+      setPresentationPlan(parsePresentationPlan(raw.presentation_plan));
 
       if (!raw.render_blocks && !raw.blocks_data && mode !== "document") return;
 
@@ -97,6 +101,7 @@ export function WorkbenchAgentBridge({ children, forceLegacy = false }: Workbenc
       setReasoningSteps,
       setRenderMode,
       setDocumentSections,
+      setPresentationPlan,
     ],
   );
 

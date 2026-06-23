@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Libre+Franklin:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { background: #e7e5df; font-family: 'Libre Franklin', sans-serif; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+</style>
+</helmet>
+
+<div style="width: max-content; min-width: 100%; min-height: 100vh; box-sizing: border-box; padding: 56px; background: #e7e5df;">
+
+  <template id="__bundler_thumbnail" data-bg-color="#e7e5df">
+    <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+      <rect width="1200" height="800" fill="#e7e5df"></rect>
+      <rect x="360" y="200" width="480" height="400" rx="10" fill="#FBFAF7"></rect>
+      <circle cx="470" cy="300" r="22" fill="#CFE6D6" stroke="#3F7A52" stroke-width="3"></circle>
+      <circle cx="560" cy="360" r="34" fill="#CFE6D6" stroke="#3F7A52" stroke-width="3"></circle>
+      <circle cx="500" cy="500" r="10" fill="#CFE6D6" stroke="#3F7A52" stroke-width="3"></circle>
+      <circle cx="730" cy="430" r="52" fill="#CFE6D6" stroke="#3F7A52" stroke-width="3"></circle>
+      <circle cx="640" cy="540" r="14" fill="none" stroke="#B07A2E" stroke-width="3" stroke-dasharray="4 5"></circle>
+    </svg>
+  </template>
+
+  <!-- header -->
+  <div style="max-width:1000px; margin-bottom:40px;">
+    <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:18px;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; color:#94908A; text-transform:uppercase;">Direction A · Journey 3 · Turn 1 · deep pass</div>
+      <div style="height:1px; flex:1; background:#d4d0c8;"></div>
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#94908A;">comparison · same system · a verdict, not a table</div>
+    </div>
+    <h1 style="font-family:'Newsreader',serif; font-weight:500; font-size:30px; line-height:1.2; color:#211E1A; margin:0 0 14px; max-width:810px; letter-spacing:-0.01em;">A comparison starts before the scoring — by refusing the framing it was handed. So Turn 1 makes you <span style="font-style:italic; color:#B07A2E;">see</span> that the four modes are structurally different bets, and names the fifth option the question left out.</h1>
+    <div style="display:flex; gap:36px; max-width:880px;">
+      <p style="flex:1; margin:0; font-size:13px; line-height:1.6; color:#6B6760;"><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#211E1A;">INSTRUMENT — </span>a funding-structure map: average grant (concentration) against project count (breadth), bubble area ∝ total money. Every coordinate is a real corpus value, drawn to scale — so the shapes are honest. Maritime is few-big-bets, highways the broad incumbent, rail many-tiny-pilots: not four sizes of one thing.</p>
+      <p style="flex:1; margin:0; font-size:13px; line-height:1.6; color:#6B6760;"><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#211E1A;">THE FIFTH OPTION — </span>the question said "rail vs maritime vs aviation vs highways." Green Book discipline forces a fifth — <em style="font-style:italic;">do nothing new, stay spread</em> — added by method, not data, so it is named off-axis and never plotted. The criteria to score against are stated up front; the scoring is Turn 2.</p>
+    </div>
+  </div>
+
+  <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.08em; color:#56524C; margin-bottom:12px;">FULL PRODUCT SURFACE — ORIENT → FRAME THE OPTIONS</div>
+
+  <div style="width:1440px; height:1030px; background:#FBFAF7; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 16px 50px rgba(0,0,0,.07); overflow:hidden; display:flex;">
+
+    <!-- LEFT RAIL -->
+    <div style="width:60px; flex:none; background:#F4F1EB; border-right:1px solid #E7E3DC; display:flex; flex-direction:column; align-items:center; padding:14px 0;">
+      <div style="width:30px; height:30px; border-radius:7px; background:#211E1A; color:#FBFAF7; font-family:'Newsreader',serif; font-weight:600; font-size:18px; display:flex; align-items:center; justify-content:center;">A</div>
+      <div style="height:22px;"></div>
+      <div style="display:flex; flex-direction:column; gap:4px; align-items:center;">
+        <div style="width:32px; height:32px; border-radius:8px; background:#E7E0D4; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#211E1A; font-weight:600;">Fr</div>
+        <div style="width:32px; height:32px; border-radius:8px; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#A39E96;">Sc</div>
+        <div style="width:32px; height:32px; border-radius:8px; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#A39E96;">Te</div>
+        <div style="width:32px; height:32px; border-radius:8px; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#A39E96;">Ap</div>
+      </div>
+      <div style="flex:1;"></div>
+      <div style="width:28px; height:28px; border-radius:50%; background:#8FA98C;"></div>
+    </div>
+
+    <!-- MAIN -->
+    <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+
+      <!-- TOPBAR -->
+      <div style="height:54px; flex:none; border-bottom:1px solid #E7E3DC; display:flex; align-items:center; padding:0 24px; gap:16px; background:#FBFAF7; position:relative; z-index:5;">
+        <div style="font-size:15px; font-weight:600; color:#211E1A; white-space:nowrap;">Transport decarbonisation — mode priority</div>
+        <div style="width:1px; height:18px; background:#E7E3DC;"></div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.06em; color:#8C887F;">CORPUS + WEB · GREEN BOOK · 19 JUN 2026</div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.08em; color:#3F7A52;">· FRAME THE OPTIONS</div>
+        <div style="flex:1;"></div>
+        <div style="display:flex; background:#F0EDE7; border-radius:7px; padding:3px; gap:2px;">
+          <div style="font-size:12px; padding:5px 12px; border-radius:5px; background:#FFFFFF; color:#211E1A; font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,.06);">Read</div>
+          <div style="font-size:12px; padding:5px 12px; border-radius:5px; color:#8C887F;">Workbench</div>
+          <div style="font-size:12px; padding:5px 12px; border-radius:5px; color:#8C887F;">Present</div>
+        </div>
+      </div>
+
+      <!-- BODY -->
+      <div style="flex:1; display:flex; min-height:0;">
+
+        <!-- CANVAS -->
+        <div style="flex:1; min-width:0; overflow:hidden; display:flex; flex-direction:column;">
+
+          <!-- CONFIDENCE CEILING (spatial cap) -->
+          <div style="flex:none; padding:13px 44px 12px; background:linear-gradient(180deg,#EFF3EE 0%,#FBFAF7 100%); border-bottom:1px solid #D3E0D5; box-shadow:0 7px 14px -10px rgba(47,92,62,.20); position:relative; z-index:3;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.13em; color:#2F5C3E; text-transform:uppercase;">▔ Confidence ceiling</div>
+              <div style="display:flex; align-items:center; gap:6px; padding:2px 8px; border-radius:4px; background:#EEF4EE; border:1px solid #CFE0D4;"><div style="width:5px; height:5px; border-radius:50%; background:#3F7A52;"></div><div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#2F5C3E; font-weight:600;">SUPPORTED</div></div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.06em; color:#7FA88A;">⌃ high — the framing rests on hard corpus structure</div>
+              <div style="flex:1; height:1px; background:repeating-linear-gradient(90deg,#C2D3C4 0 6px,transparent 6px 11px);"></div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#7FA88A;">a weighting caveat will enter at T2 — the rank, not the framing, is what's conditional</div>
+            </div>
+          </div>
+
+          <!-- canvas content -->
+          <div style="flex:1; overflow:hidden; padding:22px 44px 0; position:relative;">
+
+            <!-- HERO -->
+            <h2 style="font-family:'Newsreader',serif; font-weight:500; font-size:33px; line-height:1.14; letter-spacing:-0.018em; color:#1A1714; margin:0 0 9px; max-width:760px;">Before ranking anything: there are <span style="font-style:italic; color:#B07A2E;">five</span> options here, not four — and naming the fifth changes the conversation.</h2>
+            <p style="font-size:15px; line-height:1.5; color:#46423C; margin:0 0 6px; max-width:730px;">The four active modes aren't four versions of one thing — they're <strong style="color:#1A1714; font-weight:600;">structurally different bets</strong>. So "which mode" is really "which <em style="font-style:italic;">funding structure</em> fits CPC's role" — and that reframing is the actual decision.</p>
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#3F7A52;">Supported — structure is hard corpus fact <span style="color:#A39E96;">[S1]</span>; the scoring is T2.</div>
+              <div style="display:flex; align-items:center; gap:7px; padding:2px 4px 2px 8px; border-radius:5px; background:#F4F1EB; border:1px solid #DCD7CE;">
+                <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:700; color:#3A332A;">5 OPTIONS</span>
+                <span style="font-size:10.5px; color:#6B6760;">4 active + 1 do-nothing baseline</span>
+              </div>
+            </div>
+
+            <!-- INSTRUMENT ROW -->
+            <div style="display:flex; gap:24px; align-items:flex-start;">
+
+              <!-- THE SIGNATURE INSTRUMENT : funding-structure map -->
+              <div style="flex:none; width:600px;">
+                <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:11px;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#56524C; text-transform:uppercase;">The funding-structure map · every point a corpus value, to scale</div>
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#3F7A52;">● area ∝ total £ · hover = provenance</div>
+                </div>
+
+                <div style="position:relative; width:600px; height:340px; border:1px solid #EFEBE4; border-radius:9px; background:#FFFFFF; overflow:hidden;">
+                  <div id="atlas-fund-map" style="position:absolute; inset:0; width:100%; height:100%;"></div>
+                </div>
+
+                <div style="display:flex; gap:6px; margin-top:9px; font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#5C9070;"><span>↘ position = funding structure, not preference — no option is scored yet</span><span style="color:#A39E96; margin-left:auto;">[S1] · corpus · real counts</span></div>
+              </div>
+
+              <!-- RIGHT COLUMN : do-nothing + the reframe -->
+              <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:14px;">
+
+                <!-- THE FUNDING-STRUCTURE REFRAME (callout) -->
+                <div style="border:1px solid #CFE0D4; border-left:3px solid #3F7A52; border-radius:7px; background:linear-gradient(135deg,#F4F8F4 0%,#FAFCFA 100%); padding:13px 15px;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.1em; color:#2F5C3E; text-transform:uppercase; margin-bottom:7px;">✦ The non-obvious reading</div>
+                  <div style="font-size:13px; line-height:1.5; color:#2E3A30;">The modes don't just differ in <em style="font-style:italic;">size</em> — they differ in <strong style="color:#1A2E20;">funding structure</strong>. Maritime runs the fewest, biggest bets (£1.73m avg); rail runs many tiny ones (£221k). A feature-grid would miss this entirely.</div>
+                </div>
+
+                <!-- THE FIFTH OPTION : do-nothing, torn/method-added -->
+                <div style="position:relative; border-left:3px solid #B07A2E; border-right:1px solid #E3CDA4; border-bottom:1px solid #E3CDA4; border-radius:0 0 7px 7px; background:#FBF6EE; padding:12px 15px 13px; overflow:hidden; clip-path:polygon(0 6px, 5% 0, 11% 6px, 17% 0, 23% 6px, 29% 0, 35% 6px, 41% 0, 47% 6px, 53% 0, 59% 6px, 65% 0, 71% 6px, 77% 0, 83% 6px, 89% 0, 95% 6px, 100% 0, 100% 100%, 0 100%);">
+                  <div style="position:absolute; inset:0; background-image:repeating-linear-gradient(135deg,rgba(176,122,46,.07) 0 1px,transparent 1px 9px); pointer-events:none;"></div>
+                  <div style="position:relative;">
+                    <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:7px;">
+                      <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.1em; color:#B07A2E; text-transform:uppercase;">⊘ Option 5 · do nothing new</div>
+                      <div style="flex:1;"></div>
+                      <div style="font-family:'IBM Plex Mono',monospace; font-size:8px; color:#B89A6A;">⌖ threads T1→T4</div>
+                    </div>
+                    <div style="font-size:12.5px; line-height:1.45; color:#5A4A2E;">Keep CPC's effort <strong style="color:#3A332A;">spread</strong>, don't concentrate in one mode. <strong style="color:#3A332A;">Not in the data — added by method.</strong> It forces the real question: does <em style="font-style:italic;">focus</em> beat <em style="font-style:italic;">spread</em>? Named off-axis, never plotted to scale.</div>
+                  </div>
+                </div>
+
+                <!-- the contested dimension, planted -->
+                <div style="display:flex; align-items:flex-start; gap:9px; border-left:2px solid #CFC8BC; padding-left:11px;">
+                  <div style="font-size:12px; line-height:1.5; color:#6B6760;"><span style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#56524C; text-transform:uppercase; letter-spacing:0.08em;">The thread · </span>the whole comparison will turn on one question — <strong style="color:#3A332A;">seed where it's thin</strong> or <strong style="color:#3A332A;">amplify where it's concentrated</strong>. The map already shows the two poles.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- THE NAMED CRITERIA (CSFs) — stated up front, scored in T2 -->
+            <div style="margin-top:20px;">
+              <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:11px;">
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#56524C; text-transform:uppercase;">The criteria, named up front · Green Book critical success factors</div>
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#8C887F;">→ every option scored against these in Turn 2</div>
+              </div>
+              <div style="display:flex; gap:10px;">
+                <div style="flex:1; border:1px solid #EFEBE4; border-top:2px solid #C7C1B7; border-radius:0 0 7px 7px; background:#FBFAF7; padding:11px 12px;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#94908A; margin-bottom:5px;">01</div>
+                  <div style="font-size:13px; font-weight:600; color:#2E2A24; margin-bottom:3px;">Policy-driver strength</div>
+                  <div style="font-size:11px; line-height:1.4; color:#8C887F;">how hard is the regulatory forcing function</div>
+                </div>
+                <div style="flex:1; border:1px solid #EFEBE4; border-top:2px solid #C7C1B7; border-radius:0 0 7px 7px; background:#FBFAF7; padding:11px 12px;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#94908A; margin-bottom:5px;">02</div>
+                  <div style="font-size:13px; font-weight:600; color:#2E2A24; margin-bottom:3px;">Funding maturity</div>
+                  <div style="font-size:11px; line-height:1.4; color:#8C887F;">consolidated or fragmented field</div>
+                </div>
+                <div style="flex:1; border:1px solid #CFE0D4; border-top:2px solid #3F7A52; border-radius:0 0 7px 7px; background:#F8FAF8; padding:11px 12px;">
+                  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;"><div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#5C9070;">03</div><div style="font-family:'IBM Plex Mono',monospace; font-size:8px; color:#3F7A52; background:#EEF4EE; border:1px solid #CFE0D4; padding:1px 5px; border-radius:8px;">likely dominant</div></div>
+                  <div style="font-size:13px; font-weight:600; color:#1A2E20; margin-bottom:3px;">Room to add value</div>
+                  <div style="font-size:11px; line-height:1.4; color:#5C9070;">is the field thin enough for CPC to matter</div>
+                </div>
+                <div style="flex:1; border:1px solid #EFEBE4; border-top:2px solid #C7C1B7; border-radius:0 0 7px 7px; background:#FBFAF7; padding:11px 12px;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#94908A; margin-bottom:5px;">04</div>
+                  <div style="font-size:13px; font-weight:600; color:#2E2A24; margin-bottom:3px;">Transferability</div>
+                  <div style="font-size:11px; line-height:1.4; color:#8C887F;">does proof in this mode travel to others</div>
+                </div>
+                <div style="flex:1; border:1px solid #EFEBE4; border-top:2px solid #C7C1B7; border-radius:0 0 7px 7px; background:#FBFAF7; padding:11px 12px;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#94908A; margin-bottom:5px;">05</div>
+                  <div style="font-size:13px; font-weight:600; color:#2E2A24; margin-bottom:3px;">CPC strategic fit</div>
+                  <div style="font-size:11px; line-height:1.4; color:#8C887F;">does CPC's mandate match the mode</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="height:14px;"></div>
+          </div>
+        </div>
+
+        <!-- CHAT : so-what decision rail -->
+        <div style="width:396px; flex:none; border-left:1px solid #E7E3DC; background:#FFFFFF; display:flex; flex-direction:column;">
+          <div style="height:54px; flex:none; border-bottom:1px solid #EFEBE4; display:flex; align-items:center; padding:0 20px; gap:9px;">
+            <div style="width:7px;height:7px;border-radius:50%;background:#3F7A52;"></div>
+            <div style="font-size:12.5px; font-weight:600; color:#211E1A;">Atlas</div>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#A39E96;">· so-what</div>
+            <div style="flex:1;"></div>
+            <!-- turn spine 1/4 -->
+            <div style="display:flex; align-items:center; gap:5px;">
+              <div style="width:8px; height:8px; border-radius:50%; background:#3F7A52;"></div>
+              <div style="width:14px; height:2px; background:#E0DCD3;"></div>
+              <div style="width:7px; height:7px; border-radius:50%; border:1.5px solid #D8D3CA;"></div>
+              <div style="width:14px; height:2px; background:#E0DCD3;"></div>
+              <div style="width:7px; height:7px; border-radius:50%; border:1.5px solid #D8D3CA;"></div>
+              <div style="width:14px; height:2px; background:#E0DCD3;"></div>
+              <div style="width:7px; height:7px; border-radius:50%; border:1.5px solid #D8D3CA;"></div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#A39E96; margin-left:4px;">1/4</div>
+            </div>
+          </div>
+
+          <div style="flex:1; padding:22px 20px; overflow:hidden; display:flex; flex-direction:column; gap:16px;">
+            <div style="align-self:flex-end; max-width:288px; background:#F0EDE7; border-radius:12px 12px 4px 12px; padding:11px 14px; font-size:13px; line-height:1.5; color:#46423C;">We're launching a decarbonisation innovation programme. Which transport mode should we prioritise?</div>
+
+            <div style="max-width:316px;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.12em; color:#A39E96; text-transform:uppercase; margin-bottom:8px;">What you're looking at</div>
+              <p style="margin:0 0 14px; font-size:13.5px; line-height:1.58; color:#2E2A24;">Five options, not four. And the four active modes are <strong>structurally different bets</strong> — the map plots that, to scale. "Which mode" is really "which <em style="font-style:italic;">funding structure</em>".</p>
+
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.12em; color:#2F5C3E; text-transform:uppercase; margin-bottom:8px;">The one decision</div>
+              <div style="background:#F1F6F1; border:1px solid #CFE0D4; border-radius:9px; padding:12px 13px; margin-bottom:14px;">
+                <p style="margin:0; font-size:13.5px; line-height:1.5; color:#1A2E20;">Don't pick a mode yet. <strong>Agree the five criteria</strong> — and that do-nothing is one of the options. That's what makes the Turn-2 scoring honest.</p>
+              </div>
+
+              <div style="display:flex; gap:9px; align-items:flex-start; border-left:2px solid #E3CDA4; padding-left:11px;">
+                <div style="font-size:13px; line-height:1.5; color:#7A6A50;"><span style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#B07A2E; text-transform:uppercase; letter-spacing:0.08em;">Gate · </span>the rank will depend on <strong>which criterion you weight</strong>. I'll name the weighting in T2 — never hide it in a single score.</div>
+              </div>
+            </div>
+
+            <div style="flex:1;"></div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <div style="font-size:12px; color:#2F5C3E; background:#EEF4EE; border:1px solid #CFE0D4; border-radius:14px; padding:5px 12px;">Score them properly →</div>
+              <div style="font-size:12px; color:#6B6760; background:#F4F1EB; border:1px solid #E7E3DC; border-radius:14px; padding:5px 12px;">Show the raw mode profiles</div>
+            </div>
+          </div>
+
+          <div style="flex:none; padding:14px 16px; border-top:1px solid #EFEBE4;">
+            <div style="border:1px solid #E0DCD3; border-radius:9px; padding:10px 13px; font-size:12.5px; color:#A39E96; display:flex; align-items:center; justify-content:space-between;">Ask a follow-up…<span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#C4BFB6;">⏎</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- motion / legend annotations -->
+  <div style="max-width:1000px; margin-top:30px; display:flex; gap:30px;">
+    <div style="flex:1;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#56524C; text-transform:uppercase; margin-bottom:10px;">Where the journey goes (annotated, not built)</div>
+      <div style="display:flex; flex-direction:column; gap:7px; font-size:12.5px; color:#6B6760; line-height:1.5;">
+        <div><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#3F7A52;">⇄ swaps </span> the funding-structure map → a scored heatmap + radar small-multiples (T2), a sensitivity-flip (T3), the Green Book Appraisal Summary Table (T4).</div>
+        <div><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#B07A2E;">⊘ refuses </span> a single composite score — T2 surfaces the weighting instead of hiding it. "Not rendering" the rigged number is the world-class move.</div>
+        <div><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#8A6322;">↳ threads </span> the contested dimension — <em style="font-style:italic;">seed-thin vs amplify-concentrated</em> — runs through all four turns and becomes the one weight that flips the rank in T3.</div>
+      </div>
+    </div>
+    <div style="flex:1;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#56524C; text-transform:uppercase; margin-bottom:10px;">Material legend · provenance = state</div>
+      <div style="display:flex; flex-direction:column; gap:7px; font-size:12.5px; color:#6B6760; line-height:1.5;">
+        <div><span style="display:inline-block; width:14px; height:14px; border-radius:50%; background:#CFE6D6; border:2px solid #3F7A52; vertical-align:middle; margin-right:8px;"></span>corpus — solid green · <strong style="color:#6B6760;">HAVE</strong> (real mode profiles, owned)</div>
+        <div><span style="display:inline-block; width:22px; border-bottom:2px dashed #B6CADB; vertical-align:middle; margin-right:8px;"></span>web — dashed blue · <strong style="color:#6B6760;">borrowed</strong> (policy drivers, enters T2)</div>
+        <div><span style="display:inline-block; width:22px; height:8px; background:repeating-linear-gradient(135deg,#F7F0E2 0 3px,#FBFAF7 3px 6px); vertical-align:middle; margin-right:8px;"></span>method-added — torn amber · the do-nothing baseline (not in data)</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    this._tries = 0;
+    this._tryInit();
+  }
+
+  _tryInit() {
+    if (typeof window === 'undefined') return;
+    if (!window.echarts) {
+      if (this._tries++ > 80) return;
+      setTimeout(() => this._tryInit(), 60);
+      return;
+    }
+    const el = document.getElementById('atlas-fund-map');
+    if (!el || el.clientWidth === 0) {
+      if (this._tries++ > 80) return;
+      setTimeout(() => this._tryInit(), 60);
+      return;
+    }
+    this._render(el);
+  }
+
+  _render(el) {
+    const echarts = window.echarts;
+    if (this._chart) this._chart.dispose();
+    // SVG renderer → real DOM, so it survives screenshots & PPTX export
+    const chart = echarts.init(el, null, { renderer: 'svg' });
+    this._chart = chart;
+
+    const GREEN = '#3F7A52', FILL = '#CFE6D6', LEAF = '#5C9070', MUTE = '#8C887F', AMBER = '#8A6322', FAINT = '#A39E96';
+    const avgFmt = (v) => v >= 1000 ? '£' + (v / 1000).toFixed(2) + 'm' : '£' + v + 'k';
+
+    // value = [projects, avgGrant£k, total£m] — every coordinate a real corpus figure
+    const rows = [
+      { value: [38, 1730, 46.8],  name: 'Maritime',              orgs: 26, live: 19, note: 'few big bets',           tone: AMBER, pos: 'right' },
+      { value: [73, 1220, 47.4],  name: 'Aviation',              orgs: 37, live: 45, note: 'large grants, concentrated', tone: MUTE, pos: 'right' },
+      { value: [55, 221, 8.2],    name: 'Rail',                  orgs: 30, live: 27, note: 'many tiny pilots',        tone: AMBER, pos: 'right' },
+      { value: [205, 940, 136.3], name: 'Highways & Integrated', orgs: 127, live: 72, note: 'broad incumbent',        tone: AMBER, pos: 'left' },
+    ];
+
+    const data = rows.map(r => ({
+      value: r.value, name: r.name, orgs: r.orgs, live: r.live, note: r.note,
+      itemStyle: { color: FILL, borderColor: GREEN, borderWidth: 2 },
+      label: {
+        show: true, position: r.pos, distance: 9,
+        formatter: () => `{n|${r.name}}\n{s|${r.value[0]} proj · ${avgFmt(r.value[1])} avg}\n{t|${r.note}}`,
+        rich: {
+          n: { fontFamily: 'Libre Franklin, sans-serif', fontSize: 13, fontWeight: 600, color: '#2F5C3E', lineHeight: 16, align: r.pos === 'left' ? 'right' : 'left' },
+          s: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: LEAF, lineHeight: 13, align: r.pos === 'left' ? 'right' : 'left' },
+          t: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: r.tone, lineHeight: 13, align: r.pos === 'left' ? 'right' : 'left' },
+        },
+      },
+    }));
+
+    chart.setOption({
+      animationDuration: 600,
+      grid: { left: 54, right: 26, top: 24, bottom: 42 },
+      tooltip: {
+        backgroundColor: '#FFFFFF', borderColor: '#DCD7CE', borderWidth: 1, padding: [9, 12],
+        textStyle: { color: '#3A332A', fontFamily: 'IBM Plex Mono, monospace', fontSize: 11 },
+        extraCssText: 'box-shadow:0 8px 26px rgba(40,34,26,.16); border-radius:8px; max-width:250px; white-space:normal;',
+        formatter: (p) => `<b>${p.data.name}</b><br/>${p.value[0]} proj · ${avgFmt(p.value[1])} avg · £${p.value[2]}m total<br/>${p.data.orgs} orgs · ${p.data.live} live since 2024<br/><span style="color:#8C887F">${p.data.note} · [S1] corpus, drawn to scale</span>`,
+      },
+      xAxis: {
+        type: 'value', min: 0, max: 220,
+        name: 'projects → breadth / crowding', nameLocation: 'middle', nameGap: 26,
+        nameTextStyle: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: MUTE },
+        axisLine: { lineStyle: { color: '#E2DED6' } },
+        axisTick: { show: false },
+        axisLabel: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: FAINT },
+        splitLine: { lineStyle: { color: '#F4F1EB', type: 'dashed' } },
+      },
+      yAxis: {
+        type: 'value', min: 0, max: 1900,
+        name: '↑ avg grant · concentration', nameLocation: 'end', nameGap: 12,
+        nameTextStyle: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: MUTE, align: 'left' },
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: FAINT, formatter: (v) => v === 0 ? '£0' : '£' + (v / 1000).toFixed(1) + 'm' },
+        splitLine: { lineStyle: { color: '#F1EEE8' } },
+      },
+      series: [{
+        type: 'scatter',
+        data,
+        // diameter ∝ √(total £) → AREA is genuinely proportional to total funding
+        symbolSize: (val) => Math.sqrt(val[2]) * 5.48,
+        emphasis: { scale: 1.06, itemStyle: { borderWidth: 3 } },
+      }],
+    });
+
+    this._onResize = () => chart.resize();
+    window.addEventListener('resize', this._onResize);
+  }
+
+  componentWillUnmount() {
+    if (this._onResize) window.removeEventListener('resize', this._onResize);
+    if (this._chart) this._chart.dispose();
+  }
+}
+</script>
+</body>
+</html>

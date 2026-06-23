@@ -55,7 +55,9 @@ jobs:
           ATLAS5_HARMONIZED_EVIDENCE_V1: "true"
         run: |
           pip install pytest
-          pytest agents/test_evidence_router_lanes.py agents/test_reconcile_harmonized.py agents/test_harmonized_evidence.py -q
+          python agents/test_session_lanes.py
+          python agents/test_presentation.py
+          pytest agents/test_evidence_router_lanes.py agents/test_reconcile_harmonized.py agents/test_harmonized_evidence.py agents/test_retrieval_fabric.py agents/test_evidence_pipeline.py agents/test_multiturn_context.py agents/test_atlas_v5_run_turn.py -q
 
       - name: Graph compiles
         run: python -m py_compile agents/atlas/graph.py agents/atlas/artifact_qa.py agents/atlas/falsification.py agents/atlas/citation_guard.py

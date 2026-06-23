@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Libre+Franklin:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { background: #e7e5df; font-family: 'Libre Franklin', sans-serif; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+</style>
+</helmet>
+
+<div style="width: max-content; min-width: 100%; min-height: 100vh; box-sizing: border-box; padding: 56px; background: #e7e5df;">
+
+  <template id="__bundler_thumbnail" data-bg-color="#e7e5df">
+    <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+      <rect width="1200" height="800" fill="#e7e5df"></rect>
+      <rect x="360" y="210" width="480" height="380" rx="10" fill="#FBFAF7"></rect>
+      <rect x="430" y="430" width="60" height="120" fill="#6B6760"></rect>
+      <rect x="540" y="330" width="60" height="220" fill="#B6CADB"></rect>
+      <rect x="650" y="380" width="60" height="80" fill="#3F7A52"></rect>
+      <line x1="710" y1="300" x2="710" y2="540" stroke="#B07A2E" stroke-width="4" stroke-dasharray="6 5"></line>
+    </svg>
+  </template>
+
+  <!-- header -->
+  <div style="max-width:1000px; margin-bottom:40px;">
+    <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:18px;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; color:#94908A; text-transform:uppercase;">Direction A · Journey 2 · Turn 2 · deep pass</div>
+      <div style="height:1px; flex:1; background:#d4d0c8;"></div>
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#94908A;">economic case · ECharts SVG · geometry bound to the data</div>
+    </div>
+    <h1 style="font-family:'Newsreader',serif; font-weight:500; font-size:30px; line-height:1.2; color:#211E1A; margin:0 0 14px; max-width:800px; letter-spacing:-0.01em;">Never a bare point estimate. The verdict isn't "+£5.1m" — it's the <span style="font-style:italic; color:#B07A2E;">switching value</span>: the one number whose movement flips the whole case.</h1>
+    <div style="display:flex; gap:36px; max-width:880px;">
+      <p style="flex:1; margin:0; font-size:13px; line-height:1.6; color:#6B6760;"><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#211E1A;">DRAWN TO SCALE — </span>the NPV waterfall is a data-bound ECharts plot (SVG): every bar height is computed from the figures, not placed by hand — so "to scale" is true by construction. The Low/Central/High whisker straddles zero; the range is shown, never a rigged single point.</p>
+      <p style="flex:1; margin:0; font-size:13px; line-height:1.6; color:#6B6760;"><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#211E1A;">THE HINGE — </span>the sensitivity tornado earns dominant placement: carbon price is the swing factor, and its bar crosses zero at ~£160/tCO₂e. Every input is tagged HAVE / PARTIAL / ASSUME — the moat made visible. The ceiling falls to Indicative, honestly.</p>
+    </div>
+  </div>
+
+  <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.08em; color:#56524C; margin-bottom:12px;">FULL PRODUCT SURFACE — DIAGNOSE → ECONOMIC CASE</div>
+
+  <div style="width:1440px; height:1040px; background:#FBFAF7; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 16px 50px rgba(0,0,0,.07); overflow:hidden; display:flex;">
+
+    <!-- LEFT RAIL -->
+    <div style="width:60px; flex:none; background:#F4F1EB; border-right:1px solid #E7E3DC; display:flex; flex-direction:column; align-items:center; padding:14px 0;">
+      <div style="width:30px; height:30px; border-radius:7px; background:#211E1A; color:#FBFAF7; font-family:'Newsreader',serif; font-weight:600; font-size:18px; display:flex; align-items:center; justify-content:center;">A</div>
+      <div style="height:22px;"></div>
+      <div style="display:flex; flex-direction:column; gap:4px; align-items:center;">
+        <div style="width:32px; height:32px; border-radius:8px; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#A39E96;">Or</div>
+        <div style="width:32px; height:32px; border-radius:8px; background:#E7E0D4; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#211E1A; font-weight:600;">Ec</div>
+        <div style="width:32px; height:32px; border-radius:8px; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#A39E96;">Tr</div>
+        <div style="width:32px; height:32px; border-radius:8px; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#A39E96;">Df</div>
+      </div>
+      <div style="flex:1;"></div>
+      <div style="width:28px; height:28px; border-radius:50%; background:#CDBBA5;"></div>
+    </div>
+
+    <!-- MAIN -->
+    <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+
+      <!-- TOPBAR -->
+      <div style="height:54px; flex:none; border-bottom:1px solid #E7E3DC; display:flex; align-items:center; padding:0 24px; gap:16px; background:#FBFAF7; position:relative; z-index:5;">
+        <div style="font-size:15px; font-weight:600; color:#211E1A; white-space:nowrap;">Port shore-power decarbonisation</div>
+        <div style="width:1px; height:18px; background:#E7E3DC;"></div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.06em; color:#8C887F;">CORPUS + WEB · GREEN BOOK · 19 JUN 2026</div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.08em; color:#8A6322;">· ECONOMIC CASE</div>
+        <div style="flex:1;"></div>
+        <div style="display:flex; background:#F0EDE7; border-radius:7px; padding:3px; gap:2px;">
+          <div style="font-size:12px; padding:5px 12px; border-radius:5px; background:#FFFFFF; color:#211E1A; font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,.06);">Read</div>
+          <div style="font-size:12px; padding:5px 12px; border-radius:5px; color:#8C887F;">Workbench</div>
+          <div style="font-size:12px; padding:5px 12px; border-radius:5px; color:#8C887F;">Present</div>
+        </div>
+      </div>
+
+      <!-- BODY -->
+      <div style="flex:1; display:flex; min-height:0;">
+
+        <!-- CANVAS -->
+        <div style="flex:1; min-width:0; overflow:hidden; display:flex; flex-direction:column;">
+
+          <!-- CONFIDENCE CEILING (descended) -->
+          <div style="flex:none; padding:12px 40px 11px; background:linear-gradient(180deg,#F4EEE3 0%,#FBFAF7 100%); border-bottom:1px solid #E3CDA4; box-shadow:0 7px 14px -10px rgba(138,99,34,.22); position:relative; z-index:3;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.13em; color:#8A6322; text-transform:uppercase;">▔ Confidence ceiling</div>
+              <div style="display:flex; align-items:center; gap:6px; padding:2px 8px; border-radius:4px; background:#F7F0E2; border:1px solid #E3CDA4;"><div style="width:5px; height:5px; border-radius:50%; background:#B07A2E;"></div><div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#8A6322; font-weight:600;">INDICATIVE</div></div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.06em; color:#B0946A;">↓ fell from Supported — a value question on partial evidence caps lower</div>
+              <div style="flex:1; height:1px; background:repeating-linear-gradient(90deg,#DCC59B 0 6px,transparent 6px 11px);"></div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#B0946A;">lifts to Supported with: measured baseline emissions + firm capital quotes</div>
+            </div>
+          </div>
+
+          <!-- canvas content -->
+          <div style="flex:1; overflow:hidden; padding:18px 40px 0; position:relative;">
+
+            <!-- carried-forward trace -->
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px; padding:7px 12px; background:#F4F1EB; border-left:2px solid #CFC8BC; border-radius:0 6px 6px 0; max-width:840px;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.1em; color:#A39E96; text-transform:uppercase;">↑ carried from Turn 1</div>
+              <div style="font-size:12px; color:#8C887F;">corpus costs + the Aberdeen benefit anchor — <strong style="color:#6B6760; font-weight:600;">triangulated, not re-fetched</strong> · NPV computed in code <span style="font-family:'IBM Plex Mono',monospace; color:#9A7B47;">[CALC]</span></div>
+            </div>
+
+            <!-- HERO -->
+            <h2 style="font-family:'Newsreader',serif; font-weight:500; font-size:32px; line-height:1.15; letter-spacing:-0.018em; color:#1A1714; margin:0 0 8px; max-width:820px;">Indicative central NPV <strong style="font-weight:600;">+£5.1m</strong>, BCR <strong style="font-weight:600;">1.66</strong> — but it is genuinely marginal, and the honest headline is the switching value: <span style="font-style:italic; color:#B07A2E;">the case collapses below ~£160/tCO₂e.</span></h2>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#8A6322; margin-bottom:16px;">Positive but conditional · the range straddles zero · arithmetic exact <span style="color:#A39E96;">[CALC]</span>, the inputs are Indicative — a bet on the ETS carbon price, not on the technology.</div>
+
+            <!-- TWO-COLUMN INSTRUMENT REGION -->
+            <div style="display:flex; gap:30px; max-width:1000px;">
+
+              <!-- LEFT : NPV WATERFALL (ECharts, data-bound) -->
+              <div style="flex:none; width:516px;">
+                <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:10px;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#56524C; text-transform:uppercase;">The value bridge · NPV waterfall</div>
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#94908A;">£m PV · 20yr · 3.5% STPR · ECharts SVG</div>
+                </div>
+
+                <div style="position:relative; height:248px; border:1px solid #EFEBE4; border-radius:9px; background:#FFFFFF; overflow:hidden;">
+                  <div id="npv-waterfall" style="position:absolute; inset:0; width:100%; height:100%;"></div>
+                </div>
+
+                <!-- provenance caption -->
+                <div style="display:flex; gap:14px; align-items:center; margin-top:8px; font-family:'IBM Plex Mono',monospace; font-size:9px; color:#8C887F;">
+                  <span><span style="color:#7A746B;">■</span> capital · post-44% OB · corpus-scaled <span style="color:#3E6B8C;">PARTIAL</span></span>
+                  <span><span style="color:#B07A2E;">▦</span> benefit · web analogue × assumed £/t <span style="color:#8A6322;">ASSUME</span></span>
+                  <span style="margin-left:auto; color:#B0946A;">whisker = Low / High</span>
+                </div>
+
+                <!-- WHAT-IF · discreet by default (central = no change) -->
+                <div style="display:flex; align-items:center; gap:10px; margin-top:10px; padding:7px 12px; border:1px dashed #E0DCD3; border-radius:7px; background:#FCFBF8;">
+                  <span style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.08em; color:#A39E96; text-transform:uppercase; white-space:nowrap;">⇄ what-if</span>
+                  <span style="font-size:11px; color:#8C887F; white-space:nowrap;">carbon £/t</span>
+                  <input id="whatif-range" type="range" min="80" max="350" step="5" value="250" style="flex:1; accent-color:#B07A2E; height:3px; cursor:pointer; min-width:60px;">
+                  <span id="whatif-price" style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#46423C; white-space:nowrap; min-width:44px; text-align:right;">£250/t</span>
+                  <span style="width:1px; height:15px; background:#E7E3DC;"></span>
+                  <span id="whatif-npv" style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; color:#2F5C3E; white-space:nowrap; min-width:78px; text-align:right;">NPV +£5.1m</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-top:3px; padding:0 2px; font-family:'IBM Plex Mono',monospace; font-size:8px; color:#C4BFB6;"><span>£80</span><span id="whatif-hint" style="color:#B0946A;">⌖ switch ≈£160 — drag below to break the case</span><span>£350</span></div>
+
+                <!-- switching-value headline strip -->
+                <div style="display:flex; align-items:stretch; gap:0; margin-top:12px; border:1px solid #E3CDA4; border-radius:8px; overflow:hidden; background:linear-gradient(135deg,#FBF6EE 0%,#FDFBF6 100%);">
+                  <div style="flex:none; width:6px; background:#B07A2E;"></div>
+                  <div style="flex:1; padding:11px 15px;">
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.1em; color:#8A6322; text-transform:uppercase; margin-bottom:4px;">⚑ The switching value · the real verdict</div>
+                    <div style="font-size:13px; line-height:1.4; color:#5A4A2E;">NPV turns negative below a carbon price of <strong style="color:#3A332A;">~£160/tCO₂e</strong>. The maritime ETS is what prices this carbon <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#A39E96;">[W1]</span> — so the case is a <strong style="color:#3A332A;">policy-risk bet</strong>, not a technology bet.</div>
+                    <div style="margin-top:7px; display:flex; align-items:center; gap:7px;">
+                      <span id="switch-dot" style="width:6px; height:6px; border-radius:50%; background:#3F7A52;"></span>
+                      <span id="switch-state" style="font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600; color:#2F5C3E;">at £250/t — above the switch, NPV clears the bar</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- RIGHT : TORNADO (ECharts) + ASSUMPTIONS LEDGER -->
+              <div style="flex:1; min-width:0;">
+
+                <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:10px;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#56524C; text-transform:uppercase;">Sensitivity · what swings the verdict</div>
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#94908A;">NPV £m</div>
+                </div>
+                <div style="position:relative; height:172px; border:1px solid #EFEBE4; border-radius:9px; background:#FFFFFF; overflow:hidden;">
+                  <div id="sensitivity-tornado" style="position:absolute; inset:0; width:100%; height:100%;"></div>
+                  <div style="position:absolute; right:12px; top:10px; font-family:'IBM Plex Mono',monospace; font-size:8.5px; color:#C9A45E; z-index:2;">⌖ one dominant lever</div>
+                </div>
+
+                <!-- assumptions ledger -->
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#56524C; text-transform:uppercase; margin:14px 0 9px;">Evidence triage · the moat made visible</div>
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                  <div style="display:flex; align-items:flex-start; gap:9px;">
+                    <div style="flex:none; width:62px; display:flex; align-items:center; gap:5px; padding-top:1px;"><div style="width:6px; height:6px; border-radius:50%; background:#3F7A52;"></div><div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#2F5C3E; font-weight:600;">HAVE</div></div>
+                    <div style="flex:1; font-size:11.5px; line-height:1.4; color:#46423C;">Optimism bias 44% · discount 3.5% STPR · 20-yr life <span style="color:#8C887F;">— Green Book standards</span></div>
+                  </div>
+                  <div style="display:flex; align-items:flex-start; gap:9px;">
+                    <div style="flex:none; width:62px; display:flex; align-items:center; gap:5px; padding-top:1px;"><div style="width:6px; height:6px; border-radius:50%; background:#3E6B8C;"></div><div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#2C4F68; font-weight:600;">PARTIAL</div></div>
+                    <div style="flex:1; font-size:11.5px; line-height:1.4; color:#46423C;">Capital band (corpus pilots, scaled) · emissions 3,000 t/yr <span style="color:#8C887F;">(Aberdeen, transferred)</span></div>
+                  </div>
+                  <div style="display:flex; align-items:flex-start; gap:9px;">
+                    <div style="flex:none; width:62px; display:flex; align-items:center; gap:5px; padding-top:1px;"><div style="width:6px; height:6px; border-radius:50%; background:#B07A2E;"></div><div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#8A6322; font-weight:600;">ASSUME</div></div>
+                    <div style="flex:1; font-size:11.5px; line-height:1.4; color:#5A4A2E;">Carbon value £250/t · O&amp;M £0.15m/yr · AQ +30% <span style="color:#B0946A;">— flagged, the only legitimate extrapolation</span></div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <div style="height:18px;"></div>
+          </div>
+        </div>
+
+        <!-- CHAT : so-what decision rail -->
+        <div style="width:396px; flex:none; border-left:1px solid #E7E3DC; background:#FFFFFF; display:flex; flex-direction:column;">
+          <div style="height:54px; flex:none; border-bottom:1px solid #EFEBE4; display:flex; align-items:center; padding:0 20px; gap:9px;">
+            <div style="width:7px;height:7px;border-radius:50%;background:#B07A2E;"></div>
+            <div style="font-size:12.5px; font-weight:600; color:#211E1A;">Atlas</div>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#A39E96;">· so-what</div>
+            <div style="flex:1;"></div>
+            <!-- turn spine 2/4 -->
+            <div style="display:flex; align-items:center; gap:5px;">
+              <div style="width:7px; height:7px; border-radius:50%; background:#C7A56E;"></div>
+              <div style="width:14px; height:2px; background:#C7A56E;"></div>
+              <div style="width:8px; height:8px; border-radius:50%; background:#B07A2E;"></div>
+              <div style="width:14px; height:2px; background:#E0DCD3;"></div>
+              <div style="width:7px; height:7px; border-radius:50%; border:1.5px solid #D8D3CA;"></div>
+              <div style="width:14px; height:2px; background:#E0DCD3;"></div>
+              <div style="width:7px; height:7px; border-radius:50%; border:1.5px solid #D8D3CA;"></div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#A39E96; margin-left:4px;">2/4</div>
+            </div>
+          </div>
+
+          <div style="flex:1; padding:22px 20px; overflow:hidden; display:flex; flex-direction:column; gap:16px;">
+            <div style="align-self:flex-end; max-width:280px; background:#F0EDE7; border-radius:12px 12px 4px 12px; padding:11px 14px; font-size:13px; line-height:1.5; color:#46423C;">Put a number on it. What's the value-for-money case?</div>
+
+            <div style="max-width:316px;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.12em; color:#A39E96; text-transform:uppercase; margin-bottom:8px;">What you're looking at</div>
+              <p style="margin:0 0 14px; font-size:13.5px; line-height:1.58; color:#2E2A24;">A <strong>positive but marginal</strong> case: central NPV +£5.1m, BCR 1.66. The waterfall's whisker is the point — the range <em style="font-style:italic;">straddles zero</em>.</p>
+
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.12em; color:#8A6322; text-transform:uppercase; margin-bottom:8px;">The one decision</div>
+              <div style="background:#FBF6EE; border:1px solid #E3CDA4; border-radius:9px; padding:12px 13px; margin-bottom:14px;">
+                <p style="margin:0; font-size:13.5px; line-height:1.5; color:#5A4A2E;">Proceed <strong>SOC → OBC</strong> as a stage-gated <strong>Real Option</strong> — fund the demonstrator, exercise full rollout only if the carbon price clears the switch. Not unconditional commitment.</p>
+              </div>
+
+              <div style="display:flex; gap:9px; align-items:flex-start; border-left:2px solid #E3CDA4; padding-left:11px;">
+                <div style="font-size:13px; line-height:1.5; color:#7A6A50;"><span style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#B07A2E; text-transform:uppercase; letter-spacing:0.08em;">Gate · </span>this is a bet the ETS carbon price holds above <strong>£160/tCO₂e</strong>. Watch that number, not the technology.</div>
+              </div>
+            </div>
+
+            <div style="flex:1;"></div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <div style="font-size:12px; color:#8A6322; background:#FBF6EE; border:1px solid #E3CDA4; border-radius:14px; padding:5px 12px;">Does it transfer to a smaller port? →</div>
+              <div style="font-size:12px; color:#6B6760; background:#F4F1EB; border:1px solid #E7E3DC; border-radius:14px; padding:5px 12px;">Show the assumptions</div>
+            </div>
+          </div>
+
+          <div style="flex:none; padding:14px 16px; border-top:1px solid #EFEBE4;">
+            <div style="border:1px solid #E0DCD3; border-radius:9px; padding:10px 13px; font-size:12.5px; color:#A39E96; display:flex; align-items:center; justify-content:space-between;">Ask a follow-up…<span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#C4BFB6;">⏎</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- before/after note -->
+  <div style="max-width:1000px; margin-top:30px; display:flex; gap:30px;">
+    <div style="flex:1;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#56524C; text-transform:uppercase; margin-bottom:10px;">Turn 1 → Turn 2 · what moved</div>
+      <div style="display:flex; flex-direction:column; gap:7px; font-size:12.5px; color:#6B6760; line-height:1.5;">
+        <div><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#B07A2E;">⌄ descends </span> the ceiling falls Supported → Indicative — the honest cap for a value question on partial evidence.</div>
+        <div><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#3F7A52;">⇄ swaps </span> the forcing-function timeline → NPV waterfall + sensitivity tornado, now data-bound (ECharts SVG).</div>
+        <div><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#8A6322;">↳ threads </span> Turn 1's single-analogue blind-spot becomes the <em style="font-style:italic;">switching value</em> — the bet the whole case rests on.</div>
+      </div>
+    </div>
+    <div style="flex:1;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#56524C; text-transform:uppercase; margin-bottom:10px;">Why a data graphic, not an infographic</div>
+      <div style="display:flex; flex-direction:column; gap:7px; font-size:12.5px; color:#6B6760; line-height:1.5;">
+        <div><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#3F7A52;">shape in the numbers </span> the bars are drawn to scale from the figures — a balance-scale clip-art would imply a precision the range doesn't have.</div>
+        <div><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#B07A2E;">threshold crossed </span> the one thing the eye must catch is the whisker crossing zero and the £160 switch — everything else is prose.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() { this._tries = 0; this._price = 250; this._tryInit(); }
+  componentDidUpdate() { this._tryInit(); }
+
+  _tryInit() {
+    if (typeof window === 'undefined') return;
+    if (this._done) return;
+    if (!window.echarts) {
+      if (this._tries++ > 120) return;
+      setTimeout(() => this._tryInit(), 60);
+      return;
+    }
+    const w = document.getElementById('npv-waterfall');
+    const t = document.getElementById('sensitivity-tornado');
+    if (!w || !t || w.clientWidth === 0) {
+      if (this._tries++ > 120) return;
+      setTimeout(() => this._tryInit(), 60);
+      return;
+    }
+    this._done = true;
+    this._renderWaterfall(w);
+    this._renderTornado(t);
+    this._wireWhatIf();
+    this._onResize = () => { if (this._wf) this._wf.resize(); if (this._tn) this._tn.resize(); };
+    window.addEventListener('resize', this._onResize);
+  }
+
+  _renderWaterfall(el) {
+    const echarts = window.echarts;
+    if (this._wf) this._wf.dispose();
+    const chart = echarts.init(el, null, { renderer: 'svg' });
+    this._wf = chart;
+
+    const INK = '#7A746B', BLUE = '#C2D4E2', GREEN = '#3F7A52', AMBER = '#B07A2E';
+    const MONO = 'IBM Plex Mono, monospace';
+    const self = this;
+    const cap = 5.76;
+
+    const opt = {
+      animation: false,
+      grid: { left: 50, right: 118, top: 26, bottom: 30 },
+      xAxis: {
+        type: 'category',
+        data: ['Capital', 'Carbon + AQ', 'Net NPV'],
+        axisTick: { show: false },
+        axisLine: { lineStyle: { color: '#E0DCD3' } },
+        axisLabel: { fontFamily: MONO, fontSize: 10.5, color: '#56524C' },
+      },
+      yAxis: {
+        type: 'value', min: -10, max: 18,
+        axisLine: { show: false }, axisTick: { show: false },
+        splitLine: { lineStyle: { color: '#F2EFE9' } },
+        axisLabel: { fontFamily: MONO, fontSize: 9, color: '#A39E96', formatter: (v) => (v === 0 ? '\u00A30' : '\u00A3' + v + 'm') },
+      },
+      series: [
+        // waterfall bars drawn start->end (custom = correct across zero)
+        { type: 'custom', z: 5, silent: true, data: [0, 1, 2],
+          renderItem: (params, api) => {
+            const idx = params.dataIndex;
+            const npv = self._npv(self._price);
+            const seg = [[0, 0, -cap], [1, -cap, npv], [2, 0, npv]][idx];
+            const p0 = api.coord([idx, seg[1]]);
+            const p1 = api.coord([idx, seg[2]]);
+            const band = api.size([1, 0])[0];
+            const bw = band * 0.46;
+            const yTop = Math.min(p0[1], p1[1]);
+            const h = Math.max(2, Math.abs(p1[1] - p0[1]));
+            const neg = npv < 0;
+            let fill, stroke, dash = null, lbl, lblColor, big = false, below = false;
+            if (idx === 0) { fill = INK; stroke = '#5F5A52'; lbl = '\u2212\u00A3' + cap.toFixed(2) + 'm'; lblColor = '#46423C'; below = true; }
+            if (idx === 1) { fill = BLUE; stroke = AMBER; dash = [4, 3]; lbl = '+\u00A3' + (npv + cap).toFixed(1) + 'm'; lblColor = '#2C4F68'; }
+            if (idx === 2) { fill = neg ? '#D9B779' : GREEN; stroke = neg ? '#B07A2E' : '#356B47'; lbl = (npv >= 0 ? '+\u00A3' : '\u2212\u00A3') + Math.abs(npv).toFixed(1) + 'm'; lblColor = neg ? '#8A6322' : '#2F5C3E'; big = true; }
+            const children = [
+              { type: 'rect', shape: { x: p0[0] - bw / 2, y: yTop, width: bw, height: h },
+                style: { fill: fill, stroke: stroke, lineWidth: dash ? 1.5 : 1, lineDash: dash } },
+              { type: 'text', style: { text: lbl, x: p0[0], y: below ? (Math.max(p0[1], p1[1]) + 7) : (yTop - 15),
+                textAlign: 'center', fill: lblColor, font: (big ? 'bold 12px ' : '11px ') + MONO } },
+            ];
+            if (idx === 0) {
+              const zy = api.coord([0, 0])[1];
+              children.push({ type: 'line', shape: { x1: 46, y1: zy, x2: 400, y2: zy }, style: { stroke: '#C9C4BB', lineWidth: 1 } });
+            }
+            return { type: 'group', children: children };
+          },
+        },
+        // honest range whisker on Net NPV (data-bound coords)
+        { type: 'custom', z: 12, silent: true, data: [0],
+          renderItem: (params, api) => {
+            const npv = self._npv(self._price);
+            const hiV = npv + 11.6, loV = npv - 13.9;
+            const cx = api.coord([2, 0])[0];
+            const x = cx + 38;
+            const yHi = api.coord([2, Math.min(18, hiV)])[1];
+            const yLo = api.coord([2, Math.max(-10, loV)])[1];
+            const yMid = api.coord([2, Math.max(-10, Math.min(18, npv))])[1];
+            const f1 = (v) => (v >= 0 ? '+' : '\u2212') + Math.abs(v).toFixed(1);
+            return { type: 'group', children: [
+              { type: 'line', shape: { x1: x, y1: yHi, x2: x, y2: yLo }, style: { stroke: AMBER, lineWidth: 1.5, lineDash: [4, 4] } },
+              { type: 'line', shape: { x1: x - 6, y1: yHi, x2: x + 6, y2: yHi }, style: { stroke: GREEN, lineWidth: 2 } },
+              { type: 'line', shape: { x1: x - 6, y1: yLo, x2: x + 6, y2: yLo }, style: { stroke: AMBER, lineWidth: 2 } },
+              { type: 'circle', shape: { cx: x, cy: yMid, r: 3.5 }, style: { fill: npv < 0 ? '#B07A2E' : '#356B47' } },
+              { type: 'text', style: { text: 'High ' + f1(hiV), x: x + 9, y: yHi - 3, fill: '#2F5C3E', font: '9px ' + MONO } },
+              { type: 'text', style: { text: 'Central ' + f1(npv), x: x + 9, y: yMid - 5, fill: npv < 0 ? '#8A6322' : '#356B47', font: 'bold 9px ' + MONO } },
+              { type: 'text', style: { text: 'Low ' + f1(loV), x: x + 9, y: yLo - 3, fill: '#8A6322', font: '9px ' + MONO } },
+            ] };
+          },
+        },
+      ],
+    };
+    chart.setOption(opt);
+    this._wfOpt = opt;
+  }
+
+  _renderTornado(el) {
+    const echarts = window.echarts;
+    if (this._tn) this._tn.dispose();
+    const chart = echarts.init(el, null, { renderer: 'svg' });
+    this._tn = chart;
+    const MONO = 'IBM Plex Mono, monospace';
+    const self = this;
+
+    // bottom -> top; carbon price on top (widest swing)
+    const cats = ['AQ \u00b7 O&M', 'Capital cost', 'Emissions saved', 'Carbon price'];
+    const low = [3.5, 2, 1, -5];
+    const span = [3, 6, 8, 19];
+    const fills = [
+      { color: '#E7E3DC', borderColor: '#D8D3CA' },
+      { color: '#D8D3CA', borderColor: '#C4BFB6' },
+      { color: '#C2D4E2', borderColor: '#A9C0D2' },
+      { color: '#EFD6A6', borderColor: '#C9A45E',
+        decal: { symbol: 'line', color: 'rgba(176,122,46,0.40)', dashArrayX: [1, 0], dashArrayY: [2, 3], rotation: -Math.PI / 4 } },
+    ];
+
+    const opt = {
+      animation: false,
+      grid: { left: 104, right: 26, top: 12, bottom: 26 },
+      xAxis: {
+        type: 'value', min: -10, max: 18,
+        axisLine: { show: false }, axisTick: { show: false },
+        splitLine: { lineStyle: { color: '#F2EFE9' } },
+        axisLabel: { fontFamily: MONO, fontSize: 8.5, color: '#B5B0A8', formatter: (v) => (v === 0 ? '0' : (v > 0 ? '+' : '') + v) },
+      },
+      yAxis: {
+        type: 'category', data: cats,
+        axisTick: { show: false }, axisLine: { lineStyle: { color: '#E0DCD3' } },
+        axisLabel: { fontFamily: 'Libre Franklin, sans-serif', fontSize: 11, color: '#46423C' },
+      },
+      series: [
+        // horizontal floating bars start->end (custom = correct across zero)
+        { type: 'custom', z: 5, silent: true, data: [0, 1, 2, 3],
+          renderItem: (params, api) => {
+            const idx = params.dataIndex;
+            const x0 = low[idx], x1 = low[idx] + span[idx];
+            const p0 = api.coord([x0, idx]);
+            const p1 = api.coord([x1, idx]);
+            const barH = 15;
+            const f = fills[idx];
+            const children = [
+              { type: 'rect', shape: { x: Math.min(p0[0], p1[0]), y: p0[1] - barH / 2, width: Math.abs(p1[0] - p0[0]), height: barH },
+                style: { fill: f.color, stroke: f.borderColor, lineWidth: 1, lineDash: idx === 3 ? [4, 3] : null } },
+            ];
+            if (idx === 3) {
+              const zx = api.coord([0, 0])[0];
+              const cx = api.coord([5.1, 0])[0];
+              const yTop = 12, yBot = api.getHeight() - 26;
+              children.unshift({ type: 'line', shape: { x1: zx, y1: yTop, x2: zx, y2: yBot }, style: { stroke: '#C9A45E', lineWidth: 1.5, lineDash: [5, 4] } });
+              children.push({ type: 'text', style: { text: 'switch \u2248\u00A3160', x: zx + 4, y: yTop + 1, fill: '#8A6322', font: '9px ' + MONO } });
+              children.unshift({ type: 'line', shape: { x1: cx, y1: yTop, x2: cx, y2: yBot }, style: { stroke: '#9FC6AE', lineWidth: 1, lineDash: [2, 3] } });
+              children.push({ type: 'text', style: { text: 'central', x: cx + 4, y: yBot - 11, fill: '#5C9070', font: '8.5px ' + MONO } });
+              const mp = api.coord([self._npv(self._price), 3]);
+              children.push({ type: 'circle', shape: { cx: mp[0], cy: mp[1], r: 4 }, style: { fill: '#8A6322', stroke: '#FFFFFF', lineWidth: 1.5 } });
+            }
+            return { type: 'group', children: children };
+          },
+        },
+      ],
+    };
+    chart.setOption(opt);
+    this._tnOpt = opt;
+  }
+
+  _npv(p) { return 0.0567 * p - 9.07; }
+
+  _wireWhatIf() {
+    const range = document.getElementById('whatif-range');
+    if (range && !this._wired) {
+      this._wired = true;
+      range.addEventListener('input', (e) => this._whatIf(+e.target.value));
+    }
+    this._whatIf(this._price);
+  }
+
+  _whatIf(p) {
+    this._price = p;
+    if (this._wf && this._wfOpt) this._wf.setOption(this._wfOpt);
+    if (this._tn && this._tnOpt) this._tn.setOption(this._tnOpt);
+    const npv = this._npv(p);
+    const set = (id, txt, col) => { const el = document.getElementById(id); if (el) { el.textContent = txt; if (col) el.style.color = col; } };
+    set('whatif-price', '\u00A3' + p + '/t');
+    set('whatif-npv', 'NPV ' + (npv >= 0 ? '+\u00A3' : '\u2212\u00A3') + Math.abs(npv).toFixed(1) + 'm', npv >= 0 ? '#2F5C3E' : '#8A6322');
+    const above = p >= 160;
+    set('switch-state', 'at \u00A3' + p + '/t \u2014 ' + (above ? 'above the switch, NPV clears the bar' : 'below the switch, NPV is negative'), above ? '#2F5C3E' : '#8A6322');
+    const dot = document.getElementById('switch-dot'); if (dot) dot.style.background = above ? '#3F7A52' : '#B07A2E';
+    const hint = document.getElementById('whatif-hint'); if (hint) hint.style.color = above ? '#B0946A' : '#B07A2E';
+  }
+
+  componentWillUnmount() {
+    if (this._onResize) window.removeEventListener('resize', this._onResize);
+    if (this._wf) this._wf.dispose();
+    if (this._tn) this._tn.dispose();
+  }
+}
+</script>
+</body>
+</html>

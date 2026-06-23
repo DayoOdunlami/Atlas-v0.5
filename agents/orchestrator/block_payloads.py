@@ -28,6 +28,7 @@ _VERDICT_TO_EVIDENCE_VERDICT: dict[str, str] = {
 }
 
 _BLOCK_DEFAULT_CAPTIONS: dict[str, str] = {
+    "decision_spine": "Verdict strip — decision, confidence, and next move.",
     "executive_summary": "What this tells you at a glance.",
     "context_card": "Who and what — entity and scope this artifact covers.",
     "claim_ledger": "Specific capability claims made by the entity, with tier and role.",
@@ -48,6 +49,7 @@ _BLOCK_DEFAULT_CAPTIONS: dict[str, str] = {
 }
 
 _BLOCK_TYPE_MAP: dict[str, tuple[str, str]] = {
+    "decision_spine": ("RecommendationConfidence", "decision_card"),
     "executive_summary": ("ContextCard", "paired_context_cards"),
     "context_card": ("ContextCard", "paired_context_cards"),
     "claim_ledger": ("ClaimLedger", "claim_audit_ledger"),
@@ -297,6 +299,23 @@ def _build_context_card(model: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _build_decision_spine_block(model: dict[str, Any], blocks_data: dict[str, Any]) -> dict[str, Any]:
+    ds = blocks_data.get("decision_spine") or model.get("decision_spine") or {}
+    spine = model.get("decision_spine") or {}
+    summary = ds.get("summary") or spine.get("summary") or model.get("insight_card", "")
+    headline = ds.get("headline") or spine.get("recommendation") or model.get("headline", "")
+    tier = ds.get("confidence_tier") or spine.get("confidence_tier") or model.get("confidence_tier", "Indicative")
+    return {
+        "decision": ds.get("decision") or spine.get("decision") or headline,
+        "recommendation": headline,
+        "summary": summary,
+        "confidence_tier": tier,
+        "next_action": ds.get("next_action") or spine.get("next_action") or "",
+        "key_assumption": ds.get("key_assumption") or spine.get("key_assumption") or "",
+        "score": spine.get("score"),
+    }
+
+
 def _build_executive_summary(model: dict[str, Any], blocks_data: dict[str, Any]) -> dict[str, Any]:
     """Top-of-canvas exec summary block — promotes the insight + sample-disclosure."""
     es = blocks_data.get("executive_summary") or {}
@@ -326,6 +345,8 @@ def _build_executive_summary(model: dict[str, Any], blocks_data: dict[str, Any])
 
 
 def _content_for_block(block_id: str, model: dict[str, Any], blocks_data: dict[str, Any]) -> Any:
+    if block_id == "decision_spine":
+        return _build_decision_spine_block(model, blocks_data)
     if block_id == "executive_summary":
         return _build_executive_summary(model, blocks_data)
     if block_id == "match_bench":
@@ -370,6 +391,8 @@ _FOCUS_BLOCKS = frozenset({
 
 def _headline_for_block(block_id: str, model: dict[str, Any]) -> str:
     spec = BLOCK_REGISTRY.get(block_id)
+    if block_id == "decision_spine":
+        return "Decision spine"
     if block_id == "executive_summary":
         return "What this tells you"
     if block_id == "transfer_lanes":

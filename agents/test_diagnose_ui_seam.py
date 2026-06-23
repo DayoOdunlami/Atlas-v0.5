@@ -19,7 +19,15 @@ CANONICAL_QUERY = (
 
 
 def test_should_run_value_translation_diagnose():
-    assert should_run_value_translation("diagnose", "audit our gaps") is True
+    assert should_run_value_translation(
+        "diagnose",
+        "What transfer gaps does CPC have for the Innovate UK Smart City Challenge?",
+    ) is True
+
+
+def test_should_not_run_vt_for_generic_gap_audit():
+    """Generic gap audits use corpus builders — not the VT demo vertical."""
+    assert should_run_value_translation("diagnose", "What evidence gaps does CPC have in smart mobility?") is False
 
 
 def test_should_run_value_translation_connect_transfer():

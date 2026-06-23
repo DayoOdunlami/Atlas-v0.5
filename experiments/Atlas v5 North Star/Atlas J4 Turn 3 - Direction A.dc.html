@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Libre+Franklin:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { background: #e7e5df; font-family: 'Libre Franklin', sans-serif; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+</style>
+</helmet>
+
+<div style="width: max-content; min-width: 100%; min-height: 100vh; box-sizing: border-box; padding: 56px; background: #e7e5df;">
+
+  <template id="__bundler_thumbnail" data-bg-color="#e7e5df">
+    <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+      <rect width="1200" height="800" fill="#e7e5df"></rect>
+      <rect x="360" y="200" width="480" height="400" rx="10" fill="#FBFAF7"></rect>
+      <line x1="470" y1="400" x2="730" y2="400" stroke="#B07A2E" stroke-width="3" stroke-dasharray="6 6"></line>
+      <circle cx="470" cy="400" r="16" fill="#CFE6D6" stroke="#3F7A52" stroke-width="3"></circle>
+      <circle cx="730" cy="400" r="16" fill="#CFE6D6" stroke="#3F7A52" stroke-width="3"></circle>
+      <circle cx="600" cy="400" r="22" fill="#211E1A" stroke="#B07A2E" stroke-width="3" stroke-dasharray="4 4"></circle>
+      <circle cx="600" cy="560" r="18" fill="#FBF1E2" stroke="#C99A52" stroke-width="3" stroke-dasharray="5 5"></circle>
+    </svg>
+  </template>
+
+  <!-- header -->
+  <div style="max-width:1000px; margin-bottom:40px;">
+    <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:18px;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; color:#94908A; text-transform:uppercase;">Direction A · Journey 4 · Turn 3 · deep pass</div>
+      <div style="height:1px; flex:1; background:#d4d0c8;"></div>
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#94908A;">diagnose · the room exists — name what's actually missing</div>
+    </div>
+    <h1 style="font-family:'Newsreader',serif; font-weight:500; font-size:30px; line-height:1.2; color:#211E1A; margin:0 0 14px; max-width:830px; letter-spacing:-0.01em;">The corrected diagnosis is sharper because it works from the real network, not the corpus artefact: the gap isn't <span style="font-style:italic; color:#B07A2E;">who to invite</span> — almost everyone's already in a room — it's <span style="font-style:italic; color:#3F7A52;">how the rooms connect</span>.</h1>
+    <div style="display:flex; gap:36px; max-width:880px;">
+      <p style="flex:1; margin:0; font-size:13px; line-height:1.6; color:#6B6760;"><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#211E1A;">INSTRUMENT — </span>the actor map, now annotated with two gaps drawn <em style="font-style:italic;">onto</em> it. Gap 1: the single fragile CPC bridge between the two clusters (remove CPC, they split). Gap 2: the highways/digital transfer-neighbours — rendered as <strong style="color:#46423C;">ghost-amber nodes absent from both rooms</strong>, the genuinely missing group.</p>
+      <p style="flex:1; margin:0; font-size:13px; line-height:1.6; color:#6B6760;"><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#211E1A;">SIGN THE GAP RIGHT — </span>TRIG is still absent, so CPC's footprint is <strong style="color:#46423C;">under-counted</strong>. The corrected reading: that makes CPC's centrality a <em style="font-style:italic;">floor</em>, not a cold-start — the opposite of the draft's mis-sign. The gap <em style="font-style:italic;">raises</em> confidence in the reframe, it doesn't lower it.</p>
+    </div>
+  </div>
+
+  <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.08em; color:#56524C; margin-bottom:12px;">FULL PRODUCT SURFACE — DIAGNOSE → THE CONVENING GAP</div>
+
+  <div style="width:1440px; height:1030px; background:#FBFAF7; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 16px 50px rgba(0,0,0,.07); overflow:hidden; display:flex;">
+
+    <!-- LEFT RAIL -->
+    <div style="width:60px; flex:none; background:#F4F1EB; border-right:1px solid #E7E3DC; display:flex; flex-direction:column; align-items:center; padding:14px 0;">
+      <div style="width:30px; height:30px; border-radius:7px; background:#211E1A; color:#FBFAF7; font-family:'Newsreader',serif; font-weight:600; font-size:18px; display:flex; align-items:center; justify-content:center;">A</div>
+      <div style="height:22px;"></div>
+      <div style="display:flex; flex-direction:column; gap:4px; align-items:center;">
+        <div style="width:32px; height:32px; border-radius:8px; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#A39E96;">Mp</div>
+        <div style="width:32px; height:32px; border-radius:8px; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#A39E96;">Cn</div>
+        <div style="width:32px; height:32px; border-radius:8px; background:#E7E0D4; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#211E1A; font-weight:600;">Dg</div>
+        <div style="width:32px; height:32px; border-radius:8px; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#A39E96;">Df</div>
+      </div>
+      <div style="flex:1;"></div>
+      <div style="width:28px; height:28px; border-radius:50%; background:#8FA98C;"></div>
+    </div>
+
+    <!-- MAIN -->
+    <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+
+      <!-- TOPBAR -->
+      <div style="height:54px; flex:none; border-bottom:1px solid #E7E3DC; display:flex; align-items:center; padding:0 24px; gap:16px; background:#FBFAF7; position:relative; z-index:5;">
+        <div style="font-size:15px; font-weight:600; color:#211E1A; white-space:nowrap;">Maritime decarbonisation — partnership network</div>
+        <div style="width:1px; height:18px; background:#E7E3DC;"></div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.06em; color:#8C887F;">CORPUS + WEB · NETWORK PASS · 20 JUN 2026</div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.08em; color:#B07A2E;">· DIAGNOSE THE GAP</div>
+        <div style="flex:1;"></div>
+        <div style="display:flex; background:#F0EDE7; border-radius:7px; padding:3px; gap:2px;">
+          <div style="font-size:12px; padding:5px 12px; border-radius:5px; background:#FFFFFF; color:#211E1A; font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,.06);">Read</div>
+          <div style="font-size:12px; padding:5px 12px; border-radius:5px; color:#8C887F;">Workbench</div>
+          <div style="font-size:12px; padding:5px 12px; border-radius:5px; color:#8C887F;">Present</div>
+        </div>
+      </div>
+
+      <!-- BODY -->
+      <div style="flex:1; display:flex; min-height:0;">
+
+        <!-- CANVAS -->
+        <div style="flex:1; min-width:0; overflow:hidden; display:flex; flex-direction:column;">
+
+          <!-- CONFIDENCE CEILING -->
+          <div style="flex:none; padding:13px 44px 12px; background:linear-gradient(180deg,#EFF3EE 0%,#FBFAF7 100%); border-bottom:1px solid #D3E0D5; box-shadow:0 7px 14px -10px rgba(47,92,62,.20); position:relative; z-index:3;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.13em; color:#2F5C3E; text-transform:uppercase;">▔ Confidence ceiling</div>
+              <div style="display:flex; align-items:center; gap:6px; padding:2px 8px; border-radius:4px; background:#EEF4EE; border:1px solid #CFE0D4;"><div style="width:5px; height:5px; border-radius:50%; background:#3F7A52;"></div><div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#2F5C3E; font-weight:600;">SUPPORTED</div></div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.06em; color:#7FA88A;">⌃ held — the two gaps are firmly grounded; the TRIG gap means CPC's centrality is a FLOOR, so it doesn't pull the ceiling down</div>
+              <div style="flex:1; height:1px; background:repeating-linear-gradient(90deg,#C2D3C4 0 6px,transparent 6px 11px);"></div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#7FA88A;">⌃ correctly-signed gap doesn't lower confidence</div>
+            </div>
+          </div>
+
+          <!-- canvas content -->
+          <div style="flex:1; overflow:hidden; padding:16px 44px 0; position:relative; display:flex; flex-direction:column;">
+
+            <!-- carried-forward trace -->
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:11px; padding:6px 12px; background:#F4F1EB; border-left:2px solid #CFC8BC; border-radius:0 6px 6px 0; max-width:780px;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.1em; color:#A39E96; text-transform:uppercase;">↑ carried from Turns 1–2</div>
+              <div style="font-size:12px; color:#8C887F;">both networks · <strong style="color:#6B6760; font-weight:600;">zero new searches</strong> — Diagnose synthesises journey-state, it doesn't re-fetch <span style="font-family:'IBM Plex Mono',monospace; font-size:10px;">[W1·W2 · S2]</span></div>
+            </div>
+
+            <!-- HERO -->
+            <h2 style="font-family:'Newsreader',serif; font-weight:500; font-size:27px; line-height:1.15; letter-spacing:-0.018em; color:#1A1714; margin:0 0 7px; max-width:880px;">The room mostly already exists — so the gap is two precise things: two clusters that share <span style="font-style:italic; color:#B07A2E;">only CPC</span>, and a whole transfer-neighbour group <span style="font-style:italic; color:#B07A2E;">absent from both</span>.</h2>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#3F7A52; margin-bottom:13px;">Supported on both named gaps <span style="color:#A39E96;">[W1·W2 · S2]</span> · the TRIG gap means CPC's true centrality is a <span style="color:#B07A2E;">floor, not a ceiling</span>.</div>
+
+            <!-- INSTRUMENT ROW -->
+            <div style="display:flex; align-items:stretch; gap:18px;">
+
+              <!-- THE ANNOTATED GAP MAP -->
+              <div style="flex:none; width:600px;">
+                <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:8px;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#56524C; text-transform:uppercase;">The gap map · existing network + the two gaps, drawn on</div>
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#B07A2E;">┄ amber = gap · ▢ green = exists</div>
+                </div>
+                <div style="position:relative; width:600px; height:418px; border:1px solid #EFEBE4; border-radius:9px; background:#FFFFFF; overflow:hidden;">
+                  <div style="position:absolute; inset:0; background-image:radial-gradient(circle, #F2EFE9 1px, transparent 1px); background-size:20px 20px; opacity:0.55;"></div>
+                  <div id="atlas-gap-map" style="position:absolute; inset:0; width:100%; height:100%;"></div>
+                  <div style="position:absolute; left:13px; top:12px; display:flex; align-items:center; gap:7px; background:rgba(244,248,244,0.92); border:1px solid #CFE0D4; border-radius:6px; padding:4px 9px;">
+                    <span style="font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:700; color:#2F5C3E;">the room already exists — don't re-convene it</span>
+                  </div>
+                  <!-- gap legend, on-map -->
+                  <div style="position:absolute; right:12px; bottom:11px; display:flex; flex-direction:column; gap:4px; background:rgba(251,250,247,0.92); border:1px solid #ECE7DE; border-radius:7px; padding:7px 9px;">
+                    <div style="display:flex; align-items:center; gap:6px;"><span style="width:16px; border-bottom:2px dashed #C99A52;"></span><span style="font-family:'IBM Plex Mono',monospace; font-size:8.5px; color:#8A6322;">① fragile A–B link</span></div>
+                    <div style="display:flex; align-items:center; gap:6px;"><span style="width:10px; height:10px; border-radius:50%; background:#FBF1E2; border:1.5px dashed #C99A52;"></span><span style="font-family:'IBM Plex Mono',monospace; font-size:8.5px; color:#8A6322;">② absent transfer-neighbour</span></div>
+                  </div>
+                </div>
+                <div style="display:flex; gap:6px; margin-top:8px; font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#8A6322;"><span>▲ the amber halo on CPC = under-count — its true degree is a floor (TRIG unseen). More ties may sit there, not fewer.</span></div>
+              </div>
+
+              <!-- RIGHT COLUMN : the two gaps (DimensionGap) + answerability -->
+              <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:11px;">
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.12em; color:#56524C; text-transform:uppercase;">The two real gaps · magnitude + remedy</div>
+
+                <!-- GAP 1 -->
+                <div style="border:1px solid #E3CDA4; border-radius:8px; background:#FBF6EE; padding:12px 14px;">
+                  <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:7px;">
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:700; color:#B07A2E;">GAP 1</div>
+                    <div style="font-size:13px; font-weight:600; color:#3A2E1A;">The A–B articulation gap</div>
+                    <div style="flex:1;"></div>
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:8px; color:#B0946A;">STRUCTURAL · fragile</div>
+                  </div>
+                  <div style="display:flex; gap:3px; margin-bottom:8px;">
+                    <div style="flex:1; height:5px; border-radius:2px; background:#C99A52;"></div><div style="flex:1; height:5px; border-radius:2px; background:#C99A52;"></div><div style="flex:1; height:5px; border-radius:2px; background:#E7D6B6;"></div>
+                  </div>
+                  <div style="font-size:12px; line-height:1.45; color:#5A4A2E;">Aberdeen &amp; Irish Sea share <strong style="color:#3A332A;">only CPC</strong> — a single point of failure. <span style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#9A7C49;">[W1·W2]</span></div>
+                  <div style="margin-top:7px; padding-top:7px; border-top:1px dashed #E3CDA4; font-size:11.5px; line-height:1.4; color:#2F5C3E;"><span style="font-family:'IBM Plex Mono',monospace; font-size:8.5px; color:#3F7A52; text-transform:uppercase;">→ action </span> thicken the A–B connection beyond CPC alone.</div>
+                </div>
+
+                <!-- GAP 2 -->
+                <div style="border:1px solid #E3CDA4; border-radius:8px; background:#FBF6EE; padding:12px 14px;">
+                  <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:7px;">
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:700; color:#B07A2E;">GAP 2</div>
+                    <div style="font-size:13px; font-weight:600; color:#3A2E1A;">Transfer-neighbour absence</div>
+                    <div style="flex:1;"></div>
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:8px; color:#B0946A;">ABSENT · high-value</div>
+                  </div>
+                  <div style="display:flex; gap:3px; margin-bottom:8px;">
+                    <div style="flex:1; height:5px; border-radius:2px; background:#C99A52;"></div><div style="flex:1; height:5px; border-radius:2px; background:#C99A52;"></div><div style="flex:1; height:5px; border-radius:2px; background:#C99A52;"></div>
+                  </div>
+                  <div style="font-size:12px; line-height:1.45; color:#5A4A2E;">Highways/digital actors — maritime's strongest transferable proof — are in <strong style="color:#3A332A;">neither room</strong>. <span style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#9A7C49;">[S2]</span></div>
+                  <div style="margin-top:7px; padding-top:7px; border-top:1px dashed #E3CDA4; font-size:11.5px; line-height:1.4; color:#2F5C3E;"><span style="font-family:'IBM Plex Mono',monospace; font-size:8.5px; color:#3F7A52; text-transform:uppercase;">→ action </span> import the transfer-neighbours into the combined room.</div>
+                </div>
+
+                <!-- ANSWERABILITY CARD : under-count, correctly signed -->
+                <div style="position:relative; border-left:3px solid #B07A2E; border-top:1px solid #E3CDA4; border-right:1px solid #E3CDA4; border-bottom:1px solid #E3CDA4; border-radius:0 8px 8px 0; background:#FBF6EE; padding:11px 14px; overflow:hidden; flex:1;">
+                  <div style="position:absolute; inset:0; background-image:repeating-linear-gradient(135deg,rgba(176,122,46,.06) 0 1px,transparent 1px 9px); pointer-events:none;"></div>
+                  <div style="position:relative;">
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.1em; color:#B07A2E; text-transform:uppercase; margin-bottom:6px;">⊘ What we can't see — and which way it cuts</div>
+                    <div style="font-size:12px; line-height:1.45; color:#5A4A2E;">TRIG isn't ingested, so CPC's full maritime footprint is <strong style="color:#3A332A;">under-counted</strong>. Signed right: the network is <em style="font-style:italic;">at least</em> this connected — <strong style="color:#3A332A;">more ties may sit unseen, not fewer</strong>. The draft mis-signed this as "cold".</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- BOTTOM STRIP : what already exists, leave intact -->
+            <div style="display:flex; gap:13px; margin-top:14px; flex:1; align-items:stretch;">
+              <div style="flex:1; border:1px solid #CFE0D4; border-left:3px solid #3F7A52; border-radius:7px; background:linear-gradient(135deg,#F4F8F4 0%,#FAFCFA 100%); padding:12px 16px; display:flex; align-items:center;">
+                <div style="font-size:12.5px; line-height:1.5; color:#2E3A30;"><span style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#2F5C3E; text-transform:uppercase; letter-spacing:0.08em;">✦ leave intact · </span>CPC sits in two live-ish consortia — the actors are <strong style="color:#1A2E20;">already in rooms, just not the same one</strong>. Re-inviting them as a cold-start would be the exact corpus-only error this journey corrects. <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#7FA88A;">[W1·W2]</span></div>
+              </div>
+              <div style="flex:none; width:312px; border:1px solid #EFEBE4; border-radius:7px; background:#FBFAF7; padding:11px 14px; display:flex; flex-direction:column; justify-content:center;">
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.1em; color:#56524C; text-transform:uppercase; margin-bottom:7px;">Gaps → actions (not footnotes)</div>
+                <div style="display:flex; gap:8px;">
+                  <div style="flex:1; text-align:center; padding:7px 6px; border-radius:6px; background:#EEF4EE; border:1px solid #CFE0D4;"><div style="font-family:'IBM Plex Mono',monospace; font-size:8px; color:#2F5C3E;">①</div><div style="font-size:11px; color:#1A2E20; font-weight:600; margin-top:2px;">Thicken A–B</div></div>
+                  <div style="flex:1; text-align:center; padding:7px 6px; border-radius:6px; background:#EEF4EE; border:1px solid #CFE0D4;"><div style="font-family:'IBM Plex Mono',monospace; font-size:8px; color:#2F5C3E;">②</div><div style="font-size:11px; color:#1A2E20; font-weight:600; margin-top:2px;">Import H/D</div></div>
+                </div>
+              </div>
+            </div>
+
+            <div style="height:14px;"></div>
+          </div>
+        </div>
+
+        <!-- CHAT : so-what decision rail -->
+        <div style="width:396px; flex:none; border-left:1px solid #E7E3DC; background:#FFFFFF; display:flex; flex-direction:column;">
+          <div style="height:54px; flex:none; border-bottom:1px solid #EFEBE4; display:flex; align-items:center; padding:0 20px; gap:9px;">
+            <div style="width:7px;height:7px;border-radius:50%;background:#3F7A52;"></div>
+            <div style="font-size:12.5px; font-weight:600; color:#211E1A;">Atlas</div>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#A39E96;">· so-what</div>
+            <div style="flex:1;"></div>
+            <!-- turn spine 3/4 -->
+            <div style="display:flex; align-items:center; gap:5px;">
+              <div style="width:7px; height:7px; border-radius:50%; background:#3F7A52;"></div>
+              <div style="width:12px; height:2px; background:#3F7A52;"></div>
+              <div style="width:7px; height:7px; border-radius:50%; background:#3F7A52;"></div>
+              <div style="width:12px; height:2px; background:#3F7A52;"></div>
+              <div style="width:8px; height:8px; border-radius:50%; background:#3F7A52;"></div>
+              <div style="width:14px; height:2px; background:#E0DCD3;"></div>
+              <div style="width:7px; height:7px; border-radius:50%; border:1.5px solid #D8D3CA;"></div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#A39E96; margin-left:4px;">3/4</div>
+            </div>
+          </div>
+
+          <div style="flex:1; padding:22px 20px; overflow:hidden; display:flex; flex-direction:column; gap:16px;">
+            <div style="align-self:flex-end; max-width:300px; background:#F0EDE7; border-radius:12px 12px 4px 12px; padding:11px 14px; font-size:13px; line-height:1.5; color:#46423C;">So who should be in the room — and what's actually missing?</div>
+
+            <div style="max-width:316px;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.12em; color:#A39E96; text-transform:uppercase; margin-bottom:8px;">What you're looking at</div>
+              <p style="margin:0 0 14px; font-size:13.5px; line-height:1.58; color:#2E2A24;">Almost everyone's already in a room. The map draws the two real gaps: a <strong>fragile single bridge</strong> between your clusters, and the <strong>highways/digital actors</strong> who are in neither.</p>
+
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.12em; color:#2F5C3E; text-transform:uppercase; margin-bottom:8px;">The one decision</div>
+              <div style="background:#F1F6F1; border:1px solid #CFE0D4; border-radius:9px; padding:12px 13px; margin-bottom:14px;">
+                <p style="margin:0; font-size:13.5px; line-height:1.5; color:#1A2E20;">Two moves, not an invite list: <strong>thicken A–B</strong> beyond CPC, and <strong>import highways/digital</strong>. Both are gaps converted to actions.</p>
+              </div>
+
+              <div style="display:flex; gap:9px; align-items:flex-start; border-left:2px solid #E3CDA4; padding-left:11px;">
+                <div style="font-size:13px; line-height:1.5; color:#7A6A50;"><span style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#B07A2E; text-transform:uppercase; letter-spacing:0.08em;">Sign · </span>the TRIG blind-spot is an <strong>under-count</strong>, not a cold field — CPC is <em style="font-style:italic;">at least</em> this central. Getting the direction right is the whole correction.</div>
+              </div>
+            </div>
+
+            <div style="flex:1;"></div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <div style="font-size:12px; color:#2F5C3E; background:#EEF4EE; border:1px solid #CFE0D4; border-radius:14px; padding:5px 12px;">Give me the convening brief →</div>
+              <div style="font-size:12px; color:#6B6760; background:#F4F1EB; border:1px solid #E7E3DC; border-radius:14px; padding:5px 12px;">Who exactly to import?</div>
+            </div>
+          </div>
+
+          <div style="flex:none; padding:14px 16px; border-top:1px solid #EFEBE4;">
+            <div style="border:1px solid #E0DCD3; border-radius:9px; padding:10px 13px; font-size:12.5px; color:#A39E96; display:flex; align-items:center; justify-content:space-between;">Ask a follow-up…<span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#C4BFB6;">⏎</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- motion / legend annotations -->
+  <div style="max-width:1000px; margin-top:30px; display:flex; gap:30px;">
+    <div style="flex:1;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#56524C; text-transform:uppercase; margin-bottom:10px;">Turn 2 → Turn 3 · the diagnosis sharpens</div>
+      <div style="display:flex; flex-direction:column; gap:7px; font-size:12.5px; color:#6B6760; line-height:1.5;">
+        <div><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#3F7A52;">⇄ swaps </span> the dual-network view → the actor map annotated with the two gaps. Same network, now diagnostic. Zero new searches — Diagnose re-uses T1+T2 state.</div>
+        <div><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#B07A2E;">⊘ converts </span> each gap to an action — thicken A–B, import highways/digital — never left as a footnote. Blind-spots become moves.</div>
+        <div><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#8A6322;">↳ re-signs </span> the threaded blind-spot: TRIG-absence is an under-count (CPC ≥ this central), not a cold-start. A gap's direction matters as much as its size.</div>
+      </div>
+    </div>
+    <div style="flex:1;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#56524C; text-transform:uppercase; margin-bottom:10px;">Material legend · provenance = state</div>
+      <div style="display:flex; flex-direction:column; gap:7px; font-size:12.5px; color:#6B6760; line-height:1.5;">
+        <div><span style="display:inline-block; width:14px; height:14px; border-radius:50%; background:#CFE6D6; border:2px solid #3F7A52; vertical-align:middle; margin-right:8px;"></span>exists — green node · the room is already there (don't re-convene)</div>
+        <div><span style="display:inline-block; width:22px; border-bottom:2px dashed #C99A52; vertical-align:middle; margin-right:8px;"></span>gap-1 — amber dashed link · the fragile single A–B bridge</div>
+        <div><span style="display:inline-block; width:14px; height:14px; border-radius:50%; background:#FBF1E2; border:1.5px dashed #C99A52; vertical-align:middle; margin-right:8px;"></span>gap-2 — ghost amber node · transfer-neighbour absent from both rooms</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() { this._tries = 0; this._tryInit(); }
+  componentDidUpdate() { if (!this._chart) this._tryInit(); }
+
+  _tryInit() {
+    if (typeof window === 'undefined') return;
+    if (!window.echarts) { if (this._tries++ > 120) return; setTimeout(() => this._tryInit(), 60); return; }
+    const el = document.getElementById('atlas-gap-map');
+    if (!el || el.clientWidth === 0) { if (this._tries++ > 120) return; setTimeout(() => this._tryInit(), 60); return; }
+    this._render(el);
+  }
+
+  _render(el) {
+    const echarts = window.echarts;
+    if (this._chart) this._chart.dispose();
+    const chart = echarts.init(el, null, { renderer: 'svg' });
+    this._chart = chart;
+
+    const GREEN = '#3F7A52', FILL = '#CFE6D6', INK = '#211E1A', BLUE = '#8AA7C2',
+          AMBER = '#B07A2E', GHOST_BD = '#C99A52', GHOST_FILL = '#FBF1E2',
+          ABP_FILL = '#E6EDE4', ABP_BD = '#A8B6A2';
+
+    const N = (name, x, y, o) => Object.assign({ name, x, y }, o);
+    const memB = { color: '#E2ECF3', borderColor: BLUE, borderWidth: 2 };
+    const lbl = (pos, c, s) => ({ show: true, position: pos || 'bottom', distance: 5, fontFamily: 'Libre Franklin, sans-serif', fontSize: s || 10, color: c || '#4A6076' });
+
+    const nodes = [
+      // under-count halo behind CPC (floor)
+      N('__halo', 320, 250, { symbolSize: 86, itemStyle: { color: 'rgba(176,122,46,0.05)', borderColor: GHOST_BD, borderWidth: 1.5, borderType: 'dashed' }, silent: true, z: 1, label: { show: false } }),
+      // CPC — articulation point + under-counted
+      N('CPC', 320, 250, { symbolSize: 44, z: 5, itemStyle: { color: INK, borderColor: AMBER, borderWidth: 2.5, borderType: 'dashed' },
+        label: { show: true, position: 'inside', color: '#FBFAF7', fontWeight: 700, fontSize: 12, fontFamily: 'Libre Franklin, sans-serif' },
+        prov: 'sole bridge between clusters AND under-counted (TRIG unseen) — true degree is a floor' }),
+      // Aberdeen cluster (left)
+      N('PoA', 180, 250, { symbolSize: 26, itemStyle: { color: '#D2E2EE', borderColor: BLUE, borderWidth: 2.5 }, label: lbl('left', '#3F5E78', 10.5), prov: 'Port of Aberdeen — Shore Power lead [W1]' }),
+      N('DOF', 95, 330, { symbolSize: 16, itemStyle: memB, label: lbl('left'), prov: 'DOF Subsea — Aberdeen [W1]' }),
+      N('Happold', 75, 245, { symbolSize: 15, itemStyle: memB, label: lbl('left'), prov: 'Buro Happold — Aberdeen [W1]' }),
+      N('Tidewater', 110, 165, { symbolSize: 16, itemStyle: memB, label: lbl('bottom'), prov: 'Tidewater — Aberdeen [W1]' }),
+      N('Tyndall', 205, 150, { symbolSize: 15, itemStyle: memB, label: lbl('bottom'), prov: 'Tyndall Centre — Aberdeen academic [W1]' }),
+      // Irish Sea cluster (right)
+      N('Haskoning', 460, 250, { symbolSize: 24, itemStyle: { color: '#D2E2EE', borderColor: BLUE, borderWidth: 2.5 }, label: lbl('right', '#3F5E78', 10.5), prov: 'Royal HaskoningDHV — Irish Sea [W2]' }),
+      N('LJMU', 550, 330, { symbolSize: 16, itemStyle: memB, label: lbl('right'), prov: 'LJMU — Irish Sea [W2]' }),
+      N('Liverpool', 560, 175, { symbolSize: 16, itemStyle: memB, label: lbl('right'), prov: 'U. Liverpool — Irish Sea [W2]' }),
+      N('QUB', 470, 150, { symbolSize: 16, itemStyle: memB, label: lbl('bottom'), prov: 'Queen\u2019s University Belfast — Irish Sea [W2]' }),
+      // ABP cluster (top, faded — exists but apart)
+      N('ABP', 320, 400, { symbolSize: 18, itemStyle: { color: ABP_FILL, borderColor: ABP_BD, borderWidth: 1.5, opacity: 0.55 }, label: { show: true, position: 'top', distance: 4, fontFamily: 'Libre Franklin, sans-serif', fontSize: 9.5, color: '#9AA694' }, prov: 'ABP corridor — separate, not part of the convening gap [W4]' }),
+      // GAP 2 — absent transfer-neighbours (ghost amber)
+      N('Highways actors', 200, 60, { symbolSize: 30, itemStyle: { color: GHOST_FILL, borderColor: GHOST_BD, borderWidth: 1.5, borderType: 'dashed' }, label: { show: true, position: 'bottom', distance: 5, fontFamily: 'Libre Franklin, sans-serif', fontSize: 10, color: '#8A6322', fontWeight: 600 }, prov: 'GAP 2 — absent from both rooms · maritime\u2019s strongest transfer-neighbour [S2]' }),
+      N('Digital actors', 445, 60, { symbolSize: 26, itemStyle: { color: GHOST_FILL, borderColor: GHOST_BD, borderWidth: 1.5, borderType: 'dashed' }, label: { show: true, position: 'bottom', distance: 5, fontFamily: 'Libre Franklin, sans-serif', fontSize: 10, color: '#8A6322', fontWeight: 600 }, prov: 'GAP 2 — absent from both rooms · strong transfer-neighbour [S2]' }),
+    ];
+
+    const blueE = (s, t, bridge) => ({ source: s, target: t, lineStyle: { width: bridge ? 2.8 : 1.5, color: bridge ? '#5E7E9C' : BLUE, type: 'dashed', opacity: bridge ? 0.95 : 0.62, curveness: 0.05 },
+      label: bridge ? { show: true, formatter: (t === 'PoA' || s === 'PoA') ? '∈ A' : '∈ B', fontFamily: 'IBM Plex Mono, monospace', fontSize: 8.5, color: '#5E7E9C', backgroundColor: 'rgba(255,255,255,0.85)', padding: [1, 3] } : undefined });
+
+    const gapE = (s, t, label, cv) => ({ source: s, target: t, lineStyle: { width: 2, color: GHOST_BD, type: [5, 5], opacity: 0.85, curveness: cv || 0 },
+      label: { show: true, formatter: label, fontFamily: 'IBM Plex Mono, monospace', fontSize: 8.5, color: '#8A6322', fontWeight: 600, backgroundColor: 'rgba(251,246,238,0.92)', padding: [1, 4] } });
+
+    const links = [
+      // existing (blue dashed)
+      blueE('PoA', 'DOF'), blueE('PoA', 'Happold'), blueE('PoA', 'Tidewater'), blueE('PoA', 'Tyndall'), blueE('PoA', 'CPC', true),
+      blueE('Haskoning', 'LJMU'), blueE('Haskoning', 'Liverpool'), blueE('Haskoning', 'QUB'), blueE('Haskoning', 'CPC', true),
+      // GAP 1 — fragile/missing direct A-B link (amber dashed, bowed under CPC)
+      gapE('PoA', 'Haskoning', '① thicken A–B', -0.55),
+      // GAP 2 — import the absent transfer-neighbours (amber dashed)
+      gapE('Highways actors', 'CPC', '② import', 0.12),
+      gapE('Digital actors', 'CPC', '② import', -0.12),
+    ];
+
+    chart.setOption({
+      animationDuration: 700,
+      tooltip: {
+        backgroundColor: '#FFFFFF', borderColor: '#DCD7CE', borderWidth: 1, padding: [9, 12],
+        textStyle: { color: '#3A332A', fontFamily: 'IBM Plex Mono, monospace', fontSize: 11 },
+        extraCssText: 'box-shadow:0 8px 26px rgba(40,34,26,.16); border-radius:8px; max-width:240px; white-space:normal;',
+        formatter: (p) => {
+          if (p.dataType === 'edge') {
+            const isGap = p.data.lineStyle && p.data.lineStyle.color === GHOST_BD;
+            if (isGap) return '<b style="color:#8A6322">gap — drawn, not yet real</b><br/><span style="color:#5A5249">' + p.data.source + ' \u2014 ' + p.data.target + '</span>';
+            return '<b>existing edge</b><br/><span style="color:#5E7E9C">' + p.data.source + ' \u2014 ' + p.data.target + '</span>';
+          }
+          if (!p.data.prov) return '';
+          return '<b>' + p.data.name + '</b><br/><span style="color:#5A5249">' + p.data.prov + '</span>';
+        },
+      },
+      series: [{ type: 'graph', layout: 'none', roam: true, nodes, links, scaleLimit: { min: 0.7, max: 3 },
+        emphasis: { focus: 'adjacency', scale: 1.04, lineStyle: { width: 3 } } }],
+    });
+
+    this._onResize = () => chart.resize();
+    window.addEventListener('resize', this._onResize);
+  }
+
+  componentWillUnmount() {
+    if (this._onResize) window.removeEventListener('resize', this._onResize);
+    if (this._chart) this._chart.dispose();
+  }
+}
+</script>
+</body>
+</html>

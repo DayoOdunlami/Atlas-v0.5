@@ -7,12 +7,16 @@ from __future__ import annotations
 from agents.orchestrator.diagnose import run_value_translation_pipeline
 from agents.orchestrator.evidence_router import select_lane_mode
 
+CANONICAL_VT_QUERY = (
+    "What evidence does CPC have in smart mobility that would transfer "
+    "to the Innovate UK Smart City Challenge?"
+)
 
-# Queries that historically silently swapped to fixtures
+# Queries that trigger VT and historically used fixtures when spec extraction fails
 DEMO_TRIGGER_QUERIES = [
-    "What evidence gaps does CPC have in smart mobility?",
-    "What evidence gaps does CPC have in smart mobility infrastructure?",
-    "smart city evidence audit",
+    CANONICAL_VT_QUERY,
+    "Compare CPC smart mobility evidence against the Innovate UK Smart City Challenge",
+    "What would transfer from CPC smart mobility to Innovate UK?",
 ]
 
 
@@ -27,7 +31,7 @@ def test_diagnose_model_marks_demo_when_no_real_spec_extracted():
 
 def test_diagnose_headline_says_sample_when_demo():
     model = run_value_translation_pipeline(
-        query="What evidence gaps does CPC have in smart mobility?",
+        query=CANONICAL_VT_QUERY,
         outcome="diagnose",
     )
     assert model is not None
@@ -36,7 +40,7 @@ def test_diagnose_headline_says_sample_when_demo():
 
 def test_diagnose_executive_summary_present_in_blocks():
     model = run_value_translation_pipeline(
-        query="What evidence gaps does CPC have in smart mobility?",
+        query=CANONICAL_VT_QUERY,
         outcome="diagnose",
     )
     assert model is not None
@@ -48,7 +52,7 @@ def test_diagnose_executive_summary_present_in_blocks():
 
 def test_diagnose_insight_card_is_now_executive_summary_not_metric():
     model = run_value_translation_pipeline(
-        query="What evidence gaps does CPC have in smart mobility?",
+        query=CANONICAL_VT_QUERY,
         outcome="diagnose",
     )
     assert model is not None

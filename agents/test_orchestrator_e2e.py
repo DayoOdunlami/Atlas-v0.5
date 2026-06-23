@@ -153,6 +153,14 @@ def test_triage_analyze_diagnose():
 def test_triage_deep_gates():
     from agents.orchestrator.triage import triage_query
     r = triage_query("Build a full five-case business case for the AI freight pilot")
+    assert r.effort == "analyze"
+    assert r.outcome == "act"
+    assert r.needs_gate is False
+
+
+def test_triage_deep_external_research_gates():
+    from agents.orchestrator.triage import triage_query
+    r = triage_query("Run a comprehensive falsification analysis with full NPV appraisal")
     assert r.effort == "deep"
     assert r.needs_gate is True
 
@@ -207,6 +215,9 @@ def test_format_pass_selects_blocks():
     assert formatted["render_mode"] == "blocks"
     assert "context_card" in formatted["blocks"]
     assert "recommendation_confidence" in formatted["blocks"]
+    assert "presentation_plan" in formatted
+    plan = formatted["presentation_plan"]
+    assert plan.get("dominant_visual_id") is not None or plan.get("chat_surface")
     # context_card first, recommendation_confidence last
     assert formatted["blocks"][0] == "context_card"
     assert formatted["blocks"][-1] == "recommendation_confidence"

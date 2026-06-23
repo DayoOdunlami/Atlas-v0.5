@@ -55,6 +55,7 @@ def _conn():
     kwargs: dict = {}
     if not is_local:
         kwargs["sslmode"] = "require"
+        kwargs["connect_timeout"] = int(os.environ.get("CORPUS_PG_CONNECT_TIMEOUT", "8"))
     return psycopg2.connect(conn_str, **kwargs)
 
 

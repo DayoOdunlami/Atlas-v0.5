@@ -20,8 +20,10 @@ def test_clarify_for_very_short():
 
 def test_deep_for_business_case():
     r = triage_query("Build a full business case for CPC's smart mobility investment")
-    assert r.effort == "deep"
-    assert r.needs_gate is True
+    # Five Case act brief uses deterministic builder — analyze, no HITL gate
+    assert r.effort == "analyze"
+    assert r.outcome == "act"
+    assert r.needs_gate is False
 
 
 def test_deep_for_npv():

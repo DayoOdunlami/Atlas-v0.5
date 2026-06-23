@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Libre+Franklin:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { background: #e7e5df; font-family: 'Libre Franklin', sans-serif; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+</style>
+</helmet>
+
+<div style="width: max-content; min-width: 100%; min-height: 100vh; box-sizing: border-box; padding: 56px; background: #e7e5df;">
+
+  <template id="__bundler_thumbnail" data-bg-color="#e7e5df">
+    <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+      <rect width="1200" height="800" fill="#e7e5df"></rect>
+      <rect x="360" y="210" width="480" height="380" rx="10" fill="#FBFAF7"></rect>
+      <circle cx="520" cy="400" r="46" fill="#211E1A"></circle>
+      <circle cx="700" cy="400" r="36" fill="#3F7A52"></circle>
+      <rect x="556" y="394" width="108" height="12" fill="#3F7A52"></rect>
+    </svg>
+  </template>
+
+  <!-- header -->
+  <div style="max-width:1000px; margin-bottom:40px;">
+    <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:18px;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; color:#94908A; text-transform:uppercase;">Direction A · Turn 3 · deep pass</div>
+      <div style="height:1px; flex:1; background:#d4d0c8;"></div>
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#94908A;">decide · the shape degrades honestly to the data</div>
+    </div>
+    <h1 style="font-family:'Newsreader',serif; font-weight:500; font-size:30px; line-height:1.2; color:#211E1A; margin:0 0 14px; max-width:800px; letter-spacing:-0.01em;">The decide turn. The instrument is a network — but it's drawn <span style="font-style:italic; color:#B07A2E;">honest to its density:</span> one strong edge dominant, the thin ones labelled thin, the absent one absent.</h1>
+    <div style="display:flex; gap:36px; max-width:880px;">
+      <p style="flex:1; margin:0; font-size:13px; line-height:1.6; color:#6B6760;"><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#211E1A;">THE RULE — </span>every shape has a minimum-data threshold. Rail's bridge to highways clears it (121 edges @ 0.80); the bridges to digital and aviation don't. So it renders as an <em style="font-style:italic;">ego-network</em> around the one dense edge — never a falsely rich web. The visual degrades to match the data, not the ambition.</p>
+      <p style="flex:1; margin:0; font-size:13px; line-height:1.6; color:#6B6760;"><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#211E1A;">THE CEILING DROPS — </span>this verdict rests on a single strong bridge, so confidence falls back from Robust to Supported. The ceiling isn't a one-way ratchet; it moves with the evidence. Naming that is the honesty, and it's the cap the next turn defends.</p>
+    </div>
+  </div>
+
+  <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.08em; color:#56524C; margin-bottom:12px;">FULL PRODUCT SURFACE — DECIDE</div>
+
+  <div style="width:1440px; height:1040px; background:#FBFAF7; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 16px 50px rgba(0,0,0,.07); overflow:hidden; display:flex;">
+
+    <!-- LEFT RAIL -->
+    <div style="width:60px; flex:none; background:#F4F1EB; border-right:1px solid #E7E3DC; display:flex; flex-direction:column; align-items:center; padding:14px 0;">
+      <div style="width:30px; height:30px; border-radius:7px; background:#211E1A; color:#FBFAF7; font-family:'Newsreader',serif; font-weight:600; font-size:18px; display:flex; align-items:center; justify-content:center;">A</div>
+      <div style="height:22px;"></div>
+      <div style="display:flex; flex-direction:column; gap:4px; align-items:center;">
+        <div style="width:32px; height:32px; border-radius:8px; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#A39E96;">Or</div>
+        <div style="width:32px; height:32px; border-radius:8px; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#A39E96;">Cn</div>
+        <div style="width:32px; height:32px; border-radius:8px; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#A39E96;">Dg</div>
+        <div style="width:32px; height:32px; border-radius:8px; background:#E7E0D4; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#211E1A; font-weight:600;">Ac</div>
+        <div style="width:32px; height:32px; border-radius:8px; display:flex;align-items:center;justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#A39E96;">Df</div>
+      </div>
+      <div style="flex:1;"></div>
+      <div style="width:28px; height:28px; border-radius:50%; background:#CDBBA5;"></div>
+    </div>
+
+    <!-- MAIN -->
+    <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+
+      <!-- TOPBAR -->
+      <div style="height:54px; flex:none; border-bottom:1px solid #E7E3DC; display:flex; align-items:center; padding:0 24px; gap:16px; background:#FBFAF7; position:relative; z-index:5;">
+        <div style="font-size:15px; font-weight:600; color:#211E1A; white-space:nowrap;">Rail decarbonisation</div>
+        <div style="width:1px; height:18px; background:#E7E3DC;"></div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.06em; color:#8C887F;">CORPUS + WEB · 55 OBJECTS · 18 JUN 2026</div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.08em; color:#3F7A52;">· ACT</div>
+        <div style="flex:1;"></div>
+        <div style="display:flex; background:#F0EDE7; border-radius:7px; padding:3px; gap:2px;">
+          <div style="font-size:12px; padding:5px 12px; border-radius:5px; background:#FFFFFF; color:#211E1A; font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,.06);">Read</div>
+          <div style="font-size:12px; padding:5px 12px; border-radius:5px; color:#8C887F;">Workbench</div>
+          <div style="font-size:12px; padding:5px 12px; border-radius:5px; color:#8C887F;">Present</div>
+        </div>
+      </div>
+
+      <!-- BODY -->
+      <div style="flex:1; display:flex; min-height:0;">
+
+        <!-- CANVAS -->
+        <div style="flex:1; min-width:0; overflow:hidden; display:flex; flex-direction:column;">
+
+          <!-- CONFIDENCE CEILING (dropped back to Supported) -->
+          <div style="flex:none; padding:13px 48px 12px; background:linear-gradient(180deg,#F1EEE8 0%,#FBFAF7 100%); border-bottom:1px solid #E3DFD7; box-shadow:0 7px 14px -10px rgba(40,34,26,.22); position:relative; z-index:3;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.13em; color:#6B6760; text-transform:uppercase;">▔ Confidence ceiling</div>
+              <div style="display:flex; align-items:center; gap:6px; padding:2px 8px; border-radius:4px; background:#EEF4EE; border:1px solid #CFE0D4;"><div style="width:5px; height:5px; border-radius:50%; background:#3F7A52;"></div><div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#2F5C3E; font-weight:600;">SUPPORTED</div></div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.06em; color:#B89A6A;">↓ down from Robust</div>
+              <div style="flex:1; height:1px; background:repeating-linear-gradient(90deg,#C9C4BB 0 6px,transparent 6px 11px);"></div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#94908A;">the angle rests on a single strong bridge — the cap moves with the evidence</div>
+            </div>
+          </div>
+
+          <!-- canvas content -->
+          <div style="flex:1; overflow:hidden; padding:22px 48px 0; position:relative;">
+
+            <!-- carried-forward trace -->
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px; padding:7px 12px; background:#F4F1EB; border-left:2px solid #CFC8BC; border-radius:0 6px 6px 0; max-width:680px;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.1em; color:#A39E96; text-transform:uppercase;">↑ carried from Turns 1–2</div>
+              <div style="font-size:12px; color:#8C887F;">two-tier field · electrification is the live cluster · <span style="color:#9A7B47;">TRIG ingestion still pending</span></div>
+            </div>
+
+            <!-- HERO -->
+            <h2 style="font-family:'Newsreader',serif; font-weight:500; font-size:35px; line-height:1.16; letter-spacing:-0.018em; color:#1A1714; margin:0 0 12px; max-width:760px;">Your angle is the bridge, not the mode — enter through <span style="font-style:italic; color:#B07A2E;">highways,</span> anchor on electrification, not freight.</h2>
+            <p style="font-size:16px; line-height:1.5; color:#46423C; margin:0 0 13px; max-width:680px;">Two corpus structures point the same way: the <strong style="color:#1A1714; font-weight:600;">live partners</strong> cluster on electrification-cost, and rail's strongest cross-modal relationship by far is to <strong style="color:#1A1714; font-weight:600;">highways</strong>. So the defensible play is rail-decarbonisation-as-integrated-infrastructure.</p>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#8C887F; margin-bottom:24px;">Supported · the strongest available structure — but a single-bridge bet, not a diversified one.</div>
+
+            <div style="display:flex; gap:30px; max-width:980px;">
+
+              <!-- INSTRUMENT : density-honest NetworkMap -->
+              <div style="flex:none; width:508px;">
+                <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:11px;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#56524C; text-transform:uppercase;">Cross-modal bridges · drawn honest-to-density</div>
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#A39E96;">{{ graphStatus }}</div>
+                </div>
+
+                <div style="position:relative; height:266px; border:1px solid #EFEBE4; border-radius:9px; background:#FFFFFF; overflow:hidden;">
+                  <div style="position:absolute; inset:0; background-image:radial-gradient(circle, #F2EFE9 1px, transparent 1px); background-size:18px 18px; opacity:0.6;"></div>
+                  <div id="atlas-t3-graph" style="position:absolute; inset:0; width:100%; height:100%;"></div>
+                </div>
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#94908A; margin-top:9px; line-height:1.5;">ladder: force-graph → <span style="color:#3F7A52;">ego ◀ selected</span> → inventory → matrix &nbsp;·&nbsp; only the highways edge clears the density threshold <span style="color:#3E6B8C;">[S3]</span> &nbsp;·&nbsp; <span style="color:#56524C;">hover an edge for provenance</span></div>
+              </div>
+
+              <!-- partner shortlist (recency-sorted) -->
+              <div style="flex:1;">
+                <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:11px;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#56524C; text-transform:uppercase;">Live partner anchors</div>
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#A39E96;">sort · recency</div>
+                </div>
+
+                <div style="border:1px solid #CFE0D4; border-left:3px solid #3F7A52; border-radius:7px; background:linear-gradient(135deg,#F4F8F4 0%,#EEF4EE 100%); padding:12px 14px; margin-bottom:9px;">
+                  <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:3px;">
+                    <div style="font-size:14px; font-weight:600; color:#1A2E20; white-space:nowrap;">Furrer + Frey GB</div>
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:8.5px; color:#2F5C3E; background:#FFFFFF; border:1px solid #CFE0D4; padding:1px 6px; border-radius:10px; white-space:nowrap; flex:none;">LIVE → 2025</div>
+                  </div>
+                  <div style="font-size:12px; color:#3F6B4F;">Overhead-line electrification (OLE) · working the £1m/km cost problem now.</div>
+                </div>
+                <div style="border:1px solid #CFE0D4; border-left:3px solid #3F7A52; border-radius:7px; background:linear-gradient(135deg,#F4F8F4 0%,#EEF4EE 100%); padding:12px 14px; margin-bottom:9px;">
+                  <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:3px;">
+                    <div style="font-size:14px; font-weight:600; color:#1A2E20; white-space:nowrap;">U. Huddersfield</div>
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:8.5px; color:#2F5C3E; background:#FFFFFF; border:1px solid #CFE0D4; padding:1px 6px; border-radius:10px; white-space:nowrap; flex:none;">LIVE → 2025</div>
+                  </div>
+                  <div style="font-size:12px; color:#3F6B4F;">Composite twin-track cantilever · cheaper electrification engineering.</div>
+                </div>
+                <div style="border:1px solid #EAE6DE; border-left:3px solid #D8D3CA; border-radius:7px; background:#F7F5F0; padding:11px 14px;">
+                  <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:3px;">
+                    <div style="font-size:13px; font-weight:600; color:#8C887F; white-space:nowrap;">Freight cluster</div>
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:8.5px; color:#A39E96; background:#FFFFFF; border:1px solid #E7E3DC; padding:1px 6px; border-radius:10px; white-space:nowrap; flex:none;">ENDED 21–24</div>
+                  </div>
+                  <div style="font-size:12px; color:#A39E96;">Steamology · TDI · Meteor Power — older, scattered. A thinner partnering base today.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- honest limit -->
+            <div style="position:relative; max-width:980px; margin-top:20px;">
+              <div style="display:flex; gap:10px; align-items:flex-start; border-left:2px solid #E3CDA4; padding:2px 0 2px 13px;">
+                <div style="font-size:13px; line-height:1.5; color:#7A6A50; max-width:820px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#B07A2E; background:#F7F0E2; padding:1px 6px; border-radius:3px; letter-spacing:0.06em;">HONEST LIMIT</span> &nbsp;The bridge data is strong for highways but too sparse to chart for the other modes — so this recommendation rests on the one strong bridge, not a rich multi-modal web. Enough to act on; a single-bridge bet, explicitly not diversified.</div>
+              </div>
+            </div>
+
+            <div style="height:28px;"></div>
+          </div>
+        </div>
+
+        <!-- CHAT : so-what decision rail -->
+        <div style="width:396px; flex:none; border-left:1px solid #E7E3DC; background:#FFFFFF; display:flex; flex-direction:column;">
+          <div style="height:54px; flex:none; border-bottom:1px solid #EFEBE4; display:flex; align-items:center; padding:0 20px; gap:9px;">
+            <div style="width:7px;height:7px;border-radius:50%;background:#3F7A52;"></div>
+            <div style="font-size:12.5px; font-weight:600; color:#211E1A;">Atlas</div>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#A39E96;">· so-what</div>
+            <div style="flex:1;"></div>
+            <!-- turn spine : 3/4 -->
+            <div style="display:flex; align-items:center; gap:5px;">
+              <div style="width:7px; height:7px; border-radius:50%; background:#9CC0A8;"></div>
+              <div style="width:14px; height:2px; background:#9CC0A8;"></div>
+              <div style="width:7px; height:7px; border-radius:50%; background:#9CC0A8;"></div>
+              <div style="width:14px; height:2px; background:#9CC0A8;"></div>
+              <div style="width:8px; height:8px; border-radius:50%; background:#2F6B43;"></div>
+              <div style="width:14px; height:2px; background:#E0DCD3;"></div>
+              <div style="width:7px; height:7px; border-radius:50%; border:1.5px solid #D8D3CA;"></div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#A39E96; margin-left:4px;">3/4</div>
+            </div>
+          </div>
+
+          <div style="flex:1; padding:22px 20px; overflow:hidden; display:flex; flex-direction:column; gap:16px;">
+            <div style="align-self:flex-end; max-width:280px; background:#F0EDE7; border-radius:12px 12px 4px 12px; padding:11px 14px; font-size:13px; line-height:1.5; color:#46423C;">If we enter, where's our angle — and who would we work with?</div>
+
+            <div style="max-width:316px;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.12em; color:#A39E96; text-transform:uppercase; margin-bottom:8px;">What you're looking at</div>
+              <p style="margin:0 0 14px; font-size:13.5px; line-height:1.58; color:#2E2A24;">Two structures agree: the <strong>live partners</strong> are all on electrification, and rail's one dense bridge is to <strong>highways</strong>. The freight cluster has aged out.</p>
+
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.12em; color:#2F5C3E; text-transform:uppercase; margin-bottom:8px;">The one move</div>
+              <div style="background:#F1F6F1; border:1px solid #CFE0D4; border-radius:9px; padding:12px 13px; margin-bottom:14px;">
+                <p style="margin:0; font-size:13.5px; line-height:1.5; color:#1A2E20;">Enter via the <strong>highways bridge</strong> with <strong>Furrer+Frey</strong> and <strong>Huddersfield</strong> on electrification cost.</p>
+              </div>
+
+              <div style="display:flex; gap:9px; align-items:flex-start; border-left:2px solid #E3CDA4; padding-left:11px;">
+                <div style="font-size:13px; line-height:1.5; color:#7A6A50;"><span style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#B07A2E; text-transform:uppercase; letter-spacing:0.08em;">Caveat · </span>it's one bridge, not a web. Supported, not Robust — and the next funder will press exactly there.</div>
+              </div>
+            </div>
+
+            <div style="flex:1;"></div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <div style="font-size:12px; color:#2F5C3E; background:#EEF4EE; border:1px solid #CFE0D4; border-radius:14px; padding:5px 12px;">Defend the bet →</div>
+              <div style="font-size:12px; color:#6B6760; background:#F4F1EB; border:1px solid #E7E3DC; border-radius:14px; padding:5px 12px;">Size the first project</div>
+            </div>
+          </div>
+
+          <div style="flex:none; padding:14px 16px; border-top:1px solid #EFEBE4;">
+            <div style="border:1px solid #E0DCD3; border-radius:9px; padding:10px 13px; font-size:12.5px; color:#A39E96; display:flex; align-items:center; justify-content:space-between;">Ask a follow-up…<span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#C4BFB6;">⏎</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- transition note -->
+  <div style="max-width:1000px; margin-top:30px; display:flex; gap:30px;">
+    <div style="flex:1;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#56524C; text-transform:uppercase; margin-bottom:10px;">Turn 2 → Turn 3 · what moved</div>
+      <div style="display:flex; flex-direction:column; gap:7px; font-size:12.5px; color:#6B6760; line-height:1.5;">
+        <div><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#3F7A52;">↻ persists </span> the sentence-verdict hero and the so-what rail; the journey spine advances to 3/4.</div>
+        <div><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#B07A2E;">⇄ swaps </span> the two-readings instrument → a density-honest ego-network + a recency-sorted partner shortlist.</div>
+        <div><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#3E6B8C;">↓ ceiling drops </span> Robust → Supported — confidence moves <em style="font-style:italic;">down</em> when the structure thins. Honest, not monotonic.</div>
+      </div>
+    </div>
+    <div style="flex:1;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#56524C; text-transform:uppercase; margin-bottom:10px;">Density → material</div>
+      <div style="display:flex; flex-direction:column; gap:7px; font-size:12.5px; color:#6B6760; line-height:1.5;">
+        <div><span style="display:inline-block; width:22px; border-bottom:4px solid #3F7A52; vertical-align:middle; margin-right:8px;"></span>dense edge — solid, drawn dominant (121 @ 0.80)</div>
+        <div><span style="display:inline-block; width:22px; border-bottom:1.5px dashed #C7C1B7; vertical-align:middle; margin-right:8px;"></span>sparse edge — faint, labelled "sparse" (7 · 4)</div>
+        <div><span style="display:inline-block; width:9px; height:9px; border-radius:50%; border:1px dotted #C4BFB6; vertical-align:middle; margin-right:8px;"></span>absent — a ghost node, no edge drawn (maritime)</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return { graphStatus: 'ego-network · roam ⊕' };
+  }
+
+  componentDidMount() {
+    this._tries = 0;
+    this._tryInit();
+  }
+
+  componentDidUpdate() {
+    // a re-render can detach ECharts' canvas; re-init if it's gone
+    const el = document.getElementById('atlas-t3-graph');
+    if (el && window.echarts && !window.echarts.getInstanceByDom(el) && el.clientWidth > 0) {
+      this._render(el);
+    }
+  }
+
+  _tryInit() {
+    if (typeof window === 'undefined') return;
+    const el = document.getElementById('atlas-t3-graph');
+    if (!window.echarts || !el || el.clientWidth === 0) {
+      if (this._tries++ > 100) return;
+      setTimeout(() => this._tryInit(), 60);
+      return;
+    }
+    this._render(el);
+  }
+
+  _render(el) {
+    const echarts = window.echarts;
+    if (this._chart) this._chart.dispose();
+    const chart = echarts.init(el);
+    this._chart = chart;
+
+    const GREEN = '#3F7A52', INK = '#211E1A', FAINT = '#C7C1B7', MUTE = '#8C887F';
+
+    const nodes = [
+      { name: 'Rail',     x: 250, y: 150, symbolSize: 56, itemStyle: { color: INK },
+        label: { color: '#FBFAF7', fontWeight: 600 }, prov: 'ego centre · 55 corpus projects' },
+      { name: 'Highways', x: 92,  y: 150, symbolSize: 46, itemStyle: { color: '#EAF3EC', borderColor: GREEN, borderWidth: 2 },
+        label: { color: '#2F5C3E', fontWeight: 600 }, prov: 'dense bridge · 121 shared objects · strength 0.80 · [S3]' },
+      { name: 'Digital',  x: 412, y: 60,  symbolSize: 24, itemStyle: { color: '#FBFAF7', borderColor: '#C4BFB6', borderWidth: 1, borderType: 'dashed' },
+        label: { color: MUTE }, prov: 'sparse · 7 shared objects · below chart threshold' },
+      { name: 'Aviation', x: 412, y: 240, symbolSize: 24, itemStyle: { color: '#FBFAF7', borderColor: '#C4BFB6', borderWidth: 1, borderType: 'dashed' },
+        label: { color: MUTE }, prov: 'sparse · 4 shared objects · below chart threshold' },
+      { name: 'Maritime', x: 470, y: 150, symbolSize: 13, itemStyle: { color: 'transparent', borderColor: '#D8D3CA', borderWidth: 1, borderType: 'dotted' },
+        label: { color: '#C4BFB6', fontSize: 10 }, prov: 'absent from corpus · no edge drawn' },
+    ];
+    const links = [
+      { source: 'Rail', target: 'Highways', label: '121 · 0.80',
+        lineStyle: { width: 9, color: GREEN, opacity: 0.9, curveness: 0 } },
+      { source: 'Rail', target: 'Digital',  label: '7 · sparse',
+        lineStyle: { width: 1.5, color: FAINT, type: 'dashed', curveness: 0 } },
+      { source: 'Rail', target: 'Aviation', label: '4 · sparse',
+        lineStyle: { width: 1.5, color: FAINT, type: 'dashed', curveness: 0 } },
+    ];
+
+    chart.setOption({
+      animationDuration: 600,
+      tooltip: {
+        backgroundColor: '#FFFFFF', borderColor: '#DCD7CE', borderWidth: 1, padding: [9, 12],
+        textStyle: { color: '#3A332A', fontFamily: 'IBM Plex Mono, monospace', fontSize: 11 },
+        extraCssText: 'box-shadow:0 8px 26px rgba(40,34,26,.16); border-radius:8px; max-width:230px; white-space:normal;',
+        formatter: (p) => p.dataType === 'edge'
+          ? `<b>Rail \u2192 ${p.data.target}</b><br/>${p.data.label}<br/><span style="color:#8C887F">edge weight, drawn to scale</span>`
+          : `<b>${p.data.name}</b><br/><span style="color:#5A5249">${p.data.prov}</span>`,
+      },
+      series: [{
+        type: 'graph', layout: 'none', roam: true, data: nodes, links,
+        edgeLabel: { show: true, formatter: (p) => p.data.label, fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#2F5C3E' },
+        label: { show: true, position: 'inside', fontFamily: 'Libre Franklin, sans-serif', fontSize: 12 },
+        emphasis: { focus: 'adjacency', scale: false },
+      }],
+    });
+
+    this._onResize = () => chart.resize();
+    window.addEventListener('resize', this._onResize);
+  }
+
+  componentWillUnmount() {
+    if (this._onResize) window.removeEventListener('resize', this._onResize);
+    if (this._chart) this._chart.dispose();
+  }
+}
+</script>
+</body>
+</html>

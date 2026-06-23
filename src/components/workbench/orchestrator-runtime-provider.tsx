@@ -4,8 +4,7 @@
  * OrchestratorRuntimeProvider
  *
  * Syncs orchestrator coAgent state into the workbench canvas.
- * CopilotKit context comes from the root CopilotKitProvider (agent=workbench
- * on /workbench and /lab/orchestrator routes) — do not nest a second provider.
+ * Bidirectional: pushes artifact_summary back to Python on each canvas update.
  */
 
 import { useCoAgent } from "@copilotkit/react-core";
@@ -41,14 +40,61 @@ function OrchestratorStateSync({
   return <>{children}</>;
 }
 
+function buildArtifactSummary(model: Record<string, unknown>) {
+  const blocksData = (model.blocks_data as Record<string, unknown>) ?? {};
+  const blockIds =
+    (model.blocks as string[] | undefined) ?? Object.keys(blocksData);
+  const esBlock = blocksData.executive_summary as Record<string, unknown> | undefined;
+  const dsBlock = blocksData.decision_spine as Record<string, unknown> | undefined;
+  const es =
+    (model.executive_summary as string | undefined) ??
+    (esBlock?.summary as string | undefined) ??
+    (dsBlock?.summary as string | undefined) ??
+    (model.insight_card as string | undefined) ??
+    "";
+  return {
+    headline: (model.headline as string) ?? "",
+    outcome: (model.outcome as string) ?? "",
+    confidence_tier: (model.confidence_tier as string) ?? "",
+    is_demo_comparison: Boolean(model.is_demo_comparison),
+    executive_summary: es.slice(0, 600),
+    block_ids: blockIds.slice(0, 16),
+    citation_count: Array.isArray(model.corpus_citations)
+      ? model.corpus_citations.length
+      : 0,
+    artifact_id:
+      (model.artifact_id as string) ??
+      (model.thread_id as string) ??
+      "",
+  };
+}
+
+function renderModelSyncKey(
+  model: Record<string, unknown>,
+  query: string,
+  outcome: string,
+): string {
+  const headline = String(model.headline ?? "");
+  const mode = String(model.outcome ?? outcome);
+  const refined = model.refined ? "1" : "0";
+  const blocks = Array.isArray(model.blocks)
+    ? (model.blocks as string[]).join(",")
+    : Object.keys((model.blocks_data as object) ?? {}).join(",");
+  const plan = (model.presentation_plan as Record<string, unknown>) ?? {};
+  const dominant = String(plan.dominant_visual_id ?? "");
+  const ts = String(model.generated_at ?? model.updated_at ?? Date.now());
+  return `${query}|${mode}|${refined}|${headline}|${blocks}|${dominant}|${ts}`;
+}
+
 function useOrchestratorState(
   onRenderModel?: (model: Record<string, unknown>) => void,
 ) {
-  const { state } = useCoAgent<{
+  const { state, setState } = useCoAgent<{
     render_model: Record<string, unknown> | null;
     effort: string;
     outcome: string;
     query: string;
+    artifact_summary?: Record<string, unknown>;
   }>({
     name: "workbench",
     initialState: {
@@ -56,6 +102,7 @@ function useOrchestratorState(
       effort: "analyze",
       outcome: "orient",
       query: "",
+      artifact_summary: {},
     },
   });
 
@@ -63,11 +110,24 @@ function useOrchestratorState(
 
   useEffect(() => {
     if (!state.render_model || !onRenderModel) return;
-    const key = JSON.stringify(state.render_model);
+    const key = renderModelSyncKey(
+      state.render_model,
+      state.query ?? "",
+      state.outcome ?? "",
+    );
     if (key === lastKeyRef.current) return;
     lastKeyRef.current = key;
     onRenderModel(state.render_model);
-  }, [state.render_model, onRenderModel]);
+
+    const summary = buildArtifactSummary(state.render_model);
+    setState((prev) => ({
+      ...prev,
+      artifact_summary: summary,
+      outcome:
+        (state.render_model?.outcome as string | undefined) ??
+        prev.outcome,
+    }));
+  }, [state.render_model, state.query, state.outcome, onRenderModel, setState]);
 }
 
 export interface GateInterruptPayload {

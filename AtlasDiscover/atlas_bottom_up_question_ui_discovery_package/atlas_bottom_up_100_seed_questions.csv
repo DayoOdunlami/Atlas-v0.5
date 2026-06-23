@@ -1,0 +1,101 @@
+question_id,domain,seed_question,follow_up_1,follow_up_2,follow_up_3
+Q001,org_capability,"What is CPC genuinely strong at, based on evidence?",Why?,What evidence supports that?,What would change the answer?
+Q002,org_capability,Which CPC capabilities are proven versus self-reported?,Why?,What evidence supports that?,What would change the answer?
+Q003,org_capability,Which CPC claims are hardest to defend?,Why?,What evidence supports that?,What would change the answer?
+Q004,org_capability,"Where is CPC strongest across rail, highways, maritime?",Why?,What evidence supports that?,What would change the answer?
+Q005,org_capability,What evidence would upgrade CPC's strongest claims?,Why?,What evidence supports that?,What would change the answer?
+Q006,pipeline,What opportunities are relevant for climate resilience in transport?,Why?,What evidence supports that?,What would change the answer?
+Q007,pipeline,Which live calls are closest to CPC's capability profile?,Why?,What evidence supports that?,What would change the answer?
+Q008,pipeline,Which opportunities are high value but low fit?,Why?,What evidence supports that?,What would change the answer?
+Q009,pipeline,Which funders repeatedly appear in the pipeline?,Why?,What evidence supports that?,What would change the answer?
+Q010,pipeline,What should we ignore despite thematic appeal?,Why?,What evidence supports that?,What would change the answer?
+Q011,compare,Compare these calls and rank which deserves effort first.,Why?,What evidence supports that?,What would change the answer?
+Q012,compare,"Compare CPC as lead, partner, advisor or pass for this call.",Why?,What evidence supports that?,What would change the answer?
+Q013,compare,Which match has the best evidence-to-value ratio?,Why?,What evidence supports that?,What would change the answer?
+Q014,compare,"Compare three projects by fit, value and confidence.",Why?,What evidence supports that?,What would change the answer?
+Q015,compare,Which option is least risky?,Why?,What evidence supports that?,What would change the answer?
+Q016,fit,How does CPC fit this funding call?,Why?,What evidence supports that?,What would change the answer?
+Q017,fit,How does the GPS-denied UAS passport fit RAPPID?,Why?,What evidence supports that?,What would change the answer?
+Q018,fit,Where does the source align with the target?,Why?,What evidence supports that?,What would change the answer?
+Q019,fit,What evidence supports the match?,Why?,What evidence supports that?,What would change the answer?
+Q020,fit,What confidence cap applies to this fit?,Why?,What evidence supports that?,What would change the answer?
+Q021,gap,What is the biggest gap between source and target?,Why?,What evidence supports that?,What would change the answer?
+Q022,gap,Which gaps are blockers versus reframes?,Why?,What evidence supports that?,What would change the answer?
+Q023,gap,What evidence would change the conclusion?,Why?,What evidence supports that?,What would change the answer?
+Q024,gap,What should we collect next?,Why?,What evidence supports that?,What would change the answer?
+Q025,gap,Which missing evidence is most commercially damaging?,Why?,What evidence supports that?,What would change the answer?
+Q026,translate,Can rail testbed evidence transfer to climate-risk procurement?,Why?,What evidence supports that?,What would change the answer?
+Q027,translate,Can UAS evidence transfer to ground-based rail inspection?,Why?,What evidence supports that?,What would change the answer?
+Q028,translate,Can urban evidence transfer to rural/open-road deployment?,Why?,What evidence supports that?,What would change the answer?
+Q029,translate,"Which claims travel, reframe or fail?",Why?,What evidence supports that?,What would change the answer?
+Q030,translate,Which target-context differences matter most?,Why?,What evidence supports that?,What would change the answer?
+Q031,decide,Should CPC pursue this opportunity?,Why?,What evidence supports that?,What would change the answer?
+Q032,decide,"Should we lead, partner, advise or pass?",Why?,What evidence supports that?,What would change the answer?
+Q033,decide,Should we invest bid effort this week?,Why?,What evidence supports that?,What would change the answer?
+Q034,decide,What is the minimum viable pursuit plan?,Why?,What evidence supports that?,What would change the answer?
+Q035,decide,What would make this a no-go?,Why?,What evidence supports that?,What would change the answer?
+Q036,defend,How would I defend this to a board?,Why?,What evidence supports that?,What would change the answer?
+Q037,defend,What are likely objections?,Why?,What evidence supports that?,What would change the answer?
+Q038,defend,Which claim will be challenged first?,Why?,What evidence supports that?,What would change the answer?
+Q039,defend,Show the evidence trail behind this conclusion.,Why?,What evidence supports that?,What would change the answer?
+Q040,defend,What would change the recommendation?,Why?,What evidence supports that?,What would change the answer?
+Q041,act,What should we do next?,Why?,What evidence supports that?,What would change the answer?
+Q042,act,What actions close the top three gaps?,Why?,What evidence supports that?,What would change the answer?
+Q043,act,Who needs to be engaged next?,Why?,What evidence supports that?,What would change the answer?
+Q044,act,What is the two-week plan to improve confidence?,Why?,What evidence supports that?,What would change the answer?
+Q045,act,What is the shortest path to a credible bid decision?,Why?,What evidence supports that?,What would change the answer?
+Q046,economic,What is the economic case for pursuing this?,Why?,What evidence supports that?,What would change the answer?
+Q047,economic,What benefits drive the value case?,Why?,What evidence supports that?,What would change the answer?
+Q048,economic,What assumptions dominate NPV or BCR?,Why?,What evidence supports that?,What would change the answer?
+Q049,economic,What should an EconomicCaseBlock show?,Why?,What evidence supports that?,What would change the answer?
+Q050,economic,What is the value case if evidence is qualitative?,Why?,What evidence supports that?,What would change the answer?
+Q051,package,Turn this into a board brief.,Why?,What evidence supports that?,What would change the answer?
+Q052,package,What should be included in the snapshot?,Why?,What evidence supports that?,What would change the answer?
+Q053,package,What goes in the appendix?,Why?,What evidence supports that?,What would change the answer?
+Q054,package,What is the one-slide version?,Why?,What evidence supports that?,What would change the answer?
+Q055,package,Which evidence should be hidden until challenged?,Why?,What evidence supports that?,What would change the answer?
+Q056,explain,Why did Atlas conclude this?,Why?,What evidence supports that?,What would change the answer?
+Q057,explain,What data did Atlas use?,Why?,What evidence supports that?,What would change the answer?
+Q058,explain,What did Atlas not know?,Why?,What evidence supports that?,What would change the answer?
+Q059,explain,"Which sources were stored, derived or live gaps?",Why?,What evidence supports that?,What would change the answer?
+Q060,explain,Can Atlas answer this with current data?,Why?,What evidence supports that?,What would change the answer?
+Q061,portfolio,Which capability areas are over-represented?,Why?,What evidence supports that?,What would change the answer?
+Q062,portfolio,Where is the portfolio thin relative to policy priorities?,Why?,What evidence supports that?,What would change the answer?
+Q063,portfolio,Which clusters should CPC monitor weekly?,Why?,What evidence supports that?,What would change the answer?
+Q064,portfolio,What is the best rail AI wedge?,Why?,What evidence supports that?,What would change the answer?
+Q065,portfolio,Which matches have high value but low confidence?,Why?,What evidence supports that?,What would change the answer?
+Q066,stakeholder,Who is working on this topic?,Why?,What evidence supports that?,What would change the answer?
+Q067,stakeholder,Which partner would reduce the evidence gap fastest?,Why?,What evidence supports that?,What would change the answer?
+Q068,stakeholder,Which stakeholder would challenge this conclusion?,Why?,What evidence supports that?,What would change the answer?
+Q069,stakeholder,Where should CPC convene rather than lead?,Why?,What evidence supports that?,What would change the answer?
+Q070,stakeholder,Who should we speak to before bidding?,Why?,What evidence supports that?,What would change the answer?
+Q071,visual,What visual would best explain this recommendation?,Why?,What evidence supports that?,What would change the answer?
+Q072,visual,"Would table, map, matrix, timeline or waterfall reduce the text?",Why?,What evidence supports that?,What would change the answer?
+Q073,visual,Which blocks are doing too much work?,Why?,What evidence supports that?,What would change the answer?
+Q074,visual,Where should inspector be used instead of more text?,Why?,What evidence supports that?,What would change the answer?
+Q075,visual,Which answer shape is not supported by the current library?,Why?,What evidence supports that?,What would change the answer?
+Q076,risk,What are the top risks if CPC leads?,Why?,What evidence supports that?,What would change the answer?
+Q077,risk,What are the assurance risks?,Why?,What evidence supports that?,What would change the answer?
+Q078,risk,Which unknowns should stop us?,Why?,What evidence supports that?,What would change the answer?
+Q079,risk,What are the weakest claims?,Why?,What evidence supports that?,What would change the answer?
+Q080,risk,What is the reputational risk of overclaiming?,Why?,What evidence supports that?,What would change the answer?
+Q081,regional,Which regions have strongest opportunity signal?,Why?,What evidence supports that?,What would change the answer?
+Q082,regional,Where should a map replace a list?,Why?,What evidence supports that?,What would change the answer?
+Q083,regional,How does this opportunity differ by geography?,Why?,What evidence supports that?,What would change the answer?
+Q084,regional,Which regional data is missing?,Why?,What evidence supports that?,What would change the answer?
+Q085,regional,What place-based evidence would strengthen this?,Why?,What evidence supports that?,What would change the answer?
+Q086,market,Is there enough market pull?,Why?,What evidence supports that?,What would change the answer?
+Q087,market,What is the route to market?,Why?,What evidence supports that?,What would change the answer?
+Q088,market,"Who pays, who benefits, who decides?",Why?,What evidence supports that?,What would change the answer?
+Q089,market,Is this grant or commercial proposition?,Why?,What evidence supports that?,What would change the answer?
+Q090,market,What procurement route matters?,Why?,What evidence supports that?,What would change the answer?
+Q091,evidence,Which evidence containers support this?,Why?,What evidence supports that?,What would change the answer?
+Q092,evidence,Which evidence should be upgraded first?,Why?,What evidence supports that?,What would change the answer?
+Q093,evidence,Where does evidence contradict the story?,Why?,What evidence supports that?,What would change the answer?
+Q094,evidence,What evidence is duplicated across claims?,Why?,What evidence supports that?,What would change the answer?
+Q095,evidence,Which claim lacks source excerpt?,Why?,What evidence supports that?,What would change the answer?
+Q096,workflow,What should the agent do before rendering an artifact?,Why?,What evidence supports that?,What would change the answer?
+Q097,workflow,When should Atlas ask a clarifying question?,Why?,What evidence supports that?,What would change the answer?
+Q098,workflow,When should Atlas return a quick answer?,Why?,What evidence supports that?,What would change the answer?
+Q099,workflow,When should Atlas create a snapshot?,Why?,What evidence supports that?,What would change the answer?
+Q100,workflow,When should Atlas call a deep agent?,Why?,What evidence supports that?,What would change the answer?
