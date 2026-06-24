@@ -1,7 +1,7 @@
 """
 Parallel retrieval fabric — corpus ‖ external (Phase F PR1).
 
-Returns an EvidenceBag with timings and honest partial-failure metadata.
+Increment 1A: shaped by ShoppingList — both markets always run; weights scale limits.
 """
 from __future__ import annotations
 
@@ -12,6 +12,12 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
+from agents.atlas_v5.source_shopper import (
+    ShoppingList,
+    corpus_fetch_limits,
+    materialize_exa_queries,
+    web_fetch_limits,
+)
 from agents.orchestrator.retrieval_planner import RetrievalPlan
 
 logger = logging.getLogger(__name__)
@@ -20,6 +26,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class EvidenceBag:
     corpus_raw: list[dict[str, Any]] = field(default_factory=list)
+    corpus_documents: list[dict[str, Any]] = field(default_factory=list)
     external: list[dict[str, Any]] = field(default_factory=list)
     candidates: list[dict[str, Any]] = field(default_factory=list)
     lane_mode: str = "corpus_primary"
@@ -29,11 +36,14 @@ class EvidenceBag:
     external_skipped: bool = False
     govuk_count: int = 0
     exa_count: int = 0
+    project_hit_count: int = 0
+    document_hit_count: int = 0
 
     def as_meta(self) -> dict[str, Any]:
         return {
             "lane_mode": self.lane_mode,
             "corpus_count": len(self.corpus_raw),
+            "corpus_document_count": len(self.corpus_documents),
             "external_count": len(self.external),
             "candidate_count": len(self.candidates),
             "corpus_ms": round(self.corpus_ms, 1),
@@ -42,11 +52,13 @@ class EvidenceBag:
             "external_skipped": self.external_skipped,
             "govuk_count": self.govuk_count,
             "exa_count": self.exa_count,
+            "project_hit_count": self.project_hit_count,
+            "document_hit_count": self.document_hit_count,
         }
 
     @property
     def corpus_thin(self) -> bool:
-        return len(self.corpus_raw) < 2
+        return self.project_hit_count < 2 and self.document_hit_count < 2
 
     @property
     def has_external(self) -> bool:
@@ -54,16 +66,58 @@ class EvidenceBag:
 
     @property
     def conflict_count(self) -> int:
-        return 0  # filled after reconcile on model
+        return 0
 
 
-def _fetch_corpus(query: str, k: int) -> list[dict[str, Any]]:
+def _fetch_projects(query: str, k: int) -> list[dict[str, Any]]:
     try:
         from mcps.cpc_corpus import queries as cq
-        return cq.search_projects(query, limit=k) or []
+
+        rows = cq.search_projects(query, limit=k) or []
+        for row in rows:
+            row.setdefault("source_type", "project")
+        return rows
     except Exception as exc:
-        logger.debug("corpus fetch failed: %s", exc)
+        logger.debug("corpus project fetch failed: %s", exc)
         return []
+
+
+def _fetch_documents(query: str, k: int, sub_queries: list[str] | None = None) -> list[dict[str, Any]]:
+    try:
+        from mcps.cpc_corpus import queries as cq
+
+        claim = (sub_queries[0] if sub_queries else query)[:400]
+        rows = cq.evidence_for_claim(claim, limit=k) or []
+        for row in rows:
+            row["source_type"] = "knowledge_doc"
+        return rows
+    except Exception as exc:
+        logger.debug("corpus document fetch failed: %s", exc)
+        return []
+
+
+def _fetch_corpus_shaped(query: str, shopping: ShoppingList) -> tuple[list[dict], list[dict], list[str]]:
+    proj_k, doc_k = corpus_fetch_limits(shopping.corpus)
+    errors: list[str] = []
+    sub_q = shopping.corpus.sub_queries or [query]
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        pf = pool.submit(_fetch_projects, query, proj_k)
+        df = pool.submit(_fetch_documents, query, doc_k, sub_q)
+        try:
+            projects = pf.result(timeout=12.0)
+        except Exception as exc:
+            errors.append(f"projects: {exc}")
+            projects = []
+        try:
+            documents = df.result(timeout=12.0)
+        except Exception as exc:
+            errors.append(f"documents: {exc}")
+            documents = []
+    return projects, documents, errors
+
+
+def _fetch_corpus_legacy(query: str, k: int) -> list[dict[str, Any]]:
+    return _fetch_projects(query, k)
 
 
 def _fetch_external_bundle(
@@ -72,9 +126,10 @@ def _fetch_external_bundle(
     lane_mode: str,
     scope: str | None,
     exa_queries: list[str],
+    *,
+    shopping: ShoppingList | None = None,
     limit: int = 5,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
-    """GovUK and Exa queries in parallel inside the external bundle."""
     from agents.external_search import search_exa, search_govuk
     from agents.orchestrator.external_lane import (
         _load_corpus_call_titles,
@@ -89,19 +144,32 @@ def _fetch_external_bundle(
     corpus_titles = _load_corpus_call_titles(scope)
     _CALL_RE = re.compile(r"\b(call|challenge|competition|fund|grant|tender)\b", re.I)
 
+    if shopping is not None:
+        gov_limit, exa_limit = web_fetch_limits(shopping.web)
+        exa_queries = materialize_exa_queries(query, shopping.web)
+        govuk_q = (shopping.web.sub_queries[0] if shopping.web.sub_queries else query)[:160]
+    else:
+        gov_limit = min(limit, 5)
+        exa_limit = min(limit, 4)
+        govuk_q = query
+
     def _govuk() -> list[dict[str, Any]]:
         try:
-            return search_govuk(query, limit=min(limit, 5))
+            return search_govuk(govuk_q, limit=gov_limit)
         except Exception as exc:
             errors.append(f"govuk: {exc}")
             return []
 
     def _exa_all() -> list[dict[str, Any]]:
         rows: list[dict[str, Any]] = []
+        per_q = max(1, exa_limit // max(len(exa_queries or [query]), 1))
         for eq in exa_queries or [query]:
             try:
-                scoped = f"{eq} site:gov.uk OR innovate uk funding"
-                rows.extend(search_exa(scoped, limit=min(limit, 4)))
+                if shopping is not None:
+                    scoped = eq
+                else:
+                    scoped = f"{eq} site:gov.uk OR innovate uk funding"
+                rows.extend(search_exa(scoped, limit=min(per_q + 1, 4)))
             except Exception as exc:
                 errors.append(f"exa: {exc}")
         return rows
@@ -119,7 +187,7 @@ def _fetch_external_bundle(
         exa_raw: list[dict[str, Any]] = []
         for name, fut in futs.items():
             try:
-                result = fut.result(timeout=6.0)
+                result = fut.result(timeout=8.0)
                 if name == "govuk":
                     govuk_raw = result
                 else:
@@ -169,7 +237,7 @@ def _fetch_external_bundle(
         seen_c.add(key)
         deduped_c.append(c)
 
-    return deduped_ext[:limit], deduped_c[:3], errors
+    return deduped_ext[:limit * 2], deduped_c[:3], errors
 
 
 def run_retrieval_fabric(
@@ -178,19 +246,32 @@ def run_retrieval_fabric(
     plan: RetrievalPlan,
     *,
     scope: str | None = None,
+    shopping: ShoppingList | None = None,
 ) -> EvidenceBag:
-    """Fetch corpus and external lanes in parallel within plan timeout."""
+    """Fetch corpus and external lanes in parallel — both markets when external enabled."""
     bag = EvidenceBag(lane_mode=plan.lane_mode)
 
     if not plan.external_enabled:
         bag.external_skipped = True
         t0 = time.monotonic()
-        bag.corpus_raw = _fetch_corpus(query, plan.corpus_k)
+        if shopping is not None:
+            projects, documents, errs = _fetch_corpus_shaped(query, shopping)
+            bag.corpus_raw = projects
+            bag.corpus_documents = documents
+            bag.errors.extend(errs)
+            bag.project_hit_count = len(projects)
+            bag.document_hit_count = len(documents)
+        else:
+            bag.corpus_raw = _fetch_corpus_legacy(query, plan.corpus_k)
+            bag.project_hit_count = len(bag.corpus_raw)
         bag.corpus_ms = (time.monotonic() - t0) * 1000
         return bag
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
-        corpus_fut = pool.submit(_fetch_corpus, query, plan.corpus_k)
+        if shopping is not None:
+            corpus_fut = pool.submit(_fetch_corpus_shaped, query, shopping)
+        else:
+            corpus_fut = pool.submit(_fetch_corpus_legacy, query, plan.corpus_k)
         ext_fut = pool.submit(
             _fetch_external_bundle,
             plan.govuk_query or query,
@@ -198,10 +279,20 @@ def run_retrieval_fabric(
             plan.lane_mode,
             scope,
             plan.exa_queries,
+            shopping=shopping,
         )
         t0 = time.monotonic()
         try:
-            bag.corpus_raw = corpus_fut.result(timeout=plan.external_timeout_s)
+            if shopping is not None:
+                projects, documents, errs = corpus_fut.result(timeout=plan.external_timeout_s)
+                bag.corpus_raw = projects
+                bag.corpus_documents = documents
+                bag.errors.extend(errs)
+                bag.project_hit_count = len(projects)
+                bag.document_hit_count = len(documents)
+            else:
+                bag.corpus_raw = corpus_fut.result(timeout=plan.external_timeout_s)
+                bag.project_hit_count = len(bag.corpus_raw)
             bag.corpus_ms = (time.monotonic() - t0) * 1000
         except concurrent.futures.TimeoutError:
             bag.errors.append("corpus: timeout")

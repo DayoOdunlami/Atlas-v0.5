@@ -89,6 +89,15 @@ class RetrievalMeta(BaseModel):
     conflict_count: int = 0
     corpus_thin: bool | None = None
     external_led: bool | None = None
+    dual_peer: bool | None = None
+    corpus_substantive: bool | None = None
+    web_substantive: bool | None = None
+    corroboration_boost: bool | None = None
+    tier_reason: str | None = None
+    reconcile_lead: str | None = None
+    corpus_document_count: int | None = None
+    project_hit_count: int | None = None
+    document_hit_count: int | None = None
 
 
 class ReconciliationNote(BaseModel):

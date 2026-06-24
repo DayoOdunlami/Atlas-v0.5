@@ -1,9 +1,10 @@
-"""Dual-peer reconciliation — corpus and web are parallel sources, not ranked."""
+"""Dual-peer reconciliation — fit-weighted prominence; honest tier corroboration rules."""
 
 from __future__ import annotations
 
 from typing import Any
 
+from agents.atlas_v5.source_shopper import ReconcileLead, ShoppingList
 from agents.contracts.answer_spec import (
     AnswerSpec,
     Claim,
@@ -50,11 +51,99 @@ def _external_to_web_evidence(items: list[dict[str, Any]]) -> list[WebEvidence]:
     return out
 
 
+def lane_corpus_substantive(
+    bag: EvidenceBag,
+    *,
+    has_sql_stats: bool = False,
+) -> bool:
+    """
+    Corpus lane returned meaningful signal (not merely present).
+
+    SQL-owned stats anchor analyst turns; semantic project/doc hits anchor search.
+    """
+    if has_sql_stats and bag.project_hit_count >= 1:
+        return True
+    if bag.project_hit_count >= 2:
+        return True
+    if bag.document_hit_count >= 2:
+        return True
+    return False
+
+
+def lane_web_substantive(bag: EvidenceBag) -> bool:
+    """Web lane returned meaningful signal — not a single weak hit."""
+    if len(bag.external) >= 2:
+        return True
+    if len(bag.external) >= 1 and len(bag.candidates) >= 1:
+        return True
+    return False
+
+
+def apply_peer_tier_rules(
+    tier: str,
+    *,
+    corpus_substantive: bool,
+    web_substantive: bool,
+) -> tuple[str, bool, str]:
+    """
+    Honest tier adjustment for dual-lane turns.
+
+    Returns (new_tier, corroboration_boost_applied, tier_reason).
+
+    Rules (explicit — do not conflate prominence with corroboration):
+    - +1 boost ONLY when BOTH lanes are substantively populated.
+    - Web-led with thin corpus: single-lane web cap (Supported), NO dual-peer boost.
+    - Corpus-led with thin web: no boost — presence of SQL stats does not fake web agreement.
+    - Never boost when only one lane substantively returned signal.
+    """
+    if corpus_substantive and web_substantive:
+        return (
+            _boost_tier(tier, 1),
+            True,
+            "both lanes substantive — corroboration boost applied",
+        )
+
+    if web_substantive and not corpus_substantive:
+        return (
+            _cap_tier(_boost_tier(tier, 1), "Supported"),
+            False,
+            "web substantive, corpus thin — web-led cap, no dual-peer boost",
+        )
+
+    if corpus_substantive and not web_substantive:
+        return (
+            tier,
+            False,
+            "corpus substantive, web thin — no corroboration boost",
+        )
+
+    return tier, False, "both lanes thin — tier unchanged"
+
+
+def _lead_message(lead: ReconcileLead, corpus_n: int, web_n: int, doc_n: int) -> str:
+    if lead == "corpus":
+        return (
+            f"Corpus-led turn — {corpus_n} project citation(s), {doc_n} document chunk(s); "
+            f"web ({web_n} source(s)) provides framing where present."
+        )
+    if lead == "web":
+        return (
+            f"Web-led turn — {web_n} web source(s) primary for practitioner fit; "
+            f"corpus ({corpus_n} citations, {doc_n} docs) anchors owned IDs where matched."
+        )
+    return (
+        f"Balanced synthesis — {corpus_n} corpus + {web_n} web source(s) "
+        f"({doc_n} document chunks); cross-check, neither default authority."
+    )
+
+
 def reconcile_answer_spec(
     spec: AnswerSpec,
     bag: EvidenceBag,
     *,
     query: str = "",
+    shopping: ShoppingList | None = None,
+    has_sql_stats: bool = False,
 ) -> AnswerSpec:
     del query
     notes: list[ReconciliationNote] = []
@@ -63,57 +152,104 @@ def reconcile_answer_spec(
     web = _external_to_web_evidence(bag.external)
     corpus_n = len(spec.corpus_citations)
     web_n = len(web)
+    doc_n = bag.document_hit_count or len(bag.corpus_documents)
+
+    corpus_sub = lane_corpus_substantive(bag, has_sql_stats=has_sql_stats)
+    web_sub = lane_web_substantive(bag)
+    lead: ReconcileLead = shopping.reconcile_lead if shopping else "balanced"
+
     meta = bag.as_meta()
     meta["corpus_thin"] = bag.corpus_thin
     meta["conflict_count"] = 0
     meta["dual_peer"] = bag.lane_mode == "dual"
-    meta["external_led"] = web_n > corpus_n and web_n > 0
+    meta["external_led"] = web_sub and not corpus_sub
+    meta["corpus_substantive"] = corpus_sub
+    meta["web_substantive"] = web_sub
+    if shopping:
+        meta["reconcile_lead"] = lead
+
+    tier, boost_applied, tier_reason = apply_peer_tier_rules(
+        tier,
+        corpus_substantive=corpus_sub,
+        web_substantive=web_sub,
+    )
+    meta["corroboration_boost"] = boost_applied
+    meta["tier_reason"] = tier_reason
+
+    retrieval_fields = set(RetrievalMeta.model_fields.keys())
+    retrieval_payload = {k: v for k, v in meta.items() if k in retrieval_fields}
 
     if bag.lane_mode == "dual":
         notes.append(
             ReconciliationNote(
                 type="corroborate",
                 message=(
-                    "Parallel evidence lanes — corpus (structured CPC projects) and web "
-                    "(GovUK + Exa) fetched together; synthesise both, neither is default authority."
+                    "Parallel evidence lanes — corpus (projects + documents) and web "
+                    "always fetched; synthesise both with correct trust materials."
                 ),
             )
         )
+        notes.append(
+            ReconciliationNote(
+                type="discover" if lead == "web" else "corroborate",
+                message=_lead_message(lead, corpus_n, web_n, doc_n),
+                corpus_signal=str(corpus_n),
+                external_signal=str(web_n),
+            )
+        )
 
-    if corpus_n and web_n:
+    if boost_applied:
         notes.append(
             ReconciliationNote(
                 type="corroborate",
                 message=(
-                    f"{corpus_n} corpus citation(s) and {web_n} web source(s) — "
-                    "cross-check claims; prefer corpus for project IDs, web for policy/programme context."
+                    f"Corroboration tier boost — {tier_reason}. "
+                    f"{corpus_n} corpus + {web_n} web hits both substantive."
                 ),
                 corpus_signal=str(corpus_n),
                 external_signal=str(web_n),
             )
         )
-        tier = _boost_tier(tier, 1)
-    elif web_n and not corpus_n:
+    elif web_sub and not corpus_sub:
         notes.append(
             ReconciliationNote(
                 type="discover",
                 message=(
-                    f"Web lane returned {web_n} source(s); corpus slice thin or unmatched — "
-                    "treat web as primary signal for this query, still mark as candidate."
+                    f"Web lane substantive ({web_n} source(s)); corpus search thin — "
+                    "tier capped for web-led signal, not dual-peer corroboration."
                 ),
                 external_signal=str(web_n),
             )
         )
-        tier = _cap_tier(_boost_tier(tier, 1), "Supported")
-    elif corpus_n and not web_n and bag.lane_mode == "dual":
+    elif corpus_sub and not web_sub and bag.lane_mode == "dual":
         notes.append(
             ReconciliationNote(
                 type="discover",
                 message=(
-                    f"Corpus returned {corpus_n} citation(s); web lane ran but returned no "
-                    "verified candidates — do not assume national context is absent from the world."
+                    f"Corpus substantive ({corpus_n} citations, {doc_n} docs); "
+                    "web lane ran but returned thin signal — no corroboration boost."
                 ),
                 corpus_signal=str(corpus_n),
+            )
+        )
+    elif web_n and not corpus_n and not boost_applied:
+        notes.append(
+            ReconciliationNote(
+                type="discover",
+                message=(
+                    f"Web returned {web_n} source(s); corpus slice thin — "
+                    "web-led, still candidate/borrowed trust."
+                ),
+                external_signal=str(web_n),
+            )
+        )
+
+    if doc_n >= 2:
+        notes.append(
+            ReconciliationNote(
+                type="corroborate",
+                message=f"{doc_n} ingested document chunk(s) from knowledge corpus.",
+                corpus_signal=str(doc_n),
             )
         )
 
@@ -142,7 +278,7 @@ def reconcile_answer_spec(
             "web_evidence": web,
             "reconciliation": Reconciliation(
                 notes=notes,
-                retrieval=RetrievalMeta(**meta),
+                retrieval=RetrievalMeta(**retrieval_payload),
             ),
         },
     )

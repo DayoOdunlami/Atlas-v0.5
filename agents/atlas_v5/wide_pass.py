@@ -18,6 +18,7 @@ from agents.atlas_v5.j1t1_corpus import fetch_corpus_stats
 from agents.atlas_v5.j1t1_types import J1T1CorpusStats
 from agents.atlas_v5.network_corpus import NetworkGraphData, fetch_connect_network_graph
 from agents.atlas_v5.case_file import load_case_file
+from agents.atlas_v5.source_shopper import build_shopping_list
 from agents.atlas_v5.turn_classifier import OutcomeHint
 from agents.orchestrator.retrieval_fabric import EvidenceBag, run_retrieval_fabric
 from agents.atlas_v5.web_lane import atlas_retrieval_plan, web_lane_enabled
@@ -39,6 +40,7 @@ class WidePassResult:
     evidence_bag: EvidenceBag | None = None
     retrieval_meta: dict[str, Any] = field(default_factory=dict)
     session_claims: list[Any] = field(default_factory=list)
+    shopping_list: Any | None = None
     object_label: str = "Rail decarbonisation"
     scope_mode: str = "rail"
 
@@ -47,10 +49,12 @@ def _web_lane_enabled() -> bool:
     return web_lane_enabled()
 
 
-def _run_fabric_sync(query: str, outcome: str) -> EvidenceBag:
+def _run_fabric_sync(query: str, outcome: str, shopping) -> EvidenceBag:
     plan = plan_retrieval(query, outcome, effort="analyze")
-    plan = atlas_retrieval_plan(query, outcome, plan, web_enabled=_web_lane_enabled())
-    return run_retrieval_fabric(query, outcome, plan)
+    plan = atlas_retrieval_plan(
+        query, outcome, plan, web_enabled=_web_lane_enabled(), shopping=shopping
+    )
+    return run_retrieval_fabric(query, outcome, plan, shopping=shopping)
 
 
 async def run_wide_pass(
@@ -65,7 +69,9 @@ async def run_wide_pass(
     hint: OutcomeHint = outcome_hint or (
         "connect" if is_connect_network_query(query) else "orient"
     )
-    outcome = hint if hint in ("orient", "connect", "act", "diagnose", "defend") else "orient"
+    outcome = hint if hint in ("orient", "connect", "act", "diagnose", "defend", "find_path") else "orient"
+
+    shopping = build_shopping_list(query, outcome)
 
     loop = asyncio.get_running_loop()
     corpus_unavailable = online_only
@@ -81,7 +87,7 @@ async def run_wide_pass(
     else:
         stats = None
 
-    fabric_future = loop.run_in_executor(None, _run_fabric_sync, query, outcome)
+    fabric_future = loop.run_in_executor(None, _run_fabric_sync, query, outcome, shopping)
 
     async def _await_bag() -> EvidenceBag:
         try:
@@ -111,6 +117,7 @@ async def run_wide_pass(
         meta = bag.as_meta()
         if corpus_unavailable:
             meta = {**meta, "corpus_unavailable": True, "online_only": online_only}
+        meta["shopping_list"] = shopping.to_dict()
         return WidePassResult(
             outcome="connect",
             query=query,
@@ -123,6 +130,7 @@ async def run_wide_pass(
             object_label=object_label,
             scope_mode=scope_mode,
             session_claims=session_claims,
+            shopping_list=shopping,
         )
 
     bag = await _await_bag()
@@ -134,7 +142,8 @@ async def run_wide_pass(
             "online_only": online_only,
             "corpus_status": "unavailable",
         }
-    resolved_outcome = outcome if outcome in ("orient", "act", "diagnose", "defend") else "orient"
+    meta["shopping_list"] = shopping.to_dict()
+    resolved_outcome = outcome if outcome in ("orient", "act", "diagnose", "defend", "find_path") else "orient"
     return WidePassResult(
         outcome=resolved_outcome,
         query=query,
@@ -146,6 +155,7 @@ async def run_wide_pass(
         object_label=object_label,
         scope_mode=scope_mode,
         session_claims=session_claims,
+        shopping_list=shopping,
     )
 
 
@@ -157,7 +167,13 @@ def assemble_spec_from_wide_pass(wide: WidePassResult, *, online_only: bool = Fa
 
         spec = assemble_online_only_spec(wide)
         if wide.evidence_bag is not None:
-            spec = reconcile_answer_spec(spec, wide.evidence_bag, query=wide.query)
+            spec = reconcile_answer_spec(
+                spec,
+                wide.evidence_bag,
+                query=wide.query,
+                shopping=wide.shopping_list,
+                has_sql_stats=False,
+            )
         return spec
 
     if wide.outcome == "connect" and wide.stats and wide.graph:
@@ -198,6 +214,12 @@ def assemble_spec_from_wide_pass(wide: WidePassResult, *, online_only: bool = Fa
         raise ValueError("Wide pass produced no corpus stats (use online_only mode)")
 
     if wide.evidence_bag is not None:
-        spec = reconcile_answer_spec(spec, wide.evidence_bag, query=wide.query)
+        spec = reconcile_answer_spec(
+            spec,
+            wide.evidence_bag,
+            query=wide.query,
+            shopping=wide.shopping_list,
+            has_sql_stats=wide.stats is not None,
+        )
         spec = patch_orient_web_tier(spec, wide.evidence_bag, wide.stats)
     return spec

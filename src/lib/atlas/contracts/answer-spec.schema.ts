@@ -113,6 +113,15 @@ export const RetrievalMetaSchema = z.object({
   conflict_count: z.number().int().nonnegative().default(0),
   corpus_thin: z.boolean().optional(),
   external_led: z.boolean().optional(),
+  dual_peer: z.boolean().optional(),
+  corpus_substantive: z.boolean().optional(),
+  web_substantive: z.boolean().optional(),
+  corroboration_boost: z.boolean().optional(),
+  tier_reason: z.string().optional(),
+  reconcile_lead: z.string().optional(),
+  corpus_document_count: z.number().int().nonnegative().optional(),
+  project_hit_count: z.number().int().nonnegative().optional(),
+  document_hit_count: z.number().int().nonnegative().optional(),
 });
 
 export const ReconciliationNoteSchema = z.object({
