@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from agents.spine.citation_guard import TIER_ORDER, _cap_tier
 from agents.atlas_v5.source_shopper import ReconcileLead, ShoppingList
 from agents.contracts.answer_spec import (
     AnswerSpec,
@@ -16,23 +17,11 @@ from agents.contracts.answer_spec import (
 )
 from agents.orchestrator.retrieval_fabric import EvidenceBag
 
-_TIER_ORDER = ("Speculative", "Indicative", "Supported", "Robust")
-
-
-def _tier_rank(tier: str) -> int:
-    try:
-        return _TIER_ORDER.index(tier)
-    except ValueError:
-        return 0
-
-
-def _cap_tier(current: str, cap: str) -> str:
-    return current if _tier_rank(current) <= _tier_rank(cap) else cap
-
 
 def _boost_tier(current: str, steps: int = 1) -> str:
-    i = _tier_rank(current)
-    return _TIER_ORDER[min(i + steps, len(_TIER_ORDER) - 1)]
+    tier = current if current in TIER_ORDER else "Speculative"
+    i = TIER_ORDER.index(tier)
+    return TIER_ORDER[min(i + steps, len(TIER_ORDER) - 1)]
 
 
 def _external_to_web_evidence(items: list[dict[str, Any]]) -> list[WebEvidence]:
