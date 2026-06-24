@@ -17,6 +17,7 @@ from agents.atlas_v5.intent import is_connect_network_query
 from agents.atlas_v5.j1t1_corpus import fetch_corpus_stats
 from agents.atlas_v5.j1t1_types import J1T1CorpusStats
 from agents.atlas_v5.network_corpus import NetworkGraphData, fetch_connect_network_graph
+from agents.atlas_v5.case_file import load_case_file
 from agents.atlas_v5.turn_classifier import OutcomeHint
 from agents.orchestrator.retrieval_fabric import EvidenceBag, run_retrieval_fabric
 from agents.atlas_v5.web_lane import atlas_retrieval_plan, web_lane_enabled
@@ -37,6 +38,7 @@ class WidePassResult:
     candidates: list[dict[str, Any]] = field(default_factory=list)
     evidence_bag: EvidenceBag | None = None
     retrieval_meta: dict[str, Any] = field(default_factory=dict)
+    session_claims: list[Any] = field(default_factory=list)
     object_label: str = "Rail decarbonisation"
     scope_mode: str = "rail"
 
@@ -56,7 +58,9 @@ async def run_wide_pass(
     outcome_hint: OutcomeHint | None = None,
     *,
     online_only: bool = False,
+    thread_id: str | None = None,
 ) -> WidePassResult:
+    session_claims = load_case_file(thread_id)
     where_sql, object_label, scope_mode = corpus_scope_for_query(query)
     hint: OutcomeHint = outcome_hint or (
         "connect" if is_connect_network_query(query) else "orient"
@@ -118,6 +122,7 @@ async def run_wide_pass(
             retrieval_meta=meta,
             object_label=object_label,
             scope_mode=scope_mode,
+            session_claims=session_claims,
         )
 
     bag = await _await_bag()
@@ -140,6 +145,7 @@ async def run_wide_pass(
         retrieval_meta=meta,
         object_label=object_label,
         scope_mode=scope_mode,
+        session_claims=session_claims,
     )
 
 

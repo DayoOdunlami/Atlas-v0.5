@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field, HttpUrl
 
 ConfidenceTier = Literal["Speculative", "Indicative", "Supported", "Robust"]
 OutcomeMode = Literal["Orient", "Connect", "Diagnose", "Act", "Defend"]
-TrustScope = Literal["corpus", "web", "synthesized"]
+TrustScope = Literal["corpus", "web", "synthesized", "declared"]
 BlindspotSign = Literal["undercount", "absence"]
 ReconciliationNoteType = Literal[
     "corroborate", "conflict", "discover", "external_primary"

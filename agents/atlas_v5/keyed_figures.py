@@ -9,7 +9,7 @@ from agents.atlas_v5.j1t1_assembler import WEB_UPPER_GBP, format_gbp_compact
 from agents.atlas_v5.wide_pass import WidePassResult
 from agents.contracts.answer_spec import AnswerSpec
 
-Material = Literal["owned", "borrowed", "inferred", "absent"]
+Material = Literal["owned", "borrowed", "inferred", "absent", "declared"]
 FigureUnit = Literal["count", "gbp", "ratio", "id", "text"]
 
 

@@ -68,3 +68,30 @@ def test_unknown_key_rejected_at_merge():
     index = _index()
     merge = merge_composition_markup("{{funding.total}}", index)
     assert merge.errors
+
+
+def test_declared_section_without_keys_passes_gate():
+    index = _index()
+    source = (
+        '<section data-material="declared" data-testid="declared-situation">'
+        "<p>User stated budget ~£500k — not a corpus figure</p></section>"
+        '<div data-material="owned" data-key="stats.funding_floor_gbp">'
+        "{{stats.funding_floor_gbp}}</div>"
+    )
+    merge = merge_composition_markup(source, index)
+    assert not merge.errors
+    gate = validate_composition_gate(source, merge.merged_markup, merge, index)
+    assert gate.passed, gate.errors
+
+
+def test_owned_material_inside_declared_section_rejected():
+    index = _index()
+    source = (
+        '<section data-material="declared" data-testid="declared-situation">'
+        '<span data-material="owned" data-key="stats.funding_floor_gbp">'
+        "{{stats.funding_floor_gbp}}</span></section>"
+    )
+    merge = merge_composition_markup(source, index)
+    gate = validate_composition_gate(source, merge.merged_markup, merge, index)
+    assert not gate.passed
+    assert any("owned" in e.lower() for e in gate.errors)

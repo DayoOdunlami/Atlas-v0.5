@@ -315,6 +315,7 @@ export function AtlasAnswerSurface({
           >
             <span>● corpus — solid, owned</span>
             <span style={{ color: T.web }}>┄ web — dashed, borrowed</span>
+            <span style={{ color: T.declared }}>◇ stated by user — declared, max Indicative</span>
             <span style={{ color: T.gap }}>⌁ gap — torn, under-count</span>
           </div>
         </main>

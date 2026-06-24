@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field, model_validator
 
 from agents.atlas_v5.disposition_models import (
@@ -11,6 +13,14 @@ from agents.atlas_v5.disposition_models import (
     TurnDispositionOutput,
 )
 from agents.atlas_v5.judgement_models import JudgementFieldsOutput
+
+CaseClaimKindOut = Literal["fact", "domain", "constraint", "hypothesis", "uncertainty"]
+
+
+class CaseClaimOut(BaseModel):
+    id: str | None = None
+    text: str = Field(min_length=1, max_length=2000)
+    kind: CaseClaimKindOut = "fact"
 
 
 class DeepPassOutput(BaseModel):
@@ -26,6 +36,10 @@ class DeepPassOutput(BaseModel):
     canvas_markup: str | None = Field(
         default=None,
         description="ONLY when composition_mode is free_compose; else null",
+    )
+    case_claims: list[CaseClaimOut] = Field(
+        default_factory=list,
+        description="Declared user_situation claims extracted or updated this turn",
     )
 
     @model_validator(mode="after")

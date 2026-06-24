@@ -22,7 +22,12 @@ export function ProvenanceTrace({
   const entry: Entry | undefined = provenance[provId];
   if (!entry) return null;
 
-  const trust = entry.trust === "synthesized" ? "corpus" : entry.trust;
+  const trust =
+    entry.trust === "synthesized"
+      ? "corpus"
+      : entry.trust === "declared"
+        ? "declared"
+        : entry.trust;
 
   return (
     <div

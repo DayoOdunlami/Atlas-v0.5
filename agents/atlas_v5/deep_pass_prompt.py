@@ -112,6 +112,11 @@ Produce a DeepPassOutput JSON object. **Resolve in this order:**
    - MUST be null when composition_mode is reference_recipe
    - Use {{key}} and {{scale(key, policy=...)}} holes only; never type figures or scale pixels
    - If web.* keys absent (corpus-only), degrade honestly — do not fabricate web holes
+
+4. **case_claims** — extract or update declared user_situation claims from the user's words
+   - kind: fact | domain | constraint | hypothesis | uncertainty
+   - Never invent owned corpus figures or UUIDs — only what the user stated or clearly implied
+   - Return [] when the user gave no situational content
 """
 
 CHAT_ONLY_TASK_PROMPT = """Respond in the chat rail only. The canvas does NOT update this turn.

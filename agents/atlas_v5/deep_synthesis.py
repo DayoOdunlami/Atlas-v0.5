@@ -41,6 +41,16 @@ from agents.atlas_v5.judgement_merge import (
 )
 from agents.atlas_v5.judgement_models import JudgementFieldsOutput
 from agents.atlas_v5.keyed_figures import KeyedFigureIndex, build_keyed_index
+from agents.atlas_v5.case_file import (
+    CaseClaim,
+    bootstrap_declared_claims_heuristic,
+    case_claims_from_model_items,
+    load_case_file,
+    merge_case_claims,
+    prepend_declared_markup,
+    save_case_file,
+)
+from agents.atlas_v5.reconcile_spec import apply_declared_claims_to_spec
 from agents.atlas_v5.wide_pass import WidePassResult
 from agents.contracts.answer_spec import AnswerSpec
 
@@ -104,7 +114,30 @@ def _build_evidence_block(
         lines.append(
             f"graph: {len(wide.graph.nodes)} nodes, {len(wide.graph.edges)} edges"
         )
+    if wide.session_claims:
+        lines.append("SESSION_CASE_FILE (declared — max Indicative):")
+        for c in wide.session_claims[:8]:
+            lines.append(f"  - [{c.kind}] {c.text[:160]}")
     return "\n".join(lines)
+
+
+def _resolve_session_claims(
+    query: str,
+    wide: WidePassResult,
+    *,
+    thread_id: str | None,
+    deep: DeepPassOutput | None,
+) -> list[CaseClaim]:
+    prior = list(wide.session_claims) if wide.session_claims else load_case_file(thread_id)
+    if deep and deep.case_claims:
+        updates = case_claims_from_model_items(
+            [c.model_dump(mode="json") for c in deep.case_claims]
+        )
+        return merge_case_claims(prior, updates)
+    boot = bootstrap_declared_claims_heuristic(query)
+    if boot:
+        return merge_case_claims(prior, boot)
+    return prior
 
 
 def _format_canvas_context(current_spec: dict[str, Any] | None) -> str:
@@ -262,6 +295,7 @@ async def apply_deep_pass(
     *,
     current_spec: dict[str, Any] | None = None,
     substantive: bool = True,
+    thread_id: str | None = None,
 ) -> tuple[AnswerSpec | None, str, dict[str, Any], bool]:
     """
     Returns (spec_or_none, reply, dev_meta, update_canvas).
@@ -280,6 +314,18 @@ async def apply_deep_pass(
         current_spec=current_spec,
         recipe_rec=recipe_rec,
     )
+
+    session_claims = _resolve_session_claims(
+        query, wide, thread_id=thread_id, deep=deep
+    )
+    if session_claims:
+        save_case_file(thread_id, session_claims)
+
+    def _finish(spec: AnswerSpec) -> AnswerSpec:
+        return apply_declared_claims_to_spec(spec, session_claims)
+
+    def _markup(markup: str | None) -> str | None:
+        return prepend_declared_markup(markup, session_claims)
 
     if deep is None:
         disposition = infer_disposition_heuristic(
@@ -310,7 +356,7 @@ async def apply_deep_pass(
         )
         if template_markup:
             merged, gate_status, gate_errors, fallback_rung = apply_composition_to_spec(
-                skeleton, template_markup, index
+                skeleton, _markup(template_markup), index
             )
             merged = _attach_chart(merged, wide, index, query)
             reply = build_canvas_update_reply(merged, query)
@@ -322,12 +368,12 @@ async def apply_deep_pass(
                 gate_errors=gate_errors,
                 fallback_rung=fallback_rung or "template",
             )
-            return merged, reply, meta, True
+            return _finish(merged), reply, meta, True
 
         reply = build_canvas_update_reply(skeleton, query)
         out = _attach_chart(skeleton, wide, index, query)
         meta = _build_dev_meta(disposition, index, wide, fallback_rung="recipe")
-        return out, reply, meta, True
+        return _finish(out), reply, meta, True
 
     disposition = _apply_composition_policy(deep.disposition, recipe_rec)
 
@@ -356,12 +402,12 @@ async def apply_deep_pass(
         meta = _build_dev_meta(
             disposition, index, wide, gate_status="degrade_prose", fallback_rung="prose"
         )
-        return merged, reply, meta, True
+        return _finish(merged), reply, meta, True
 
     if disposition.composition_mode == "free_compose":
         if deep.canvas_markup:
             merged, gate_status, gate_errors, fallback_rung = apply_composition_to_spec(
-                merged, deep.canvas_markup, index
+                merged, _markup(deep.canvas_markup), index
             )
             meta = _build_dev_meta(
                 disposition,
@@ -372,14 +418,14 @@ async def apply_deep_pass(
                 fallback_rung=fallback_rung,
             )
             reply = _reply(deep.judgement.chat_complement, merged)
-            return merged, reply, meta, True
+            return _finish(merged), reply, meta, True
 
         template_markup = build_template_markup(
             query, deep.judgement, index, **_template_kwargs(wide)
         )
         if template_markup:
             merged, gate_status, gate_errors, fallback_rung = apply_composition_to_spec(
-                merged, template_markup, index
+                merged, _markup(template_markup), index
             )
             meta = _build_dev_meta(
                 disposition,
@@ -390,7 +436,7 @@ async def apply_deep_pass(
                 fallback_rung=fallback_rung or "template",
             )
             reply = _reply(deep.judgement.chat_complement, merged)
-            return merged, reply, meta, True
+            return _finish(merged), reply, meta, True
 
         if merged.instrument is not None:
             meta = _build_dev_meta(
@@ -402,7 +448,7 @@ async def apply_deep_pass(
                 fallback_rung="recipe",
             )
             reply = _reply(deep.judgement.chat_complement, merged)
-            return merged, reply, meta, True
+            return _finish(merged), reply, meta, True
 
         merged = merged.model_copy(update={"instrument": None})
         meta = _build_dev_meta(
@@ -414,11 +460,11 @@ async def apply_deep_pass(
             fallback_rung="prose",
         )
         reply = _reply(deep.judgement.chat_complement, merged)
-        return merged, reply, meta, True
+        return _finish(merged), reply, meta, True
 
     reply = _reply(deep.judgement.chat_complement, merged)
     meta = _build_dev_meta(disposition, index, wide, fallback_rung="recipe")
-    return merged, reply, meta, True
+    return _finish(merged), reply, meta, True
 
 
 async def apply_deep_judgement(

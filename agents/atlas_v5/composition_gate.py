@@ -14,6 +14,14 @@ _SCALE_ATTR = re.compile(
     r'(width|height|r|stroke-width)\s*=\s*["\'](\d+)px["\']',
     re.I,
 )
+_DECLARED_SECTION = re.compile(
+    r'<section[^>]*data-material="declared"[^>]*>.*?</section>',
+    re.I | re.S,
+)
+
+
+def _markup_without_declared_sections(markup: str) -> str:
+    return _DECLARED_SECTION.sub("", markup)
 
 
 @dataclass
@@ -34,11 +42,12 @@ def validate_composition_gate(
         errors.extend(merge.errors)
 
     allowed_values = set(merge.merge_log.values())
-    for m in _CURRENCY.findall(merged_markup):
+    gate_markup = _markup_without_declared_sections(merged_markup)
+    for m in _CURRENCY.findall(gate_markup):
         if m not in allowed_values and not any(m in v for v in allowed_values):
             errors.append(f"orphan figure: {m}")
 
-    if "£8.17m" in merged_markup and "£8.17m" not in allowed_values:
+    if "£8.17m" in gate_markup and "£8.17m" not in allowed_values:
         if "stats.funding_floor_gbp" not in merge.merge_log:
             errors.append("orphan figure: £8.17m")
 
@@ -75,5 +84,14 @@ def validate_composition_gate(
         )
         if material and material.group(1) == "owned" and fig.material == "borrowed":
             errors.append(f"material mismatch: {key} marked owned but is borrowed")
+        if material and material.group(1) == "declared":
+            errors.append(f"declared material must not use data-key: {key}")
+
+    for section in _DECLARED_SECTION.finditer(merged_markup):
+        body = section.group(0)
+        if re.search(r'data-material=["\']owned["\']', body, re.I):
+            errors.append("declared section must not contain data-material=owned")
+        if re.search(r'data-key=["\']', body, re.I):
+            errors.append("declared section must not contain data-key bindings")
 
     return GateResult(passed=len(errors) == 0, errors=errors)

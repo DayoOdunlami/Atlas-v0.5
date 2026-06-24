@@ -29,7 +29,12 @@ export const OutcomeModeSchema = z.enum([
   "Defend",
 ]);
 
-export const TrustScopeSchema = z.enum(["corpus", "web", "synthesized"]);
+export const TrustScopeSchema = z.enum([
+  "corpus",
+  "web",
+  "synthesized",
+  "declared",
+]);
 
 export const BlindspotSignSchema = z.enum(["undercount", "absence"]);
 

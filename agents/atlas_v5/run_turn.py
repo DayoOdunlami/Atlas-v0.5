@@ -61,13 +61,11 @@ async def run_turn(
     outcome_hint: OutcomeHint | None = None,
     current_spec: dict[str, Any] | None = None,
 ) -> AnswerSpec:
-    del thread_id
-
     q = query.strip() or J1T1_QUERY_PHRASE
-    wide = await run_wide_pass(q, outcome_hint=outcome_hint)
+    wide = await run_wide_pass(q, outcome_hint=outcome_hint, thread_id=thread_id)
     skeleton = assemble_spec_from_wide_pass(wide)
     spec, _reply, _meta, _update = await apply_deep_pass(
-        q, skeleton, wide, current_spec=current_spec, substantive=True
+        q, skeleton, wide, current_spec=current_spec, substantive=True, thread_id=thread_id
     )
     return _apply_tier_guard(spec or skeleton)
 
@@ -150,6 +148,7 @@ async def _execute_substantive_turn(
     current_spec: dict[str, Any] | None = None,
     showcase_meta: dict[str, Any] | None = None,
     prior_dev_meta: dict[str, Any] | None = None,
+    thread_id: str | None = None,
 ) -> dict[str, Any]:
     online_only = is_online_only_active(prior_dev_meta)
     work_q = q
@@ -166,6 +165,7 @@ async def _execute_substantive_turn(
         work_q,
         outcome_hint=outcome_hint,
         online_only=online_only,
+        thread_id=thread_id,
     )
 
     if wide.retrieval_meta.get("corpus_unavailable") and not online_only:
@@ -178,6 +178,7 @@ async def _execute_substantive_turn(
         wide,
         current_spec=current_spec,
         substantive=True,
+        thread_id=thread_id,
     )
 
     if online_only:
@@ -220,7 +221,6 @@ async def run_turn_response(
     current_spec: dict[str, Any] | None = None,
     prior_dev_meta: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    del thread_id
     q = query.strip()
     if not q:
         return {
@@ -244,6 +244,7 @@ async def run_turn_response(
                 current_spec=current_spec,
                 showcase_meta=showcase_meta,
                 prior_dev_meta=prior_dev_meta,
+                thread_id=thread_id,
             )
             intro = showcase_reply
             payload["reply"] = f"{intro}\n\n---\n\n{payload.get('reply', '')}"
@@ -285,6 +286,7 @@ async def run_turn_response(
         decision,
         current_spec=current_spec,
         prior_dev_meta=prior_dev_meta,
+        thread_id=thread_id,
     )
 
 
@@ -295,7 +297,6 @@ async def run_turn_stream(
     current_spec: dict[str, Any] | None = None,
 ) -> AsyncIterator[str]:
     """NDJSON stream: partial skeleton envelope, then final turn payload."""
-    del thread_id
     q = query.strip()
     if not q:
         yield json.dumps(
@@ -331,7 +332,9 @@ async def run_turn_stream(
         ) + "\n"
         return
 
-    wide = await run_wide_pass(q, outcome_hint=decision.outcome_hint)
+    wide = await run_wide_pass(
+        q, outcome_hint=decision.outcome_hint, thread_id=thread_id
+    )
     skeleton = assemble_spec_from_wide_pass(wide)
     stats_line = "corpus gathered"
     if wide.stats:
@@ -389,7 +392,7 @@ async def run_turn_stream(
     ) + "\n"
 
     payload = await _execute_substantive_turn(
-        q, decision, current_spec=current_spec
+        q, decision, current_spec=current_spec, thread_id=thread_id
     )
     final_trace = [
         trace_step("complete", "Canvas ready"),

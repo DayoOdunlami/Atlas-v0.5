@@ -3,10 +3,26 @@
 import type { ConfidenceTier } from "@/lib/atlas5/types";
 import { atlasFont, atlasTokens as T } from "@/lib/atlas/tokens";
 
-export type TrustScope = "corpus" | "web" | "synthesized";
+export type TrustScope = "corpus" | "web" | "synthesized" | "declared";
 
-/** Corpus-solid / web-dashed material swatch */
+/** Corpus-solid / web-dashed / declared-diamond material swatch */
 export function TrustSwatch({ trust }: { trust: TrustScope }) {
+  if (trust === "declared") {
+    return (
+      <span
+        data-testid="trust-swatch-declared"
+        className="inline-block shrink-0"
+        style={{
+          width: 8,
+          height: 8,
+          background: T.declaredWash,
+          border: `1.5px solid ${T.declared}`,
+          transform: "rotate(45deg)",
+          marginRight: 2,
+        }}
+      />
+    );
+  }
   const isCorpus = trust === "corpus";
   const color = isCorpus ? T.corpus : T.web;
   return (
@@ -30,6 +46,24 @@ export function TrustBadge({
   trust: TrustScope;
   label?: string;
 }) {
+  if (trust === "declared") {
+    return (
+      <span
+        data-testid="trust-badge-declared"
+        className="inline-flex items-center gap-1.5"
+        style={{
+          fontFamily: atlasFont.mono,
+          fontSize: 10,
+          letterSpacing: "0.08em",
+          color: T.declared,
+          textTransform: "uppercase",
+        }}
+      >
+        <TrustSwatch trust="declared" />
+        {label ?? "Stated by user"}
+      </span>
+    );
+  }
   const isCorpus = trust === "corpus";
   const color = isCorpus ? T.corpus : T.web;
   return (
@@ -51,6 +85,8 @@ export function SourceBadge({
   source: TrustScope;
   title: string;
 }) {
+  const isDeclared = source === "declared";
+  const isCorpus = source === "corpus";
   return (
     <span
       data-testid="source-badge"
@@ -58,9 +94,13 @@ export function SourceBadge({
       style={{
         fontFamily: atlasFont.mono,
         fontSize: 10,
-        border: source === "corpus" ? `1px solid ${T.corpus}` : `1px dashed ${T.web}`,
-        color: source === "corpus" ? T.corpus : "#3E5566",
-        background: source === "corpus" ? T.corpusWash : "#EDF1F6",
+        border: isDeclared
+          ? `1px dashed ${T.declared}`
+          : isCorpus
+            ? `1px solid ${T.corpus}`
+            : `1px dashed ${T.web}`,
+        color: isDeclared ? T.declared : isCorpus ? T.corpus : "#3E5566",
+        background: isDeclared ? T.declaredWash : isCorpus ? T.corpusWash : "#EDF1F6",
       }}
     >
       <TrustSwatch trust={source} />

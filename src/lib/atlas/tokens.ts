@@ -13,6 +13,8 @@ export const atlasTokens = {
   web: "#B6CADB",
   gap: "#B07A2E",
   gapWash: "#FBF4E8",
+  declared: "#8B6914",
+  declaredWash: "#FBF8F0",
 } as const;
 
 export const atlasFont = {

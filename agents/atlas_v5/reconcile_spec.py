@@ -6,6 +6,8 @@ from typing import Any
 
 from agents.contracts.answer_spec import (
     AnswerSpec,
+    Claim,
+    ProvenanceEntry,
     Reconciliation,
     ReconciliationNote,
     RetrievalMeta,
@@ -142,5 +144,50 @@ def reconcile_answer_spec(
                 notes=notes,
                 retrieval=RetrievalMeta(**meta),
             ),
+        },
+    )
+
+
+def apply_declared_claims_to_spec(
+    spec: AnswerSpec,
+    declared: list,
+) -> AnswerSpec:
+    """Merge declared case-file claims into AnswerSpec trust rail."""
+    from agents.atlas_v5.case_file import to_answer_spec_claims
+
+    if not declared:
+        return spec
+
+    declared_claims = to_answer_spec_claims(declared)
+    other = [c for c in spec.claims if c.source != "declared"]
+    prov = dict(spec.provenance)
+    for c in declared_claims:
+        key = c.provId or f"declared-{c.id[:8]}"
+        prov[key] = ProvenanceEntry(
+            ref=c.provId or c.id,
+            scope="declared",
+            trust="declared",
+            trustNote=f"Stated by user · {c.tier} max",
+            row=c.text[:120],
+        )
+
+    notes = list(spec.reconciliation.notes) if spec.reconciliation else []
+    notes.append(
+        ReconciliationNote(
+            type="discover",
+            message=(
+                f"{len(declared_claims)} declared situation claim(s) — "
+                "self-reported; trust material capped at Indicative."
+            ),
+        )
+    )
+    recon = spec.reconciliation
+    retrieval = recon.retrieval if recon else RetrievalMeta(lane_mode="corpus_only")
+
+    return spec.model_copy(
+        update={
+            "claims": other + declared_claims,
+            "provenance": prov,
+            "reconciliation": Reconciliation(notes=notes, retrieval=retrieval),
         },
     )
