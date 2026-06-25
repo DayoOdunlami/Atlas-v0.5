@@ -1,29 +1,65 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { CorpusFieldCanvas } from "@/components/atlas/entry/corpus-field-canvas";
 import { entryFranklin, entryNewsreader } from "@/components/atlas/entry/entry-fonts";
+import { ConnectionStatus } from "@/components/atlas/shell/connection-status";
 import { SoWhatRail } from "@/components/atlas/shell/so-what-rail";
-import { startNewAtlasV5Thread } from "@/components/copilotkit-provider";
 import {
   ENTRY_PLACEHOLDERS,
   ENTRY_SO_WHAT,
   ENTRY_STARTERS,
 } from "@/lib/atlas/entry-screen-copy";
+import { markPendingBootstrap, writeAtlasSessionQuery } from "@/lib/atlas/session";
 import { atlasFont } from "@/lib/atlas/tokens";
 
-const COMPOSE_MS = 1200;
+type HealthPayload = {
+  ok?: boolean;
+  agents?: { ok?: boolean; url?: string };
+  anthropic_configured?: boolean;
+  error?: string;
+};
+
+function EntryHealthBanner({ health }: { health: HealthPayload | null }) {
+  if (!health || health.ok) return null;
+  const agentsDown = health.agents?.ok === false;
+  return (
+    <div
+      className="shrink-0 border-b px-6 py-2 text-[12px]"
+      style={{
+        borderColor: "#E8D4C4",
+        background: "#FDF6F0",
+        color: "#7C4A2E",
+      }}
+    >
+      {agentsDown ? (
+        <>
+          Agent service not reachable
+          {health.agents?.url ? ` (${health.agents.url})` : ""}. Start with{" "}
+          <code className="text-[11px]">npm run dev</code> or{" "}
+          <code className="text-[11px]">npm run dev:agents</code> — then retry your question.
+        </>
+      ) : (
+        <>Atlas health check failed{health.error ? `: ${health.error}` : ""}.</>
+      )}
+      {!health.anthropic_configured ? (
+        <span className="ml-2 opacity-80">ANTHROPIC_API_KEY not set — replies may skeleton.</span>
+      ) : null}
+    </div>
+  );
+}
 
 export function AtlasEntryScreen() {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [navigating, setNavigating] = useState(false);
   const [primerOpen, setPrimerOpen] = useState(true);
   const [highlight, setHighlight] = useState<string | null>(null);
   const [phIdx, setPhIdx] = useState(0);
-  const navigateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [health, setHealth] = useState<HealthPayload | null>(null);
 
   const active = query.trim().length > 0 || submitted;
   const askPlaceholder = ENTRY_PLACEHOLDERS[phIdx % ENTRY_PLACEHOLDERS.length];
@@ -33,59 +69,79 @@ export function AtlasEntryScreen() {
     return () => clearInterval(id);
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await fetch("/api/atlas/health", { cache: "no-store" });
+        if (!cancelled) setHealth((await res.json()) as HealthPayload);
+      } catch {
+        if (!cancelled) setHealth({ ok: false, agents: { ok: false } });
+      }
+    };
+    void load();
+    const id = window.setInterval(() => void load(), 60_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, []);
+
   const go = useCallback(
     (text: string) => {
       const q = text.trim();
-      if (!q) return;
+      if (!q || navigating) return;
       setQuery(q);
       setSubmitted(true);
-      startNewAtlasV5Thread();
-      if (navigateTimer.current) clearTimeout(navigateTimer.current);
-      navigateTimer.current = setTimeout(() => {
-        router.push(`/atlas/session?q=${encodeURIComponent(q)}`);
-      }, COMPOSE_MS);
+      setNavigating(true);
+      writeAtlasSessionQuery(q);
+      markPendingBootstrap(q);
+      router.push(`/atlas/session?q=${encodeURIComponent(q)}`);
     },
-    [router],
-  );
-
-  useEffect(
-    () => () => {
-      if (navigateTimer.current) clearTimeout(navigateTimer.current);
-    },
-    [],
+    [navigating, router],
   );
 
   const handleAsk = useCallback(
     async (message: string) => {
       go(message);
-      return "Composing your canvas from live corpus…";
+      return "Opening session — Atlas will start thinking on the next screen…";
     },
     [go],
   );
+
+  const entrySoWhat = submitted
+    ? {
+        ...ENTRY_SO_WHAT,
+        lookingAt: `Starting session — “${query.slice(0, 72)}${query.length > 72 ? "…" : ""}”`,
+        primaryAction: navigating ? "Opening session…" : "Compose",
+      }
+    : ENTRY_SO_WHAT;
 
   return (
     <div
       className={`${entryNewsreader.variable} ${entryFranklin.variable} flex min-h-screen flex-col`}
       style={{ background: "#e7e5df", fontFamily: "var(--font-entry-sans), sans-serif" }}
     >
-      <div className="flex min-h-0 flex-1 items-stretch overflow-hidden">
+      <EntryHealthBanner health={health} />
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row lg:items-stretch">
         {/* Canvas at rest — visual starting point from HTML prototype */}
-        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto p-6 lg:p-10">
+        <main className="order-2 flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto p-4 lg:order-1 lg:p-10">
           <div
             className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col overflow-hidden rounded-sm bg-[#FBFAF7] shadow-lg"
             style={{
-              minHeight: 520,
+              minHeight: 420,
               boxShadow: "0 1px 3px rgba(0,0,0,.08), 0 16px 50px rgba(0,0,0,.07)",
             }}
           >
             {/* topbar */}
             <div
-              className="flex h-[54px] shrink-0 items-center gap-4 border-b px-6"
+              className="flex h-[54px] shrink-0 items-center gap-4 border-b px-4 lg:px-6"
               style={{ borderColor: "#E7E3DC" }}
             >
               <div className="text-[15px] font-semibold text-[#211E1A]">Atlas</div>
-              <div className="h-[18px] w-px bg-[#E7E3DC]" />
+              <div className="hidden h-[18px] w-px bg-[#E7E3DC] sm:block" />
               <div
+                className="hidden sm:block"
                 style={{
                   fontFamily: atlasFont.mono,
                   fontSize: 10.5,
@@ -106,17 +162,12 @@ export function AtlasEntryScreen() {
                   ▦ materials
                 </button>
               ) : null}
-              <div className="flex items-center gap-1.5 rounded-md px-2.5 py-1" style={{ background: "#F0EDE7" }}>
-                <div className="atlas-pulse-dot h-[7px] w-[7px] rounded-full bg-[#8FA98C]" />
-                <span style={{ fontFamily: atlasFont.mono, fontSize: 11, fontWeight: 600, color: "#56524C" }}>
-                  READY
-                </span>
-              </div>
+              <ConnectionStatus className="relative" />
             </div>
 
             {primerOpen ? (
               <div
-                className="flex shrink-0 flex-wrap items-center gap-3 border-b px-6 py-2 text-[11px] text-[#46423C]"
+                className="flex shrink-0 flex-wrap items-center gap-3 border-b px-4 py-2 text-[11px] text-[#46423C] lg:px-6"
                 style={{ background: "#F8F6F1", borderColor: "#EAE5DC" }}
               >
                 <span style={{ fontFamily: atlasFont.mono, fontSize: 9, letterSpacing: "0.12em", color: "#56524C" }}>
@@ -136,7 +187,7 @@ export function AtlasEntryScreen() {
               </div>
             ) : null}
 
-            <div className="relative min-h-[420px] flex-1 overflow-hidden">
+            <div className="relative min-h-[320px] flex-1 overflow-hidden lg:min-h-[420px]">
               <CorpusFieldCanvas active={active} highlight={highlight} />
               <div
                 className="pointer-events-none absolute inset-0"
@@ -146,7 +197,7 @@ export function AtlasEntryScreen() {
                 }}
               />
 
-              <div className="relative z-[3] flex h-full flex-col justify-center px-8 py-10 lg:px-14">
+              <div className="relative z-[3] flex h-full flex-col justify-center px-6 py-8 lg:px-14 lg:py-10">
                 {!submitted ? (
                   <div className="max-w-[560px]">
                     <p
@@ -159,7 +210,7 @@ export function AtlasEntryScreen() {
                         marginBottom: 16,
                       }}
                     >
-                      Atlas · ready
+                      Ask in the chat rail →
                     </p>
                     <h1
                       style={{
@@ -176,8 +227,9 @@ export function AtlasEntryScreen() {
                       <span style={{ fontStyle: "italic" }}>understand</span>?
                     </h1>
                     <p className="mb-6 text-sm leading-relaxed text-[#56524C]">
-                      Use the <strong>ask bar on the right</strong> to type your question — or pick a
-                      starter below. The field lights up as you type.
+                      Type in the <strong>ask bar</strong> (right on desktop, above on mobile) and press{" "}
+                      <strong>Enter</strong> — you&apos;ll move to the session screen where Atlas thinks.
+                      The status pill shows whether the agent service is connected.
                     </p>
                     <div>
                       <div
@@ -227,7 +279,7 @@ export function AtlasEntryScreen() {
                       }}
                     >
                       <span className="atlas-pulse-dot-fast h-1.5 w-1.5 rounded-full bg-[#3F7A52]" />
-                      composing the canvas
+                      opening session
                     </div>
                     <h2
                       style={{
@@ -241,6 +293,9 @@ export function AtlasEntryScreen() {
                     >
                       “{query}”
                     </h2>
+                    <p className="mt-4 text-sm text-[#56524C]">
+                      Handing off to Atlas — watch for &ldquo;Atlas is thinking…&rdquo; in the chat rail.
+                    </p>
                   </div>
                 )}
               </div>
@@ -248,14 +303,15 @@ export function AtlasEntryScreen() {
           </div>
         </main>
 
-        {/* Always-visible ask / chat rail — primary way to submit a question */}
+        {/* Ask / chat rail — primary submit path; first on mobile */}
         <SoWhatRail
-          soWhat={ENTRY_SO_WHAT}
+          soWhat={entrySoWhat}
           onFollowUp={handleAsk}
-          inputPlaceholder={askPlaceholder}
+          chatPending={submitted}
+          inputPlaceholder={submitted ? "Opening session…" : askPlaceholder}
           onDraftChange={(text) => {
             setQuery(text);
-            setSubmitted(false);
+            if (submitted) return;
           }}
         />
       </div>

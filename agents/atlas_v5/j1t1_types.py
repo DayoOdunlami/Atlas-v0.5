@@ -15,6 +15,19 @@ class FunderBreakdownRow:
 
 
 @dataclass
+class ModeThemeRow:
+    mode: str
+    theme: str
+    project_count: int
+
+
+@dataclass
+class StartYearRow:
+    year: int
+    project_count: int
+
+
+@dataclass
 class J1T1CorpusStats:
     project_count: int
     funding_sum: float
@@ -23,5 +36,7 @@ class J1T1CorpusStats:
     org_count: int
     live_since_2024: int
     funders: list[FunderBreakdownRow] = field(default_factory=list)
+    mode_themes: list[ModeThemeRow] = field(default_factory=list)
+    start_years: list[StartYearRow] = field(default_factory=list)
     top_citations: list[dict[str, Any]] = field(default_factory=list)
     queried_at: str = ""

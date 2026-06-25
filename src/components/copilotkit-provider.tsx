@@ -105,10 +105,11 @@ export function CopilotKitProvider({ children }: { children: React.ReactNode }) 
   const workbenchThreadId = useStableWorkbenchThreadId(orchestratorRoute);
   const atlasV5ThreadId = useStableAtlasV5ThreadId(atlasV5Route);
   const threadId = orchestratorRoute ? workbenchThreadId : atlasV5Route ? atlasV5ThreadId : undefined;
+  // Remount on thread rotation so "New question" clears CopilotKit chat history.
   const providerKey = orchestratorRoute
     ? workbenchThreadId
     : atlasV5Route
-      ? atlasV5ThreadId
+      ? `atlas_v5-${atlasV5ThreadId ?? "pending"}`
       : agentName;
 
   return (

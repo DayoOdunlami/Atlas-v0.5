@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { atlasFont, atlasTokens as T } from "@/lib/atlas/tokens";
+import type { AtlasUxPrefs } from "@/lib/atlas/ux-preferences";
 
 export type AtlasDevMeta = {
   turn_stage?: string | null;
@@ -15,6 +16,7 @@ export type AtlasDevMeta = {
   };
   keyed_keys?: string[];
   web_keys_absent_reason?: string | null;
+  research_keys_absent_reason?: string | null;
   lane_mode?: string;
   external_skipped?: boolean;
   gate_status?: string | null;
@@ -31,6 +33,24 @@ export type AtlasDevMeta = {
     query?: string;
   };
   zod_error?: string;
+  stage_ms?: Record<string, number>;
+  lead_lane?: string;
+  trust_conflicts?: string[];
+  validation_summary?: Record<string, unknown>;
+  visual_intent?: string;
+  visual_strength?: string;
+  visual_suppressed?: boolean;
+  visual_suppression?: string[];
+  visual_suppression_reason?: string;
+  charts_attached?: number;
+  chart_kinds?: string[];
+  visual_opportunities?: Array<{
+    kind: string;
+    role: string;
+    story: string;
+    priority: number;
+  }>;
+  visual_rejected?: Array<{ kind: string; reason: string; role?: string }>;
   showcase?: {
     active?: boolean;
     mode?: string;
@@ -45,9 +65,15 @@ export type AtlasDevMeta = {
 export function DevOverlay({
   meta,
   dataSource,
+  uxPrefs,
+  onUxPrefsChange,
+  turnTiming,
 }: {
   meta: AtlasDevMeta | null;
   dataSource?: string;
+  uxPrefs?: AtlasUxPrefs;
+  onUxPrefsChange?: (patch: Partial<AtlasUxPrefs>) => void;
+  turnTiming?: { elapsedMs: number | null; running: boolean };
 }) {
   const [open, setOpen] = useState(true);
   const show =
@@ -83,6 +109,18 @@ export function DevOverlay({
       {open ? (
         <div className="space-y-1 border-t px-3 py-2" style={{ borderColor: "#5A5249" }}>
           <Row k="dataSource" v={dataSource} />
+          {turnTiming ? (
+            <Row
+              k="turn"
+              v={
+                turnTiming.running
+                  ? `${((turnTiming.elapsedMs ?? 0) / 1000).toFixed(1)}s · running`
+                  : turnTiming.elapsedMs != null
+                    ? `${(turnTiming.elapsedMs / 1000).toFixed(1)}s · complete`
+                    : "—"
+              }
+            />
+          ) : null}
           <Row k="stage" v={meta.turn_stage ?? "—"} />
           <Row k="partial" v={meta.partial_stage ?? "—"} />
           <Row k="surface" v={d.primary_surface} />
@@ -93,6 +131,11 @@ export function DevOverlay({
           <Row k="keys" v={`${meta.keyed_keys?.length ?? 0} available`} />
           {meta.web_keys_absent_reason ? (
             <Row k="web.*" v="absent (corpus-only)" />
+          ) : null}
+          {meta.research_keys_absent_reason ? (
+            <Row k="research.*" v="off (ATLAS_V5_RESEARCH_LANE=0)" />
+          ) : meta.validation_summary?.research_figures ? (
+            <Row k="research.*" v={`${String(meta.validation_summary.research_figures)} figures`} />
           ) : null}
           <Row k="gate" v={meta.gate_status ?? "—"} />
           <Row k="fallback" v={meta.fallback_rung ?? "—"} />
@@ -109,9 +152,97 @@ export function DevOverlay({
               {d.reasoning.slice(0, 120)}
             </div>
           ) : null}
+          {meta.stage_ms && Object.keys(meta.stage_ms).length > 0 ? (
+            <div className="space-y-0.5 border-t pt-2" style={{ borderColor: "#5A5249" }}>
+              <div style={{ color: "#94908A" }}>stage_ms</div>
+              {Object.entries(meta.stage_ms).map(([k, v]) => (
+                <Row key={k} k={k} v={`${(v / 1000).toFixed(1)}s`} />
+              ))}
+            </div>
+          ) : null}
+          {meta.visual_intent || meta.charts_attached !== undefined ? (
+            <div className="space-y-0.5 border-t pt-2" style={{ borderColor: "#5A5249" }}>
+              <div style={{ color: "#94908A" }}>visuals</div>
+              <Row k="intent" v={meta.visual_intent ?? "—"} />
+              <Row k="lead_lane" v={meta.lead_lane ?? "—"} />
+              {meta.trust_conflicts?.length ? (
+                <Row k="conflicts" v={meta.trust_conflicts.join("; ")} />
+              ) : null}
+              <Row k="strength" v={meta.visual_strength ?? "—"} />
+              <Row
+                k="attached"
+                v={`${meta.charts_attached ?? 0}${meta.chart_kinds?.length ? ` (${meta.chart_kinds.join(", ")})` : ""}`}
+              />
+              {meta.visual_suppressed ? (
+                <Row
+                  k="suppressed"
+                  v={meta.visual_suppression_reason ?? meta.visual_suppression?.join("; ") ?? "yes"}
+                />
+              ) : null}
+              {meta.visual_rejected?.slice(0, 3).map((r, i) => (
+                <div key={i} style={{ color: "#94908A" }}>
+                  ↳ {r.kind}: {r.reason.slice(0, 60)}
+                </div>
+              ))}
+            </div>
+          ) : null}
+          {uxPrefs && onUxPrefsChange ? (
+            <div className="space-y-1 border-t pt-2" style={{ borderColor: "#5A5249" }}>
+              <div style={{ color: "#94908A" }}>UX streaming</div>
+              <ToggleRow
+                label="Interim chat (gather)"
+                checked={uxPrefs.streamInterimChat}
+                onChange={(v) => onUxPrefsChange({ streamInterimChat: v })}
+              />
+              <ToggleRow
+                label="Chat token stream"
+                checked={uxPrefs.streamChatTokens}
+                hint="costly"
+                onChange={(v) => onUxPrefsChange({ streamChatTokens: v })}
+              />
+              <ToggleRow
+                label="Compose partials"
+                checked={uxPrefs.streamCompose}
+                hint="costly"
+                onChange={(v) => onUxPrefsChange({ streamCompose: v })}
+              />
+              <ToggleRow
+                label="Fold CoT steps"
+                checked={uxPrefs.collapsibleCot}
+                onChange={(v) => onUxPrefsChange({ collapsibleCot: v })}
+              />
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
+  );
+}
+
+function ToggleRow({
+  label,
+  checked,
+  hint,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  hint?: string;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center gap-2">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        style={{ accentColor: T.corpus }}
+      />
+      <span>
+        {label}
+        {hint ? <span style={{ color: "#94908A" }}> · {hint}</span> : null}
+      </span>
+    </label>
   );
 }
 

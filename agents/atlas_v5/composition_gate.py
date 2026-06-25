@@ -78,12 +78,21 @@ def validate_composition_gate(
         if fig is None:
             errors.append(f"data-key references unknown key: {key}")
             continue
+        if fig.validation_status in ("absent", "declined"):
+            errors.append(f"data-key {key} has validation_status={fig.validation_status}")
+            continue
         material = re.search(
             rf'data-key="{re.escape(key)}"[^>]*data-material="(\w+)"',
             merged_markup,
         )
-        if material and material.group(1) == "owned" and fig.material == "borrowed":
-            errors.append(f"material mismatch: {key} marked owned but is borrowed")
+        lane_attr = re.search(
+            rf'data-key="{re.escape(key)}"[^>]*data-lane="(\w+)"',
+            merged_markup,
+        )
+        if lane_attr and lane_attr.group(1) != fig.lane:
+            errors.append(f"lane mismatch: {key} marked {lane_attr.group(1)} but ledger is {fig.lane}")
+        if material and material.group(1) == "owned" and fig.lane == "web":
+            errors.append(f"material mismatch: {key} marked owned but ledger lane is web")
         if material and material.group(1) == "declared":
             errors.append(f"declared material must not use data-key: {key}")
 

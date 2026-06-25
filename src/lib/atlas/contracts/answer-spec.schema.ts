@@ -27,6 +27,7 @@ export const OutcomeModeSchema = z.enum([
   "Diagnose",
   "Act",
   "Defend",
+  "FindPath",
 ]);
 
 export const TrustScopeSchema = z.enum([
@@ -68,7 +69,7 @@ export const WebEvidenceSchema = z.object({
   source_tier: z
     .enum(["primary_gov", "funder", "publisher", "news", "other"])
     .optional(),
-  verification_state: z.literal("candidate").default("candidate"),
+  verification_state: z.enum(["verified", "candidate"]).default("candidate"),
   provenance: z.literal("external").default("external"),
 });
 
@@ -117,8 +118,9 @@ export const RetrievalMetaSchema = z.object({
   corpus_substantive: z.boolean().optional(),
   web_substantive: z.boolean().optional(),
   corroboration_boost: z.boolean().optional(),
-  tier_reason: z.string().optional(),
-  reconcile_lead: z.string().optional(),
+  tier_reason: z.string().nullish(),
+  reconcile_lead: z.string().nullish(),
+  lead_lane: z.string().nullish(),
   corpus_document_count: z.number().int().nonnegative().optional(),
   project_hit_count: z.number().int().nonnegative().optional(),
   document_hit_count: z.number().int().nonnegative().optional(),
@@ -126,10 +128,10 @@ export const RetrievalMetaSchema = z.object({
 
 export const ReconciliationNoteSchema = z.object({
   type: ReconciliationNoteTypeSchema,
-  message: z.string().optional(),
-  corpus_signal: z.string().optional(),
-  external_signal: z.string().optional(),
-  note: z.string().optional(),
+  message: z.string().nullish(),
+  corpus_signal: z.string().nullish(),
+  external_signal: z.string().nullish(),
+  note: z.string().nullish(),
 });
 
 export const ReconciliationSchema = z.object({
@@ -159,12 +161,42 @@ export const GateStatusSchema = z.enum([
   "degrade_prose",
 ]);
 
+export const ChartRoleSchema = z.enum([
+  "ranking",
+  "composition",
+  "distribution",
+  "flow",
+  "coverage",
+  "evolution",
+  "compare",
+  "temporal",
+  "theme_stack",
+]);
+
+export const ChartInteractionSpecSchema = z.object({
+  type: z.enum(["floor_adjust", "filter_category"]).default("floor_adjust"),
+  key: z.string().min(1),
+  label: z.string().optional(),
+  min: z.number().optional(),
+  max: z.number().optional(),
+  default: z.number().optional(),
+});
+
 export const ChartBlockSchema = z.object({
   engine: z.literal("echarts").default("echarts"),
-  kind: z.enum(["bar", "line", "pie", "network"]).default("bar"),
+  kind: z
+    .enum(["bar", "line", "pie", "network", "heatmap", "sankey"])
+    .default("bar"),
   title: z.string().optional(),
+  role: ChartRoleSchema.optional(),
+  story: z.string().optional(),
   option: z.record(z.string(), z.unknown()).default({}),
   data_keys: z.array(z.string()).default([]),
+  series_lanes: z.array(z.string()).default([]),
+  validation_statuses: z.array(z.string()).default([]),
+  lead_lane: z.string().optional(),
+  reconciliation_note: z.string().optional(),
+  interaction_spec: ChartInteractionSpecSchema.optional(),
   gate_status: GateStatusSchema.optional(),
   gate_errors: z.array(z.string()).default([]),
 });
@@ -246,6 +278,7 @@ export const AnswerSpecSchema = z.object({
   blindspot: BlindspotSchema.optional(),
   instrument: InstrumentSchema.optional(),
   chart: ChartBlockSchema.optional(),
+  charts: z.array(ChartBlockSchema).default([]),
   canvas: CanvasBlockSchema.optional(),
   claims: z.array(ClaimSchema).default([]),
   corpus_citations: z.array(CorpusCitationSchema).default([]),
@@ -299,7 +332,7 @@ export function validateFinalAnswerSpec(
 export function validatePartialAnswerSpec(
   spec: unknown,
 ): z.SafeParseReturnType<unknown, Partial<AnswerSpec>> {
-  return AnswerSpecSchema.partial().safeParse(spec);
+  return AnswerSpecSchema.partial().safeParse(sanitizeAnswerSpecForMouth(spec));
 }
 
 export function formatZodError(error: z.ZodError): string {

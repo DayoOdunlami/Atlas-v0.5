@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 
 import type { AnswerSpec } from "@/lib/atlas/contracts/answer-spec.schema";
+import { AtlasChatMarkdown } from "@/components/atlas/shell/atlas-chat-markdown";
 import { ShowcaseChips, type ShowcaseOption } from "@/components/atlas/shell/showcase-chips";
 import { atlasFont, atlasTokens as T } from "@/lib/atlas/tokens";
 
@@ -20,6 +21,7 @@ export function SoWhatRail({
   onDraftChange,
   showcaseOptions,
   onShowcaseSelect,
+  progressLine,
 }: {
   soWhat: SoWhat;
   initialQuery?: string;
@@ -30,6 +32,8 @@ export function SoWhatRail({
   onDraftChange?: (text: string) => void;
   showcaseOptions?: ShowcaseOption[];
   onShowcaseSelect?: (command: string) => void;
+  /** Live CoT / graph stage line while canvas is building. */
+  progressLine?: string | null;
 }) {
   const [draft, setDraft] = useState("");
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>(() =>
@@ -40,7 +44,8 @@ export function SoWhatRail({
 
   const copilotMode = externalMessages !== undefined;
   const messages = copilotMode ? externalMessages : localMessages;
-  const pending = copilotMode ? Boolean(externalPending) : localPending;
+  const pending =
+    externalPending !== undefined ? Boolean(externalPending) : localPending;
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -90,8 +95,8 @@ export function SoWhatRail({
   return (
     <aside
       data-testid="so-what-rail"
-      className="flex shrink-0 flex-col self-stretch border-l bg-white"
-      style={{ width: 396, flex: "0 0 396px", borderColor: "#E7E3DC", minHeight: 0 }}
+      className="order-1 flex w-full shrink-0 flex-col self-stretch border-b bg-white lg:order-2 lg:w-[396px] lg:flex-[0_0_396px] lg:border-b-0 lg:border-l"
+      style={{ borderColor: "#E7E3DC", minHeight: 0 }}
     >
       <div
         className="flex shrink-0 items-center gap-2 border-b px-5"
@@ -148,16 +153,26 @@ export function SoWhatRail({
             ) : (
               <div
                 key={`${msg.role}-${i}-${msg.content.slice(0, 24)}`}
-                className="max-w-[316px] self-start whitespace-pre-wrap text-[13px] leading-relaxed"
+                className="max-w-[316px] self-start text-[13px] leading-relaxed"
                 style={{ color: "#46423C" }}
               >
-                {msg.content}
+                <AtlasChatMarkdown content={msg.content} />
               </div>
             ),
           )}
           {pending ? (
-            <div className="self-start text-[13px] italic" style={{ color: T.inkFaint }}>
-              Atlas is thinking…
+            <div className="self-start space-y-1">
+              <div className="text-[13px] italic" style={{ color: T.inkFaint }}>
+                {copilotMode ? "Atlas is thinking…" : "Opening session…"}
+              </div>
+              {progressLine ? (
+                <div
+                  className="max-w-[316px] text-[12px] leading-snug"
+                  style={{ color: T.inkSoft, fontFamily: atlasFont.sans }}
+                >
+                  {progressLine}
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>

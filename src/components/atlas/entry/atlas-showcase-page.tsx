@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { ATLAS_SHOWCASE_SCENES, J1T1_QUERY } from "@/lib/atlas/entry-queries";
-import { startNewAtlasV5Thread } from "@/components/copilotkit-provider";
+import { markPendingBootstrap, writeAtlasSessionQuery } from "@/lib/atlas/session";
 import { atlasFont, atlasTokens as T } from "@/lib/atlas/tokens";
 
 export function AtlasShowcasePage() {
@@ -61,7 +61,8 @@ export function AtlasShowcasePage() {
           <button
             type="button"
             onClick={() => {
-              startNewAtlasV5Thread();
+              writeAtlasSessionQuery(scene.query);
+              markPendingBootstrap(scene.query);
               router.push(`/atlas/session?q=${encodeURIComponent(scene.query)}`);
             }}
             className="rounded-full px-5 py-2 text-sm font-medium text-white"

@@ -1,5 +1,4 @@
-"""
-Atlas v5 — light-model turn router (Haiku).
+"""Atlas v5 — light-model turn router (Haiku).
 
 Routing ONLY: chat | clarify | substantive + outcome_hint.
 Reply content is deep-pass (Sonnet) or heuristic fallback — not Haiku.
@@ -18,6 +17,7 @@ from pydantic import BaseModel, Field
 
 from agents.atlas_v5.chat_router import classify_follow_up
 from agents.atlas_v5.intent import (
+    has_declared_uncertainty_cue,
     is_connect_network_query,
     is_j1t1_orient_query,
     is_substantive_canvas_query,
@@ -27,21 +27,23 @@ from agents.atlas_v5.j1t1_corpus import J1T1_QUERY_PHRASE
 logger = logging.getLogger(__name__)
 
 INTENT_MODEL = os.getenv("INTENT_MODEL_NAME", "claude-haiku-4-5")
-OutcomeHint = Literal["orient", "connect", "diagnose", "act", "defend"]
+OutcomeHint = Literal["orient", "connect", "diagnose", "act", "defend", "find_path"]
 TurnRoute = Literal["chat", "clarify", "substantive"]
 
 
 class TurnClassifierOutput(BaseModel):
     route: TurnRoute = Field(
         description=(
-            "chat = canvas unchanged (greeting, off-topic, thinking aloud, meta); "
+            "chat = canvas unchanged (greeting, off-topic, meta); "
             "clarify = one question only; "
-            "substantive = update canvas (landscape, network, evidence)"
+            "substantive = update canvas (landscape, network, evidence, find_path)"
         ),
     )
     outcome_hint: OutcomeHint | None = Field(
         default=None,
-        description="When substantive only: orient | connect | diagnose | act | defend",
+        description=(
+            "When substantive only: orient | connect | diagnose | act | defend | find_path"
+        ),
     )
     reasoning: str = ""
 
@@ -49,15 +51,17 @@ class TurnClassifierOutput(BaseModel):
 _CLASSIFIER_SYSTEM = """You are a cheap router for Atlas v5 (/atlas). Classify ONLY — do not write the user reply.
 
 Routes:
-- **chat** — Greetings, thanks, off-topic trivia, thinking aloud, meta about canvas, clear/reset canvas,
-  confusion about the UI. Canvas does NOT update.
+- **chat** — Greetings alone, thanks, off-topic trivia, meta about canvas, clear/reset canvas.
+  Canvas does NOT update.
 - **clarify** — In-scope but too vague for a canvas turn; one follow-up needed. Canvas does NOT update.
-- **substantive** — Landscape, network, evidence, funding, strategy questions that should refresh the canvas.
+- **substantive** — Landscape, network, evidence, funding, strategy, or find-my-path questions
+  that should refresh the canvas.
 
 Rules:
 - "hello" alone → chat
 - "latest Haribo innovations" → chat (off-topic redirect handled downstream)
-- "I've got a rail idea, not sure what I'm asking" → chat (thinking partner downstream)
+- Declared uncertainty ("not sure what I'm asking", "help me figure out", "got an idea but…")
+  → **substantive**, outcome_hint **find_path** (NOT chat-only)
 - "state of play on rail decarbonisation" → substantive, outcome_hint orient
 - Network / ecosystem / partners → substantive, outcome_hint connect
 - Do NOT judge assumptions or write chat content — routing only.
@@ -110,6 +114,8 @@ def _haiku_classify(
 
 
 def _infer_outcome_hint(query: str) -> OutcomeHint:
+    if has_declared_uncertainty_cue(query):
+        return "find_path"
     if is_connect_network_query(query):
         return "connect"
     if is_j1t1_orient_query(query) or query.lower() == J1T1_QUERY_PHRASE.lower():
@@ -124,6 +130,15 @@ def _infer_outcome_hint(query: str) -> OutcomeHint:
     return "orient"
 
 
+def _find_path_decision(reasoning: str, *, source: Literal["haiku", "heuristic"]) -> TurnDecision:
+    return TurnDecision(
+        route="substantive",
+        outcome_hint="find_path",
+        reasoning=reasoning,
+        source=source,
+    )
+
+
 def classify_turn_heuristic(
     query: str,
     current_spec: dict[str, Any] | None = None,
@@ -131,6 +146,9 @@ def classify_turn_heuristic(
     q = query.strip()
     if not q:
         return TurnDecision(route="chat", source="heuristic")
+
+    if has_declared_uncertainty_cue(q):
+        return _find_path_decision("C1: declared uncertainty → find_path", source="heuristic")
 
     if is_connect_network_query(q) or is_j1t1_orient_query(q):
         return TurnDecision(
@@ -158,12 +176,18 @@ def classify_turn(
     if not q:
         return TurnDecision(route="chat", source="heuristic")
 
+    # C1 precedence — declared uncertainty beats domain keyword and Haiku chat misroutes.
+    if has_declared_uncertainty_cue(q):
+        return _find_path_decision("C1: declared uncertainty → find_path", source="heuristic")
+
     if re.match(r"^\s*(hi|hello|hey)[\s,—-]+", q, re.I) and len(q.split()) > 4:
         substantive = re.sub(r"^\s*(hi|hello|hey)[\s,—-]+", "", q, flags=re.I).strip()
         if substantive and classify_follow_up(substantive, current_spec) == "canvas_update":
+            hint = _infer_outcome_hint(substantive)
             return TurnDecision(
                 route="substantive",
-                outcome_hint=_infer_outcome_hint(substantive),
+                outcome_hint=hint,
+                reasoning="Greeting stripped; substantive tail",
                 source="heuristic",
             )
 
@@ -172,6 +196,11 @@ def classify_turn(
         return classify_turn_heuristic(q, current_spec)
 
     if parsed.route in ("chat", "clarify"):
+        if has_declared_uncertainty_cue(q):
+            return _find_path_decision(
+                f"C1 override: uncertainty cue (Haiku said {parsed.route})",
+                source="heuristic",
+            )
         if is_substantive_canvas_query(q):
             return TurnDecision(
                 route="substantive",
@@ -188,9 +217,12 @@ def classify_turn(
             source="haiku",
         )
 
+    hint = parsed.outcome_hint or _infer_outcome_hint(q)
+    if has_declared_uncertainty_cue(q):
+        hint = "find_path"
     return TurnDecision(
         route="substantive",
-        outcome_hint=parsed.outcome_hint or _infer_outcome_hint(q),
+        outcome_hint=hint,
         reasoning=parsed.reasoning or "Haiku substantive",
         source="haiku",
     )

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import datetime
 
-from agents.atlas_v5.j1t1_types import FunderBreakdownRow, J1T1CorpusStats
+from agents.atlas_v5.j1t1_types import FunderBreakdownRow, J1T1CorpusStats, ModeThemeRow, StartYearRow
 from mcps.cpc_corpus.queries import _pg_query
 
 J1T1_WHERE = "'rail' = ANY(cpc_modes) AND 'decarbonisation' = ANY(cpc_themes)"
@@ -60,6 +60,31 @@ def fetch_corpus_stats(where_clause: str = J1T1_WHERE) -> J1T1CorpusStats:
         """
     )
 
+    mode_theme_rows = _pg_query(
+        f"""
+        SELECT mode_label AS mode, theme_label AS theme, COUNT(*)::int AS project_count
+        FROM (
+          SELECT unnest(cpc_modes) AS mode_label, unnest(cpc_themes) AS theme_label
+          FROM atlas.projects
+          WHERE {where_clause}
+        ) expanded
+        GROUP BY mode_label, theme_label
+        ORDER BY project_count DESC
+        LIMIT 12
+        """
+    )
+
+    year_rows = _pg_query(
+        f"""
+        SELECT EXTRACT(YEAR FROM start_date)::int AS yr, COUNT(*)::int AS project_count
+        FROM atlas.projects
+        WHERE {where_clause} AND start_date IS NOT NULL
+        GROUP BY yr
+        HAVING EXTRACT(YEAR FROM start_date)::int >= 2015
+        ORDER BY yr
+        """
+    )
+
     funding_sum = float(row["funding_sum"])
 
     return J1T1CorpusStats(
@@ -77,6 +102,18 @@ def fetch_corpus_stats(where_clause: str = J1T1_WHERE) -> J1T1CorpusStats:
                 funding_sum=float(f["funding_sum"]),
             )
             for f in funder_rows
+        ],
+        mode_themes=[
+            ModeThemeRow(
+                mode=str(m["mode"]),
+                theme=str(m["theme"]),
+                project_count=int(m["project_count"]),
+            )
+            for m in mode_theme_rows
+        ],
+        start_years=[
+            StartYearRow(year=int(y["yr"]), project_count=int(y["project_count"]))
+            for y in year_rows
         ],
         top_citations=[
             {

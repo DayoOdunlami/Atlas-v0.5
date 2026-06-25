@@ -20,9 +20,20 @@ import {
 } from "@/lib/atlas/contracts/answer-spec.schema";
 import type { AnswerSpecSource } from "@/lib/atlas/fetch-answer-spec";
 import {
+  clearBootstrapSent,
+  consumePendingBootstrap,
+  markBootstrapSent,
   readAtlasSessionQuery,
+  wasBootstrapSent,
   writeAtlasSessionQuery,
 } from "@/lib/atlas/session";
+import {
+  readAtlasUxPrefs,
+  patchAtlasUxPrefs,
+  uxPrefsForAgent,
+  type AtlasUxPrefs,
+} from "@/lib/atlas/ux-preferences";
+import { latestReasoningProgress } from "@/components/atlas/shell/canvas-thinking";
 
 type AtlasV5CoState = {
   answer_spec_envelope?: AnswerSpecEnvelope;
@@ -31,6 +42,7 @@ type AtlasV5CoState = {
   query?: string;
   reasoning_trace?: AtlasReasoningStep[];
   turn_active?: boolean;
+  ux_prefs?: Record<string, boolean>;
 };
 
 function mergePartialIntoSpec(
@@ -92,6 +104,7 @@ export function AtlasCopilotShell({
   bootstrapQuery?: string;
 }) {
   const router = useRouter();
+  const [uxPrefs, setUxPrefs] = useState<AtlasUxPrefs>(() => readAtlasUxPrefs());
   const initialEnvelope: AnswerSpecEnvelope = useMemo(
     () =>
       initialSpec
@@ -115,11 +128,13 @@ export function AtlasCopilotShell({
       canvas_cleared: !initialSpec,
       reasoning_trace: [],
       turn_active: false,
+      ux_prefs: uxPrefsForAgent(uxPrefs),
     },
   });
 
   const seededRef = useRef(false);
   const bootstrapBootRef = useRef(false);
+
   useEffect(() => {
     if (seededRef.current) return;
     seededRef.current = true;
@@ -136,6 +151,11 @@ export function AtlasCopilotShell({
   const [envelopeStatus, setEnvelopeStatus] = useState<AnswerSpecEnvelope["status"]>("final");
   const lastRevisionRef = useRef(0);
   const specRef = useRef<AnswerSpec | null>(initialSpec);
+  const turnStartedAtRef = useRef<number | null>(null);
+  const [turnTiming, setTurnTiming] = useState<{
+    elapsedMs: number | null;
+    running: boolean;
+  }>({ elapsedMs: null, running: false });
 
   useEffect(() => {
     specRef.current = spec;
@@ -202,7 +222,7 @@ export function AtlasCopilotShell({
       setDevMeta((prev) => ({
         ...prev,
         zod_error: zodError,
-        gate_errors: [...(prev?.gate_errors ?? []), `Zod: ${zodError.slice(0, 120)}`],
+        gate_errors: [`Zod: ${zodError.slice(0, 120)}`],
       }));
       console.warn("[/atlas] AnswerSpec Zod validation failed:", zodError);
     }
@@ -213,34 +233,70 @@ export function AtlasCopilotShell({
   }, [state?.answer_spec_envelope, state?.canvas_cleared]);
 
   const { messages, sendMessage, status } = useAtlas5Chat();
+  const sendMessageRef = useRef(sendMessage);
+  useEffect(() => {
+    sendMessageRef.current = sendMessage;
+  }, [sendMessage]);
+
   const chatPending = status === "streaming" || status === "submitted";
   const turnActive = Boolean(state?.turn_active ?? devMeta?.turn_active);
   const canvasThinking = chatPending || turnActive || envelopeStatus === "partial";
 
   useEffect(() => {
-    const q = bootstrapQuery?.trim();
-    if (!q || bootstrapBootRef.current) return;
+    const running = chatPending || turnActive || envelopeStatus === "partial";
+    if (running) {
+      if (turnStartedAtRef.current === null) {
+        turnStartedAtRef.current = Date.now();
+      }
+      setTurnTiming((prev) => ({ ...prev, running: true }));
+      const id = window.setInterval(() => {
+        if (turnStartedAtRef.current !== null) {
+          setTurnTiming({
+            running: true,
+            elapsedMs: Date.now() - turnStartedAtRef.current,
+          });
+        }
+      }, 200);
+      return () => window.clearInterval(id);
+    }
 
-    const prev = readAtlasSessionQuery();
-    const rotate = prev !== q;
-    if (rotate) {
+    if (turnStartedAtRef.current !== null) {
+      const elapsedMs = Date.now() - turnStartedAtRef.current;
+      turnStartedAtRef.current = null;
+      setTurnTiming({ running: false, elapsedMs });
+    }
+  }, [chatPending, turnActive, envelopeStatus]);
+
+  useEffect(() => {
+    const q = bootstrapQuery?.trim();
+    if (!q) return;
+    if (bootstrapBootRef.current) return;
+    if (wasBootstrapSent(q)) {
+      bootstrapBootRef.current = true;
+      return;
+    }
+
+    const fromEntry = consumePendingBootstrap(q);
+    if (fromEntry) {
+      writeAtlasSessionQuery(q);
+      startNewAtlasV5Thread();
+    } else if (readAtlasSessionQuery() !== q) {
       writeAtlasSessionQuery(q);
       startNewAtlasV5Thread();
     }
 
-    const sendBootstrap = () => {
-      if (bootstrapBootRef.current) return;
-      bootstrapBootRef.current = true;
-      sendMessage({ role: "user", parts: [{ type: "text", text: q }] });
-    };
+    bootstrapBootRef.current = true;
+    markBootstrapSent(q);
 
-    if (rotate) {
-      const timer = window.setTimeout(sendBootstrap, 200);
-      return () => window.clearTimeout(timer);
-    }
-
-    sendBootstrap();
-  }, [bootstrapQuery, sendMessage]);
+    const delayMs = fromEntry ? 450 : 150;
+    const timer = window.setTimeout(() => {
+      sendMessageRef.current({
+        role: "user",
+        parts: [{ type: "text", text: q }],
+      });
+    }, delayMs);
+    return () => window.clearTimeout(timer);
+  }, [bootstrapQuery]);
 
   const chatMessages: ChatMessage[] =
     messages.length > 0
@@ -252,6 +308,8 @@ export function AtlasCopilotShell({
 
   const handleFollowUp = useCallback(
     (message: string) => {
+      turnStartedAtRef.current = Date.now();
+      setTurnTiming({ running: true, elapsedMs: 0 });
       sendMessage({
         role: "user",
         parts: [{ type: "text", text: message }],
@@ -273,10 +331,42 @@ export function AtlasCopilotShell({
   );
 
   const handleNewSession = useCallback(() => {
+    if (chatPending) return;
     writeAtlasSessionQuery("");
+    clearBootstrapSent();
+    bootstrapBootRef.current = false;
+    setSpec(null);
+    setDevMeta(null);
+    setReasoningTrace([]);
+    setEnvelopeStatus("final");
+    lastRevisionRef.current = 0;
+    setState?.({
+      answer_spec_envelope: { revision: 0, status: "final" },
+      canvas_cleared: true,
+      answer_dev_meta: {},
+      reasoning_trace: [],
+      turn_active: false,
+    });
     startNewAtlasV5Thread();
     router.push("/atlas");
-  }, [router]);
+  }, [chatPending, router, setState]);
+
+  const handleUxPrefsChange = useCallback(
+    (patch: Partial<AtlasUxPrefs>) => {
+      const next = patchAtlasUxPrefs(patch);
+      setUxPrefs(next);
+      setState?.((prev) => ({
+        ...prev,
+        ux_prefs: uxPrefsForAgent(next),
+      }));
+    },
+    [setState],
+  );
+
+  const progressLine =
+    canvasThinking && reasoningTrace.length > 0
+      ? latestReasoningProgress(reasoningTrace)
+      : null;
 
   return (
     <AtlasAnswerSurface
@@ -293,6 +383,11 @@ export function AtlasCopilotShell({
       onShowcaseSelect={handleShowcaseSelect}
       bootstrapQuery={bootstrapQuery}
       onNewSession={handleNewSession}
+      collapsibleCot={uxPrefs.collapsibleCot}
+      progressLine={progressLine}
+      uxPrefs={uxPrefs}
+      onUxPrefsChange={handleUxPrefsChange}
+      turnTiming={turnTiming}
     />
   );
 }

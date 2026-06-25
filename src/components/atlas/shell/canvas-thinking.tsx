@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { atlasFont, atlasTokens as T } from "@/lib/atlas/tokens";
 
@@ -30,12 +30,16 @@ export function CanvasThinking({
   active,
   stage,
   partialCanvas,
+  defaultCollapsed = true,
 }: {
   steps: AtlasReasoningStep[];
   active: boolean;
   stage?: string | null;
   partialCanvas?: boolean;
+  /** When true, step list starts folded — headline stays visible while active. */
+  defaultCollapsed?: boolean;
 }) {
+  const [expanded, setExpanded] = useState(!defaultCollapsed);
   const visible = steps.filter((s) => s.thought?.trim());
   const last = visible[visible.length - 1];
   const headline = useMemo(() => {
@@ -44,6 +48,9 @@ export function CanvasThinking({
     if (stage === "judgement") return "Reasoning the answer…";
     return "Atlas is thinking…";
   }, [last, stage, visible.length]);
+
+  const showSteps = visible.length > 0 && (expanded || !active);
+  const canToggle = visible.length > 0;
 
   if (!active && visible.length === 0) return null;
 
@@ -58,7 +65,9 @@ export function CanvasThinking({
     >
       <div className="mb-3 flex items-center gap-2">
         <span
-          className={active ? "atlas-pulse-dot inline-block h-2 w-2 rounded-full" : "inline-block h-2 w-2 rounded-full"}
+          className={
+            active ? "atlas-pulse-dot inline-block h-2 w-2 rounded-full" : "inline-block h-2 w-2 rounded-full"
+          }
           style={{ background: active ? T.corpus : "#8FA98C" }}
           aria-hidden
         />
@@ -74,10 +83,26 @@ export function CanvasThinking({
           {active ? "Chain of thought" : "Turn complete"}
           {stage ? ` · ${stage}` : ""}
         </span>
+        {canToggle ? (
+          <button
+            type="button"
+            className="ml-auto cursor-pointer border-none bg-transparent p-0"
+            style={{
+              fontFamily: atlasFont.mono,
+              fontSize: 9,
+              color: T.corpus,
+              letterSpacing: "0.06em",
+            }}
+            onClick={() => setExpanded((v) => !v)}
+            aria-expanded={showSteps}
+          >
+            {showSteps ? "Hide steps" : "Show steps"}
+          </button>
+        ) : null}
       </div>
 
       <p
-        className="mb-3"
+        className={showSteps ? "mb-3" : "mb-0"}
         style={{
           fontFamily: atlasFont.serif,
           fontSize: 18,
@@ -88,7 +113,7 @@ export function CanvasThinking({
         {headline}
       </p>
 
-      {visible.length > 0 ? (
+      {showSteps ? (
         <ol className="space-y-2 border-t pt-3" style={{ borderColor: T.ruleSoft }}>
           {visible.map((step, i) => {
             const isLast = i === visible.length - 1;
@@ -121,11 +146,19 @@ export function CanvasThinking({
             );
           })}
         </ol>
-      ) : active ? (
+      ) : active && visible.length === 0 ? (
         <p style={{ fontFamily: atlasFont.mono, fontSize: 11, color: T.inkFaint }}>
           Connecting to corpus…
         </p>
       ) : null}
     </div>
   );
+}
+
+/** Last trace line for the chat rail progress strip. */
+export function latestReasoningProgress(steps: AtlasReasoningStep[]): string | null {
+  const visible = steps.filter((s) => s.thought?.trim());
+  const last = visible[visible.length - 1];
+  if (!last) return null;
+  return stepLabel(last, visible.length - 1);
 }

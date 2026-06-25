@@ -59,7 +59,10 @@ def build_swot_markup(
   <div style="font-family:ui-monospace,monospace;font-size:10px;letter-spacing:0.12em;color:#56524C;text-transform:uppercase;margin-bottom:10px">
     SWOT · analyst synthesis · corpus stats owned
   </div>
-  {stats_row}
+          {stats_row}
+          <p style="font-family:ui-monospace,monospace;font-size:9px;color:#94908A;margin:0 0 14px">
+            Charts below use the same keyed stats — click chart keys for provenance
+          </p>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
     <div style="border:1px solid #3F7A52;background:#EEF4EE;padding:14px;border-radius:6px">
       <div style="font-family:ui-monospace,monospace;font-size:10px;color:#3F7A52;margin-bottom:8px">STRENGTHS</div>

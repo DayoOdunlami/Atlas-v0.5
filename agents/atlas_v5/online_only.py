@@ -6,10 +6,8 @@ import asyncio
 import re
 from typing import Any
 
-from agents.atlas_v5.corpus_scope import corpus_scope_for_query
-from agents.atlas_v5.j1t1_corpus import fetch_corpus_stats
 from agents.atlas_v5.turn_classifier import OutcomeHint, TurnDecision
-from mcps.cpc_corpus import transport
+from mcps.cpc_corpus.connectivity import corpus_reachable_for_turn, probe_corpus_connectivity
 
 _CONSENT_RE = re.compile(
     r"\b("
@@ -119,12 +117,28 @@ def build_online_only_active_meta(query: str, outcome_hint: OutcomeHint | None) 
     }
 
 
-async def probe_corpus_available(query: str) -> bool:
-    """Fast check — False when Postgres pooler is unreachable."""
-    where_sql, _, _ = corpus_scope_for_query(query)
+async def probe_corpus_available(_query: str) -> bool:
+    """Fast tier probe — False only when Postgres and Supabase REST both fail."""
     loop = asyncio.get_event_loop()
-    try:
-        await loop.run_in_executor(None, fetch_corpus_stats, where_sql)
-        return True
-    except transport.PostgresUnavailable:
-        return False
+    return await loop.run_in_executor(None, corpus_reachable_for_turn)
+
+
+def corpus_connectivity_note() -> str:
+    """Human-readable note for online-only offer when probe fails."""
+    conn = probe_corpus_connectivity()
+    if conn["any_reachable"]:
+        return ""
+    pg = conn["postgres"]
+    rest = conn["rest"]
+    parts: list[str] = ["CPC corpus unreachable on all transport tiers."]
+    if pg.get("configured") and pg.get("status") == "fail":
+        attempts = pg.get("attempts", 0)
+        parts.append(
+            f"Postgres pooler failed after {attempts} attempt(s)"
+            + (f": {pg.get('error')}" if pg.get("error") else "")
+        )
+    if rest.get("configured") and rest.get("status") == "fail":
+        parts.append(f"Supabase REST failed: {rest.get('error') or 'unknown'}")
+    elif not rest.get("configured"):
+        parts.append("Supabase REST not configured (set SUPABASE_SERVICE_KEY for HTTPS fallback).")
+    return " ".join(parts)

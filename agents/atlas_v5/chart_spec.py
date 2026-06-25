@@ -1,18 +1,14 @@
-"""ChartSpec builder — guardrailed ECharts options from corpus stats."""
+"""ChartSpec builder — guardrailed ECharts options from corpus stats (legacy entry)."""
 
 from __future__ import annotations
 
-from typing import Any
-
-from agents.atlas_v5.chart_router import select_chart_kind
-from agents.atlas_v5.j1t1_assembler import format_gbp_compact
 from agents.atlas_v5.j1t1_types import J1T1CorpusStats
 from agents.atlas_v5.keyed_figures import KeyedFigureIndex
-from agents.atlas_v5.visual_intent import is_funder_bar_query
+from agents.atlas_v5.visual.attach import VisualAttachResult, attach_visuals
+from agents.atlas_v5.visual.builders import build_funder_ranking_bar
+from agents.atlas_v5.visual.opportunity import VisualOpportunity
+from agents.atlas_v5.wide_pass import WidePassResult
 from agents.contracts.answer_spec import AnswerSpec, ChartBlock
-from agents.registry.viz_guardrail import sanitise_chart_spec, validate_chart_spec
-
-_ATLAS_BAR_COLORS = ["#3F7A52", "#3E6B8C", "#B07A2E", "#94908A", "#6B6560"]
 
 
 def build_funder_bar_chart(
@@ -21,83 +17,15 @@ def build_funder_bar_chart(
     *,
     query: str = "",
 ) -> ChartBlock | None:
-    if not stats.funders:
-        return None
-    if query and not is_funder_bar_query(query):
-        if select_chart_kind(query) != "bar":
-            return None
-
-    rows = sorted(stats.funders, key=lambda r: r.funding_sum, reverse=True)[:6]
-    names = [r.lead_funder for r in rows]
-    values = [round(r.funding_sum) for r in rows]
-
-    option: dict[str, Any] = {
-        "title": {
-            "text": "Funding by lead funder · corpus floor",
-            "left": 0,
-            "textStyle": {"fontSize": 12, "fontWeight": 500, "color": "#56524C"},
-        },
-        "grid": {"left": 8, "right": 16, "top": 36, "bottom": 8, "containLabel": True},
-        "xAxis": {
-            "type": "value",
-            "name": "GBP (floor)",
-            "axisLabel": {
-                "formatter": "{value}",
-                "color": "#94908A",
-                "fontSize": 10,
-            },
-        },
-        "yAxis": {
-            "type": "category",
-            "data": names,
-            "axisLabel": {"color": "#56524C", "fontSize": 11},
-        },
-        "series": [
-            {
-                "type": "bar",
-                "data": [
-                    {
-                        "value": v,
-                        "itemStyle": {
-                            "color": _ATLAS_BAR_COLORS[idx % len(_ATLAS_BAR_COLORS)],
-                            "borderRadius": [0, 3, 3, 0],
-                        },
-                    }
-                    for idx, v in enumerate(values)
-                ],
-                "label": {
-                    "show": True,
-                    "position": "right",
-                    "formatter": "{c}",
-                    "fontSize": 10,
-                    "color": "#56524C",
-                },
-            }
-        ],
-        "tooltip": {
-            "trigger": "axis",
-            "formatter": "{b}: £{c} (corpus floor)",
-        },
-    }
-
-    ok, issues = validate_chart_spec(option)
-    if not ok:
-        return None
-    option = sanitise_chart_spec(option)
-
-    data_keys = ["stats.funding_floor_gbp"]
-    if index.get("stats.project_count"):
-        data_keys.append("stats.project_count")
-
-    return ChartBlock(
-        engine="echarts",
+    """Backward-compatible single bar builder (no query gate)."""
+    del query
+    opp = VisualOpportunity(
         kind="bar",
-        title="Funding by lead funder",
-        option=option,
-        data_keys=data_keys,
-        gate_status="pass",
-        gate_errors=issues,
+        role="ranking",
+        story="Lead-funder skew in corpus slice — floor funding only",
+        priority=10,
     )
+    return build_funder_ranking_bar(stats, index, opp)
 
 
 def attach_chart_if_applicable(
@@ -106,9 +34,20 @@ def attach_chart_if_applicable(
     index: KeyedFigureIndex,
     query: str,
 ) -> AnswerSpec:
-    if stats is None or spec.chart is not None:
-        return spec
-    chart = build_funder_bar_chart(stats, index, query=query)
-    if chart is None:
-        return spec
-    return spec.model_copy(update={"chart": chart})
+    wide = WidePassResult(
+        outcome=str(spec.mode).lower().replace("findpath", "find_path"),
+        query=query,
+        stats=stats,
+        corpus_hits=[],
+        retrieval_meta={"lane_mode": index.lane_mode},
+    )
+    return attach_visuals(spec, wide, index, query).spec
+
+
+def attach_charts_with_meta(
+    spec: AnswerSpec,
+    wide: WidePassResult,
+    index: KeyedFigureIndex,
+    query: str,
+) -> VisualAttachResult:
+    return attach_visuals(spec, wide, index, query)

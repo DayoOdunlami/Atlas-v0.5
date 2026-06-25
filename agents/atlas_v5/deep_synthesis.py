@@ -23,12 +23,13 @@ from agents.atlas_v5.composition_policy import (
 from agents.atlas_v5.composition_pipeline import apply_composition_to_spec
 from agents.atlas_v5.composition_skill import load_visual_composition_skill
 from agents.atlas_v5.deep_pass_models import DeepPassOutput
-from agents.atlas_v5.chart_spec import attach_chart_if_applicable
+from agents.atlas_v5.chart_spec import attach_charts_with_meta
 from agents.atlas_v5.visual_templates import build_template_markup
 from agents.atlas_v5.deep_pass_prompt import (
     CHAT_ONLY_TASK_PROMPT,
     CORPUS_ONLY_EVIDENCE_ADDENDUM,
     DUAL_LANE_EVIDENCE_ADDENDUM,
+    DEEP_PASS_DISPOSITION_BLOCKS,
     DEEP_PASS_SYSTEM_PROMPT,
     DISPOSITION_JUDGEMENT_TASK_PROMPT,
 )
@@ -57,6 +58,7 @@ from agents.contracts.answer_spec import AnswerSpec
 logger = logging.getLogger(__name__)
 
 SYNTHESIS_MODEL = os.getenv("MODEL_NAME", "claude-sonnet-4-6")
+DEEP_PASS_MAX_TOKENS = int(os.getenv("ATLAS_V5_DEEP_MAX_TOKENS", "8192"))
 FREE_COMPOSE_ENABLED = os.getenv("ATLAS_V5_FREE_COMPOSE", "1").strip().lower() in (
     "1",
     "true",
@@ -151,6 +153,23 @@ def _format_canvas_context(current_spec: dict[str, Any] | None) -> str:
     )
 
 
+def _normalize_claim_source(source: str) -> str:
+    if source in ("synthesised", "synthesized"):
+        return "synthesized"
+    return source
+
+
+def _normalize_deep_pass_output(result: DeepPassOutput) -> DeepPassOutput:
+    claims = []
+    for claim in result.judgement.claims:
+        patched = claim.model_copy(
+            update={"source": _normalize_claim_source(str(claim.source))},
+        )
+        claims.append(patched)
+    judgement = result.judgement.model_copy(update={"claims": claims})
+    return result.model_copy(update={"judgement": judgement})
+
+
 def _invoke_structured(system: str, user: str, schema: type[BaseModel]) -> BaseModel | None:
     try:
         from langchain_anthropic import ChatAnthropic
@@ -158,13 +177,16 @@ def _invoke_structured(system: str, user: str, schema: type[BaseModel]) -> BaseM
         llm = ChatAnthropic(
             model=SYNTHESIS_MODEL,
             api_key=os.environ["ANTHROPIC_API_KEY"],
-            max_tokens=4096,
+            max_tokens=DEEP_PASS_MAX_TOKENS,
             temperature=0.35,
         )
         structured = llm.with_structured_output(schema)
-        return structured.invoke(
+        result = structured.invoke(
             [SystemMessage(content=system), HumanMessage(content=user)],
         )
+        if isinstance(result, DeepPassOutput):
+            return _normalize_deep_pass_output(result)
+        return result
     except Exception as exc:
         logger.warning("Deep pass structured call failed: %s", exc)
         return None
@@ -183,7 +205,7 @@ def synthesize_deep_pass_sync(
         return None
     skill = load_visual_composition_skill()
     chart_skill = _load_chart_skill()
-    system = DEEP_PASS_SYSTEM_PROMPT + _lane_addendum(wide)
+    system = DEEP_PASS_SYSTEM_PROMPT + DEEP_PASS_DISPOSITION_BLOCKS + _lane_addendum(wide)
     if skill and FREE_COMPOSE_ENABLED:
         system += f"\n\n## Visual composition skill\n{skill[:4000]}"
     if chart_skill:
@@ -210,7 +232,7 @@ def synthesize_chat_only_sync(
 ) -> str | None:
     if not _has_api_key():
         return None
-    system = DEEP_PASS_SYSTEM_PROMPT + CORPUS_ONLY_EVIDENCE_ADDENDUM
+    system = DEEP_PASS_SYSTEM_PROMPT + DEEP_PASS_DISPOSITION_BLOCKS + CORPUS_ONLY_EVIDENCE_ADDENDUM
     task = CHAT_ONLY_TASK_PROMPT
     if clarify:
         task += "\nAsk ONE focused clarifying question — no canvas update."
@@ -221,8 +243,11 @@ def synthesize_chat_only_sync(
     return None
 
 
-def _attach_chart(spec: AnswerSpec, wide: WidePassResult, index: KeyedFigureIndex, query: str) -> AnswerSpec:
-    return attach_chart_if_applicable(spec, wide.stats, index, query)
+def _attach_chart(
+    spec: AnswerSpec, wide: WidePassResult, index: KeyedFigureIndex, query: str
+) -> tuple[AnswerSpec, dict[str, Any]]:
+    result = attach_charts_with_meta(spec, wide, index, query)
+    return result.spec, result.meta
 
 
 def _template_kwargs(wide: WidePassResult) -> dict[str, str]:
@@ -240,11 +265,13 @@ def _build_dev_meta(
     gate_status: str | None = None,
     gate_errors: list[str] | None = None,
     fallback_rung: str | None = None,
+    visual_meta: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return {
+    meta = {
         "disposition": disposition.model_dump(mode="json"),
         "keyed_keys": index.keys(),
         "web_keys_absent_reason": index.web_keys_absent_reason,
+        "research_keys_absent_reason": index.research_keys_absent_reason,
         "lane_mode": wide.retrieval_meta.get("lane_mode"),
         "external_skipped": index.external_skipped,
         "gate_status": gate_status,
@@ -252,6 +279,9 @@ def _build_dev_meta(
         "fallback_rung": fallback_rung,
         "free_compose_enabled": FREE_COMPOSE_ENABLED,
     }
+    if visual_meta:
+        meta.update(visual_meta)
+    return meta
 
 
 def _apply_composition_policy(
@@ -358,7 +388,7 @@ async def apply_deep_pass(
             merged, gate_status, gate_errors, fallback_rung = apply_composition_to_spec(
                 skeleton, _markup(template_markup), index
             )
-            merged = _attach_chart(merged, wide, index, query)
+            merged, visual_meta = _attach_chart(merged, wide, index, query)
             reply = build_canvas_update_reply(merged, query)
             meta = _build_dev_meta(
                 disposition,
@@ -367,12 +397,15 @@ async def apply_deep_pass(
                 gate_status=gate_status,
                 gate_errors=gate_errors,
                 fallback_rung=fallback_rung or "template",
+                visual_meta=visual_meta,
             )
             return _finish(merged), reply, meta, True
 
         reply = build_canvas_update_reply(skeleton, query)
-        out = _attach_chart(skeleton, wide, index, query)
-        meta = _build_dev_meta(disposition, index, wide, fallback_rung="recipe")
+        out, visual_meta = _attach_chart(skeleton, wide, index, query)
+        meta = _build_dev_meta(
+            disposition, index, wide, fallback_rung="recipe", visual_meta=visual_meta
+        )
         return _finish(out), reply, meta, True
 
     disposition = _apply_composition_policy(deep.disposition, recipe_rec)
@@ -387,7 +420,10 @@ async def apply_deep_pass(
 
     merged = merge_judgement_onto_skeleton(skeleton, deep.judgement)
     merged = merge_keyed_figures_into_spec(merged, index, skeleton=skeleton)
-    merged = _attach_chart(merged, wide, index, query)
+    merged, visual_meta = _attach_chart(merged, wide, index, query)
+
+    def _dev_meta(**kwargs: Any) -> dict[str, Any]:
+        return _build_dev_meta(disposition, index, wide, visual_meta=visual_meta, **kwargs)
 
     def _reply(complement: str | None, fallback_spec: AnswerSpec) -> str:
         raw = (complement or "").strip()
@@ -399,9 +435,7 @@ async def apply_deep_pass(
         if merged.instrument is None:
             merged = merged.model_copy(update={"instrument": None})
         reply = _reply(deep.judgement.chat_complement, merged)
-        meta = _build_dev_meta(
-            disposition, index, wide, gate_status="degrade_prose", fallback_rung="prose"
-        )
+        meta = _dev_meta(gate_status="degrade_prose", fallback_rung="prose")
         return _finish(merged), reply, meta, True
 
     if disposition.composition_mode == "free_compose":
@@ -409,10 +443,7 @@ async def apply_deep_pass(
             merged, gate_status, gate_errors, fallback_rung = apply_composition_to_spec(
                 merged, _markup(deep.canvas_markup), index
             )
-            meta = _build_dev_meta(
-                disposition,
-                index,
-                wide,
+            meta = _dev_meta(
                 gate_status=gate_status,
                 gate_errors=gate_errors,
                 fallback_rung=fallback_rung,
@@ -427,10 +458,7 @@ async def apply_deep_pass(
             merged, gate_status, gate_errors, fallback_rung = apply_composition_to_spec(
                 merged, _markup(template_markup), index
             )
-            meta = _build_dev_meta(
-                disposition,
-                index,
-                wide,
+            meta = _dev_meta(
                 gate_status=gate_status,
                 gate_errors=gate_errors,
                 fallback_rung=fallback_rung or "template",
@@ -439,10 +467,7 @@ async def apply_deep_pass(
             return _finish(merged), reply, meta, True
 
         if merged.instrument is not None:
-            meta = _build_dev_meta(
-                disposition,
-                index,
-                wide,
+            meta = _dev_meta(
                 gate_status="fallback_recipe",
                 gate_errors=["free_compose: no canvas_markup; skeleton recipe"],
                 fallback_rung="recipe",
@@ -451,10 +476,7 @@ async def apply_deep_pass(
             return _finish(merged), reply, meta, True
 
         merged = merged.model_copy(update={"instrument": None})
-        meta = _build_dev_meta(
-            disposition,
-            index,
-            wide,
+        meta = _dev_meta(
             gate_status="degrade_prose",
             gate_errors=["free_compose: no markup, template, or recipe"],
             fallback_rung="prose",
@@ -463,7 +485,7 @@ async def apply_deep_pass(
         return _finish(merged), reply, meta, True
 
     reply = _reply(deep.judgement.chat_complement, merged)
-    meta = _build_dev_meta(disposition, index, wide, fallback_rung="recipe")
+    meta = _dev_meta(fallback_rung="recipe")
     return _finish(merged), reply, meta, True
 
 

@@ -26,6 +26,15 @@ def web_lane_enabled() -> bool:
     )
 
 
+def research_lane_enabled() -> bool:
+    return os.getenv("ATLAS_V5_RESEARCH_LANE", "1").strip().lower() not in (
+        "0",
+        "false",
+        "off",
+        "no",
+    )
+
+
 def plan_from_shopping_list(
     query: str,
     shopping: ShoppingList,

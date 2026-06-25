@@ -11,7 +11,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field, HttpUrl
 
 ConfidenceTier = Literal["Speculative", "Indicative", "Supported", "Robust"]
-OutcomeMode = Literal["Orient", "Connect", "Diagnose", "Act", "Defend"]
+OutcomeMode = Literal["Orient", "Connect", "Diagnose", "Act", "Defend", "FindPath"]
 TrustScope = Literal["corpus", "web", "synthesized", "declared"]
 BlindspotSign = Literal["undercount", "absence"]
 ReconciliationNoteType = Literal[
@@ -50,7 +50,7 @@ class WebEvidence(BaseModel):
     publisher: str | None = None
     snippet: str | None = None
     retrieval_tool: str | None = None
-    verification_state: Literal["candidate"] = "candidate"
+    verification_state: Literal["verified", "candidate"] = "candidate"
     provenance: Literal["external"] = "external"
 
 
@@ -95,6 +95,7 @@ class RetrievalMeta(BaseModel):
     corroboration_boost: bool | None = None
     tier_reason: str | None = None
     reconcile_lead: str | None = None
+    lead_lane: str | None = None
     corpus_document_count: int | None = None
     project_hit_count: int | None = None
     document_hit_count: int | None = None
@@ -177,12 +178,44 @@ class CanvasBlock(BaseModel):
     gate_errors: list[str] = Field(default_factory=list)
 
 
+ChartKind = Literal["bar", "line", "pie", "network", "heatmap", "sankey"]
+ChartRole = Literal[
+    "ranking",
+    "composition",
+    "distribution",
+    "flow",
+    "coverage",
+    "evolution",
+    "compare",
+    "temporal",
+    "theme_stack",
+]
+
+
+class ChartInteractionSpec(BaseModel):
+    """Layer B hook — scenario / what-if surface (schema only in v1)."""
+
+    type: Literal["floor_adjust", "filter_category"] = "floor_adjust"
+    key: str
+    label: str | None = None
+    min: float | None = None
+    max: float | None = None
+    default: float | None = None
+
+
 class ChartBlock(BaseModel):
     engine: Literal["echarts"] = "echarts"
-    kind: Literal["bar", "line", "pie", "network"] = "bar"
+    kind: ChartKind = "bar"
     title: str | None = None
+    role: ChartRole | None = None
+    story: str | None = None
     option: dict[str, Any] = Field(default_factory=dict)
     data_keys: list[str] = Field(default_factory=list)
+    series_lanes: list[str] = Field(default_factory=list)
+    validation_statuses: list[str] = Field(default_factory=list)
+    lead_lane: str | None = None
+    reconciliation_note: str | None = None
+    interaction_spec: ChartInteractionSpec | None = None
     gate_status: GateStatus | None = "pass"
     gate_errors: list[str] = Field(default_factory=list)
 
@@ -199,6 +232,7 @@ class AnswerSpec(BaseModel):
     blindspot: Blindspot | None = None
     instrument: Instrument | None = None
     chart: ChartBlock | None = None
+    charts: list[ChartBlock] = Field(default_factory=list)
     canvas: CanvasBlock | None = None
     claims: list[Claim] = Field(default_factory=list)
     corpus_citations: list[CorpusCitation] = Field(default_factory=list)

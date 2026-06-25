@@ -16,6 +16,7 @@ from agents.atlas_v5.source_shopper import (
     ShoppingList,
     corpus_fetch_limits,
     materialize_exa_queries,
+    research_fetch_limit,
     web_fetch_limits,
 )
 from agents.orchestrator.retrieval_planner import RetrievalPlan
@@ -38,6 +39,9 @@ class EvidenceBag:
     exa_count: int = 0
     project_hit_count: int = 0
     document_hit_count: int = 0
+    research_snapshot: dict[str, Any] | None = None
+    research_ms: float = 0.0
+    research_skipped: bool = False
 
     def as_meta(self) -> dict[str, Any]:
         return {
@@ -46,10 +50,14 @@ class EvidenceBag:
             "corpus_document_count": len(self.corpus_documents),
             "external_count": len(self.external),
             "candidate_count": len(self.candidates),
+            "research_count": int((self.research_snapshot or {}).get("sample_size") or 0),
+            "research_total": int((self.research_snapshot or {}).get("total_count") or 0),
             "corpus_ms": round(self.corpus_ms, 1),
             "external_ms": round(self.external_ms, 1),
+            "research_ms": round(self.research_ms, 1),
             "errors": self.errors,
             "external_skipped": self.external_skipped,
+            "research_skipped": self.research_skipped,
             "govuk_count": self.govuk_count,
             "exa_count": self.exa_count,
             "project_hit_count": self.project_hit_count,
@@ -240,6 +248,28 @@ def _fetch_external_bundle(
     return deduped_ext[:limit * 2], deduped_c[:3], errors
 
 
+def _fetch_research_snapshot(query: str, shopping: ShoppingList) -> tuple[dict[str, Any] | None, list[str]]:
+    from agents.atlas_v5.trust.validate_research import fetch_openalex_snapshot
+
+    errors: list[str] = []
+    sub_q = (shopping.research.sub_queries[0] if shopping.research.sub_queries else query)[:200]
+    limit = research_fetch_limit(shopping.research)
+    try:
+        snapshot = fetch_openalex_snapshot(sub_q, limit=limit)
+        if snapshot is None:
+            errors.append("research: openalex returned no snapshot")
+        return snapshot, errors
+    except Exception as exc:
+        errors.append(f"research: {exc}")
+        return None, errors
+
+
+def _research_enabled() -> bool:
+    from agents.atlas_v5.web_lane import research_lane_enabled
+
+    return research_lane_enabled()
+
+
 def run_retrieval_fabric(
     query: str,
     outcome: str,
@@ -248,8 +278,9 @@ def run_retrieval_fabric(
     scope: str | None = None,
     shopping: ShoppingList | None = None,
 ) -> EvidenceBag:
-    """Fetch corpus and external lanes in parallel — both markets when external enabled."""
+    """Fetch corpus, external, and research lanes in parallel when enabled."""
     bag = EvidenceBag(lane_mode=plan.lane_mode)
+    research_on = _research_enabled() and shopping is not None
 
     if not plan.external_enabled:
         bag.external_skipped = True
@@ -265,9 +296,19 @@ def run_retrieval_fabric(
             bag.corpus_raw = _fetch_corpus_legacy(query, plan.corpus_k)
             bag.project_hit_count = len(bag.corpus_raw)
         bag.corpus_ms = (time.monotonic() - t0) * 1000
+
+        if research_on and shopping is not None:
+            t1 = time.monotonic()
+            snapshot, r_errs = _fetch_research_snapshot(query, shopping)
+            bag.research_snapshot = snapshot
+            bag.errors.extend(r_errs)
+            bag.research_ms = (time.monotonic() - t1) * 1000
+        else:
+            bag.research_skipped = True
         return bag
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+    workers = 3 if research_on else 2
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
         if shopping is not None:
             corpus_fut = pool.submit(_fetch_corpus_shaped, query, shopping)
         else:
@@ -281,6 +322,10 @@ def run_retrieval_fabric(
             plan.exa_queries,
             shopping=shopping,
         )
+        research_fut = None
+        if research_on and shopping is not None:
+            research_fut = pool.submit(_fetch_research_snapshot, query, shopping)
+
         t0 = time.monotonic()
         try:
             if shopping is not None:
@@ -309,5 +354,17 @@ def run_retrieval_fabric(
         except concurrent.futures.TimeoutError:
             bag.errors.append("external: timeout")
         bag.external_ms = (time.monotonic() - t1) * 1000
+
+        if research_fut is not None:
+            t2 = time.monotonic()
+            try:
+                snapshot, r_errs = research_fut.result(timeout=plan.external_timeout_s)
+                bag.research_snapshot = snapshot
+                bag.errors.extend(r_errs)
+            except concurrent.futures.TimeoutError:
+                bag.errors.append("research: timeout")
+            bag.research_ms = (time.monotonic() - t2) * 1000
+        else:
+            bag.research_skipped = True
 
     return bag

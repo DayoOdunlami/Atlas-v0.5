@@ -9,9 +9,9 @@ import { IncommensurableMagnitudes } from "@/components/atlas/recipes/incommensu
 import { EvidenceGapMatrix } from "@/components/atlas/recipes/evidence-gap-matrix";
 import { NetworkMap } from "@/components/atlas/recipes/network-map";
 import { OpportunityList } from "@/components/atlas/recipes/opportunity-list";
-import { CanvasThinking, type AtlasReasoningStep } from "@/components/atlas/shell/canvas-thinking";
+import { CanvasThinking, latestReasoningProgress, type AtlasReasoningStep } from "@/components/atlas/shell/canvas-thinking";
 import { CarriedFromBanner } from "@/components/atlas/shell/carried-from-banner";
-import { ConnectionStatus } from "@/components/atlas/shell/connection-status";
+import { AtlasSessionNav } from "@/components/atlas/shell/atlas-session-nav";
 import { DevOverlay, type AtlasDevMeta } from "@/components/atlas/shell/dev-overlay";
 import { EmptyCanvas } from "@/components/atlas/shell/empty-canvas";
 import {
@@ -28,6 +28,7 @@ import { AnswerabilityCard } from "@/components/atlas/spine/answerability-card";
 import { ConfidenceCeilingBar } from "@/components/atlas/spine/confidence-ceiling-bar";
 import { ProvenanceTrace } from "@/components/atlas/spine/provenance-trace";
 import { atlasFont, atlasTokens as T } from "@/lib/atlas/tokens";
+import type { AtlasUxPrefs } from "@/lib/atlas/ux-preferences";
 
 function renderInstrument(
   instrument: AnswerSpec["instrument"],
@@ -63,6 +64,11 @@ export type AtlasAnswerSurfaceProps = {
   onShowcaseSelect?: (command: string) => void;
   bootstrapQuery?: string;
   onNewSession?: () => void;
+  collapsibleCot?: boolean;
+  progressLine?: string | null;
+  uxPrefs?: AtlasUxPrefs;
+  onUxPrefsChange?: (patch: Partial<AtlasUxPrefs>) => void;
+  turnTiming?: { elapsedMs: number | null; running: boolean };
 };
 
 export function AtlasAnswerSurface({
@@ -79,20 +85,28 @@ export function AtlasAnswerSurface({
   onShowcaseSelect,
   bootstrapQuery,
   onNewSession,
+  collapsibleCot = true,
+  progressLine,
+  uxPrefs,
+  onUxPrefsChange,
+  turnTiming,
 }: AtlasAnswerSurfaceProps) {
   const [provId, setProvId] = useState<string | null>(null);
   const partialStage = devMeta?.partial_stage;
   const building = canvasThinking && envelopePartial;
+  /** Skeleton spine from wide pass is not the final answer — hide until complete. */
+  const judgementLocked =
+    building && partialStage !== "complete" && partialStage !== undefined;
   const showStats =
     Boolean(spec?.stats?.length) &&
     (!building || (partialStage && stageAtLeast(partialStage, "stats")));
   const showSpine =
-    Boolean(spec?.verdict?.sentence) &&
-    (!building || (partialStage && stageAtLeast(partialStage, "spine")));
-  const showVisual =
+    Boolean(spec?.verdict?.sentence) && !judgementLocked;
+  const showVisual = !judgementLocked && (
     !building ||
     partialStage === "complete" ||
-    (partialStage && stageAtLeast(partialStage, "visual"));
+    (partialStage && stageAtLeast(partialStage, "visual"))
+  );
 
   const handleFollowUp = useCallback(
     async (message: string) => {
@@ -123,8 +137,8 @@ export function AtlasAnswerSurface({
     const emptySoWhat = {
       lookingAt: contextLine,
       oneDecision: "Company assessments and vague asks stay in chat until you narrow the lens.",
-      gate: "",
-      primaryAction: onNewSession ? "New session" : "",
+      gate: "—",
+      primaryAction: onNewSession ? "New question" : "—",
       turn: "—",
     };
     return (
@@ -134,45 +148,54 @@ export function AtlasAnswerSurface({
         className="flex min-h-screen flex-col"
         style={{ background: T.page, fontFamily: atlasFont.sans }}
       >
-        {onNewSession ? (
-          <div
-            className="flex shrink-0 items-center justify-between gap-3 border-b px-4 py-2"
-            style={{ borderColor: T.rule, background: T.page }}
-          >
-            <ConnectionStatus devMeta={devMeta} className="relative" />
-            <button
-              type="button"
-              onClick={onNewSession}
-              className="cursor-pointer border-none bg-transparent underline"
-              style={{ fontFamily: atlasFont.mono, fontSize: 10, color: T.corpus }}
-            >
-              New session
-            </button>
-          </div>
-        ) : (
-          <div
-            className="flex shrink-0 justify-end px-4 py-2"
-            style={{ borderColor: T.rule, background: T.page }}
-          >
-            <ConnectionStatus devMeta={devMeta} className="relative" />
-          </div>
-        )}
-        <EmptyCanvas />
-        <SoWhatRail
-          soWhat={emptySoWhat}
-          onFollowUp={handleFollowUp}
-          chatMessages={chatMessages}
+        <AtlasSessionNav
+          devMeta={devMeta}
+          onNewSession={onNewSession}
           chatPending={chatPending}
-          showcaseOptions={devMeta?.showcase?.options}
-          onShowcaseSelect={
-            onFollowUpProp
-              ? (cmd) => {
-                  void handleFollowUp(cmd);
-                }
-              : undefined
-          }
         />
-        <DevOverlay meta={devMeta} dataSource={dataSource} />
+
+        <div className="mx-auto flex w-full max-w-[1440px] flex-1 items-stretch overflow-hidden px-6 py-8 lg:px-14">
+          <main
+            className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-sm shadow-lg"
+            style={{ background: T.canvas }}
+          >
+            <div className="relative min-h-0 flex-1 overflow-y-auto px-10 pb-10 pt-8 lg:px-12">
+              {canvasThinking ? (
+                <CanvasThinking
+                  steps={reasoningTrace}
+                  active={canvasThinking}
+                  stage={devMeta?.turn_stage}
+                  partialCanvas={envelopePartial}
+                  defaultCollapsed={collapsibleCot}
+                />
+              ) : null}
+              <EmptyCanvas />
+            </div>
+          </main>
+
+          <SoWhatRail
+            soWhat={emptySoWhat}
+            onFollowUp={handleFollowUp}
+            chatMessages={chatMessages}
+            chatPending={chatPending}
+            progressLine={progressLine}
+            showcaseOptions={devMeta?.showcase?.options}
+            onShowcaseSelect={
+              onFollowUpProp
+                ? (cmd) => {
+                    void handleFollowUp(cmd);
+                  }
+                : undefined
+            }
+          />
+        </div>
+        <DevOverlay
+          meta={devMeta}
+          dataSource={dataSource}
+          uxPrefs={uxPrefs}
+          onUxPrefsChange={onUxPrefsChange}
+          turnTiming={turnTiming}
+        />
       </div>
     );
   }
@@ -217,9 +240,11 @@ export function AtlasAnswerSurface({
         </div>
       ) : null}
 
-      <div className="flex shrink-0 justify-end px-6 pt-2">
-        <ConnectionStatus devMeta={devMeta} className="relative" />
-      </div>
+      <AtlasSessionNav
+        devMeta={devMeta}
+        onNewSession={onNewSession}
+        chatPending={chatPending}
+      />
 
       <div className="mx-auto flex w-full max-w-[1440px] flex-1 items-stretch overflow-hidden px-6 py-8 lg:px-14">
         <main
@@ -244,13 +269,18 @@ export function AtlasAnswerSurface({
                 active={canvasThinking}
                 stage={devMeta?.turn_stage}
                 partialCanvas={envelopePartial}
+                defaultCollapsed={collapsibleCot}
               />
             ) : null}
             <div
-              key={`${spec.mode}-${spec.instrument?.recipe ?? "none"}-${spec.canvas?.gate_status ?? ""}-${spec.verdict?.sentence?.slice(0, 48) ?? "partial"}`}
-              className="atlas-canvas-morph"
+              key={`${spec.mode}-${spec.instrument?.recipe ?? "none"}-${spec.canvas?.gate_status ?? ""}-${spec.verdict?.sentence?.slice(0, 48) ?? "partial"}-${devMeta?.partial_stage ?? "idle"}`}
+              className={
+                judgementLocked && spec
+                  ? "atlas-canvas-morph-out"
+                  : "atlas-canvas-morph"
+              }
               style={{
-                opacity: envelopePartial && canvasThinking ? 0.92 : 1,
+                opacity: envelopePartial && canvasThinking && !judgementLocked ? 0.92 : 1,
                 transition: "opacity 0.35s ease",
               }}
             >
@@ -281,13 +311,49 @@ export function AtlasAnswerSurface({
                 <CanvasSectionSkeleton lines={3} />
               ) : null}
 
+              {judgementLocked && showStats ? (
+                <div
+                  className="atlas-synth-shimmer mb-4 rounded-lg border px-4 py-3"
+                  style={{ borderColor: T.ruleSoft, background: "#F8F6F1" }}
+                >
+                  <p
+                    className="m-0 uppercase"
+                    style={{
+                      fontFamily: atlasFont.mono,
+                      fontSize: 9,
+                      letterSpacing: "0.1em",
+                      color: T.inkFaint,
+                    }}
+                  >
+                    Synthesising verdict & visual
+                  </p>
+                  <CanvasSectionSkeleton lines={2} />
+                </div>
+              ) : null}
+
               {showVisual ? (
                 <>
-                  {spec.chart?.option ? (
-                    <ProgressiveCanvasSection visible index={3} testId="progressive-chart">
-                      <ChartCanvas chart={spec.chart} />
-                    </ProgressiveCanvasSection>
-                  ) : null}
+                  {(spec.charts?.length
+                    ? spec.charts
+                    : spec.chart?.option
+                      ? [spec.chart]
+                      : []
+                  ).map((chart, chartIdx) =>
+                    chart?.option ? (
+                      <ProgressiveCanvasSection
+                        key={`chart-${chartIdx}-${chart.kind ?? "bar"}`}
+                        visible
+                        index={3 + chartIdx}
+                        testId={`progressive-chart-${chartIdx}`}
+                      >
+                        <ChartCanvas
+                          chart={chart}
+                          provenance={spec.provenance}
+                          onProv={setProvId}
+                        />
+                      </ProgressiveCanvasSection>
+                    ) : null,
+                  )}
                   {spec.canvas?.merged_markup && spec.canvas.gate_status === "pass" ? (
                     <ProgressiveCanvasSection visible index={4} testId="progressive-compose">
                       <CompositionCanvas canvas={spec.canvas} />
@@ -313,10 +379,11 @@ export function AtlasAnswerSurface({
               borderColor: "#E7E3DC",
             }}
           >
-            <span>● corpus — solid, owned</span>
-            <span style={{ color: T.web }}>┄ web — dashed, borrowed</span>
-            <span style={{ color: T.declared }}>◇ stated by user — declared, max Indicative</span>
-            <span style={{ color: T.gap }}>⌁ gap — torn, under-count</span>
+            <span style={{ color: T.corpus }}>● corpus lane</span>
+            <span style={{ color: T.web }}>● web lane</span>
+            <span style={{ color: T.declared }}>◇ declared</span>
+            <span style={{ color: T.gap }}>⌁ gap / contested</span>
+            <span style={{ color: T.inkFaint }}>validated · candidate · verified</span>
           </div>
         </main>
 
@@ -326,11 +393,18 @@ export function AtlasAnswerSurface({
           onFollowUp={handleFollowUp}
           chatMessages={chatMessages}
           chatPending={chatPending}
+          progressLine={progressLine}
           showcaseOptions={showcaseOptions}
           onShowcaseSelect={onShowcaseSelect}
         />
       </div>
-      <DevOverlay meta={devMeta} dataSource={dataSource} />
+      <DevOverlay
+        meta={devMeta}
+        dataSource={dataSource}
+        uxPrefs={uxPrefs}
+        onUxPrefsChange={onUxPrefsChange}
+        turnTiming={turnTiming}
+      />
     </div>
   );
 }

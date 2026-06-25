@@ -172,6 +172,13 @@ def test_classify_turn_keeps_haiku_chat_for_off_topic():
     assert d.source == "haiku"
 
 
+def test_classify_turn_find_path_for_uncertainty():
+    q = "I've got a rail idea, not sure what I'm asking"
+    d = classify_turn_heuristic(q)
+    assert d.route == "substantive"
+    assert d.outcome_hint == "find_path"
+
+
 def test_chat_router_clear_canvas_is_chat_only():
     assert classify_follow_up("clear the canvas / artifact area", MOCK_SPEC) == "chat_only"
     reply = build_chat_only_reply("clear the canvas", MOCK_SPEC)

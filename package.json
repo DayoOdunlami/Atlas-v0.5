@@ -25,6 +25,12 @@
     "eval:pic": "playwright test eval/pic_session.spec.ts --config eval/playwright.orchestrator.config.ts",
     "eval:chat-path": "node scripts/python-bin.mjs -m pytest agents/test_chat_path.py -q",
     "eval:genui": "node scripts/python-bin.mjs -m agents.atlas_v5.genui_eval",
+    "eval:calibration": "node scripts/python-bin.mjs -m agents.atlas_v5.calibration_eval",
+    "eval:calibration:heuristic": "node scripts/python-bin.mjs -m agents.atlas_v5.calibration_eval --heuristic-only",
+    "eval:v5-trajectories": "node scripts/python-bin.mjs eval/run_atlas_v5_trajectories.py",
+    "eval:v5-trajectories:quick": "node scripts/python-bin.mjs eval/run_atlas_v5_trajectories.py --id V01_hello --id V02_rail_orient_followup",
+    "eval:v5-session": "playwright test --config eval/playwright.atlas-v5.config.ts",
+    "eval:v5-session:smoke": "playwright test --config eval/playwright.atlas-v5.config.ts --grep E2E-3",
     "eval:demo-scenarios": "node scripts/python-bin.mjs -m pytest agents/test_demo_scenarios.py -q",
     "eval:battery": "node scripts/python-bin.mjs eval/run_battery.py --no-judge",
     "eval:battery:judge": "node scripts/python-bin.mjs eval/run_battery.py",
@@ -39,6 +45,8 @@
     "eval:golden": "python eval/tier2_generator.py --golden",
     "check-types": "tsc --noEmit",
     "agents:start": "node scripts/python-bin.mjs -m uvicorn agents.server:app --port 8000 --reload --reload-dir agents --reload-dir mcps --reload-delay 1",
+    "agents:setup": "node scripts/setup-agents.mjs",
+    "agents:bench": "node scripts/python-bin.mjs agents/atlas_v5/bench_turn_stages.py",
     "agents:verify": "node scripts/python-bin.mjs -c \"import httpx, json; r = httpx.post('http://localhost:8000/agents/jarvis', json={'query':'autonomous freight corridors UK'}); print(json.dumps(r.json(), indent=2))\""
   },
   "dependencies": {

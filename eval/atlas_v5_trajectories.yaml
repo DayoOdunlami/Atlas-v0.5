@@ -1,0 +1,155 @@
+# Atlas v5 practitioner session — multi-turn scenarios (API / brain path).
+# Runs via: npm run eval:v5-trajectories
+#
+# Each turn carries thread_id, current_spec, and prior_dev_meta forward — same as
+# CopilotKit session without opening a browser.
+
+version: "1.0"
+
+trajectories:
+  - id: V01_hello
+    name: Greeting stays chat-only
+    turns:
+      - query: "hello"
+        expect:
+          route: [chat, clarify]
+          update_canvas: false
+          min_reply_chars: 8
+
+  - id: V02_rail_orient_followup
+    name: Rail landscape then TRIG follow-up
+    turns:
+      - query: "State of play on rail decarbonisation in our corpus"
+        expect:
+          route: substantive
+          update_canvas: true
+          max_latency_ms: 120000
+          spec:
+            has_verdict: true
+      - query: "What about TRIG grants?"
+        expect:
+          route: [substantive, chat, clarify]
+          min_reply_chars: 24
+          reply_not_contains:
+            - "paste your question"
+            - "lost the thread"
+            - "online-only mode"
+
+  - id: V03_wewalk_clarify
+    name: WeWalk company clarify arc
+    turns:
+      - query: >-
+          I'm working with a company called WeWalk. I'd like to understand their product
+          and service offering and potential opportunities / value transition, especially
+          in a rail-focused application.
+        expect:
+          update_canvas: false
+          route: [chat, clarify, substantive]
+          min_reply_chars: 20
+      - query: "WeWalk is the company — smart cane for visually impaired people."
+        expect:
+          min_reply_chars: 12
+      - query: >-
+          I want to know how WeWalk can translate to grow in the UK innovation landscape,
+          specifically rail stations and passenger assistance.
+        expect:
+          min_reply_chars: 20
+          reply_not_contains:
+            - "rail decarb portfolio"
+
+  - id: V04_swot_followup
+    name: SWOT then funding follow-up
+    turns:
+      - query: "Perform a SWOT analysis on CPC rail decarbonisation for me"
+        expect:
+          route: substantive
+          max_latency_ms: 120000
+          min_reply_chars: 40
+      - query: "Which funders dominate in our corpus?"
+        expect:
+          min_reply_chars: 20
+          reply_not_contains:
+            - "paste your question"
+
+  # Optional — only runs when ATLAS_TRAJECTORY_FORCE_OFFLINE=1 (mocked probe in CI).
+  - id: V05_online_only_consent
+    name: Corpus unavailable → user accepts online-only
+    optional: true
+    requires_env: ATLAS_TRAJECTORY_FORCE_OFFLINE
+    turns:
+      - query: "WeWalk rail station opportunities in the UK"
+        expect:
+          route: clarify
+          lane_mode: online_only_pending
+      - query: "yes, continue online"
+        expect:
+          route: substantive
+          lane_mode: online_only
+          reply_not_contains:
+            - "paste your question"
+            - "lost the thread"
+
+  - id: V06_find_path_funding
+    name: Declared uncertainty → find path → funding follow-up
+    turns:
+      - query: "I've got a rail innovation idea but I'm not sure what I'm asking yet"
+        expect:
+          route: substantive
+          update_canvas: true
+          outcome_hint: [find_path, orient, diagnose]
+          max_latency_ms: 120000
+          min_reply_chars: 40
+          reply_not_contains:
+            - "rail decarb portfolio"
+            - "paste your question"
+      - query: "What kind of funding might fit an SME innovator like that?"
+        expect:
+          route: [substantive, chat, clarify]
+          min_reply_chars: 30
+          reply_contains:
+            - "fund"
+          reply_not_contains:
+            - "paste your question"
+            - "lost the thread"
+            - "not sure what you're asking"
+
+  - id: V07_connect_ecosystem
+    name: Network ecosystem map then gap question
+    turns:
+      - query: >-
+          Map the ecosystem for rail decarbonisation in our corpus — organisations,
+          funders, and operators and how they connect.
+        expect:
+          route: substantive
+          update_canvas: true
+          outcome_hint: [connect, orient]
+          max_latency_ms: 120000
+          min_reply_chars: 30
+      - query: "Which connections look weakest for SME or startup access?"
+        expect:
+          route: [substantive, chat, clarify, diagnose]
+          min_reply_chars: 24
+          reply_not_contains:
+            - "paste your question"
+            - "lost the thread"
+
+  - id: V08_defend_board
+    name: Establish landscape then board defence
+    turns:
+      - query: "State of play on rail decarbonisation in our corpus"
+        expect:
+          route: substantive
+          update_canvas: true
+          max_latency_ms: 120000
+          spec:
+            has_verdict: true
+      - query: "How would I defend this portfolio to a sceptical board?"
+        expect:
+          route: [substantive, chat, clarify, defend]
+          outcome_hint: [defend, act, diagnose, orient]
+          min_reply_chars: 40
+          reply_contains:
+            - "board"
+          reply_not_contains:
+            - "paste your question"
+            - "lost the thread"

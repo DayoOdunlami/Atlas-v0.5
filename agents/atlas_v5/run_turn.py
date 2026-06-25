@@ -25,7 +25,11 @@ from agents.atlas_v5.online_only import (
 from agents.atlas_v5.showcase import resolve_showcase_turn
 from agents.atlas_v5.turn_classifier import OutcomeHint, TurnDecision, classify_turn
 from agents.atlas_v5.turn_memory import apply_turn_accretion
-from agents.atlas_v5.wide_pass import assemble_spec_from_wide_pass, run_wide_pass
+from agents.atlas_v5.wide_pass import (
+    assemble_spec_from_wide_pass,
+    needs_online_only_consent as _needs_online_only_consent,
+    run_wide_pass,
+)
 from agents.atlas_v5.progressive_stream import build_partial_envelope
 from agents.contracts.answer_spec import AnswerSpec, AnswerSpecEnvelope
 from agents.spine.citation_guard import apply_citation_guard
@@ -149,6 +153,9 @@ async def _execute_substantive_turn(
     showcase_meta: dict[str, Any] | None = None,
     prior_dev_meta: dict[str, Any] | None = None,
     thread_id: str | None = None,
+    cached_wide: Any | None = None,
+    cached_skeleton: AnswerSpec | None = None,
+    stage_ms: dict[str, float] | None = None,
 ) -> dict[str, Any]:
     online_only = is_online_only_active(prior_dev_meta)
     work_q = q
@@ -161,17 +168,38 @@ async def _execute_substantive_turn(
     elif not online_only and not await probe_corpus_available(work_q):
         return build_online_only_offer(work_q, decision)
 
-    wide = await run_wide_pass(
-        work_q,
-        outcome_hint=outcome_hint,
-        online_only=online_only,
-        thread_id=thread_id,
-    )
+    import time
 
-    if wide.retrieval_meta.get("corpus_unavailable") and not online_only:
+    if cached_wide is not None and cached_skeleton is not None:
+        wide = cached_wide
+        skeleton = cached_skeleton
+    else:
+        t_wide = time.perf_counter()
+        wide = await run_wide_pass(
+            work_q,
+            outcome_hint=outcome_hint,
+            online_only=online_only,
+            thread_id=thread_id,
+        )
+        if stage_ms is not None:
+            stage_ms["wide_ms"] = round((time.perf_counter() - t_wide) * 1000, 0)
+            meta = wide.retrieval_meta or {}
+            if meta.get("shopper_ms") is not None:
+                stage_ms["shopper_ms"] = float(meta["shopper_ms"])
+            if meta.get("corpus_ms") is not None:
+                stage_ms["corpus_fetch_ms"] = float(meta["corpus_ms"])
+            if meta.get("external_ms") is not None:
+                stage_ms["external_fetch_ms"] = float(meta["external_ms"])
+
+        if _needs_online_only_consent(wide) and not online_only:
+            return build_online_only_offer(work_q, decision)
+
+        skeleton = assemble_spec_from_wide_pass(wide, online_only=online_only)
+
+    if cached_wide is None and _needs_online_only_consent(wide) and not online_only:
         return build_online_only_offer(work_q, decision)
 
-    skeleton = assemble_spec_from_wide_pass(wide, online_only=online_only)
+    t_deep = time.perf_counter()
     spec, reply, dev_meta, update_canvas = await apply_deep_pass(
         work_q,
         skeleton,
@@ -180,6 +208,8 @@ async def _execute_substantive_turn(
         substantive=True,
         thread_id=thread_id,
     )
+    if stage_ms is not None:
+        stage_ms["deep_ms"] = round((time.perf_counter() - t_deep) * 1000, 0)
 
     if online_only:
         dev_meta = {
@@ -189,6 +219,9 @@ async def _execute_substantive_turn(
 
     if showcase_meta:
         dev_meta = {**dev_meta, **showcase_meta}
+
+    if stage_ms:
+        dev_meta = {**dev_meta, "stage_ms": stage_ms}
 
     if not update_canvas:
         return {

@@ -1,0 +1,86 @@
+{
+  "version": "1.0",
+  "generated_at": "2026-06-25T15:20:03Z",
+  "scenarios_total": 3,
+  "scenarios_executed": 3,
+  "scenarios_skipped": 0,
+  "scenarios_passed": 0,
+  "pass_rate": 0.0,
+  "results": [
+    {
+      "id": "V06_find_path_funding",
+      "name": "Declared uncertainty \u2192 find path \u2192 funding follow-up",
+      "passed": false,
+      "skipped": false,
+      "skip_reason": "",
+      "failures": [
+        "turn 1: list index out of range"
+      ],
+      "turns": [
+        {
+          "turn": 1,
+          "query": "I've got a rail innovation idea but I'm not sure what I'm asking yet",
+          "passed": false,
+          "failures": [
+            "execution error: list index out of range"
+          ],
+          "route": null,
+          "update_canvas": null,
+          "latency_ms": 0.0,
+          "lane_mode": null,
+          "reply_preview": "list index out of range"
+        }
+      ]
+    },
+    {
+      "id": "V07_connect_ecosystem",
+      "name": "Network ecosystem map then gap question",
+      "passed": false,
+      "skipped": false,
+      "skip_reason": "",
+      "failures": [
+        "turn 1: Wide pass produced no corpus stats (use online_only mode)"
+      ],
+      "turns": [
+        {
+          "turn": 1,
+          "query": "Map the ecosystem for rail decarbonisation in our corpus \u2014 organisations, funders, and operators and how they connect.",
+          "passed": false,
+          "failures": [
+            "execution error: Wide pass produced no corpus stats (use online_only mode)"
+          ],
+          "route": null,
+          "update_canvas": null,
+          "latency_ms": 0.0,
+          "lane_mode": null,
+          "reply_preview": "Wide pass produced no corpus stats (use online_only mode)"
+        }
+      ]
+    },
+    {
+      "id": "V08_defend_board",
+      "name": "Establish landscape then board defence",
+      "passed": false,
+      "skipped": false,
+      "skip_reason": "",
+      "failures": [
+        "turn 1: Wide pass produced no corpus stats (use online_only mode)"
+      ],
+      "turns": [
+        {
+          "turn": 1,
+          "query": "State of play on rail decarbonisation in our corpus",
+          "passed": false,
+          "failures": [
+            "execution error: Wide pass produced no corpus stats (use online_only mode)"
+          ],
+          "route": null,
+          "update_canvas": null,
+          "latency_ms": 0.0,
+          "lane_mode": null,
+          "reply_preview": "Wide pass produced no corpus stats (use online_only mode)"
+        }
+      ]
+    }
+  ]
+}

@@ -5,7 +5,11 @@ from __future__ import annotations
 from typing import Any
 
 from agents.spine.citation_guard import TIER_ORDER, _cap_tier
+from agents.atlas_v5.keyed_figures import KeyedFigureIndex
 from agents.atlas_v5.source_shopper import ReconcileLead, ShoppingList
+from agents.atlas_v5.trust.reconcile_v2 import resolve_lead_lane
+from agents.atlas_v5.trust.tier_from_evidence import tier_from_multi_lane_evidence
+from agents.atlas_v5.trust.validate_web import _validation_for_item
 from agents.contracts.answer_spec import (
     AnswerSpec,
     Claim,
@@ -27,6 +31,7 @@ def _boost_tier(current: str, steps: int = 1) -> str:
 def _external_to_web_evidence(items: list[dict[str, Any]]) -> list[WebEvidence]:
     out: list[WebEvidence] = []
     for i, item in enumerate(items[:10]):
+        status, _refs = _validation_for_item(item)
         out.append(
             WebEvidence(
                 id=f"web-{i + 1}",
@@ -35,6 +40,7 @@ def _external_to_web_evidence(items: list[dict[str, Any]]) -> list[WebEvidence]:
                 publisher=item.get("publisher"),
                 snippet=(item.get("snippet") or "")[:400] or None,
                 retrieval_tool=item.get("retrieval_tool"),
+                verification_state=status if status in ("verified", "candidate") else "candidate",
             )
         )
     return out
@@ -109,20 +115,20 @@ def apply_peer_tier_rules(
     return tier, False, "both lanes thin — tier unchanged"
 
 
-def _lead_message(lead: ReconcileLead, corpus_n: int, web_n: int, doc_n: int) -> str:
+def _lead_message(lead: str, corpus_n: int, web_n: int, doc_n: int) -> str:
     if lead == "corpus":
         return (
             f"Corpus-led turn — {corpus_n} project citation(s), {doc_n} document chunk(s); "
-            f"web ({web_n} source(s)) provides framing where present."
+            f"web ({web_n} source(s)) cross-checked where present."
         )
     if lead == "web":
         return (
-            f"Web-led turn — {web_n} web source(s) primary for practitioner fit; "
-            f"corpus ({corpus_n} citations, {doc_n} docs) anchors owned IDs where matched."
+            f"Web-led turn — {web_n} validated web source(s) lead for programme/policy scale; "
+            f"corpus ({corpus_n} citations, {doc_n} docs) grounds project IDs where matched."
         )
     return (
         f"Balanced synthesis — {corpus_n} corpus + {web_n} web source(s) "
-        f"({doc_n} document chunks); cross-check, neither default authority."
+        f"({doc_n} document chunks); compare lanes, neither default authority."
     )
 
 
@@ -134,7 +140,6 @@ def reconcile_answer_spec(
     shopping: ShoppingList | None = None,
     has_sql_stats: bool = False,
 ) -> AnswerSpec:
-    del query
     notes: list[ReconciliationNote] = []
     tier = spec.tier
 
@@ -147,6 +152,20 @@ def reconcile_answer_spec(
     web_sub = lane_web_substantive(bag)
     lead: ReconcileLead = shopping.reconcile_lead if shopping else "balanced"
 
+    lead_lane = resolve_lead_lane(
+        query,
+        shopping=shopping,
+        corpus_substantive=corpus_sub,
+        web_substantive=web_sub,
+        index=KeyedFigureIndex(),
+    )
+    web_verified = sum(
+        1 for item in bag.external if _validation_for_item(item)[0] == "verified"
+    )
+    corpus_depth = max(corpus_n, bag.project_hit_count if has_sql_stats else 0)
+    if has_sql_stats and corpus_sub:
+        corpus_depth = max(corpus_depth, 5)
+
     meta = bag.as_meta()
     meta["corpus_thin"] = bag.corpus_thin
     meta["conflict_count"] = 0
@@ -154,6 +173,7 @@ def reconcile_answer_spec(
     meta["external_led"] = web_sub and not corpus_sub
     meta["corpus_substantive"] = corpus_sub
     meta["web_substantive"] = web_sub
+    meta["lead_lane"] = lead_lane
     if shopping:
         meta["reconcile_lead"] = lead
 
@@ -162,8 +182,16 @@ def reconcile_answer_spec(
         corpus_substantive=corpus_sub,
         web_substantive=web_sub,
     )
+    tier, tier_cap_reason = tier_from_multi_lane_evidence(
+        tier,
+        corpus_citation_count=corpus_depth,
+        web_verified_count=web_verified,
+        corpus_substantive=corpus_sub,
+        web_substantive=web_sub,
+        lead_lane=lead_lane,
+    )
     meta["corroboration_boost"] = boost_applied
-    meta["tier_reason"] = tier_reason
+    meta["tier_reason"] = f"{tier_reason}; {tier_cap_reason}"
 
     retrieval_fields = set(RetrievalMeta.model_fields.keys())
     retrieval_payload = {k: v for k, v in meta.items() if k in retrieval_fields}
@@ -173,15 +201,15 @@ def reconcile_answer_spec(
             ReconciliationNote(
                 type="corroborate",
                 message=(
-                    "Parallel evidence lanes — corpus (projects + documents) and web "
-                    "always fetched; synthesise both with correct trust materials."
+                    "Parallel evidence lanes — corpus and web always fetched; "
+                    "validate each lane on its merits — neither default authority."
                 ),
             )
         )
         notes.append(
             ReconciliationNote(
-                type="discover" if lead == "web" else "corroborate",
-                message=_lead_message(lead, corpus_n, web_n, doc_n),
+                type="discover" if lead_lane == "web" else "corroborate",
+                message=_lead_message(lead_lane, corpus_n, web_n, doc_n),
                 corpus_signal=str(corpus_n),
                 external_signal=str(web_n),
             )
@@ -227,7 +255,7 @@ def reconcile_answer_spec(
                 type="discover",
                 message=(
                     f"Web returned {web_n} source(s); corpus slice thin — "
-                    "web-led, still candidate/borrowed trust."
+                    "web-led, validated web signal — peer lane, not second-class input."
                 ),
                 external_signal=str(web_n),
             )

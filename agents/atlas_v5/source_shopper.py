@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field, model_validator
 
 logger = logging.getLogger(__name__)
 
-ReconcileLead = Literal["corpus", "web", "balanced"]
+ReconcileLead = Literal["corpus", "web", "research", "balanced"]
 OutcomeMode = Literal[
     "orient", "connect", "diagnose", "act", "defend", "find_path"
 ]
@@ -48,18 +48,26 @@ class WebAisleShopModel(BaseModel):
     )
 
 
+class ResearchAisleShopModel(BaseModel):
+    """Research sub-aisle — OpenAlex always invoked when research lane enabled."""
+
+    openalex_weight: float = Field(ge=0.05, le=1.0)
+    sub_queries: list[str] = Field(default_factory=list, max_length=4)
+
+
 class ShoppingListModel(BaseModel):
     """Per-lane shopping list — no lane-set / skip field exists."""
 
     reconcile_lead: ReconcileLead = "balanced"
     corpus: CorpusAisleShopModel
     web: WebAisleShopModel
+    research: ResearchAisleShopModel
     reasoning: str = ""
 
     @model_validator(mode="after")
-    def _both_lanes_present(self) -> "ShoppingListModel":
-        if self.corpus is None or self.web is None:
-            raise ValueError("both corpus and web aisles required")
+    def _all_lanes_present(self) -> "ShoppingListModel":
+        if self.corpus is None or self.web is None or self.research is None:
+            raise ValueError("corpus, web, and research aisles required")
         return self
 
 
@@ -69,6 +77,7 @@ class ShoppingList:
     reconcile_lead: ReconcileLead
     corpus: CorpusAisleShopModel
     web: WebAisleShopModel
+    research: ResearchAisleShopModel
     source: Literal["floor", "shopper"] = "floor"
     reasoning: str = ""
 
@@ -80,6 +89,7 @@ class ShoppingList:
             "reasoning": self.reasoning,
             "corpus": self.corpus.model_dump(),
             "web": self.web.model_dump(),
+            "research": self.research.model_dump(),
         }
 
     @classmethod
@@ -89,6 +99,7 @@ class ShoppingList:
             reconcile_lead=model.reconcile_lead,
             corpus=model.corpus,
             web=model.web,
+            research=model.research,
             source=source,  # type: ignore[arg-type]
             reasoning=model.reasoning,
         )
@@ -112,6 +123,18 @@ def clear_shopper_cache() -> None:
 
 def _clamp01(v: float) -> float:
     return max(0.05, min(1.0, float(v)))
+
+
+def _research_aisle(query: str, outcome: OutcomeMode, *, weight: float = 0.2) -> ResearchAisleShopModel:
+    q = query.strip() or "transport innovation UK"
+    if outcome in ("diagnose", "defend"):
+        weight = max(weight, 0.35)
+    elif outcome == "find_path":
+        weight = 0.15
+    return ResearchAisleShopModel(
+        openalex_weight=_clamp01(weight),
+        sub_queries=[q[:160], f"{q} academic literature UK transport"][:2],
+    )
 
 
 def floor_shopping_list(query: str, outcome: str) -> ShoppingList:
@@ -146,8 +169,9 @@ def floor_shopping_list(query: str, outcome: str) -> ShoppingList:
                 "{query} SME transport innovation partner accelerator",
             ],
         )
-        lead: ReconcileLead = "web"
+        lead = "web"
         reasoning = "find_path floor: documents + funders/partners; GovUK minimal"
+        research = _research_aisle(q, mode, weight=0.15)
     elif mode in ("connect", "act"):
         corpus = CorpusAisleShopModel(
             projects_weight=0.65,
@@ -167,6 +191,7 @@ def floor_shopping_list(query: str, outcome: str) -> ShoppingList:
         )
         lead = "balanced"
         reasoning = f"{mode} floor: opportunities + partners weighted"
+        research = _research_aisle(q, mode, weight=0.2)
     elif mode in ("diagnose", "defend"):
         corpus = CorpusAisleShopModel(
             projects_weight=0.45,
@@ -186,6 +211,7 @@ def floor_shopping_list(query: str, outcome: str) -> ShoppingList:
         )
         lead = "balanced"
         reasoning = f"{mode} floor: policy + document evidence"
+        research = _research_aisle(q, mode, weight=0.4)
     else:  # orient
         corpus = CorpusAisleShopModel(
             projects_weight=0.75,
@@ -205,12 +231,14 @@ def floor_shopping_list(query: str, outcome: str) -> ShoppingList:
         )
         lead = "corpus"
         reasoning = "orient floor: project rows + GovUK policy emphasis"
+        research = _research_aisle(q, mode, weight=0.2)
 
     return ShoppingList(
         outcome=mode,
         reconcile_lead=lead,
         corpus=corpus,
         web=web,
+        research=research,
         source="floor",
         reasoning=reasoning,
     )
@@ -231,11 +259,16 @@ def _merge_with_floor(floor: ShoppingList, refined: ShoppingListModel) -> Shoppi
         sub_queries=(refined.web.sub_queries or floor.web.sub_queries)[:6],
         exa_scopes=(refined.web.exa_scopes or floor.web.exa_scopes)[:4],
     )
+    merged_research = ResearchAisleShopModel(
+        openalex_weight=_clamp01(refined.research.openalex_weight),
+        sub_queries=(refined.research.sub_queries or floor.research.sub_queries)[:4],
+    )
     return ShoppingList(
         outcome=floor.outcome,
         reconcile_lead=refined.reconcile_lead,
         corpus=merged_corpus,
         web=merged_web,
+        research=merged_research,
         source="shopper",
         reasoning=refined.reasoning or floor.reasoning,
     )
@@ -254,9 +287,10 @@ def _shopper_sync(query: str, outcome: str, floor: ShoppingList) -> ShoppingList
         structured = llm.with_structured_output(ShoppingListModel)
         system = (
             "You are the Atlas source shopper. Set per-lane weights and sub-queries only. "
-            "Both corpus and web must remain populated — adjust weights, never omit a lane. "
-            "corpus has projects_weight + documents_weight; web has govuk/funders/partners/programmes. "
-            "reconcile_lead is corpus | web | balanced for narrative prominence only."
+            "Corpus, web, and research must remain populated — adjust weights, never omit a lane. "
+            "corpus has projects_weight + documents_weight; web has govuk/funders/partners/programmes; "
+            "research has openalex_weight + sub_queries. "
+            "reconcile_lead is corpus | web | research | balanced for narrative prominence only."
         )
         user = (
             f"Query: {query}\nOutcome mode: {outcome}\n"
@@ -310,6 +344,10 @@ def web_fetch_limits(shop: WebAisleShopModel) -> tuple[int, int]:
     gov = max(1, min(5, int(round(5 * shop.govuk_weight))))
     exa = max(2, min(8, int(round(6 * (shop.funders_weight + shop.partners_weight + shop.programmes_weight) / 3))))
     return gov, exa
+
+
+def research_fetch_limit(shop: ResearchAisleShopModel) -> int:
+    return max(1, min(10, int(round(6 * shop.openalex_weight))))
 
 
 def materialize_exa_queries(query: str, shop: WebAisleShopModel) -> list[str]:

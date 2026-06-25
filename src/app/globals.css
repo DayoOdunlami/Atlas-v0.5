@@ -358,17 +358,61 @@ html {
 
 /* Atlas v5 — canvas morph on AnswerSpec revision change */
 .atlas-canvas-morph {
-  animation: atlas-canvas-in 0.35s ease-out;
+  animation: atlas-canvas-in 0.45s ease-out;
+}
+
+.atlas-canvas-morph-out {
+  animation: atlas-canvas-out 0.28s ease-in forwards;
 }
 
 @keyframes atlas-canvas-in {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes atlas-canvas-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0.4;
+    transform: translateY(-6px);
+  }
+}
+
+/* Shimmer while deep synthesis runs — no fake content */
+.atlas-synth-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.atlas-synth-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 60%
+  );
+  animation: atlas-shimmer 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes atlas-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
   }
 }
 

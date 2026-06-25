@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from agents.atlas_v5.corpus_scope import corpus_scope_for_query
-from agents.atlas_v5.intent import is_connect_network_query
+from agents.atlas_v5.intent import has_declared_uncertainty_cue, is_connect_network_query
 from agents.atlas_v5.j1t1_corpus import fetch_corpus_stats
 from agents.atlas_v5.j1t1_types import J1T1CorpusStats
 from agents.atlas_v5.network_corpus import NetworkGraphData, fetch_connect_network_graph
@@ -27,6 +27,36 @@ from agents.orchestrator.retrieval_planner import RetrievalPlan, plan_retrieval
 from mcps.cpc_corpus import transport
 
 logger = logging.getLogger(__name__)
+
+
+def _reconcile_corpus_unavailable(
+    corpus_unavailable: bool,
+    stats: J1T1CorpusStats | None,
+    bag: EvidenceBag,
+) -> bool:
+    """Postgres aggregate stats may fail while REST search still returns corpus hits."""
+    if not corpus_unavailable:
+        return False
+    if stats is not None:
+        return False
+    if bag.corpus_raw:
+        return False
+    tier = transport.get_last_transport()
+    if tier in ("rest_vector", "rest_keyword", "postgres"):
+        return False
+    return True
+
+
+def needs_online_only_consent(wide: WidePassResult) -> bool:
+    """True only when all corpus tiers failed — not when REST worked with zero hits."""
+    from agents.atlas_v5.rest_fallback_assembler import _corpus_hits
+
+    if wide.stats is not None or _corpus_hits(wide):
+        return False
+    meta = wide.retrieval_meta or {}
+    if not meta.get("corpus_unavailable"):
+        return False
+    return transport.get_last_transport() == "unavailable"
 
 
 @dataclass
@@ -65,29 +95,53 @@ async def run_wide_pass(
     thread_id: str | None = None,
 ) -> WidePassResult:
     session_claims = load_case_file(thread_id)
+    if not session_claims and has_declared_uncertainty_cue(query):
+        from agents.atlas_v5.case_file import bootstrap_declared_claims_heuristic
+
+        session_claims = bootstrap_declared_claims_heuristic(query)
     where_sql, object_label, scope_mode = corpus_scope_for_query(query)
     hint: OutcomeHint = outcome_hint or (
-        "connect" if is_connect_network_query(query) else "orient"
+        "find_path"
+        if has_declared_uncertainty_cue(query)
+        else "connect"
+        if is_connect_network_query(query)
+        else "orient"
     )
     outcome = hint if hint in ("orient", "connect", "act", "diagnose", "defend", "find_path") else "orient"
-
-    shopping = build_shopping_list(query, outcome)
 
     loop = asyncio.get_running_loop()
     corpus_unavailable = online_only
     stats: J1T1CorpusStats | None = None
 
+    import time
+
+    t0 = time.perf_counter()
+    shopping_task = asyncio.create_task(
+        asyncio.to_thread(build_shopping_list, query, outcome)
+    )
+    stats_task: asyncio.Task[J1T1CorpusStats] | None = None
     if not online_only:
+        stats_task = asyncio.create_task(
+            asyncio.to_thread(fetch_corpus_stats, where_sql)
+        )
+
+    shopping = await shopping_task
+    shopper_ms = round((time.perf_counter() - t0) * 1000, 0)
+
+    fabric_future = loop.run_in_executor(None, _run_fabric_sync, query, outcome, shopping)
+
+    stats_ms = 0.0
+    if stats_task is not None:
+        t_stats = time.perf_counter()
         try:
-            stats = await loop.run_in_executor(None, fetch_corpus_stats, where_sql)
+            stats = await stats_task
         except transport.PostgresUnavailable as exc:
             stats = None
             corpus_unavailable = True
             logger.warning("Corpus stats unavailable: %s", exc)
+        stats_ms = round((time.perf_counter() - t_stats) * 1000, 0)
     else:
         stats = None
-
-    fabric_future = loop.run_in_executor(None, _run_fabric_sync, query, outcome, shopping)
 
     async def _await_bag() -> EvidenceBag:
         try:
@@ -115,8 +169,13 @@ async def run_wide_pass(
             except transport.PostgresUnavailable:
                 corpus_unavailable = True
         meta = bag.as_meta()
+        meta["shopper_ms"] = shopper_ms
+        meta["corpus_stats_ms"] = stats_ms
+        corpus_unavailable = _reconcile_corpus_unavailable(corpus_unavailable, stats, bag)
         if corpus_unavailable:
-            meta = {**meta, "corpus_unavailable": True, "online_only": online_only}
+            meta = {**meta, "corpus_unavailable": True, "online_only": True}
+        elif stats is None and bag.corpus_raw:
+            meta = {**meta, "corpus_status": "rest_or_search", "corpus_stats_skipped": True}
         meta["shopping_list"] = shopping.to_dict()
         return WidePassResult(
             outcome="connect",
@@ -135,13 +194,18 @@ async def run_wide_pass(
 
     bag = await _await_bag()
     meta = bag.as_meta()
+    meta["shopper_ms"] = shopper_ms
+    meta["corpus_stats_ms"] = stats_ms
+    corpus_unavailable = _reconcile_corpus_unavailable(corpus_unavailable, stats, bag)
     if corpus_unavailable:
         meta = {
             **meta,
             "corpus_unavailable": True,
-            "online_only": online_only,
+            "online_only": True,
             "corpus_status": "unavailable",
         }
+    elif stats is None and bag.corpus_raw:
+        meta = {**meta, "corpus_status": "rest_or_search", "corpus_stats_skipped": True}
     meta["shopping_list"] = shopping.to_dict()
     resolved_outcome = outcome if outcome in ("orient", "act", "diagnose", "defend", "find_path") else "orient"
     return WidePassResult(
@@ -161,8 +225,21 @@ async def run_wide_pass(
 
 def assemble_spec_from_wide_pass(wide: WidePassResult, *, online_only: bool = False):
     from agents.atlas_v5.reconcile_spec import reconcile_answer_spec
+    from agents.atlas_v5.rest_fallback_assembler import _corpus_hits
 
-    if wide.stats is None and (online_only or wide.retrieval_meta.get("online_only")):
+    meta = wide.retrieval_meta or {}
+    has_hits = bool(_corpus_hits(wide))
+    tier = transport.get_last_transport()
+    fully_unavailable = bool(
+        (online_only or meta.get("online_only"))
+        or (
+            meta.get("corpus_unavailable")
+            and not has_hits
+            and tier == "unavailable"
+        )
+    )
+
+    if wide.stats is None and not has_hits and fully_unavailable:
         from agents.atlas_v5.online_only_assembler import assemble_online_only_spec
 
         spec = assemble_online_only_spec(wide)
@@ -201,6 +278,10 @@ def assemble_spec_from_wide_pass(wide: WidePassResult, *, online_only: bool = Fa
         from agents.atlas_v5.act_assembler import assemble_act_spec
 
         spec = assemble_act_spec(wide.stats, wide, query=wide.query)
+    elif wide.outcome == "find_path":
+        from agents.atlas_v5.find_path_assembler import assemble_find_path_spec
+
+        spec = assemble_find_path_spec(wide)
     elif wide.stats:
         from agents.atlas_v5.j1t1_assembler import assemble_j1t1_spec
 
@@ -210,8 +291,10 @@ def assemble_spec_from_wide_pass(wide: WidePassResult, *, online_only: bool = Fa
             if wide.object_label != "Rail decarbonisation":
                 updates["object"] = wide.object_label
             spec = spec.model_copy(update=updates)
-    else:
-        raise ValueError("Wide pass produced no corpus stats (use online_only mode)")
+    elif wide.stats is None:
+        from agents.atlas_v5.rest_fallback_assembler import assemble_rest_fallback_spec
+
+        spec = assemble_rest_fallback_spec(wide)
 
     if wide.evidence_bag is not None:
         spec = reconcile_answer_spec(

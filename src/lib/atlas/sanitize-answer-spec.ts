@@ -77,7 +77,23 @@ export function sanitizeAnswerSpecForMouth(spec: unknown): unknown {
     }
     if (rec.retrieval && typeof rec.retrieval === "object") {
       const ret = { ...(rec.retrieval as Record<string, unknown>) };
-      for (const key of ["corpus_ms", "external_ms", "govuk_count", "exa_count", "corpus_thin", "external_led"]) {
+      for (const key of [
+        "corpus_ms",
+        "external_ms",
+        "govuk_count",
+        "exa_count",
+        "corpus_thin",
+        "external_led",
+        "tier_reason",
+        "reconcile_lead",
+        "dual_peer",
+        "corpus_substantive",
+        "web_substantive",
+        "corroboration_boost",
+        "corpus_document_count",
+        "project_hit_count",
+        "document_hit_count",
+      ]) {
         if (ret[key] === null) delete ret[key];
       }
       rec.retrieval = ret;

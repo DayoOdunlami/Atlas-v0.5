@@ -30,6 +30,28 @@ _OFF_TOPIC_RE = re.compile(
     re.I,
 )
 
+_UNCERTAINTY_CUE_RE = re.compile(
+    r"\b("
+    r"not\s+sure\s+what\s+i'?m\s+asking|"
+    r"don'?t\s+know\s+what\s+i'?m\s+asking|"
+    r"don'?t\s+know\s+where\s+to\s+start|"
+    r"help\s+me\s+figure\s+out|"
+    r"half.?formed|"
+    r"working\s+through|"
+    r"what\s+should\s+i\s+(even\s+)?be\s+asking|"
+    r"got\s+(an?\s+)?\w+\s+idea\s+but"
+    r")\b",
+    re.I,
+)
+
+
+def has_declared_uncertainty_cue(query: str) -> bool:
+    """C1 route signal — declared uncertainty about the question itself (not advisor elicit)."""
+    q = query.strip()
+    if not q:
+        return False
+    return bool(_UNCERTAINTY_CUE_RE.search(q))
+
 
 def is_substantive_canvas_query(query: str) -> bool:
     """True when the message should refresh the canvas (in-domain strategic ask)."""

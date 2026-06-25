@@ -13,6 +13,8 @@
 | Understand the whole in one paragraph | [§0 System at a glance](#0-system-at-a-glance) |
 | Know what we **recommend** vs what exists today | [§1 Architecture stance](#1-architecture-stance-hub-vs-pipeline) |
 | See where the LLM starts and LangGraph ends | [§2 LLM boundary](#2-llm-boundary-where-cognition-lives) |
+| Understand trust & peer lanes | [§4 Evidence lanes](#4-evidence-lanes-peer-model) · [TRUST_MODEL_V2.md](./TRUST_MODEL_V2.md) |
+| Implement trust v2 or multi-lane charts | [§17 Trust v2 + visual rollout](#17-trust-v2--visual-rollout) |
 | Add/remove a recipe, chart, or template | [§10 Element inventory](#10-element-inventory) |
 | Navigate by metaphor | [§11 Analogy map](#11-analogy-map-standardized) |
 | Product north star & decision surfaces | [§16 Product north star](#16-product-north-star) |
@@ -43,7 +45,7 @@
 | **Recipe** | Standard arrangement (React) | `instrument` |
 | **Template** | Prep kit (deterministic HTML) | `canvas.merged_markup` |
 | **Compose** | Custom plate (LLM HTML) | `canvas.merged_markup` |
-| **Chart** | Inset chart (ECharts) | `chart` — can coexist above compose/recipe |
+| **Chart** | Inset chart(s) (ECharts) | `charts[]` + `chart` (first) — can coexist above compose/recipe |
 
 Template and compose share one slot; template is fallback when LLM is off or compose fails.
 
@@ -276,7 +278,16 @@ flowchart LR
 
 **Tier honesty (Increment 1A):** reconcile fit-weights narrative *lead* by mode. Corroboration tier **+1** applies only when **both** lanes return substantive signal — never when one lane led and the other was thin. See `apply_peer_tier_rules()` in `reconcile_spec.py`.
 
-**Not equal in trust marking** — equal in **always running**.
+**Trust marking today (v1):** `owned` / `borrowed` / `declared` encode provenance but read as a quality hierarchy in UI (solid corpus vs dashed web). Fetch is peer; **validation and charts are still corpus-centric.**
+
+**Trust marking target (v2):** Peer lanes with **lane-specific validation** and a shared ledger — no default incumbent. See **[TRUST_MODEL_V2.md](./TRUST_MODEL_V2.md)** for `lane` + `validation_status` + lead-by-question reconcile + lane-aware charts.
+
+| | v1 (live) | v2 (target) |
+|--|-----------|-------------|
+| Lane fetch | Peer — always run | Same |
+| Labels | `owned` / `borrowed` / `declared` | `lane` + `validation_status` + per-claim tier |
+| Tier cap | Corpus citation count | Validated evidence across lanes |
+| Charts | Corpus SQL + corpus hits | Best validated dataset per question; multi-lane OK |
 
 ---
 
@@ -302,7 +313,7 @@ One Sonnet call — layered inputs, not three competing systems.
 | free_compose vs reference_recipe | deep_pass disposition | Yes (or heuristic) |
 | HTML layout & materials | deep_pass + visual composition skill | Yes |
 | SWOT/journey when no LLM | `visual_templates.py` | No |
-| Funder bar chart | `chart_spec.py` + intent/router | No |
+| Funder bar chart | `visual/` opportunity engine + builders | No |
 
 **Fallback ladder** (compose slot):
 
@@ -323,7 +334,7 @@ flowchart TD
   Spine --> ST[StatStrip]
 
   Spec --> Visual{Visual area}
-  Visual --> CH[ChartCanvas if spec.chart]
+  Visual --> CH[ChartCanvas if spec.charts or spec.chart]
   Visual --> Fork{Compose slot}
   Fork -->|merged_markup gate=pass| CO[CompositionCanvas HTML]
   Fork -->|else| REC[Recipe React instrument]
@@ -339,7 +350,7 @@ flowchart TD
 | **Recipe** | `instrument` | `*_assembler.py` | No |
 | **Template** | `canvas.merged_markup` | `visual_templates.py` | No |
 | **Compose** | `canvas.merged_markup` | Model HTML → merge → gate | `atlas-visual-composition.md` |
-| **Chart** | `chart` | `chart_spec.py` + `viz_guardrail` | `atlas-chart-encoding.md` (LLM); attach is **code** |
+| **Chart** | `charts[]`, `chart` | `visual/attach.py` + builders + `viz_guardrail` | `atlas-chart-encoding.md` (LLM hint only); attach is **code** |
 
 ### ECharts vs Recharts (what is actually live)
 
@@ -348,7 +359,7 @@ flowchart TD
 | **ECharts** (`echarts-for-react`) | `chart-canvas.tsx`, `network-map.tsx` | **Yes** — primary chart path |
 | **Recharts** | `src/components/ui/chart.tsx`, lab/workbench | **No** — legacy/lab only |
 
-**Why responses feel prose-heavy:** `chart_router` knows bar/line/pie/network, but **only funder bar is implemented** in `chart_spec.py`. Chart attach runs **after** deep pass and only when query + `stats.funders` match intent. Skills do not trigger charts.
+**Why responses can still feel prose-heavy:** compose/templates cover many queries; charts require **validated numeric shape**. Today the Visual Opportunity Engine attaches 0–3 charts from **corpus stats + corpus citations only** — external lane enriches prose/reconcile but not chart series yet. See [§17](#17-trust-v2--visual-rollout).
 
 ---
 
@@ -453,14 +464,22 @@ Living registry — add a row when you add a recipe, chart, or template.
 | T1 | SWOT 2×2 grid | `visual_intent` swot | `build_swot_markup` |
 | T2 | Journey orient strip | `visual_intent` journey_orient | `build_journey_orient_markup` |
 
-### Charts (`chart` — ECharts)
+### Charts (`charts[]` / `chart` — ECharts)
 
-| ID | Chart kind | Status | Trigger | Builder |
-|----|------------|--------|---------|---------|
-| C1 | Funder horizontal bar | **Live** | funder / breakdown queries + `stats.funders` | `build_funder_bar_chart` |
-| C2 | Line (trend) | Router only | `_TIME_RE` in `chart_router.py` | not implemented |
-| C3 | Pie (composition) | Router only | — | not implemented |
+**Engine:** `agents/atlas_v5/visual/` — data profile → opportunity tree → builders → attach (max 3, weak-data suppression). Entry: `chart_spec.attach_charts_with_meta`.
+
+| ID | Chart kind | Status | Data source (today) | Builder |
+|----|------------|--------|---------------------|---------|
+| C1 | Funder ranking bar | **Live** | `stats.funders` (corpus SQL) | `build_funder_ranking_bar` |
+| C1b | Null funding bar | **Live** | `stats.funders` null counts | `build_null_funding_bar` |
+| C3 | Pie composition | **Live** | corpus funder floor shares | `build_funder_composition_pie` |
+| C5 | Evidence heatmap | **Live** | corpus hits + citations | `build_evidence_heatmap` |
+| C6 | Flow sankey | **Live** | corpus hits (connect / flow intent) | `build_flow_sankey` |
+| C2 | Line (trend) | Planned | corpus or web time series | not implemented |
+| C7 | Web programme bar | **Planned (v2)** | validated `web.*` ledger figures | trust v2 |
 | C4 | Network as ChartSpec | N/A | use R2 NetworkMap | by design |
+
+**v2:** charts bind to **ledger keys from any lane** that passed validation; lead lane from reconcile. See [TRUST_MODEL_V2.md](./TRUST_MODEL_V2.md) §3.
 
 ### Skills & prompts
 
@@ -475,7 +494,7 @@ Living registry — add a row when you add a recipe, chart, or template.
 
 When adding a **recipe:** assembler → `AnswerSpec.instrument` schema → mouth `renderInstrument` → eval case.  
 When adding a **template:** `visual_templates.py` + `visual_intent.py` → eval case.  
-When adding a **chart:** `chart_spec.py` builder + `viz_guardrail` + `chart_router` + mouth unchanged if `ChartBlock` shape holds → eval case.
+When adding a **chart:** builder in `visual/builders.py` + opportunity row in `visual/opportunity.py` + `viz_guardrail` + eval in `test_visual_opportunity.py` → mouth unchanged if `ChartBlock` shape holds.
 
 ---
 
@@ -514,7 +533,7 @@ Same blueprint row in every column. **Restaurant** = where to put changes. **Bod
 **Validation questions**
 
 - *Restaurant:* “Supplier, ticket number, set menu, prep kit, inset chart, or chef’s special?”
-- *Body:* “Does it pass the immune system? Owned vs borrowed?”
+- *Body:* “Does it pass the immune system? Which **lane** validated this figure?” (v2 — not “owned vs borrowed” alone)
 - *Architecture:* “Pipeline fix (atlas_v5) or tool-loop fix (orchestrator)? Which path is `/atlas` using?”
 
 ---
@@ -611,7 +630,7 @@ Gate for trust.
 | **Routing** | `chat` \| `clarify` \| `substantive` + outcome hints (`orient` / `connect` / `diagnose` / `act` / `defend`) | Richer intent routing (clarify / refine / analyse lanes) without making LLM own evidence fetch |
 | **Evidence** | `wide_pass` runs deterministically; corpus, SQL, web are **code-planned**, parallel, not LLM-selected | Same factory model + academic / user-file lanes (planned, not live) |
 | **Render contract** | `AnswerSpec` / envelope | Same contract — decision surfaces compile into AnswerSpec fields |
-| **Charts** | Narrow: **C1 funder bar live**; C2/C3 router-only | Full visual grammar (line, composition, timelines, option boards) |
+| **Charts** | Visual Opportunity Engine — multi-chart, corpus-only data | Lane-aware charts + dual-series reconcile ([§17](#17-trust-v2--visual-rollout)) |
 | **Product framing** | Render fork asks chart / compose / recipe / prose | **Decision surfaces first** — implementation second |
 | **“Compiler”** | **Distributed** — assemblers → reconcile → deep_pass → chart attach → merge → gate | May be named as one concept; no requirement for a single module yet |
 
@@ -646,7 +665,7 @@ LangGraph schedules the turn; **governance lives in these layers**, not in the g
 | Layer | Role | Current module(s) | Maturity |
 |-------|------|-------------------|----------|
 | Evidence factory | Always-on parallel fetch | `wide_pass`, `retrieval_fabric`, `j1t1_corpus` | Strong direction |
-| Evidence ledger | Owned / borrowed / reconcile | `EvidenceBag`, `reconcile_spec`, `KeyedFigureIndex` | Core |
+| Evidence ledger | Owned / borrowed / reconcile | `EvidenceBag`, `reconcile_spec`, `KeyedFigureIndex` | **v2:** validated ledger — [TRUST_MODEL_V2.md](./TRUST_MODEL_V2.md) |
 | Analyst judgement | Meaning, tension, voice, compose | `deep_pass` (Sonnet) | Good — role now explicit |
 | Spec compiler *(concept)* | Assemble AnswerSpec | Assemblers, deep_pass, chart attach, merge | Fragmented but functional |
 | Trusted surface | Mouth render fork | `atlas-answer-surface.tsx` | Promising — visually thin |
@@ -661,7 +680,7 @@ Product should ask **“what decision shape?”** before **“chart or recipe?�
 | **State of Play / Decision Brief** | Understand landscape, tiers, blindspots | Verdict spine + stat strip + two-tier field | R1 IncommensurableMagnitudes + T2 journey template + compose | **Today** — partial (journey/orient queries) |
 | **Strategic Options** | Compare paths, trade-offs | Option board / trade-off columns | Compose (free HTML) or new recipe | **Target** — prose + compose fragments only |
 | **Evidence Gap** | What is missing / thin | HAVE–GAP–MOVE matrix | R3 EvidenceGapMatrix + diagnose assembler | **Today** — diagnose outcome |
-| **Funding / Funder Breakdown** | Who funds, how much (floor) | Horizontal bar / composition | C1 ChartSpec bar + SQL `stats.funders` | **Today** — C1 live when intent matches |
+| **Funding / Funder Breakdown** | Who funds, how much (floor) | Horizontal bar / composition | C1–C3 + Visual Opportunity Engine | **Today** — corpus-only; **v2** — web programme when validated |
 | **Partner / Actor Map** | Who connects to whom | Force / network graph | R2 NetworkMap + connect graph fetch | **Today** — connect outcome |
 | **Defensible Recommendation** | Defend a move under scrutiny | Claim + evidence + counterclaim pack | Spine + reconciliation notes + compose | **Target** — tier + citations today; pack layout aspirational |
 | **Action Plan / Next Moves** | What to do next | Ranked opportunities list | R4 OpportunityList + act assembler | **Today** — act outcome |
@@ -671,4 +690,45 @@ Product should ask **“what decision shape?”** before **“chart or recipe?�
 
 ---
 
-*Last updated: §16 product north star — decision surfaces, evidence/governance boundaries, today vs target.*
+## 17. Trust v2 + visual rollout
+
+> **Spec:** [TRUST_MODEL_V2.md](./TRUST_MODEL_V2.md) (full ledger, validators, reconcile, chart rules).  
+> **Already shipped:** Visual Opportunity Engine (`agents/atlas_v5/visual/`) — 0–3 charts, data-shape selection, dev overlay meta — **corpus inputs only**.
+
+### Phase map
+
+| Phase | What | Key files | Unblocks |
+|-------|------|-----------|----------|
+| **T0** | Spec + blueprint | `docs/TRUST_MODEL_V2.md`, this § | Alignment |
+| **T1 — Ledger schema** | ✅ `lane`, `validation_status`, `source_refs` on figures | `keyed_figures.py`, `trust/ledger.py` | Lane-aware gate |
+| **T2 — Validators** | ✅ Corpus + web validators | `trust/validate_*.py` | External figures in ledger |
+| **T3 — Reconcile v2** | ✅ Lead lane, conflict detection, multi-lane tier cap | `reconcile_spec.py`, `trust/reconcile_v2.py`, `trust/tier_from_evidence.py` | Honest external-led answers |
+| **T4 — Visual v2** | ✅ Dual-scale + web programme charts; lead-lane selection | `visual/*` | Rich external in charts |
+| **T5 — Mouth** | ✅ Lane legend, chart lane badges, peer prompt | `atlas-answer-surface.tsx`, `chart-canvas.tsx`, `deep_pass_prompt.py` | User sees peer model |
+| **T6 — Research lane** | New fetch bay + validator (same pattern as web) | `retrieval_fabric.py`, `trust/validate_research.py` | Academic API |
+
+### Visual v2 checklist (after T1–T2)
+
+1. **Extract web figures into ledger** — programme totals, live-call counts from validated external hits (not placeholder `WEB_UPPER_GBP` alone).
+2. **Extend `DataProfile.lane_sets`** — profile per lane after validation, not raw bag.
+3. **Opportunity selection** — use `lead_lane` from reconcile; allow web-led bar when corpus slice thin but web verified.
+4. **New builders** — `build_web_programme_bar`, `build_dual_floor_vs_programme` (corpus + web series, reconciliation note in `ChartBlock.story`).
+5. **Schema** — `ChartBlock.series_lane`, `validation_status`, `lead_lane` (additive).
+6. **Gate** — composition + chart attach accept any ledger key with `validation_status != absent`.
+7. **Tests** — dual-lane chart attach, conflict suppression, web-led when corpus thin (`test_visual_opportunity.py`, `test_reconcile_*.py`).
+8. **Prompt** — `deep_pass_prompt.py`: peer validation language; remove “corpus anchors, web decorates” framing.
+
+### What you can ship without full v2
+
+| Increment | Effort | Value |
+|-----------|--------|-------|
+| Web validated figures in ledger (T1–T2 only) | Medium | External numbers gateable in compose |
+| One web-led chart builder + dual-series | Medium | Programme scale visible when corpus blind |
+| UI legend v2 (T5 partial) | Small | Stops “corpus good / web bad” signalling |
+| Full reconcile + tier v2 | Large | Correct tier when external leads |
+
+**Recommended order:** T1 → T2 → T4 (one web chart) → T5 legend → T3 tier → T6 research lane.
+
+---
+
+*Last updated: §17 trust v2 rollout + Visual Opportunity Engine inventory; TRUST_MODEL_V2.md.*

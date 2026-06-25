@@ -55,6 +55,7 @@ class AtlasV5State(TypedDict, total=False):
     reasoning_trace: Annotated[list[dict[str, Any]], _merge_trace]
     turn_active: bool
     turn_pipeline: dict[str, Any]
+    ux_prefs: dict[str, bool]
 
 
 def build_atlas_v5_graph():

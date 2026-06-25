@@ -146,19 +146,12 @@ app.add_middleware(
 async def health() -> dict:
     """Service-level health check with corpus transport probe."""
     from mcps.cpc_corpus import transport
-    from mcps.cpc_corpus import queries
+    from mcps.cpc_corpus.connectivity import probe_corpus_connectivity
 
-    corpus_transport = "unknown"
-    corpus_ok = False
-    try:
-        rows = queries.search_projects("health", limit=1)
-        corpus_transport = transport.get_last_transport()
-        corpus_ok = corpus_transport != "unavailable"
-    except Exception as exc:
-        corpus_transport = "error"
-        corpus_detail = str(exc)[:120]
-    else:
-        corpus_detail = transport.human_transport_note(corpus_transport)
+    conn = probe_corpus_connectivity()
+    corpus_transport = conn["preferred_transport"]
+    corpus_ok = conn["any_reachable"]
+    corpus_detail = conn["note"]
 
     return {
         "status": "ok",
@@ -168,8 +161,25 @@ async def health() -> dict:
             "note": corpus_detail,
             "postgres_url_set": bool(os.getenv("POSTGRES_URL") or os.getenv("DATABASE_URL")),
             "supabase_rest_set": transport.rest_configured(),
+            "postgres": conn["postgres"],
+            "rest": conn["rest"],
+        },
+        "web_lane": {
+            "enabled": os.getenv("ATLAS_V5_WEB_LANE", "1").strip().lower()
+            not in ("0", "false", "off", "no"),
+            "exa_api_key_set": bool(os.getenv("EXA_API_KEY", "").strip()),
+            "exa_py_installed": _exa_py_installed(),
         },
     }
+
+
+def _exa_py_installed() -> bool:
+    try:
+        import exa_py  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
 
 
 @app.get("/")

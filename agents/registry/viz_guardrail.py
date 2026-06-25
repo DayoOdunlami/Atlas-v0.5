@@ -65,6 +65,8 @@ def _check_data_lengths(spec: dict[str, Any], issues: list[str]) -> None:
     for i, s in enumerate(series_list):
         if not isinstance(s, dict):
             continue
+        if s.get("type") in ("heatmap", "sankey", "pie"):
+            continue
         data = s.get("data")
         if data is not None and not isinstance(data, list):
             issues.append(f"series[{i}].data is not a list")
