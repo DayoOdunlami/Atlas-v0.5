@@ -22,6 +22,16 @@ const ORCHESTRATOR_V1 =
 const WORKBENCH_THREAD_KEY = "atlas5-workbench-thread-id";
 const ATLAS_V5_THREAD_KEY = "atlas5-v5-thread-id";
 
+function readOrCreateThreadId(storageKey: string): string {
+  if (typeof sessionStorage === "undefined") return "";
+  let id = sessionStorage.getItem(storageKey);
+  if (!id) {
+    id = crypto.randomUUID();
+    sessionStorage.setItem(storageKey, id);
+  }
+  return id;
+}
+
 /** Rotate LangGraph/CopilotKit thread — call from Workbench "New chat". */
 export function startNewWorkbenchThread(): string {
   const id = crypto.randomUUID();
@@ -38,8 +48,15 @@ export function startNewAtlasV5Thread(): string {
   return id;
 }
 
-function useStableThreadId(enabled: boolean, storageKey: string, resetEvent: string): string | undefined {
-  const [threadId, setThreadId] = useState<string | undefined>(undefined);
+function useStableThreadId(
+  enabled: boolean,
+  storageKey: string,
+  resetEvent: string,
+): string | undefined {
+  const [threadId, setThreadId] = useState<string | undefined>(() => {
+    if (!enabled || typeof window === "undefined") return undefined;
+    return readOrCreateThreadId(storageKey);
+  });
 
   useEffect(() => {
     if (!enabled) {
@@ -47,12 +64,7 @@ function useStableThreadId(enabled: boolean, storageKey: string, resetEvent: str
       return;
     }
     const syncFromStorage = () => {
-      let id = sessionStorage.getItem(storageKey);
-      if (!id) {
-        id = crypto.randomUUID();
-        sessionStorage.setItem(storageKey, id);
-      }
-      setThreadId(id);
+      setThreadId(readOrCreateThreadId(storageKey));
     };
     syncFromStorage();
     window.addEventListener(resetEvent, syncFromStorage);
@@ -105,11 +117,11 @@ export function CopilotKitProvider({ children }: { children: React.ReactNode }) 
   const workbenchThreadId = useStableWorkbenchThreadId(orchestratorRoute);
   const atlasV5ThreadId = useStableAtlasV5ThreadId(atlasV5Route);
   const threadId = orchestratorRoute ? workbenchThreadId : atlasV5Route ? atlasV5ThreadId : undefined;
-  // Remount on thread rotation so "New question" clears CopilotKit chat history.
+  // Remount only on explicit thread rotation (New question) — stable id from first client paint.
   const providerKey = orchestratorRoute
     ? workbenchThreadId
     : atlasV5Route
-      ? `atlas_v5-${atlasV5ThreadId ?? "pending"}`
+      ? `atlas_v5-${atlasV5ThreadId ?? "init"}`
       : agentName;
 
   return (

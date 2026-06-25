@@ -30,32 +30,73 @@ def _rpc_available(name: str) -> bool:
         return False
 
 
+def _keyword_terms(query: str) -> list[str]:
+    """Progressive ILIKE terms — long questions rarely match title/abstract verbatim."""
+    q = sanitize_ilike_term(query)
+    terms: list[str] = []
+    if q:
+        terms.append(q)
+    ql = (query or "").lower()
+    for token in (
+        "decarbonisation",
+        "decarbonization",
+        "rail decarbonisation",
+        "maritime decarbonisation",
+        "aviation decarbonisation",
+        "hydrogen",
+        "transport innovation",
+        "rail",
+        "maritime",
+        "aviation",
+    ):
+        if token in ql and token not in terms:
+            terms.append(token)
+    if "decarbon" in ql and "decarbonisation" not in terms:
+        terms.append("decarbon")
+    # Last resort: single high-signal word from the query
+    if len(terms) <= 1:
+        for word in re.findall(r"[a-z]{5,}", ql):
+            if word not in ("which", "should", "prioritise", "prioritize", "transport", "there"):
+                terms.append(word)
+                break
+    seen: set[str] = set()
+    out: list[str] = []
+    for t in terms:
+        key = t.strip().lower()
+        if key and key not in seen:
+            seen.add(key)
+            out.append(t.strip())
+    return out[:6]
+
+
 def search_projects_keyword(query: str, limit: int = 10) -> list[dict[str, Any]]:
     sb = _client()
-    term = sanitize_ilike_term(query)
-    pattern = f"%{term}%"
-    result = (
-        sb.schema("atlas")
-        .from_("projects")
-        .select("id, title, lead_org_name, abstract, transport_relevance_score")
-        .or_(f"title.ilike.{pattern},abstract.ilike.{pattern}")
-        .order("transport_relevance_score", desc=True)
-        .limit(limit)
-        .execute()
-    )
-    rows = result.data or []
-    return [
-        {
-            "id": str(r["id"]),
-            "title": r.get("title") or "",
-            "organisation": r.get("lead_org_name") or "",
-            "abstract": (r.get("abstract") or "")[:300],
-            "transport_relevance_score": r.get("transport_relevance_score"),
-            "similarity": None,
-            "source_type": "project",
-        }
-        for r in rows
-    ]
+    for term in _keyword_terms(query):
+        pattern = f"%{sanitize_ilike_term(term)}%"
+        result = (
+            sb.schema("atlas")
+            .from_("projects")
+            .select("id, title, lead_org_name, abstract, transport_relevance_score")
+            .or_(f"title.ilike.{pattern},abstract.ilike.{pattern}")
+            .order("transport_relevance_score", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        rows = result.data or []
+        if rows:
+            return [
+                {
+                    "id": str(r["id"]),
+                    "title": r.get("title") or "",
+                    "organisation": r.get("lead_org_name") or "",
+                    "abstract": (r.get("abstract") or "")[:300],
+                    "transport_relevance_score": r.get("transport_relevance_score"),
+                    "similarity": None,
+                    "source_type": "project",
+                }
+                for r in rows
+            ]
+    return []
 
 
 def search_projects_vector(embedding_vec: list[float], limit: int = 10) -> list[dict[str, Any]]:

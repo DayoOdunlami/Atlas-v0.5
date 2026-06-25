@@ -11,6 +11,14 @@ Scope = tuple[str, str, str]  # where_sql, object_label, mode_tag
 
 def corpus_scope_for_query(query: str) -> Scope:
     ql = query.lower()
+    if re.search(r"\btransport mode(s)?\b", ql) and re.search(
+        r"\b(prioriti[sz]e|prioritise|prioritize|compare|which mode|across modes)\b", ql
+    ):
+        return (
+            "TRUE",
+            "Transport decarbonisation (all modes)",
+            "multi_mode",
+        )
     if re.search(r"\b(swot|pest|pestle)\b", ql) and re.search(
         r"\bcpc|connected places catapult\b", ql
     ):

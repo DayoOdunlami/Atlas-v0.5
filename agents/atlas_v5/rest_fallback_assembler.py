@@ -118,6 +118,14 @@ def assemble_rest_fallback_spec(wide: WidePassResult) -> AnswerSpec:
             "Full network graph needs Postgres — relationship map may be partial."
         )
 
+    web_block = ""
+    if web:
+        lines = "\n".join(
+            f"- [{w.title}]({w.url})" if w.url else f"- {w.title}"
+            for w in web[:6]
+        )
+        web_block = f"\n\n### Web lane ({len(web)} source(s))\n{lines}\n"
+
     return AnswerSpec(
         object=label,
         scope=f"CORPUS HTTPS · {n_proj} MATCH(ES) · {mode.upper()}",
@@ -138,17 +146,23 @@ def assemble_rest_fallback_spec(wide: WidePassResult) -> AnswerSpec:
         query=query,
         soWhat=SoWhat(
             lookingAt=f"{mode} · {label}",
-            oneDecision="Use matched projects as evidence anchors — reconnect Postgres for full stats/charts.",
+            oneDecision=(
+                "Use matched projects as evidence anchors — web sources listed on canvas when corpus is thin."
+                if web
+                else "Use matched projects as evidence anchors — reconnect Postgres for full stats/charts."
+            ),
             gate="REST corpus · max Indicative without SQL aggregates",
-            primaryAction="Review corpus matches below",
+            primaryAction="Review evidence on canvas",
             turn=f"{mode} · REST fallback",
         ),
         canvas={
             "composition_mode": "free_compose",
-            "markup": (
+            "gate_status": "pass",
+            "merged_markup": (
                 f"## {label}\n\n"
                 f"**Corpus via HTTPS** — Postgres pooler unreachable; "
-                f"{n_proj} project(s) retrieved via Supabase REST.\n\n"
+                f"{n_proj} project(s) retrieved via Supabase REST."
+                f"{web_block}\n\n"
                 f"_{query}_"
             ),
         },

@@ -215,6 +215,13 @@ export function ConnectionStatus({
           {devMeta?.route ? (
             <StatusRow label="Last route" detail={`${devMeta.route} (${devMeta.route_source})`} />
           ) : null}
+          {health?.agents?.ok === false ? (
+            <p className="mt-2 font-medium" style={{ color: "#9A3412" }}>
+              Agent offline — set PYTHON_AGENTS_URL on Vercel to your Railway service. Chat
+              will not reply until the agent is reachable.
+              {health?.agents?.url ? ` (${health.agents.url})` : ""}
+            </p>
+          ) : null}
           {health?.error ? (
             <p className="mt-2" style={{ color: "#9A3412" }}>
               {health.error}

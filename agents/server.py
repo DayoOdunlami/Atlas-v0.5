@@ -132,6 +132,7 @@ app.add_middleware(
         "https://atlas-v0-5-dayoodunlamis-projects.vercel.app",
         os.getenv("NEXT_PUBLIC_BASE_URL", ""),
     ],
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
