@@ -9,15 +9,16 @@ export const metadata = {
 export default async function AtlasSessionPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; thread?: string }>;
 }) {
-  const { q } = await searchParams;
+  const { q, thread } = await searchParams;
   const { spec, dataSource } = await fetchAnswerSpecForPage(q);
   return (
     <AtlasClientShell
       initialSpec={spec}
       initialDataSource={dataSource}
       bootstrapQuery={q?.trim()}
+      initialThreadId={thread?.trim()}
     />
   );
 }

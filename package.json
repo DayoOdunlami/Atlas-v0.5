@@ -29,6 +29,8 @@
     "eval:calibration:heuristic": "node scripts/python-bin.mjs -m agents.atlas_v5.calibration_eval --heuristic-only",
     "eval:v5-trajectories": "node scripts/python-bin.mjs eval/run_atlas_v5_trajectories.py",
     "eval:v5-trajectories:quick": "node scripts/python-bin.mjs eval/run_atlas_v5_trajectories.py --id V01_hello --id V02_rail_orient_followup",
+    "eval:v5-threads": "npx vitest run --config eval/vitest.atlas5.config.ts eval/atlas-v5-threads.test.ts && node scripts/python-bin.mjs -m pytest agents/test_persist_turn.py -q",
+    "db:migrate:atlas": "node scripts/apply-atlas-migrations.mjs",
     "eval:v5-session": "playwright test --config eval/playwright.atlas-v5.config.ts",
     "eval:v5-session:smoke": "playwright test --config eval/playwright.atlas-v5.config.ts --grep E2E-3",
     "eval:demo-scenarios": "node scripts/python-bin.mjs -m pytest agents/test_demo_scenarios.py -q",

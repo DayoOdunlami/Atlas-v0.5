@@ -40,11 +40,22 @@ export function startNewWorkbenchThread(): string {
   return id;
 }
 
+/** Read current v5 thread id (creates one if missing). */
+export function readAtlasV5ThreadId(): string {
+  return readOrCreateThreadId(ATLAS_V5_THREAD_KEY);
+}
+
+/** Set v5 thread id — remounts CopilotKit via provider key. */
+export function setAtlasV5ThreadId(id: string): void {
+  if (typeof sessionStorage === "undefined") return;
+  sessionStorage.setItem(ATLAS_V5_THREAD_KEY, id);
+  window.dispatchEvent(new Event("atlas5:new-atlas-v5-thread"));
+}
+
 /** Rotate /atlas v5 CopilotKit thread. */
 export function startNewAtlasV5Thread(): string {
   const id = crypto.randomUUID();
-  sessionStorage.setItem(ATLAS_V5_THREAD_KEY, id);
-  window.dispatchEvent(new Event("atlas5:new-atlas-v5-thread"));
+  setAtlasV5ThreadId(id);
   return id;
 }
 

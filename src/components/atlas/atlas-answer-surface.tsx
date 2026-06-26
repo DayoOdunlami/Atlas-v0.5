@@ -12,6 +12,9 @@ import { OpportunityList } from "@/components/atlas/recipes/opportunity-list";
 import { CanvasThinking, latestReasoningProgress, type AtlasReasoningStep } from "@/components/atlas/shell/canvas-thinking";
 import { CarriedFromBanner } from "@/components/atlas/shell/carried-from-banner";
 import { AtlasSessionNav } from "@/components/atlas/shell/atlas-session-nav";
+import {
+  AtlasThreadSidebar,
+} from "@/components/atlas/shell/atlas-thread-sidebar";
 import { DevOverlay, type AtlasDevMeta } from "@/components/atlas/shell/dev-overlay";
 import { EmptyCanvas } from "@/components/atlas/shell/empty-canvas";
 import {
@@ -29,6 +32,7 @@ import { ConfidenceCeilingBar } from "@/components/atlas/spine/confidence-ceilin
 import { ProvenanceTrace } from "@/components/atlas/spine/provenance-trace";
 import { atlasFont, atlasTokens as T } from "@/lib/atlas/tokens";
 import type { AtlasUxPrefs } from "@/lib/atlas/ux-preferences";
+import type { ThreadSummary } from "@/lib/atlas/thread-client";
 
 function renderInstrument(
   instrument: AnswerSpec["instrument"],
@@ -69,6 +73,14 @@ export type AtlasAnswerSurfaceProps = {
   uxPrefs?: AtlasUxPrefs;
   onUxPrefsChange?: (patch: Partial<AtlasUxPrefs>) => void;
   turnTiming?: { elapsedMs: number | null; running: boolean };
+  activeThreadId?: string | null;
+  threads?: ThreadSummary[];
+  threadsLoading?: boolean;
+  historyOpen?: boolean;
+  onToggleHistory?: () => void;
+  onSelectThread?: (threadId: string) => void;
+  onNewThread?: () => void;
+  historyDisabled?: boolean;
 };
 
 export function AtlasAnswerSurface({
@@ -90,6 +102,14 @@ export function AtlasAnswerSurface({
   uxPrefs,
   onUxPrefsChange,
   turnTiming,
+  activeThreadId = null,
+  threads = [],
+  threadsLoading = false,
+  historyOpen = false,
+  onToggleHistory,
+  onSelectThread,
+  onNewThread,
+  historyDisabled = false,
 }: AtlasAnswerSurfaceProps) {
   const [provId, setProvId] = useState<string | null>(null);
   const partialStage = devMeta?.partial_stage;
@@ -154,7 +174,19 @@ export function AtlasAnswerSurface({
           chatPending={chatPending}
         />
 
-        <div className="mx-auto flex w-full max-w-[1440px] flex-1 items-stretch overflow-hidden px-6 py-8 lg:px-14">
+        <div className="mx-auto flex w-full max-w-[1640px] flex-1 items-stretch gap-4 overflow-hidden px-6 py-8 lg:px-10">
+          {onToggleHistory && onSelectThread && onNewThread ? (
+            <AtlasThreadSidebar
+              threads={threads}
+              activeThreadId={activeThreadId}
+              loading={threadsLoading}
+              open={historyOpen}
+              onToggle={onToggleHistory}
+              onSelectThread={onSelectThread}
+              onNewThread={onNewThread}
+              disabled={historyDisabled}
+            />
+          ) : null}
           <main
             className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-sm shadow-lg"
             style={{ background: T.canvas }}
@@ -246,7 +278,19 @@ export function AtlasAnswerSurface({
         chatPending={chatPending}
       />
 
-      <div className="mx-auto flex w-full max-w-[1440px] flex-1 items-stretch overflow-hidden px-6 py-8 lg:px-14">
+      <div className="mx-auto flex w-full max-w-[1640px] flex-1 items-stretch gap-4 overflow-hidden px-6 py-8 lg:px-10">
+        {onToggleHistory && onSelectThread && onNewThread ? (
+          <AtlasThreadSidebar
+            threads={threads}
+            activeThreadId={activeThreadId}
+            loading={threadsLoading}
+            open={historyOpen}
+            onToggle={onToggleHistory}
+            onSelectThread={onSelectThread}
+            onNewThread={onNewThread}
+            disabled={historyDisabled}
+          />
+        ) : null}
         <main
           className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-sm shadow-lg"
           style={{ background: T.canvas }}

@@ -9,7 +9,12 @@ import { AtlasAnswerSurface } from "@/components/atlas/atlas-answer-surface";
 import type { AtlasReasoningStep } from "@/components/atlas/shell/canvas-thinking";
 import type { AtlasDevMeta } from "@/components/atlas/shell/dev-overlay";
 import type { ChatMessage } from "@/components/atlas/shell/so-what-rail";
-import { startNewAtlasV5Thread } from "@/components/copilotkit-provider";
+import {
+  AtlasThreadSidebar,
+  readHistorySidebarOpen,
+  writeHistorySidebarOpen,
+} from "@/components/atlas/shell/atlas-thread-sidebar";
+import { latestReasoningProgress } from "@/components/atlas/shell/canvas-thinking";
 import { useAtlas5Chat } from "@/hooks/use-atlas5-chat";
 import {
   formatZodError,
@@ -19,6 +24,14 @@ import {
   type AnswerSpecEnvelope,
 } from "@/lib/atlas/contracts/answer-spec.schema";
 import type { AnswerSpecSource } from "@/lib/atlas/fetch-answer-spec";
+import { extractLayoutSignals, titleFromQuery } from "@/lib/atlas/layout-signals";
+import {
+  ensureThread,
+  fetchThreadDetail,
+  fetchThreadList,
+  persistTurn,
+  type ThreadSummary,
+} from "@/lib/atlas/thread-client";
 import {
   clearBootstrapSent,
   consumePendingBootstrap,
@@ -33,7 +46,7 @@ import {
   uxPrefsForAgent,
   type AtlasUxPrefs,
 } from "@/lib/atlas/ux-preferences";
-import { latestReasoningProgress } from "@/components/atlas/shell/canvas-thinking";
+import { startNewAtlasV5Thread, readAtlasV5ThreadId, setAtlasV5ThreadId } from "@/components/copilotkit-provider";
 
 type AtlasV5CoState = {
   answer_spec_envelope?: AnswerSpecEnvelope;
@@ -98,10 +111,12 @@ export function AtlasCopilotShell({
   initialSpec,
   initialDataSource,
   bootstrapQuery,
+  initialThreadId,
 }: {
   initialSpec: AnswerSpec | null;
   initialDataSource: AnswerSpecSource;
   bootstrapQuery?: string;
+  initialThreadId?: string;
 }) {
   const router = useRouter();
   const [uxPrefs, setUxPrefs] = useState<AtlasUxPrefs>(() => readAtlasUxPrefs());
@@ -156,6 +171,16 @@ export function AtlasCopilotShell({
     elapsedMs: number | null;
     running: boolean;
   }>({ elapsedMs: null, running: false });
+
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(
+    initialThreadId ?? null,
+  );
+  const [threads, setThreads] = useState<ThreadSummary[]>([]);
+  const [threadsLoading, setThreadsLoading] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [restoredMessages, setRestoredMessages] = useState<ChatMessage[]>([]);
+  const lastPersistedKeyRef = useRef<string>("");
+  const threadInitRef = useRef(false);
 
   useEffect(() => {
     specRef.current = spec;
@@ -268,6 +293,149 @@ export function AtlasCopilotShell({
   }, [chatPending, turnActive, envelopeStatus]);
 
   useEffect(() => {
+    setHistoryOpen(readHistorySidebarOpen());
+  }, []);
+
+  const refreshThreadList = useCallback(async () => {
+    setThreadsLoading(true);
+    try {
+      setThreads(await fetchThreadList());
+    } finally {
+      setThreadsLoading(false);
+    }
+  }, []);
+
+  const rehydrateThread = useCallback(
+    async (threadId: string) => {
+      const detail = await fetchThreadDetail(threadId);
+      if (!detail) return;
+
+      const msgs: ChatMessage[] = [];
+      let lastSpec: AnswerSpec | null = null;
+      for (const turn of detail.turns) {
+        if (turn.user_message?.trim()) {
+          msgs.push({ role: "user", content: turn.user_message });
+        }
+        if (turn.assistant_reply?.trim()) {
+          msgs.push({ role: "assistant", content: turn.assistant_reply });
+        }
+        if (turn.answer_spec) {
+          const validated = validateFinalAnswerSpec(turn.answer_spec);
+          if (validated.success) lastSpec = validated.data;
+        }
+      }
+
+      setRestoredMessages(msgs);
+      lastPersistedKeyRef.current = `${detail.turns.length}:${msgs.length}`;
+
+      if (lastSpec) {
+        setSpec(lastSpec);
+        setDataSource("brain");
+        setState?.({
+          answer_spec_envelope: {
+            revision: detail.turns.length,
+            status: "final",
+            spec: lastSpec,
+          },
+          canvas_cleared: false,
+        });
+        lastRevisionRef.current = detail.turns.length;
+      }
+    },
+    [setState],
+  );
+
+  useEffect(() => {
+    if (threadInitRef.current) return;
+    threadInitRef.current = true;
+
+    const tid = initialThreadId?.trim() || readAtlasV5ThreadId();
+    setActiveThreadId(tid);
+    setAtlasV5ThreadId(tid);
+
+    void refreshThreadList();
+    if (initialThreadId?.trim()) {
+      void rehydrateThread(tid);
+    }
+
+    const q = bootstrapQuery?.trim();
+    if (q && !initialThreadId?.trim()) {
+      void ensureThread(tid, titleFromQuery(q));
+    }
+
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("thread") !== tid) {
+        params.set("thread", tid);
+        router.replace(`/atlas/session?${params.toString()}`, { scroll: false });
+      }
+    }
+  }, [bootstrapQuery, initialThreadId, rehydrateThread, refreshThreadList, router]);
+
+  useEffect(() => {
+    if (chatPending || turnActive) return;
+    const envelope = state?.answer_spec_envelope;
+    if (!envelope || envelope.status !== "final") return;
+
+    const revision = envelope.revision ?? 0;
+    const liveMessages: ChatMessage[] =
+      messages.length > 0
+        ? messages.map((m) => ({
+            role: m.role as "user" | "assistant",
+            content: m.parts.map((p) => p.text).join(""),
+          }))
+        : restoredMessages;
+
+    const lastUser = [...liveMessages].reverse().find((m) => m.role === "user");
+    const lastAssistant = [...liveMessages]
+      .reverse()
+      .find((m) => m.role === "assistant");
+
+    if (!lastUser && !lastAssistant) return;
+
+    const persistKey = `${revision}:${liveMessages.length}:${lastAssistant?.content?.slice(0, 40) ?? ""}`;
+    if (persistKey === lastPersistedKeyRef.current) return;
+
+    const threadId = activeThreadId ?? readAtlasV5ThreadId();
+    const userText = lastUser?.content ?? state?.query ?? bootstrapQuery ?? "";
+    void (async () => {
+      await ensureThread(threadId, titleFromQuery(userText));
+      const ok = await persistTurn(threadId, {
+        user_message: userText,
+        assistant_reply: lastAssistant?.content ?? "",
+        route: devMeta?.route ?? null,
+        outcome_hint:
+          (devMeta as { outcome_hint?: string } | null)?.outcome_hint ?? null,
+        answer_spec: state?.canvas_cleared ? null : spec,
+        answer_dev_meta: devMeta,
+        layout_signals: extractLayoutSignals(
+          state?.canvas_cleared ? null : spec,
+          devMeta,
+        ),
+        latency_ms: turnTiming.elapsedMs,
+      });
+      if (ok) {
+        lastPersistedKeyRef.current = persistKey;
+        void refreshThreadList();
+      }
+    })();
+  }, [
+    activeThreadId,
+    bootstrapQuery,
+    chatPending,
+    devMeta,
+    messages,
+    restoredMessages,
+    spec,
+    state?.answer_spec_envelope,
+    state?.canvas_cleared,
+    state?.query,
+    turnActive,
+    turnTiming.elapsedMs,
+    refreshThreadList,
+  ]);
+
+  useEffect(() => {
     const q = bootstrapQuery?.trim();
     if (!q) return;
     if (bootstrapBootRef.current) return;
@@ -279,10 +447,14 @@ export function AtlasCopilotShell({
     const fromEntry = consumePendingBootstrap(q);
     if (fromEntry) {
       writeAtlasSessionQuery(q);
-      startNewAtlasV5Thread();
+      const tid = startNewAtlasV5Thread();
+      setActiveThreadId(tid);
+      void ensureThread(tid, titleFromQuery(q));
     } else if (readAtlasSessionQuery() !== q) {
       writeAtlasSessionQuery(q);
-      startNewAtlasV5Thread();
+      const tid = startNewAtlasV5Thread();
+      setActiveThreadId(tid);
+      void ensureThread(tid, titleFromQuery(q));
     }
 
     bootstrapBootRef.current = true;
@@ -304,7 +476,7 @@ export function AtlasCopilotShell({
           role: m.role,
           content: m.parts.map((p) => p.text).join(""),
         }))
-      : [];
+      : restoredMessages;
 
   const handleFollowUp = useCallback(
     (message: string) => {
@@ -335,6 +507,8 @@ export function AtlasCopilotShell({
     writeAtlasSessionQuery("");
     clearBootstrapSent();
     bootstrapBootRef.current = false;
+    lastPersistedKeyRef.current = "";
+    setRestoredMessages([]);
     setSpec(null);
     setDevMeta(null);
     setReasoningTrace([]);
@@ -347,9 +521,48 @@ export function AtlasCopilotShell({
       reasoning_trace: [],
       turn_active: false,
     });
-    startNewAtlasV5Thread();
-    router.push("/atlas");
-  }, [chatPending, router, setState]);
+    const tid = startNewAtlasV5Thread();
+    setActiveThreadId(tid);
+    void ensureThread(tid, "New session");
+    void refreshThreadList();
+    router.push(`/atlas/session?thread=${tid}`);
+  }, [chatPending, refreshThreadList, router, setState]);
+
+  const handleSelectThread = useCallback(
+    (threadId: string) => {
+      if (chatPending) return;
+      setAtlasV5ThreadId(threadId);
+      setActiveThreadId(threadId);
+      setRestoredMessages([]);
+      setSpec(null);
+      setDevMeta(null);
+      setReasoningTrace([]);
+      lastRevisionRef.current = 0;
+      lastPersistedKeyRef.current = "";
+      setState?.({
+        answer_spec_envelope: { revision: 0, status: "final" },
+        canvas_cleared: true,
+        answer_dev_meta: {},
+        reasoning_trace: [],
+        turn_active: false,
+      });
+      router.push(`/atlas/session?thread=${threadId}`);
+      void rehydrateThread(threadId);
+    },
+    [chatPending, rehydrateThread, router, setState],
+  );
+
+  const handleToggleHistory = useCallback(() => {
+    setHistoryOpen((open) => {
+      const next = !open;
+      writeHistorySidebarOpen(next);
+      return next;
+    });
+  }, []);
+
+  const handleNewThreadFromSidebar = useCallback(() => {
+    handleNewSession();
+  }, [handleNewSession]);
 
   const handleUxPrefsChange = useCallback(
     (patch: Partial<AtlasUxPrefs>) => {
@@ -388,6 +601,14 @@ export function AtlasCopilotShell({
       uxPrefs={uxPrefs}
       onUxPrefsChange={handleUxPrefsChange}
       turnTiming={turnTiming}
+      activeThreadId={activeThreadId}
+      threads={threads}
+      threadsLoading={threadsLoading}
+      historyOpen={historyOpen}
+      onToggleHistory={handleToggleHistory}
+      onSelectThread={handleSelectThread}
+      onNewThread={handleNewThreadFromSidebar}
+      historyDisabled={chatPending}
     />
   );
 }
