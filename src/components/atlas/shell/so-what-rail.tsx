@@ -6,6 +6,7 @@ import type { AnswerSpec } from "@/lib/atlas/contracts/answer-spec.schema";
 import { AtlasChatMarkdown } from "@/components/atlas/shell/atlas-chat-markdown";
 import { ShowcaseChips, type ShowcaseOption } from "@/components/atlas/shell/showcase-chips";
 import { atlasFont, atlasTokens as T } from "@/lib/atlas/tokens";
+import { cn } from "@/lib/utils";
 
 type SoWhat = AnswerSpec["soWhat"];
 
@@ -22,6 +23,7 @@ export function SoWhatRail({
   showcaseOptions,
   onShowcaseSelect,
   progressLine,
+  splitEmbedded = false,
 }: {
   soWhat: SoWhat;
   initialQuery?: string;
@@ -34,6 +36,8 @@ export function SoWhatRail({
   onShowcaseSelect?: (command: string) => void;
   /** Live CoT / graph stage line while canvas is building. */
   progressLine?: string | null;
+  /** Fill parent when rendered inside SurfaceSplitPanels. */
+  splitEmbedded?: boolean;
 }) {
   const [draft, setDraft] = useState("");
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>(() =>
@@ -95,7 +99,12 @@ export function SoWhatRail({
   return (
     <aside
       data-testid="so-what-rail"
-      className="order-1 flex w-full shrink-0 flex-col self-stretch border-b bg-white lg:order-2 lg:w-[396px] lg:flex-[0_0_396px] lg:border-b-0 lg:border-l"
+      className={cn(
+        "flex flex-col self-stretch bg-white",
+        splitEmbedded
+          ? "h-full min-h-0 w-full"
+          : "order-1 w-full shrink-0 border-b lg:order-2 lg:w-[396px] lg:flex-[0_0_396px] lg:border-b-0 lg:border-l",
+      )}
       style={{ borderColor: "#E7E3DC", minHeight: 0 }}
     >
       <div

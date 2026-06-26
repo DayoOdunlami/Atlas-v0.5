@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useWorkbench } from "@/lib/workbench/workbench-context";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ConfidenceTierBadge } from "./shared/confidence-tier-badge";
+import { SurfaceViewModeToggle } from "@/components/layout/surface-view-mode-toggle";
 import { Camera, Undo2, Redo2, Home, PlayCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -28,7 +29,6 @@ export function WorkbenchHeader() {
 
       <div className="flex-1 min-w-0 flex items-center gap-2 overflow-x-auto">
         {isHome ? (
-          // Home: just show workbench identity, no match chrome
           <>
             <Home className="w-4 h-4 text-muted-foreground shrink-0" />
             <span className="text-[15px] font-semibold truncate">Atlas Workbench</span>
@@ -38,7 +38,6 @@ export function WorkbenchHeader() {
           </>
         ) : (
           <>
-            {/* Source title — truncated */}
             <span
               className="text-[15px] font-semibold truncate max-w-xs"
               title={source_object.title}
@@ -48,12 +47,10 @@ export function WorkbenchHeader() {
 
             <span className="text-muted-foreground text-sm shrink-0">→</span>
 
-            {/* CQ pill */}
             <span className="shrink-0 inline-flex items-center rounded border border-indigo-200 bg-indigo-50 dark:bg-indigo-950/30 dark:border-indigo-800 px-2 py-0.5 text-[12px] font-medium text-indigo-700 dark:text-indigo-300">
               {canonical_question_id}
             </span>
 
-            {/* Confidence tier — clickable */}
             <ConfidenceTierBadge
               tier={decision_spine.confidence_tier}
               onClick={() => openInspector("confidence")}
@@ -63,7 +60,8 @@ export function WorkbenchHeader() {
         )}
       </div>
 
-      {/* Demo mode entry — always visible so it's discoverable */}
+      <SurfaceViewModeToggle compact className="hidden lg:inline-flex shrink-0 mr-1" />
+
       <Link
         href="/workbench/demo"
         prefetch={false}
@@ -74,7 +72,6 @@ export function WorkbenchHeader() {
         <span className="hidden sm:inline">Demo</span>
       </Link>
 
-      {/* Undo / Redo (M2.0) */}
       <div className="flex shrink-0 items-center gap-0.5 mr-1">
         <button
           type="button"
@@ -108,7 +105,6 @@ export function WorkbenchHeader() {
         </button>
       </div>
 
-      {/* Snapshot — hidden on home (nothing to snapshot yet) */}
       {!isHome && (
         <button
           onClick={() => setSnapshotOpen(true)}

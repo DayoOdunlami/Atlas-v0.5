@@ -33,6 +33,12 @@ import { ProvenanceTrace } from "@/components/atlas/spine/provenance-trace";
 import { atlasFont, atlasTokens as T } from "@/lib/atlas/tokens";
 import type { AtlasUxPrefs } from "@/lib/atlas/ux-preferences";
 import type { ThreadSummary } from "@/lib/atlas/thread-client";
+import { SurfaceSplitProvider } from "@/components/layout/surface-split-provider";
+import {
+  MobileChatTrigger,
+  SurfaceSplitPanels,
+} from "@/components/layout/surface-split-panels";
+import { SurfaceViewModeToggle } from "@/components/layout/surface-view-mode-toggle";
 
 function renderInstrument(
   instrument: AnswerSpec["instrument"],
@@ -162,85 +168,104 @@ export function AtlasAnswerSurface({
       turn: "—",
     };
     return (
-      <div
-        data-testid="atlas-surface-root"
-        data-dataSource={dataSource}
-        className="flex min-h-screen flex-col"
-        style={{ background: T.page, fontFamily: atlasFont.sans }}
-      >
-        <AtlasSessionNav
-          devMeta={devMeta}
-          onNewSession={onNewSession}
-          chatPending={chatPending}
-        />
-
-        <div className="mx-auto flex w-full max-w-[1640px] flex-1 items-stretch gap-4 overflow-hidden px-6 py-8 lg:px-10">
-          {onToggleHistory && onSelectThread && onNewThread ? (
-            <AtlasThreadSidebar
-              threads={threads}
-              activeThreadId={activeThreadId}
-              loading={threadsLoading}
-              open={historyOpen}
-              onToggle={onToggleHistory}
-              onSelectThread={onSelectThread}
-              onNewThread={onNewThread}
-              disabled={historyDisabled}
-            />
-          ) : null}
-          <main
-            className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-sm shadow-lg"
-            style={{ background: T.canvas }}
-          >
-            <div className="relative min-h-0 flex-1 overflow-y-auto px-10 pb-10 pt-8 lg:px-12">
-              {canvasThinking ? (
-                <CanvasThinking
-                  steps={reasoningTrace}
-                  active={canvasThinking}
-                  stage={devMeta?.turn_stage}
-                  partialCanvas={envelopePartial}
-                  defaultCollapsed={collapsibleCot}
-                />
-              ) : null}
-              <EmptyCanvas />
-            </div>
-          </main>
-
-          <SoWhatRail
-            soWhat={emptySoWhat}
-            onFollowUp={handleFollowUp}
-            chatMessages={chatMessages}
+      <SurfaceSplitProvider autoSaveId="atlas-session-split">
+        <div
+          data-testid="atlas-surface-root"
+          data-datasource={dataSource}
+          className="flex h-svh flex-col overflow-hidden"
+          style={{ background: T.page, fontFamily: atlasFont.sans }}
+        >
+          <AtlasSessionNav
+            devMeta={devMeta}
+            onNewSession={onNewSession}
             chatPending={chatPending}
-            progressLine={progressLine}
-            showcaseOptions={devMeta?.showcase?.options}
-            onShowcaseSelect={
-              onFollowUpProp
-                ? (cmd) => {
-                    void handleFollowUp(cmd);
-                  }
-                : undefined
+            toolbar={
+              <SurfaceViewModeToggle compact className="hidden lg:inline-flex" />
             }
           />
+
+          <div className="flex min-h-0 flex-1 w-full gap-4 overflow-hidden px-4 py-4 lg:px-6 lg:py-6">
+            {onToggleHistory && onSelectThread && onNewThread ? (
+              <AtlasThreadSidebar
+                threads={threads}
+                activeThreadId={activeThreadId}
+                loading={threadsLoading}
+                open={historyOpen}
+                onToggle={onToggleHistory}
+                onSelectThread={onSelectThread}
+                onNewThread={onNewThread}
+                disabled={historyDisabled}
+              />
+            ) : null}
+
+            <SurfaceSplitPanels
+              className="min-w-0 flex-1"
+              mobileChatTitle="Atlas chat"
+              canvasPanel={
+                <main
+                  className="flex min-h-0 min-w-0 h-full flex-col overflow-hidden rounded-sm shadow-lg"
+                  style={{ background: T.canvas }}
+                >
+                  <div className="relative min-h-0 flex-1 overflow-y-auto px-6 pb-10 pt-8 lg:px-10 xl:px-12">
+                    {canvasThinking ? (
+                      <CanvasThinking
+                        steps={reasoningTrace}
+                        active={canvasThinking}
+                        stage={devMeta?.turn_stage}
+                        partialCanvas={envelopePartial}
+                        defaultCollapsed={collapsibleCot}
+                      />
+                    ) : null}
+                    <EmptyCanvas />
+                  </div>
+                </main>
+              }
+              chatPanel={
+                <SoWhatRail
+                  splitEmbedded
+                  soWhat={emptySoWhat}
+                  initialQuery={bootstrapQuery}
+                  onFollowUp={handleFollowUp}
+                  chatMessages={chatMessages}
+                  chatPending={chatPending}
+                  progressLine={progressLine}
+                  showcaseOptions={devMeta?.showcase?.options}
+                  onShowcaseSelect={
+                    onFollowUpProp
+                      ? (cmd) => {
+                          void handleFollowUp(cmd);
+                        }
+                      : undefined
+                  }
+                />
+              }
+            />
+          </div>
+
+          <MobileChatTrigger label="Chat" />
+
+          <DevOverlay
+            meta={devMeta}
+            dataSource={dataSource}
+            uxPrefs={uxPrefs}
+            onUxPrefsChange={onUxPrefsChange}
+            turnTiming={turnTiming}
+          />
         </div>
-        <DevOverlay
-          meta={devMeta}
-          dataSource={dataSource}
-          uxPrefs={uxPrefs}
-          onUxPrefsChange={onUxPrefsChange}
-          turnTiming={turnTiming}
-        />
-      </div>
+      </SurfaceSplitProvider>
     );
   }
 
   return (
-    <div
-      data-testid="atlas-surface-root"
-      data-dataSource={dataSource}
-      data-mode={spec.mode}
-      data-recipe={spec.instrument?.recipe ?? "none"}
-      className="flex min-h-screen flex-col"
-      style={{ background: T.page, fontFamily: atlasFont.sans }}
-    >
+    <SurfaceSplitProvider autoSaveId="atlas-session-split">
+      <div
+        data-testid="atlas-surface-root"
+        data-datasource={dataSource}
+        data-mode={spec.mode}
+        data-recipe={spec.instrument?.recipe ?? "none"}
+        className="flex h-svh flex-col overflow-hidden"
+        style={{ background: T.page, fontFamily: atlasFont.sans }}
+      >
       {devMeta?.zod_error ? (
         <div
           className="shrink-0 px-4 py-2 text-center"
@@ -276,9 +301,12 @@ export function AtlasAnswerSurface({
         devMeta={devMeta}
         onNewSession={onNewSession}
         chatPending={chatPending}
+        toolbar={
+          <SurfaceViewModeToggle compact className="hidden lg:inline-flex" />
+        }
       />
 
-      <div className="mx-auto flex w-full max-w-[1640px] flex-1 items-stretch gap-4 overflow-hidden px-6 py-8 lg:px-10">
+      <div className="flex min-h-0 flex-1 w-full gap-4 overflow-hidden px-4 py-4 lg:px-6 lg:py-6">
         {onToggleHistory && onSelectThread && onNewThread ? (
           <AtlasThreadSidebar
             threads={threads}
@@ -291,14 +319,19 @@ export function AtlasAnswerSurface({
             disabled={historyDisabled}
           />
         ) : null}
-        <main
-          className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-sm shadow-lg"
-          style={{ background: T.canvas }}
-        >
-          <ScopeBar object={spec.object} scope={spec.scope} mode={spec.mode} tier={spec.tier} />
-          <ConfidenceCeilingBar tier={spec.tier} />
 
-          <div className="relative min-h-0 flex-1 overflow-y-auto px-10 pb-10 pt-8 lg:px-12">
+        <SurfaceSplitPanels
+          className="min-w-0 flex-1"
+          mobileChatTitle="Atlas chat"
+          canvasPanel={
+            <main
+              className="flex min-h-0 min-w-0 h-full flex-col overflow-hidden rounded-sm shadow-lg"
+              style={{ background: T.canvas }}
+            >
+              <ScopeBar object={spec.object} scope={spec.scope} mode={spec.mode} tier={spec.tier} />
+              <ConfidenceCeilingBar tier={spec.tier} />
+
+              <div className="relative min-h-0 flex-1 overflow-y-auto px-6 pb-10 pt-8 lg:px-10 xl:px-12">
             <ProvenanceTrace
               provId={provId}
               provenance={spec.provenance}
@@ -429,19 +462,26 @@ export function AtlasAnswerSurface({
             <span style={{ color: T.gap }}>⌁ gap / contested</span>
             <span style={{ color: T.inkFaint }}>validated · candidate · verified</span>
           </div>
-        </main>
-
-        <SoWhatRail
-          soWhat={spec.soWhat}
-          initialQuery={spec.query}
-          onFollowUp={handleFollowUp}
-          chatMessages={chatMessages}
-          chatPending={chatPending}
-          progressLine={progressLine}
-          showcaseOptions={showcaseOptions}
-          onShowcaseSelect={onShowcaseSelect}
+            </main>
+          }
+          chatPanel={
+            <SoWhatRail
+              splitEmbedded
+              soWhat={spec.soWhat}
+              initialQuery={spec.query}
+              onFollowUp={handleFollowUp}
+              chatMessages={chatMessages}
+              chatPending={chatPending}
+              progressLine={progressLine}
+              showcaseOptions={showcaseOptions}
+              onShowcaseSelect={onShowcaseSelect}
+            />
+          }
         />
       </div>
+
+      <MobileChatTrigger label="Chat" />
+
       <DevOverlay
         meta={devMeta}
         dataSource={dataSource}
@@ -449,6 +489,7 @@ export function AtlasAnswerSurface({
         onUxPrefsChange={onUxPrefsChange}
         turnTiming={turnTiming}
       />
-    </div>
+      </div>
+    </SurfaceSplitProvider>
   );
 }

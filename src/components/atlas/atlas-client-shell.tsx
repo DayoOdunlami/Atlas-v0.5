@@ -367,7 +367,7 @@ export function AtlasCopilotShell({
       const params = new URLSearchParams(window.location.search);
       if (params.get("thread") !== tid) {
         params.set("thread", tid);
-        router.replace(`/atlas/session?${params.toString()}`, { scroll: false });
+        router.replace(`/atlas?${params.toString()}`, { scroll: false });
       }
     }
   }, [bootstrapQuery, initialThreadId, rehydrateThread, refreshThreadList, router]);
@@ -439,12 +439,13 @@ export function AtlasCopilotShell({
     const q = bootstrapQuery?.trim();
     if (!q) return;
     if (bootstrapBootRef.current) return;
-    if (wasBootstrapSent(q)) {
+
+    const fromEntry = consumePendingBootstrap(q);
+    if (!fromEntry && wasBootstrapSent(q)) {
       bootstrapBootRef.current = true;
       return;
     }
 
-    const fromEntry = consumePendingBootstrap(q);
     if (fromEntry) {
       writeAtlasSessionQuery(q);
       const tid = startNewAtlasV5Thread();
@@ -470,13 +471,22 @@ export function AtlasCopilotShell({
     return () => window.clearTimeout(timer);
   }, [bootstrapQuery]);
 
-  const chatMessages: ChatMessage[] =
-    messages.length > 0
-      ? messages.map((m) => ({
-          role: m.role,
-          content: m.parts.map((p) => p.text).join(""),
-        }))
-      : restoredMessages;
+  const chatMessages: ChatMessage[] = useMemo(() => {
+    const fromRuntime =
+      messages.length > 0
+        ? messages.map((m) => ({
+            role: m.role as "user" | "assistant",
+            content: m.parts.map((p) => p.text).join(""),
+          }))
+        : restoredMessages;
+
+    if (fromRuntime.length > 0) return fromRuntime;
+
+    const q = bootstrapQuery?.trim();
+    if (q) return [{ role: "user", content: q }];
+
+    return [];
+  }, [bootstrapQuery, messages, restoredMessages]);
 
   const handleFollowUp = useCallback(
     (message: string) => {
@@ -525,7 +535,7 @@ export function AtlasCopilotShell({
     setActiveThreadId(tid);
     void ensureThread(tid, "New session");
     void refreshThreadList();
-    router.push(`/atlas/session?thread=${tid}`);
+    router.push(`/atlas?thread=${tid}`);
   }, [chatPending, refreshThreadList, router, setState]);
 
   const handleSelectThread = useCallback(
@@ -546,7 +556,7 @@ export function AtlasCopilotShell({
         reasoning_trace: [],
         turn_active: false,
       });
-      router.push(`/atlas/session?thread=${threadId}`);
+      router.push(`/atlas?thread=${threadId}`);
       void rehydrateThread(threadId);
     },
     [chatPending, rehydrateThread, router, setState],

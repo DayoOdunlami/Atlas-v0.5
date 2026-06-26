@@ -96,7 +96,7 @@ export function AtlasEntryScreen() {
       setNavigating(true);
       writeAtlasSessionQuery(q);
       markPendingBootstrap(q);
-      router.push(`/atlas/session?q=${encodeURIComponent(q)}`);
+      router.push(`/atlas?q=${encodeURIComponent(q)}`);
     },
     [navigating, router],
   );
@@ -228,7 +228,7 @@ export function AtlasEntryScreen() {
                     </h1>
                     <p className="mb-6 text-sm leading-relaxed text-[#56524C]">
                       Type in the <strong>ask bar</strong> (right on desktop, above on mobile) and press{" "}
-                      <strong>Enter</strong> — you&apos;ll move to the session screen where Atlas thinks.
+                      <strong>Enter</strong> — Atlas opens on this same page and starts thinking.
                       The status pill shows whether the agent service is connected.
                     </p>
                     <div>

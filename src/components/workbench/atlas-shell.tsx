@@ -8,6 +8,10 @@ import { HomeCanvas } from "./home-canvas";
 import { InspectorDrawer } from "./inspector-drawer";
 import { SnapshotPreview } from "./snapshot-preview";
 import { PatchConfirmationPanel } from "./patch-confirmation-panel";
+import {
+  MobileChatTrigger,
+  SurfaceSplitPanels,
+} from "@/components/layout/surface-split-panels";
 
 const ORCHESTRATOR_V1 =
   process.env.NEXT_PUBLIC_ATLAS5_ORCHESTRATOR_V1 === "true";
@@ -17,33 +21,35 @@ export function AtlasShell() {
     useWorkbench();
   const isHome = cqId === "cq.home";
 
+  const chatPanel = ORCHESTRATOR_V1 ? (
+    <OrchestratorChatPanel />
+  ) : (
+    <ChatPanel />
+  );
+
   return (
-    <div className="flex h-full overflow-hidden">
-      {/* Chat panel — readable density; clamps so the canvas keeps the spotlight */}
-      <div className="hidden lg:flex flex-col w-[360px] xl:w-[400px] 2xl:w-[440px] shrink-0 h-full max-w-[32vw]">
-        {ORCHESTRATOR_V1 ? <OrchestratorChatPanel /> : <ChatPanel />}
-      </div>
+    <div className="relative flex h-full overflow-hidden">
+      <SurfaceSplitPanels
+        chatPanel={chatPanel}
+        canvasPanel={isHome ? <HomeCanvas /> : <ArtifactCanvas />}
+        mobileChatTitle="Atlas Copilot"
+        className="min-w-0 flex-1"
+      />
 
-      {/* Main canvas — gets all remaining real estate */}
-      <div className="flex-1 min-w-0 h-full overflow-hidden">
-        {isHome ? <HomeCanvas /> : <ArtifactCanvas />}
-      </div>
+      <MobileChatTrigger label="Copilot" />
 
-      {/* Inspector drawer — shadcn Sheet, right side */}
       <InspectorDrawer
         inspectorKey={inspectorKey}
         inspectorIndex={model.inspector_index}
         onClose={closeInspector}
       />
 
-      {/* Snapshot preview modal */}
       <SnapshotPreview
         open={snapshotOpen}
         onClose={() => setSnapshotOpen(false)}
         model={model}
       />
 
-      {/* Patch confirmation panel (M0.9) — bottom Sheet, shown when agent proposes */}
       <PatchConfirmationPanel />
     </div>
   );

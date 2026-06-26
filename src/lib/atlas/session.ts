@@ -1,4 +1,4 @@
-/** Tracks the last /atlas/session?q= value — rotate CopilotKit thread when it changes. */
+/** Tracks the last `/atlas?q=` value — rotate CopilotKit thread when it changes. */
 export const ATLAS_V5_SESSION_QUERY_KEY = "atlas5-v5-session-query";
 
 /** Entry → session handoff: session consumes this to rotate thread + bootstrap send. */

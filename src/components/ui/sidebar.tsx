@@ -12,6 +12,9 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 type SidebarContextProps = {
   state: "expanded" | "collapsed";
+  visualExpanded: boolean;
+  expandOnHover: boolean;
+  setHoverExpanded: (value: boolean) => void;
   open: boolean;
   setOpen: (open: boolean) => void;
   isMobile: boolean;
@@ -32,6 +35,7 @@ export function useSidebar() {
 
 export function SidebarProvider({
   defaultOpen = true,
+  expandOnHover = false,
   open: openProp,
   onOpenChange,
   className,
@@ -40,11 +44,13 @@ export function SidebarProvider({
   ...props
 }: React.ComponentProps<"div"> & {
   defaultOpen?: boolean;
+  expandOnHover?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
   const isMobile = useIsMobile();
   const [_open, _setOpen] = React.useState(defaultOpen);
+  const [hoverExpanded, setHoverExpanded] = React.useState(false);
   const open = openProp ?? _open;
 
   const setOpen = React.useCallback(
@@ -61,9 +67,21 @@ export function SidebarProvider({
   );
 
   const state = open ? "expanded" : "collapsed";
+  const visualExpanded = open || (expandOnHover && hoverExpanded);
 
   return (
-    <SidebarContext.Provider value={{ state, open, setOpen, isMobile, toggleSidebar }}>
+    <SidebarContext.Provider
+      value={{
+        state,
+        visualExpanded,
+        expandOnHover,
+        setHoverExpanded,
+        open,
+        setOpen,
+        isMobile,
+        toggleSidebar,
+      }}
+    >
       <div
         data-slot="sidebar-wrapper"
         style={
@@ -95,17 +113,21 @@ export function Sidebar({
   collapsible?: "icon" | "offcanvas" | "none";
   variant?: "sidebar" | "inset" | "floating";
 }) {
-  const { state } = useSidebar();
+  const { visualExpanded, expandOnHover, setHoverExpanded } = useSidebar();
 
   return (
     <div
       data-slot="sidebar"
-      data-state={state}
+      data-state={visualExpanded ? "expanded" : "collapsed"}
       data-collapsible={collapsible}
+      onMouseEnter={() => expandOnHover && setHoverExpanded(true)}
+      onMouseLeave={() => expandOnHover && setHoverExpanded(false)}
       className={cn(
-        "bg-sidebar text-sidebar-foreground hidden md:flex flex-col h-svh",
-        "transition-[width] duration-200 ease-linear",
-        state === "expanded"
+        "bg-sidebar text-sidebar-foreground hidden md:flex flex-col h-svh relative",
+        expandOnHover
+          ? "transition-all duration-500 ease-out shadow-lg bg-background/95 backdrop-blur-sm"
+          : "transition-[width] duration-200 ease-linear",
+        visualExpanded
           ? "w-(--sidebar-width)"
           : collapsible === "icon"
             ? "w-(--sidebar-width-icon)"
@@ -115,6 +137,12 @@ export function Sidebar({
       {...props}
     >
       {children}
+      {expandOnHover && !visualExpanded ? (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute right-0 top-1/2 h-12 w-1 -translate-y-1/2 rounded-l-full bg-gradient-to-b from-primary/0 via-primary/50 to-primary/0"
+        />
+      ) : null}
     </div>
   );
 }
@@ -140,13 +168,13 @@ export function SidebarGroup({ className, ...props }: React.ComponentProps<"div"
 }
 
 export function SidebarGroupLabel({ className, ...props }: React.ComponentProps<"div">) {
-  const { state } = useSidebar();
+  const { visualExpanded } = useSidebar();
   return (
     <div
       data-slot="sidebar-group-label"
       className={cn(
-        "text-sidebar-foreground/70 flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium transition-[margin,opacity] duration-200",
-        state === "collapsed" && "opacity-0 -mt-8",
+        "text-sidebar-foreground/70 flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium transition-[margin,opacity] duration-300",
+        !visualExpanded && "opacity-0 -mt-8 pointer-events-none",
         className,
       )}
       {...props}
@@ -162,8 +190,31 @@ export function SidebarMenu({ className, ...props }: React.ComponentProps<"ul">)
   return <ul data-slot="sidebar-menu" className={cn("flex w-full min-w-0 flex-col gap-1", className)} {...props} />;
 }
 
-export function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
-  return <li data-slot="sidebar-menu-item" className={cn("group/menu-item relative", className)} {...props} />;
+export function SidebarMenuItem({
+  className,
+  staggerIndex,
+  ...props
+}: React.ComponentProps<"li"> & { staggerIndex?: number }) {
+  const { visualExpanded, expandOnHover } = useSidebar();
+  return (
+    <li
+      data-slot="sidebar-menu-item"
+      className={cn(
+        "group/menu-item relative",
+        expandOnHover &&
+          visualExpanded &&
+          staggerIndex != null &&
+          "animate-in slide-in-from-left-2 duration-300 fill-mode-backwards",
+        className,
+      )}
+      style={
+        expandOnHover && visualExpanded && staggerIndex != null
+          ? { animationDelay: `${staggerIndex * 50}ms` }
+          : undefined
+      }
+      {...props}
+    />
+  );
 }
 
 export function SidebarMenuButton({
@@ -176,19 +227,19 @@ export function SidebarMenuButton({
   isActive?: boolean;
   tooltip?: string;
 }) {
-  const { state } = useSidebar();
+  const { visualExpanded } = useSidebar();
 
   return (
     <button
       data-slot="sidebar-menu-button"
       data-active={isActive}
-      title={state === "collapsed" ? tooltip : undefined}
+      title={!visualExpanded ? tooltip : undefined}
       className={cn(
         "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm",
         "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors",
         "data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:font-medium",
-        "[&>svg]:size-4 [&>svg]:shrink-0 [&>span]:truncate",
-        state === "collapsed" && "justify-center [&>span]:hidden",
+        "[&>svg]:size-4 [&>svg]:shrink-0 [&>span]:truncate [&>span]:transition-all [&>span]:duration-300",
+        !visualExpanded && "justify-center [&>span]:w-0 [&>span]:opacity-0 [&>span]:overflow-hidden",
         className,
       )}
       {...props}

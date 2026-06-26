@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { ConnectionStatus } from "@/components/atlas/shell/connection-status";
 import type { AtlasDevMeta } from "@/components/atlas/shell/dev-overlay";
@@ -11,6 +12,7 @@ type AtlasSessionNavProps = {
   onNewSession?: () => void;
   chatPending?: boolean;
   className?: string;
+  toolbar?: ReactNode;
 };
 
 /** Top bar — corpus connectivity + escape hatch to a fresh question. */
@@ -19,6 +21,7 @@ export function AtlasSessionNav({
   onNewSession,
   chatPending = false,
   className = "",
+  toolbar,
 }: AtlasSessionNavProps) {
   return (
     <div
@@ -40,7 +43,9 @@ export function AtlasSessionNav({
         <ConnectionStatus devMeta={devMeta} className="relative" />
       </div>
 
-      {onNewSession ? (
+      <div className="flex shrink-0 items-center gap-2">
+        {toolbar}
+        {onNewSession ? (
         <button
           type="button"
           data-testid="atlas-new-question"
@@ -60,7 +65,8 @@ export function AtlasSessionNav({
         >
           New question
         </button>
-      ) : null}
+        ) : null}
+      </div>
     </div>
   );
 }

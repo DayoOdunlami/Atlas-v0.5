@@ -15,6 +15,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { WorkbenchSidebar } from "@/components/workbench/app-sidebar";
 import { WorkbenchHeader } from "@/components/workbench/site-header";
 import { Toaster } from "@/components/ui/ui/sonner";
+import { SurfaceSplitProvider } from "@/components/layout/surface-split-provider";
 import { DemoShell } from "./demo-shell";
 import { DemoScenarioPicker } from "./demo-scenario-picker";
 import { getDemoScenario } from "@/data/demo-fixtures";
@@ -36,16 +37,18 @@ export function DemoWorkbenchPage({ scenarioId }: DemoWorkbenchPageProps) {
       initialCitations={scenario.lastCitations ?? []}
       demoMode
     >
-      <SidebarProvider defaultOpen={false}>
-        <WorkbenchSidebar />
-        <SidebarInset className="overflow-hidden flex flex-col h-svh">
-          <WorkbenchHeader />
-          <DemoScenarioPicker activeScenarioId={scenarioId} />
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <DemoShell />
-          </div>
-        </SidebarInset>
-      </SidebarProvider>
+      <SurfaceSplitProvider autoSaveId="atlas-workbench-demo-split">
+        <SidebarProvider defaultOpen={false} expandOnHover>
+          <WorkbenchSidebar />
+          <SidebarInset className="overflow-hidden flex flex-col h-svh">
+            <WorkbenchHeader />
+            <DemoScenarioPicker activeScenarioId={scenarioId} />
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <DemoShell />
+            </div>
+          </SidebarInset>
+        </SidebarProvider>
+      </SurfaceSplitProvider>
       <Toaster position="bottom-right" richColors closeButton />
     </WorkbenchProvider>
   );

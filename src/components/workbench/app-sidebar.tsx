@@ -52,15 +52,21 @@ const CQ_ICONS: Record<CanonicalQuestionId, React.ReactNode> = {
 //   No layout changes needed — just swap the data source.
 // ---------------------------------------------------------------------------
 
-function WorkbenchSessionItem({ session }: { session: SessionListItem }) {
-  const { state } = useSidebar();
-  const collapsed = state === "collapsed";
+function WorkbenchSessionItem({
+  session,
+  staggerIndex,
+}: {
+  session: SessionListItem;
+  staggerIndex?: number;
+}) {
+  const { visualExpanded } = useSidebar();
+  const collapsed = !visualExpanded;
 
   const label = session.title || `${session.passportTitle} — ${session.targetTitle}`;
   const timeAgo = formatDistanceToNow(new Date(session.updatedAt), { addSuffix: true });
 
   return (
-    <SidebarMenuItem>
+    <SidebarMenuItem staggerIndex={staggerIndex}>
       <SidebarMenuButton
         tooltip={collapsed ? label : undefined}
         className="h-auto py-2"
@@ -90,8 +96,8 @@ function WorkbenchSessionItem({ session }: { session: SessionListItem }) {
 
 function WorkbenchSessionsSection() {
   const { recentSessions } = useWorkbench();
-  const { state } = useSidebar();
-  const collapsed = state === "collapsed";
+  const { visualExpanded } = useSidebar();
+  const collapsed = !visualExpanded;
 
   if (recentSessions.length === 0) {
     return collapsed ? null : (
@@ -119,8 +125,12 @@ function WorkbenchSessionsSection() {
       )}
       <SidebarGroupContent>
         <SidebarMenu>
-          {recentSessions.map((session) => (
-            <WorkbenchSessionItem key={session.id} session={session} />
+          {recentSessions.map((session, index) => (
+            <WorkbenchSessionItem
+              key={session.id}
+              session={session}
+              staggerIndex={index + 4}
+            />
           ))}
         </SidebarMenu>
       </SidebarGroupContent>
@@ -134,8 +144,8 @@ function WorkbenchSessionsSection() {
 
 export function WorkbenchSidebar() {
   const { cqId, setCqId, cqIds, session } = useWorkbench();
-  const { state } = useSidebar();
-  const collapsed = state === "collapsed";
+  const { visualExpanded } = useSidebar();
+  const collapsed = !visualExpanded;
   const hasMatch = Boolean(session.matchId);
 
   const homeIds = cqIds.filter((id) => !isMatchCq(id));
@@ -154,7 +164,9 @@ export function WorkbenchSidebar() {
           A
         </div>
         {!collapsed && (
-          <span className="text-sm font-semibold truncate">Atlas</span>
+          <span className="text-sm font-semibold truncate transition-all duration-500">
+            Atlas
+          </span>
         )}
       </div>
 
@@ -163,8 +175,8 @@ export function WorkbenchSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {homeIds.map((id: CanonicalQuestionId) => (
-                <SidebarMenuItem key={id}>
+              {homeIds.map((id: CanonicalQuestionId, index) => (
+                <SidebarMenuItem key={id} staggerIndex={index}>
                   <SidebarMenuButton
                     isActive={id === cqId}
                     tooltip={CQ_LABELS[id]}
@@ -195,8 +207,8 @@ export function WorkbenchSidebar() {
           )}
           <SidebarGroupContent>
             <SidebarMenu>
-              {matchIds.map((id: CanonicalQuestionId) => (
-                <SidebarMenuItem key={id}>
+              {matchIds.map((id: CanonicalQuestionId, index) => (
+                <SidebarMenuItem key={id} staggerIndex={index + homeIds.length + 1}>
                   <SidebarMenuButton
                     isActive={id === cqId}
                     tooltip={CQ_LABELS[id]}

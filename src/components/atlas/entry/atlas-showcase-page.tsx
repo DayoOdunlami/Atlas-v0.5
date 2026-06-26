@@ -63,7 +63,7 @@ export function AtlasShowcasePage() {
             onClick={() => {
               writeAtlasSessionQuery(scene.query);
               markPendingBootstrap(scene.query);
-              router.push(`/atlas/session?q=${encodeURIComponent(scene.query)}`);
+              router.push(`/atlas?q=${encodeURIComponent(scene.query)}`);
             }}
             className="rounded-full px-5 py-2 text-sm font-medium text-white"
             style={{ background: T.corpus }}
@@ -120,10 +120,10 @@ export function AtlasShowcasePage() {
           </code>
           <p className="mt-2 text-xs" style={{ color: T.inkFaint }}>
             Or open{" "}
-            <Link href={`/atlas/session?q=${encodeURIComponent(J1T1_QUERY)}`} className="underline">
-              /atlas/session
+            <Link href={`/atlas?q=${encodeURIComponent(J1T1_QUERY)}`} className="underline">
+              /atlas?q=…
             </Link>{" "}
-            with no query — server bootstraps the same J1T1 live spec from corpus.
+            — server bootstraps the J1T1 live spec from corpus when no client query is set.
           </p>
         </div>
       </div>
