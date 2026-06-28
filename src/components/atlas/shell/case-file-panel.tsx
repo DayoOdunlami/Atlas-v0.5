@@ -200,6 +200,7 @@ export function CaseFilePanel({
   threadId,
   spec,
   expanded,
+  embedded = false,
   disabled,
   onSwotRequest,
   onEntityAttached,
@@ -207,6 +208,8 @@ export function CaseFilePanel({
   threadId: string | null;
   spec: AnswerSpec | null;
   expanded: boolean;
+  /** When true, body only — parent rail section owns the header/collapse. */
+  embedded?: boolean;
   disabled?: boolean;
   onSwotRequest?: (message: string) => void;
   onEntityAttached?: (entityId: string | null) => void;
@@ -308,6 +311,138 @@ export function CaseFilePanel({
 
   if (!threadId) return null;
 
+  const panelBody = (
+    <>
+      {!embedded ? (
+        <div className="mb-2 flex items-center justify-between gap-2 px-1">
+          <div>
+            <p
+              className="m-0 uppercase"
+              style={{
+                fontFamily: atlasFont.mono,
+                fontSize: 9,
+                letterSpacing: "0.1em",
+                color: T.declared,
+              }}
+            >
+              Case file
+            </p>
+            <p
+              className="m-0 mt-0.5"
+              style={{ fontFamily: atlasFont.sans, fontSize: 10, color: T.inkFaint }}
+            >
+              {claims.length} declared · max Indicative
+            </p>
+          </div>
+          {claims.length > 0 && onSwotRequest ? (
+            <button
+              type="button"
+              data-testid="case-file-swot-btn"
+              disabled={disabled || busy}
+              title="Ask Atlas for a SWOT on your stated claims"
+              onClick={() => onSwotRequest(SWOT_ON_CLAIMS_PROMPT)}
+              className="flex items-center gap-1 rounded border px-2 py-1 text-[10px] disabled:opacity-40"
+              style={{
+                borderColor: T.declared,
+                color: T.declared,
+                background: T.declaredWash,
+                fontFamily: atlasFont.mono,
+              }}
+            >
+              <Sparkles className="size-3" />
+              SWOT
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {claims.length === 0 ? (
+        <p
+          className="px-1 py-2"
+          style={{ fontFamily: atlasFont.sans, fontSize: 11, color: T.inkFaint }}
+        >
+          Tell Atlas your situation — constraints, goals, or uncertainties appear here as
+          declared claims.
+        </p>
+      ) : (
+        <ul className="m-0 list-none space-y-2 overflow-y-auto p-0 px-1">
+          {claims.map((c) => (
+            <ClaimRow
+              key={c.id}
+              claim={c}
+              expanded={embedded || expanded}
+              editing={editingId === c.id}
+              disabled={disabled || busy}
+              onEdit={() => setEditingId(c.id)}
+              onSave={(patch) => updateClaim(c.id, patch)}
+              onConfirm={() => updateClaim(c.id, { review_status: "confirmed" })}
+              onReject={() => updateClaim(c.id, { review_status: "rejected" })}
+            />
+          ))}
+        </ul>
+      )}
+
+      <div className="mt-2 space-y-1 px-1">
+        {!caseEntityId ? (
+          <button
+            type="button"
+            data-testid="case-file-promote"
+            disabled={disabled || busy || claims.length === 0}
+            onClick={() => void handlePromote()}
+            className="flex w-full items-center gap-2 rounded border px-2 py-1.5 text-left text-[11px] disabled:opacity-40"
+            style={{ borderColor: T.ruleSoft, color: T.inkSoft }}
+          >
+            <FolderOpen className="size-3.5 shrink-0" />
+            Save as case entity
+          </button>
+        ) : (
+          <p
+            className="m-0 px-1"
+            style={{ fontFamily: atlasFont.mono, fontSize: 9, color: T.corpus }}
+          >
+            Linked to entity · {caseEntityId.slice(0, 8)}…
+          </p>
+        )}
+
+        <button
+          type="button"
+          data-testid="case-entities-toggle"
+          onClick={() => setEntitiesOpen((v) => !v)}
+          className="w-full rounded px-1 py-1 text-left text-[10px]"
+          style={{ fontFamily: atlasFont.mono, color: T.inkFaint }}
+        >
+          {entitiesOpen ? "▾" : "▸"} Case entities ({entities.length})
+        </button>
+
+        {entitiesOpen && entities.length > 0 ? (
+          <ul className="m-0 max-h-28 list-none space-y-1 overflow-y-auto p-0">
+            {entities.map((e) => (
+              <li key={e.id}>
+                <button
+                  type="button"
+                  disabled={disabled || busy || e.id === caseEntityId}
+                  onClick={() => void handleAttach(e.id)}
+                  className="w-full truncate rounded px-1 py-1 text-left text-[11px] hover:underline disabled:opacity-40"
+                  style={{ fontFamily: atlasFont.sans, color: T.inkSoft }}
+                >
+                  {e.title} · {e.claim_count} claims
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div data-testid="case-file-panel" className="px-0.5">
+        {panelBody}
+      </div>
+    );
+  }
+
   return (
     <div
       data-testid="case-file-panel"
@@ -316,125 +451,7 @@ export function CaseFilePanel({
     >
       <div className={cn("px-2 py-2", !expanded && "flex justify-center")}>
         {expanded ? (
-          <>
-            <div className="mb-2 flex items-center justify-between gap-2 px-1">
-              <div>
-                <p
-                  className="m-0 uppercase"
-                  style={{
-                    fontFamily: atlasFont.mono,
-                    fontSize: 9,
-                    letterSpacing: "0.1em",
-                    color: T.declared,
-                  }}
-                >
-                  Case file
-                </p>
-                <p
-                  className="m-0 mt-0.5"
-                  style={{ fontFamily: atlasFont.sans, fontSize: 10, color: T.inkFaint }}
-                >
-                  {claims.length} declared · max Indicative
-                </p>
-              </div>
-              {claims.length > 0 && onSwotRequest ? (
-                <button
-                  type="button"
-                  data-testid="case-file-swot-btn"
-                  disabled={disabled || busy}
-                  title="Ask Atlas for a SWOT on your stated claims"
-                  onClick={() => onSwotRequest(SWOT_ON_CLAIMS_PROMPT)}
-                  className="flex items-center gap-1 rounded border px-2 py-1 text-[10px] disabled:opacity-40"
-                  style={{
-                    borderColor: T.declared,
-                    color: T.declared,
-                    background: T.declaredWash,
-                    fontFamily: atlasFont.mono,
-                  }}
-                >
-                  <Sparkles className="size-3" />
-                  SWOT
-                </button>
-              ) : null}
-            </div>
-
-            {claims.length === 0 ? (
-              <p
-                className="px-1 py-2"
-                style={{ fontFamily: atlasFont.sans, fontSize: 11, color: T.inkFaint }}
-              >
-                Tell Atlas your situation — constraints, goals, or uncertainties appear here as
-                declared claims.
-              </p>
-            ) : (
-              <ul className="m-0 max-h-48 list-none space-y-2 overflow-y-auto p-0 px-1">
-                {claims.map((c) => (
-                  <ClaimRow
-                    key={c.id}
-                    claim={c}
-                    expanded={expanded}
-                    editing={editingId === c.id}
-                    disabled={disabled || busy}
-                    onEdit={() => setEditingId(c.id)}
-                    onSave={(patch) => updateClaim(c.id, patch)}
-                    onConfirm={() => updateClaim(c.id, { review_status: "confirmed" })}
-                    onReject={() => updateClaim(c.id, { review_status: "rejected" })}
-                  />
-                ))}
-              </ul>
-            )}
-
-            <div className="mt-2 space-y-1 px-1">
-              {!caseEntityId ? (
-                <button
-                  type="button"
-                  data-testid="case-file-promote"
-                  disabled={disabled || busy || claims.length === 0}
-                  onClick={() => void handlePromote()}
-                  className="flex w-full items-center gap-2 rounded border px-2 py-1.5 text-left text-[11px] disabled:opacity-40"
-                  style={{ borderColor: T.ruleSoft, color: T.inkSoft }}
-                >
-                  <FolderOpen className="size-3.5 shrink-0" />
-                  Save as case entity
-                </button>
-              ) : (
-                <p
-                  className="m-0 px-1"
-                  style={{ fontFamily: atlasFont.mono, fontSize: 9, color: T.corpus }}
-                >
-                  Linked to entity · {caseEntityId.slice(0, 8)}…
-                </p>
-              )}
-
-              <button
-                type="button"
-                data-testid="case-entities-toggle"
-                onClick={() => setEntitiesOpen((v) => !v)}
-                className="w-full rounded px-1 py-1 text-left text-[10px]"
-                style={{ fontFamily: atlasFont.mono, color: T.inkFaint }}
-              >
-                {entitiesOpen ? "▾" : "▸"} Case entities ({entities.length})
-              </button>
-
-              {entitiesOpen && entities.length > 0 ? (
-                <ul className="m-0 max-h-28 list-none space-y-1 overflow-y-auto p-0">
-                  {entities.map((e) => (
-                    <li key={e.id}>
-                      <button
-                        type="button"
-                        disabled={disabled || busy || e.id === caseEntityId}
-                        onClick={() => void handleAttach(e.id)}
-                        className="w-full truncate rounded px-1 py-1 text-left text-[11px] hover:underline disabled:opacity-40"
-                        style={{ fontFamily: atlasFont.sans, color: T.inkSoft }}
-                      >
-                        {e.title} · {e.claim_count} claims
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </div>
-          </>
+          panelBody
         ) : (
           <span
             data-testid="case-file-collapsed-badge"

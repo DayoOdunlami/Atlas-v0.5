@@ -2,14 +2,35 @@
 
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
-import { Home, MessageSquare, Pencil, Plus, Trash2, Wrench } from "lucide-react";
-import { useState } from "react";
+import {
+  FolderOpen,
+  Home,
+  MessageSquare,
+  Pencil,
+  Pin,
+  Plus,
+  Settings2,
+  Sparkles,
+  Trash2,
+  Wrench,
+} from "lucide-react";
+import { useLayoutEffect, useMemo, useState } from "react";
 
 import { ConnectionStatus } from "@/components/atlas/shell/connection-status";
 import { CaseFilePanel } from "@/components/atlas/shell/case-file-panel";
 import { openAtlasDevOverlay, type AtlasDevMeta } from "@/components/atlas/shell/dev-overlay";
+import { RailCollapsibleSection } from "@/components/atlas/shell/rail-collapsible-section";
 import { SurfaceViewModeToggle } from "@/components/layout/surface-view-mode-toggle";
+import {
+  declaredClaimsFromSpec,
+  SWOT_ON_CLAIMS_PROMPT,
+} from "@/lib/atlas/case-file-types";
 import type { PersistStatus, ThreadSummary } from "@/lib/atlas/thread-client";
+import {
+  readRailSectionOpen,
+  writeRailSectionOpen,
+  type RailSectionId,
+} from "@/lib/atlas/rail-section-prefs";
 import type { AnswerSpec } from "@/lib/atlas/contracts/answer-spec.schema";
 import { atlasFont, atlasTokens as T } from "@/lib/atlas/tokens";
 import { cn } from "@/lib/utils";
@@ -73,10 +94,33 @@ export function AtlasSessionRail({
   const [pinned, setPinned] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
+  const [sessionsOpen, setSessionsOpen] = useState(true);
+  const [caseFileOpen, setCaseFileOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const [sectionsHydrated, setSectionsHydrated] = useState(false);
   const isOpen = expanded || pinned;
+  const claimCount = useMemo(
+    () => declaredClaimsFromSpec(caseFileSpec ?? null).length,
+    [caseFileSpec],
+  );
+
+  useLayoutEffect(() => {
+    setSessionsOpen(readRailSectionOpen("sessions", true));
+    setCaseFileOpen(readRailSectionOpen("caseFile", claimCount > 0));
+    setToolsOpen(readRailSectionOpen("tools", false));
+    setSectionsHydrated(true);
+  }, [claimCount]);
+
   const showDevControls =
     process.env.NODE_ENV === "development" ||
     process.env.NEXT_PUBLIC_ATLAS_DEV_OVERLAY === "1";
+
+  const toggleSection = (id: RailSectionId, open: boolean, setOpen: (v: boolean) => void) => {
+    if (!isOpen) setExpanded(true);
+    const next = isOpen ? !open : true;
+    setOpen(next);
+    writeRailSectionOpen(id, next);
+  };
 
   const commitRename = (threadId: string) => {
     const trimmed = renameDraft.trim();
@@ -128,6 +172,17 @@ export function AtlasSessionRail({
         >
           Atlas
         </span>
+        {isOpen ? (
+          <button
+            type="button"
+            title={pinned ? "Unpin sidebar" : "Pin sidebar open"}
+            onClick={() => setPinned((v) => !v)}
+            className="ml-auto rounded p-1"
+            style={{ color: pinned ? T.corpus : T.inkFaint }}
+          >
+            <Pin className={cn("size-3.5", pinned && "fill-current")} />
+          </button>
+        ) : null}
       </div>
 
       {/* New question */}
@@ -162,66 +217,43 @@ export function AtlasSessionRail({
         </button>
       </div>
 
-      {/* Sessions */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div
-          className={cn(
-            "flex shrink-0 items-center gap-2 px-3 py-1.5 uppercase",
-            !isOpen && "justify-center px-0",
-          )}
-          style={{
-            fontFamily: atlasFont.mono,
-            fontSize: 9,
-            letterSpacing: "0.12em",
-            color: T.inkFaint,
-          }}
+      {/* Collapsible sections — single scroll stack */}
+      <div
+        className={cn(
+          "flex min-h-0 flex-1 flex-col overflow-y-auto",
+          !isOpen && "items-center gap-2 py-2",
+        )}
+      >
+        <RailCollapsibleSection
+          testId="atlas-rail-sessions"
+          icon={<MessageSquare className="size-3.5" />}
+          title="Sessions"
+          subtitle={
+            threads.length > 0
+              ? `${threads.length} saved · ${syncing ? "syncing" : "ready"}`
+              : syncing
+                ? "Loading from database…"
+                : "No saved sessions yet"
+          }
+          badge={threads.length || undefined}
+          open={sectionsHydrated ? sessionsOpen : true}
+          onToggle={() => toggleSection("sessions", sessionsOpen, setSessionsOpen)}
+          railOpen={isOpen}
+          maxBodyHeight="max-h-[min(50vh,320px)]"
         >
-          <MessageSquare className="size-3.5 shrink-0" />
-          <span
-            className={cn(
-              "transition-all duration-500",
-              isOpen ? "opacity-100 w-auto" : "w-0 overflow-hidden opacity-0",
-            )}
-          >
-            Sessions
-          </span>
-          {isOpen ? (
-            <button
-              type="button"
-              title={pinned ? "Unpin sidebar" : "Pin sidebar open"}
-              onClick={() => setPinned((v) => !v)}
-              className="ml-auto rounded px-1 py-0.5"
-              style={{ color: pinned ? T.corpus : T.inkFaint, fontSize: 9 }}
-            >
-              {pinned ? "Pinned" : "Pin"}
-            </button>
-          ) : null}
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
-          {threads.length === 0 && syncing && isOpen ? (
+          {threads.length === 0 && syncing ? (
             <p style={{ fontFamily: atlasFont.mono, fontSize: 10, color: T.inkFaint }}>
               Loading…
             </p>
           ) : threads.length === 0 ? (
-            isOpen ? (
-              <p style={{ fontFamily: atlasFont.mono, fontSize: 10, color: T.inkFaint }}>
-                {persistConfigured
-                  ? "No saved sessions yet — complete a turn to save."
-                  : "Set POSTGRES_URL to enable session history."}
-              </p>
-            ) : null
+            <p style={{ fontFamily: atlasFont.mono, fontSize: 10, color: T.inkFaint }}>
+              {persistConfigured
+                ? "Complete a turn to save a session."
+                : "Set POSTGRES_URL to enable session history."}
+            </p>
           ) : (
             <>
-              {syncing && isOpen ? (
-                <p
-                  className="mb-2 px-1"
-                  style={{ fontFamily: atlasFont.mono, fontSize: 9, color: T.inkFaint }}
-                >
-                  Syncing…
-                </p>
-              ) : null}
-              {rehydrating && isOpen ? (
+              {rehydrating ? (
                 <p
                   className="mb-2 px-1"
                   style={{ fontFamily: atlasFont.mono, fontSize: 10, color: T.inkFaint }}
@@ -229,29 +261,20 @@ export function AtlasSessionRail({
                   Restoring session…
                 </p>
               ) : null}
-              <ul className="space-y-1">
-                {threads.map((t, index) => {
+              <ul className="m-0 list-none space-y-1 p-0">
+                {threads.map((t) => {
                   const active = t.id === activeThreadId;
                   const renaming = renamingId === t.id;
                   return (
-                    <li
-                      key={t.id}
-                      className={cn(
-                        isOpen && "animate-in slide-in-from-left-2 duration-300 fill-mode-backwards",
-                      )}
-                      style={isOpen ? { animationDelay: `${index * 40}ms` } : undefined}
-                    >
+                    <li key={t.id}>
                       <div
-                        className={cn(
-                          "group flex w-full items-start rounded-md transition-colors",
-                          isOpen ? "gap-0" : "justify-center p-2",
-                        )}
+                        className="group flex w-full items-start rounded-md transition-colors"
                         style={{
                           background: active ? T.corpusWash : "transparent",
                           border: active ? `1px solid ${T.rule}` : "1px solid transparent",
                         }}
                       >
-                        {renaming && isOpen ? (
+                        {renaming ? (
                           <input
                             type="text"
                             autoFocus
@@ -276,10 +299,7 @@ export function AtlasSessionRail({
                             data-testid={`atlas-thread-${t.id}`}
                             title={t.title || "Untitled session"}
                             onClick={() => onSelectThread(t.id)}
-                            className={cn(
-                              "min-w-0 flex-1 rounded-md text-left transition-colors",
-                              isOpen ? "px-2 py-2" : "flex justify-center p-0",
-                            )}
+                            className="min-w-0 flex-1 rounded-md px-2 py-2 text-left"
                             style={{
                               fontFamily: atlasFont.sans,
                               fontSize: 12,
@@ -289,31 +309,22 @@ export function AtlasSessionRail({
                               border: "none",
                             }}
                           >
-                            {isOpen ? (
-                              <>
-                                <div className="truncate font-medium">
-                                  {t.title || "Untitled session"}
-                                </div>
-                                <div
-                                  style={{
-                                    fontFamily: atlasFont.mono,
-                                    fontSize: 9,
-                                    color: T.inkFaint,
-                                    marginTop: 2,
-                                  }}
-                                >
-                                  {formatDistanceToNow(new Date(t.updated_at), { addSuffix: true })}
-                                </div>
-                              </>
-                            ) : (
-                              <span
-                                className="inline-block size-2 rounded-full"
-                                style={{ background: active ? T.corpus : T.inkFaint }}
-                              />
-                            )}
+                            <div className="truncate font-medium">
+                              {t.title || "Untitled session"}
+                            </div>
+                            <div
+                              style={{
+                                fontFamily: atlasFont.mono,
+                                fontSize: 9,
+                                color: T.inkFaint,
+                                marginTop: 2,
+                              }}
+                            >
+                              {formatDistanceToNow(new Date(t.updated_at), { addSuffix: true })}
+                            </div>
                           </button>
                         )}
-                        {isOpen && onRenameThread && !renaming ? (
+                        {onRenameThread && !renaming ? (
                           <button
                             type="button"
                             data-testid={`atlas-thread-rename-${t.id}`}
@@ -329,7 +340,7 @@ export function AtlasSessionRail({
                             <Pencil className="size-3.5" />
                           </button>
                         ) : null}
-                        {isOpen && onDeleteThread ? (
+                        {onDeleteThread ? (
                           <button
                             type="button"
                             data-testid={`atlas-thread-delete-${t.id}`}
@@ -347,7 +358,7 @@ export function AtlasSessionRail({
                   );
                 })}
               </ul>
-              {isOpen && onClearAllSessions && threads.length > 1 ? (
+              {onClearAllSessions && threads.length > 1 ? (
                 <button
                   type="button"
                   data-testid="atlas-clear-all-sessions"
@@ -367,59 +378,131 @@ export function AtlasSessionRail({
               ) : null}
             </>
           )}
-        </div>
+        </RailCollapsibleSection>
+
+        <RailCollapsibleSection
+          testId="atlas-rail-case-file"
+          icon={<FolderOpen className="size-3.5" />}
+          title="Case file"
+          subtitle={
+            claimCount > 0
+              ? `${claimCount} declared · max Indicative`
+              : "Constraints, goals, uncertainties"
+          }
+          badge={claimCount || undefined}
+          headerAction={
+            claimCount > 0 && onCaseFileSwot ? (
+              <button
+                type="button"
+                data-testid="case-file-swot-btn"
+                disabled={disabled || chatPending}
+                title="SWOT on your stated claims"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCaseFileSwot(SWOT_ON_CLAIMS_PROMPT);
+                }}
+                className="flex items-center gap-1 rounded border px-1.5 py-0.5 text-[9px] disabled:opacity-40"
+                style={{
+                  borderColor: T.declared,
+                  color: T.declared,
+                  background: T.declaredWash,
+                  fontFamily: atlasFont.mono,
+                }}
+              >
+                <Sparkles className="size-3" />
+                SWOT
+              </button>
+            ) : null
+          }
+          open={sectionsHydrated ? caseFileOpen : claimCount > 0}
+          onToggle={() => toggleSection("caseFile", caseFileOpen, setCaseFileOpen)}
+          railOpen={isOpen}
+          maxBodyHeight="max-h-[min(45vh,300px)]"
+        >
+          <CaseFilePanel
+            threadId={activeThreadId}
+            spec={caseFileSpec ?? null}
+            expanded
+            embedded
+            disabled={disabled || chatPending}
+            onSwotRequest={onCaseFileSwot}
+            onEntityAttached={onCaseEntityAttached}
+          />
+        </RailCollapsibleSection>
+
+        {showDevControls ? (
+          <RailCollapsibleSection
+            testId="atlas-rail-tools"
+            icon={<Settings2 className="size-3.5" />}
+            title="Tools"
+            subtitle="Dev overlay & save status"
+            open={sectionsHydrated ? toolsOpen : false}
+            onToggle={() => toggleSection("tools", toolsOpen, setToolsOpen)}
+            railOpen={isOpen}
+            maxBodyHeight="max-h-40"
+          >
+            <div className="space-y-2 px-1">
+              <button
+                type="button"
+                data-testid="atlas-dev-overlay-toggle"
+                onClick={() => openAtlasDevOverlay()}
+                className="flex w-full items-center gap-2 rounded-md border px-2 py-1.5"
+                style={{
+                  fontFamily: atlasFont.mono,
+                  fontSize: 10,
+                  color: T.inkFaint,
+                  borderColor: T.rule,
+                  background: "transparent",
+                }}
+              >
+                <Wrench className="size-3.5 shrink-0" />
+                Dev timing & routing
+              </button>
+              <p
+                data-testid="atlas-persist-status"
+                className="m-0 px-1"
+                style={{
+                  fontFamily: atlasFont.mono,
+                  fontSize: 9,
+                  color:
+                    persistStatus === "error" || !persistConfigured
+                      ? "#9A3412"
+                      : persistStatus === "saved"
+                        ? T.corpus
+                        : T.inkFaint,
+                }}
+              >
+                {persistStatusLabel(persistStatus, persistConfigured)}
+              </p>
+            </div>
+          </RailCollapsibleSection>
+        ) : (
+          isOpen ? (
+            <p
+              data-testid="atlas-persist-status"
+              className="shrink-0 px-3 py-1"
+              style={{
+                fontFamily: atlasFont.mono,
+                fontSize: 9,
+                color:
+                  persistStatus === "error" || !persistConfigured
+                    ? "#9A3412"
+                    : persistStatus === "saved"
+                      ? T.corpus
+                      : T.inkFaint,
+              }}
+            >
+              {persistStatusLabel(persistStatus, persistConfigured)}
+            </p>
+          ) : null
+        )}
       </div>
 
-      <CaseFilePanel
-        threadId={activeThreadId}
-        spec={caseFileSpec ?? null}
-        expanded={isOpen}
-        disabled={disabled || chatPending}
-        onSwotRequest={onCaseFileSwot}
-        onEntityAttached={onCaseEntityAttached}
-      />
-
-      {/* Workbench controls — moved from top bar */}
+      {/* Footer — always visible */}
       <div
         className="shrink-0 space-y-2 border-t p-2"
         style={{ borderColor: T.ruleSoft }}
       >
-        {showDevControls && isOpen ? (
-          <button
-            type="button"
-            data-testid="atlas-dev-overlay-toggle"
-            onClick={() => openAtlasDevOverlay()}
-            className="flex w-full items-center gap-2 rounded-md border px-2 py-1.5"
-            style={{
-              fontFamily: atlasFont.mono,
-              fontSize: 10,
-              color: T.inkFaint,
-              borderColor: T.rule,
-              background: "transparent",
-            }}
-          >
-            <Wrench className="size-3.5 shrink-0" />
-            Dev timing & routing
-          </button>
-        ) : null}
-        {isOpen ? (
-          <p
-            data-testid="atlas-persist-status"
-            className="px-1"
-            style={{
-              fontFamily: atlasFont.mono,
-              fontSize: 9,
-              color:
-                persistStatus === "error" || !persistConfigured
-                  ? "#9A3412"
-                  : persistStatus === "saved"
-                    ? T.corpus
-                    : T.inkFaint,
-            }}
-          >
-            {persistStatusLabel(persistStatus, persistConfigured)}
-          </p>
-        ) : null}
         <div className={cn(!isOpen && "flex flex-col items-center gap-2")}>
           <ConnectionStatus devMeta={devMeta} compact={!isOpen} className="relative w-full" />
           <SurfaceViewModeToggle
