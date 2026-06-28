@@ -112,4 +112,62 @@ test.describe("Atlas v5 workbench — chat + canvas + dev overlay", () => {
     await waitForTurnIdle(page);
     expect(depthErrors).toEqual([]);
   });
+
+  test("WB-3 sidebar thread switch keeps URL on selected thread", async ({ page }) => {
+    test.setTimeout(120_000);
+    const depthErrors = attachConsoleGuards(page);
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    const threadA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const threadB = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+    const now = new Date().toISOString();
+
+    await page.goto(`${BASE}/atlas?thread=${threadB}`);
+    await page.evaluate(
+      ({ threadA, threadB, now }) => {
+        sessionStorage.setItem(
+          "atlas5:thread-list",
+          JSON.stringify([
+            {
+              id: threadA,
+              title: "Session A",
+              lens: "CPC",
+              created_at: now,
+              updated_at: now,
+            },
+            {
+              id: threadB,
+              title: "Session B",
+              lens: "CPC",
+              created_at: now,
+              updated_at: now,
+            },
+          ]),
+        );
+        sessionStorage.setItem("atlas5-v5-thread-id", threadB);
+      },
+      { threadA, threadB, now },
+    );
+    await page.reload();
+
+    await expect(page.locator('[data-testid="atlas-surface-root"]')).toBeVisible({
+      timeout: 60_000,
+    });
+
+    const rail = page.getByTestId("atlas-session-rail");
+    await rail.hover();
+    await page.getByTitle("Pin sidebar open").click();
+
+    await page.getByTestId(`atlas-thread-${threadA}`).click();
+
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get("thread"), {
+        timeout: 10_000,
+      })
+      .toBe(threadA);
+
+    await page.waitForTimeout(1500);
+    expect(new URL(page.url()).searchParams.get("thread")).toBe(threadA);
+    expect(depthErrors).toEqual([]);
+  });
 });

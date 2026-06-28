@@ -46,7 +46,6 @@ import {
   uxPrefsForAgent,
   type AtlasUxPrefs,
 } from "@/lib/atlas/ux-preferences";
-import { startNewAtlasV5Thread, readAtlasV5ThreadId, setAtlasV5ThreadId } from "@/components/copilotkit-provider";
 import {
   clearCachedThreadList,
   readCachedThreadList,
@@ -54,6 +53,8 @@ import {
   upsertCachedThread,
   writeCachedThreadList,
 } from "@/lib/atlas/thread-list-cache";
+import { buildAtlasBootstrapUrl, buildAtlasThreadUrl } from "@/lib/atlas/thread-navigation";
+import { readAtlasV5ThreadId, setAtlasV5ThreadId } from "@/components/copilotkit-provider";
 
 type AtlasV5CoState = {
   answer_spec_envelope?: AnswerSpecEnvelope;
@@ -201,6 +202,7 @@ export function AtlasCopilotShell({
   const [copilotBoundThreadId, setCopilotBoundThreadId] = useState<string | null>(null);
   const [caseEntityId, setCaseEntityId] = useState<string | null>(null);
   const threadInitRef = useRef(false);
+  const syncedUrlThreadRef = useRef<string | null>(null);
 
   const syncAgentThreadContext = useCallback(
     (threadId: string, entityId: string | null) => {
@@ -388,6 +390,12 @@ export function AtlasCopilotShell({
       setRehydrating(true);
       setCopilotBoundThreadId(null);
       setCaseEntityId(null);
+      setRestoredMessages([]);
+      setSpec(null);
+      setDevMeta(null);
+      setReasoningTrace([]);
+      setEnvelopeStatus("final");
+      lastRevisionRef.current = 0;
       try {
         const detail = await fetchThreadDetail(threadId);
         if (!detail) {
@@ -468,31 +476,36 @@ export function AtlasCopilotShell({
   useEffect(() => {
     if (threadInitRef.current) return;
     threadInitRef.current = true;
-
-    const tid = initialThreadId?.trim() || readAtlasV5ThreadId();
-    setActiveThreadId(tid);
-    syncAgentThreadContext(tid, null);
-    // Sync storage; remount CopilotKit only when URL thread differs from stored id.
-    setAtlasV5ThreadId(tid);
-
     void refreshThreadList();
-    if (initialThreadId?.trim()) {
-      void rehydrateThread(tid);
-    }
+  }, [refreshThreadList]);
 
+  useEffect(() => {
+    const urlThread = initialThreadId?.trim();
+    if (!urlThread) return;
+    if (syncedUrlThreadRef.current === urlThread) return;
+    syncedUrlThreadRef.current = urlThread;
+
+    setAtlasV5ThreadId(urlThread);
+    setActiveThreadId(urlThread);
+    syncAgentThreadContext(urlThread, null);
+    setCopilotBoundThreadId(null);
+    setReasoningTrace([]);
+    lastPersistedKeyRef.current = "";
+
+    void rehydrateThread(urlThread);
+  }, [initialThreadId, rehydrateThread, syncAgentThreadContext]);
+
+  useEffect(() => {
     const q = bootstrapQuery?.trim();
-    if (q && !initialThreadId?.trim()) {
-      void ensureThread(tid, titleFromQuery(q));
-    }
+    if (!q || initialThreadId?.trim()) return;
 
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("thread") !== tid) {
-        params.set("thread", tid);
-        router.replace(`/atlas?${params.toString()}`, { scroll: false });
-      }
-    }
-  }, [bootstrapQuery, initialThreadId, rehydrateThread, refreshThreadList, router, syncAgentThreadContext]);
+    const fromEntry = consumePendingBootstrap(q);
+    if (!fromEntry && wasBootstrapSent(q)) return;
+
+    const tid = crypto.randomUUID();
+    writeAtlasSessionQuery(q);
+    router.replace(buildAtlasBootstrapUrl(tid, q), { scroll: false });
+  }, [bootstrapQuery, initialThreadId, router]);
 
   const turnTimingRef = useRef(turnTiming);
   useEffect(() => {
@@ -500,6 +513,7 @@ export function AtlasCopilotShell({
   }, [turnTiming]);
 
   useEffect(() => {
+    if (rehydrating) return;
     if (chatPending || turnActive || envelopeStatus === "partial") return;
 
     const useCopilotMessages =
@@ -576,13 +590,15 @@ export function AtlasCopilotShell({
     state?.canvas_cleared,
     turnActive,
     envelopeStatus,
+    rehydrating,
     refreshThreadList,
     state?.answer_spec_envelope?.revision,
   ]);
 
   useEffect(() => {
     const q = bootstrapQuery?.trim();
-    if (!q) return;
+    const urlThread = initialThreadId?.trim();
+    if (!q || !urlThread) return;
     if (bootstrapBootRef.current) return;
 
     const fromEntry = consumePendingBootstrap(q);
@@ -591,31 +607,20 @@ export function AtlasCopilotShell({
       return;
     }
 
-    if (fromEntry) {
-      writeAtlasSessionQuery(q);
-      const tid = startNewAtlasV5Thread();
-      setActiveThreadId(tid);
-      void ensureThread(tid, titleFromQuery(q));
-    } else if (readAtlasSessionQuery() !== q) {
-      writeAtlasSessionQuery(q);
-      const tid = startNewAtlasV5Thread();
-      setActiveThreadId(tid);
-      void ensureThread(tid, titleFromQuery(q));
-    }
-
     bootstrapBootRef.current = true;
     markBootstrapSent(q);
+    void ensureThread(urlThread, titleFromQuery(q));
 
     const delayMs = fromEntry ? 450 : 150;
     const timer = window.setTimeout(() => {
-      setCopilotBoundThreadId(readAtlasV5ThreadId());
+      setCopilotBoundThreadId(urlThread);
       sendMessageRef.current({
         role: "user",
         parts: [{ type: "text", text: q }],
       });
     }, delayMs);
     return () => window.clearTimeout(timer);
-  }, [bootstrapQuery]);
+  }, [bootstrapQuery, initialThreadId]);
 
   const chatMessages: ChatMessage[] = useMemo(() => {
     const useCopilotMessages =
@@ -703,13 +708,15 @@ export function AtlasCopilotShell({
   const handleBackToEntry = useCallback(() => {
     if (chatPending) return;
     resetWorkbenchState();
+    syncedUrlThreadRef.current = null;
     router.push("/atlas");
   }, [chatPending, resetWorkbenchState, router]);
 
   const handleNewQuestion = useCallback(() => {
     if (chatPending) return;
     resetWorkbenchState();
-    const tid = startNewAtlasV5Thread();
+    syncedUrlThreadRef.current = null;
+    const tid = crypto.randomUUID();
     const now = new Date().toISOString();
     const optimistic: ThreadSummary = {
       id: tid,
@@ -718,8 +725,6 @@ export function AtlasCopilotShell({
       created_at: now,
       updated_at: now,
     };
-    setActiveThreadId(tid);
-    syncAgentThreadContext(tid, null);
     setThreads((prev) => {
       const next = [optimistic, ...prev.filter((t) => t.id !== tid)];
       writeCachedThreadList(next);
@@ -727,21 +732,17 @@ export function AtlasCopilotShell({
     });
     void ensureThread(tid, "New session");
     void refreshThreadList();
-    router.push(`/atlas?thread=${tid}`);
-  }, [chatPending, refreshThreadList, resetWorkbenchState, router, syncAgentThreadContext]);
+    router.push(buildAtlasThreadUrl(tid));
+  }, [chatPending, refreshThreadList, resetWorkbenchState, router]);
 
   const handleSelectThread = useCallback(
     (threadId: string) => {
       if (chatPending || rehydrating) return;
-      setAtlasV5ThreadId(threadId);
-      setActiveThreadId(threadId);
-      setCopilotBoundThreadId(null);
-      setReasoningTrace([]);
-      lastPersistedKeyRef.current = "";
-      router.push(`/atlas?thread=${threadId}`);
-      void rehydrateThread(threadId);
+      if (threadId === activeThreadId) return;
+      writeAtlasSessionQuery("");
+      router.push(buildAtlasThreadUrl(threadId));
     },
-    [chatPending, rehydrating, rehydrateThread, router],
+    [activeThreadId, chatPending, rehydrating, router],
   );
 
   const handleRenameThread = useCallback(
