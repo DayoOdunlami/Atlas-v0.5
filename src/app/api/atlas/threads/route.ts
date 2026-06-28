@@ -2,24 +2,29 @@ import { NextResponse } from "next/server";
 
 import { isAtlasPgConfigured } from "@/lib/atlas/pg-pool";
 import { createThread, listThreads } from "@/lib/atlas/thread-store";
-import { resolveThreadOwnerId } from "@/lib/atlas/thread-auth";
+import { resolveThreadOwnerId, resolveThreadAuthMeta } from "@/lib/atlas/thread-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  if (!isAtlasPgConfigured()) {
-    return NextResponse.json({ threads: [], configured: false });
+  const { configured, authorized, ownerId } = await resolveThreadAuthMeta();
+
+  if (!configured) {
+    return NextResponse.json({
+      threads: [],
+      configured: false,
+      authorized: false,
+    });
   }
 
-  const ownerId = await resolveThreadOwnerId();
   if (!ownerId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized", configured: true, authorized: false }, { status: 401 });
   }
 
   try {
     const threads = await listThreads(ownerId);
-    return NextResponse.json({ threads, configured: true });
+    return NextResponse.json({ threads, configured: true, authorized: true });
   } catch (err) {
     console.error("[threads/GET]", err);
     return NextResponse.json({ error: "Failed to list threads" }, { status: 500 });

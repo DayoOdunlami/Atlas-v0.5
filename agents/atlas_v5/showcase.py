@@ -49,6 +49,13 @@ def parse_domain_selection(query: str) -> ShowcaseDomain | None:
         if token in ("muscle", "digital"):
             return "flex"
         return token  # type: ignore[return-value]
+    # Menu picks: "1", "2", "number 2", "option 2", "#2"
+    num_m = re.match(r"^(?:number|option|choice|pick|#)?\s*([123])\s*\.?\s*$", ql)
+    if num_m:
+        idx = int(num_m.group(1))
+        order: list[ShowcaseDomain] = ["rail", "aviation", "flex"]
+        if 1 <= idx <= len(order):
+            return order[idx - 1]
     if ql in DOMAIN_ALIASES:
         return DOMAIN_ALIASES[ql]
     for domain, journey in JOURNEYS.items():
@@ -76,7 +83,7 @@ def build_menu_reply() -> str:
         "2. **Aviation** — SAF / aviation decarbonisation slice",
         "3. **Flex** — *flex your digital muscle* — surface morph demo",
         "",
-        "Reply **`demo rail`**, **`demo aviation`**, or **`demo flex`** to start.",
+        "Reply **`1`**, **`2`**, or **`3`** — or **`demo rail`**, **`demo aviation`**, **`demo flex`** to start.",
         "Then say **`next`** to advance, or ask your own question anytime.",
         "",
         "Or open **`/atlas/showcase`** for the scene picker.",

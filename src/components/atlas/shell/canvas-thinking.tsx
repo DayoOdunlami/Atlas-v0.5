@@ -148,7 +148,11 @@ export function CanvasThinking({
         </ol>
       ) : active && visible.length === 0 ? (
         <p style={{ fontFamily: atlasFont.mono, fontSize: 11, color: T.inkFaint }}>
-          Connecting to corpus…
+          {stage === "gather"
+            ? "Gathering corpus evidence…"
+            : stage === "judgement" || stage === "spine"
+              ? "Synthesising answer…"
+              : "Running turn — canvas may take 30–60s before the first trace step…"}
         </p>
       ) : null}
     </div>

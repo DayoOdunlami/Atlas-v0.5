@@ -15,6 +15,8 @@ type SurfaceSplitContextValue = {
   viewMode: SurfaceViewMode;
   setViewMode: (mode: SurfaceViewMode) => void;
   registerChatPanel: (panel: ImperativePanelHandle | null) => void;
+  /** PanelGroup finished layout — imperative resize is safe after this. */
+  markPanelGroupReady: () => void;
   mobileChatOpen: boolean;
   setMobileChatOpen: (open: boolean) => void;
 };
@@ -35,6 +37,20 @@ export function useSurfaceSplitOptional() {
   return React.useContext(SurfaceSplitContext);
 }
 
+/** Imperative panel APIs throw until PanelGroup has computed sizes. */
+function safeApplyPanelSize(
+  panel: ImperativePanelHandle,
+  size: number,
+): boolean {
+  try {
+    if (panel.isCollapsed()) panel.expand();
+    panel.resize(size);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function SurfaceSplitProvider({
   autoSaveId,
   viewModeStorageKey,
@@ -47,27 +63,37 @@ export function SurfaceSplitProvider({
 }) {
   const storageKey = viewModeStorageKey ?? autoSaveId;
   const chatPanelRef = React.useRef<ImperativePanelHandle | null>(null);
+  const viewModeRef = React.useRef<SurfaceViewMode>("balanced");
+  const layoutReadyRef = React.useRef(false);
   const [viewMode, setViewModeState] = React.useState<SurfaceViewMode>("balanced");
   const [mobileChatOpen, setMobileChatOpen] = React.useState(false);
 
   React.useEffect(() => {
-    setViewModeState(readSurfaceViewMode(storageKey));
+    const stored = readSurfaceViewMode(storageKey);
+    viewModeRef.current = stored;
+    setViewModeState(stored);
   }, [storageKey]);
 
   const applyViewMode = React.useCallback((mode: SurfaceViewMode) => {
     const panel = chatPanelRef.current;
-    const size = SURFACE_VIEW_MODE_SIZES[mode];
-    if (panel) {
-      if (panel.isCollapsed()) panel.expand();
-      panel.resize(size);
-    }
+    if (!panel || !layoutReadyRef.current) return false;
+    return safeApplyPanelSize(panel, SURFACE_VIEW_MODE_SIZES[mode]);
+  }, []);
+
+  const markPanelGroupReady = React.useCallback(() => {
+    layoutReadyRef.current = true;
   }, []);
 
   const setViewMode = React.useCallback(
     (mode: SurfaceViewMode) => {
+      viewModeRef.current = mode;
       setViewModeState(mode);
       writeSurfaceViewMode(storageKey, mode);
-      applyViewMode(mode);
+      if (!applyViewMode(mode)) {
+        requestAnimationFrame(() => {
+          applyViewMode(mode);
+        });
+      }
     },
     [applyViewMode, storageKey],
   );
@@ -75,9 +101,9 @@ export function SurfaceSplitProvider({
   const registerChatPanel = React.useCallback(
     (panel: ImperativePanelHandle | null) => {
       chatPanelRef.current = panel;
-      if (panel) applyViewMode(readSurfaceViewMode(storageKey));
+      if (!panel) layoutReadyRef.current = false;
     },
-    [applyViewMode, storageKey],
+    [],
   );
 
   const value = React.useMemo(
@@ -86,6 +112,7 @@ export function SurfaceSplitProvider({
       viewMode,
       setViewMode,
       registerChatPanel,
+      markPanelGroupReady,
       mobileChatOpen,
       setMobileChatOpen,
     }),
@@ -94,6 +121,7 @@ export function SurfaceSplitProvider({
       viewMode,
       setViewMode,
       registerChatPanel,
+      markPanelGroupReady,
       mobileChatOpen,
     ],
   );

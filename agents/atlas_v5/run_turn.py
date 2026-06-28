@@ -13,6 +13,7 @@ from agents.atlas_v5.chat_router import is_clear_canvas_query
 from agents.atlas_v5.deep_synthesis import apply_deep_pass, synthesize_chat_reply
 from agents.atlas_v5.intent import is_connect_network_query, is_j1t1_orient_query
 from agents.atlas_v5.j1t1_corpus import J1T1_QUERY_PHRASE
+from agents.atlas_v5.corpus_gate import substantive_blocked_offer
 from agents.atlas_v5.online_only import (
     build_online_only_active_meta,
     build_online_only_offer,
@@ -153,6 +154,7 @@ async def _execute_substantive_turn(
     showcase_meta: dict[str, Any] | None = None,
     prior_dev_meta: dict[str, Any] | None = None,
     thread_id: str | None = None,
+    case_entity_id: str | None = None,
     cached_wide: Any | None = None,
     cached_skeleton: AnswerSpec | None = None,
     stage_ms: dict[str, float] | None = None,
@@ -180,6 +182,7 @@ async def _execute_substantive_turn(
             outcome_hint=outcome_hint,
             online_only=online_only,
             thread_id=thread_id,
+            case_entity_id=case_entity_id,
         )
         if stage_ms is not None:
             stage_ms["wide_ms"] = round((time.perf_counter() - t_wide) * 1000, 0)
@@ -194,10 +197,18 @@ async def _execute_substantive_turn(
         if _needs_online_only_consent(wide) and not online_only:
             return build_online_only_offer(work_q, decision)
 
+        blocked = substantive_blocked_offer(wide, work_q, decision, online_only=online_only)
+        if blocked:
+            return blocked
+
         skeleton = assemble_spec_from_wide_pass(wide, online_only=online_only)
 
-    if cached_wide is None and _needs_online_only_consent(wide) and not online_only:
-        return build_online_only_offer(work_q, decision)
+    if cached_wide is None:
+        blocked = substantive_blocked_offer(wide, work_q, decision, online_only=online_only)
+        if blocked:
+            return blocked
+        if _needs_online_only_consent(wide) and not online_only:
+            return build_online_only_offer(work_q, decision)
 
     t_deep = time.perf_counter()
     spec, reply, dev_meta, update_canvas = await apply_deep_pass(
@@ -207,6 +218,7 @@ async def _execute_substantive_turn(
         current_spec=current_spec,
         substantive=True,
         thread_id=thread_id,
+        case_entity_id=case_entity_id,
     )
     if stage_ms is not None:
         stage_ms["deep_ms"] = round((time.perf_counter() - t_deep) * 1000, 0)
@@ -368,6 +380,11 @@ async def run_turn_stream(
     wide = await run_wide_pass(
         q, outcome_hint=decision.outcome_hint, thread_id=thread_id
     )
+    blocked = substantive_blocked_offer(wide, q, decision)
+    if blocked:
+        yield json.dumps({"event": "final", **blocked}) + "\n"
+        return
+
     skeleton = assemble_spec_from_wide_pass(wide)
     stats_line = "corpus gathered"
     if wide.stats:

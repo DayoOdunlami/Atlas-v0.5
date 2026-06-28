@@ -2,7 +2,8 @@
 
 > **Status:** Locked. **Authority:** product outcomes layer (what / why / for whom).
 > **Source:** mirrored faithfully from the Notion canonical "🧭 Atlas v5 — North Star and Validation Thesis (v3.1)" (last verified 2026-06-15). When MCP connections are restored, Notion will be harmonised to match this file.
-> **Companions:** `CLAUDE.md` (stack anchor) · `ATLAS5_BRAIN_ADR.md` (brain & rendering paradigm) · `ATLAS5_IMPLEMENTATION_PLAN.md` (sequenced work).
+> **Companions:** `CLAUDE.md` (stack anchor) · `ATLAS5_BRAIN_ADR.md` (brain & rendering paradigm) · `ATLAS5_IMPLEMENTATION_PLAN.md` (sequenced work).  
+> **Build order (June 2026):** [docs/ATLAS_V5_BLUEPRINT.md §18](./docs/ATLAS_V5_BLUEPRINT.md#18-product-direction--case-file-centre-june-2026) · [docs/ATLAS_V5_CASE_FILE_PLAN.md](./docs/ATLAS_V5_CASE_FILE_PLAN.md) — Case File centre on `/atlas`; matcher becomes Diagnose mode, not primary UX.  
 > **Build rule:** *Do not build a landscape. Build a route-finder.*
 
 ---
@@ -300,4 +301,6 @@ Shorter: **Atlas turns fragmented innovation evidence into defensible strategic 
 
 *v3.1 — May 2026. Mirrored to repo 2026-06-15. Status: locked. Owner: Dayo. Reviewed against adversarial four-horsemen critique (Google, OpenAI, Anthropic, Palantir lenses).*
 
-*Notion source (when reachable): "🧭 Atlas v5 — North Star and Validation Thesis (v3.1)" — page id `36dc9b38-2a74-8170-ad34-fc4950df3621`.*
+**Jun 2026 sequencing addendum (does not replace v3.1 outcomes):** Implementation priority is **Case File centre** on `/atlas` — see `docs/ATLAS_V5_BLUEPRINT.md` §18 and `docs/ATLAS_V5_CASE_FILE_PLAN.md`. Matcher-first UX is Phase 3 optional; Entity Passport maps to **Case Entity** (operational tooling, not marketplace UI).
+
+*Notion source (when reachable): "🧭 Atlas v5 — North Star and Validation Thesis (v3.1)" — page id `36dc9b38-2a74-8170-ad34-fc4950df3621`. Build status page: **📦 Atlas v5 — Case File & Build Status (Jun 2026)** under Canonical Spec.*

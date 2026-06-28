@@ -93,7 +93,7 @@ def assemble_rest_fallback_spec(wide: WidePassResult) -> AnswerSpec:
     stat_rows = [
         Stat(
             value=str(n_proj),
-            label="Corpus projects matched (HTTPS search)",
+            label="Corpus projects matched (semantic search)",
             provId="rest.project_hits",
             tone="corpus",
         ),
@@ -109,7 +109,7 @@ def assemble_rest_fallback_spec(wide: WidePassResult) -> AnswerSpec:
         )
 
     verdict = (
-        f"Corpus search over HTTPS returned {n_proj} project match(es) for {label}. "
+        f"Semantic corpus search returned {n_proj} verified project match(es) for {label}. "
         "SQL aggregate stats were unavailable (Postgres pooler blocked) — charts may be limited."
     )
     if wide.outcome == "connect":
@@ -128,7 +128,7 @@ def assemble_rest_fallback_spec(wide: WidePassResult) -> AnswerSpec:
 
     return AnswerSpec(
         object=label,
-        scope=f"CORPUS HTTPS · {n_proj} MATCH(ES) · {mode.upper()}",
+        scope=f"CORPUS SEMANTIC · {n_proj} VERIFIED · {mode.upper()}",
         mode=mode,
         tier=tier,
         tierCapReason=(

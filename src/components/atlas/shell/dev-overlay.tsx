@@ -1,6 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+const DEV_OVERLAY_STORAGE_KEY = "atlas-dev-overlay-open";
+export const ATLAS_DEV_OVERLAY_OPEN_EVENT = "atlas5:dev-overlay-open";
+
+export function openAtlasDevOverlay(): void {
+  try {
+    sessionStorage.setItem(DEV_OVERLAY_STORAGE_KEY, "1");
+    window.dispatchEvent(new Event(ATLAS_DEV_OVERLAY_OPEN_EVENT));
+  } catch {
+    /* ignore */
+  }
+}
 
 import { atlasFont, atlasTokens as T } from "@/lib/atlas/tokens";
 import type { AtlasUxPrefs } from "@/lib/atlas/ux-preferences";
@@ -75,21 +87,44 @@ export function DevOverlay({
   onUxPrefsChange?: (patch: Partial<AtlasUxPrefs>) => void;
   turnTiming?: { elapsedMs: number | null; running: boolean };
 }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem(DEV_OVERLAY_STORAGE_KEY);
+      if (stored === "1") setOpen(true);
+    } catch {
+      /* ignore */
+    }
+    const onOpen = () => setOpen(true);
+    window.addEventListener(ATLAS_DEV_OVERLAY_OPEN_EVENT, onOpen);
+    return () => window.removeEventListener(ATLAS_DEV_OVERLAY_OPEN_EVENT, onOpen);
+  }, []);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(DEV_OVERLAY_STORAGE_KEY, open ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  }, [open]);
+
   const show =
     process.env.NODE_ENV === "development" ||
     process.env.NEXT_PUBLIC_ATLAS_DEV_OVERLAY === "1";
 
-  if (!show || !meta) {
+  if (!show) {
     return null;
   }
 
-  const d = meta.disposition ?? {};
+  const hasMeta = meta && Object.keys(meta).length > 0;
+
+  const d = meta?.disposition ?? {};
 
   return (
     <div
       data-testid="atlas-dev-overlay"
-      className="fixed bottom-4 left-4 z-50 max-w-sm rounded-lg border shadow-lg"
+      className="fixed bottom-4 right-4 z-50 max-w-xs rounded-lg border shadow-lg"
       style={{
         borderColor: T.rule,
         background: "#1A1714",
@@ -98,16 +133,39 @@ export function DevOverlay({
         fontSize: 10,
       }}
     >
-      <button
-        type="button"
-        className="w-full px-3 py-2 text-left uppercase tracking-wider"
-        style={{ color: "#94908A" }}
-        onClick={() => setOpen((v) => !v)}
-      >
-        Atlas dev {open ? "▾" : "▸"}
-      </button>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          className="min-w-0 flex-1 px-3 py-2 text-left uppercase tracking-wider"
+          style={{ color: "#94908A" }}
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+        >
+          Atlas dev {open ? "▾" : "▸"}
+        </button>
+        {open ? (
+          <button
+            type="button"
+            className="shrink-0 px-2 py-2 uppercase tracking-wider"
+            style={{ color: "#94908A" }}
+            onClick={() => setOpen(false)}
+            aria-label="Close dev overlay"
+            title="Close"
+          >
+            ✕
+          </button>
+        ) : null}
+      </div>
       {open ? (
-        <div className="space-y-1 border-t px-3 py-2" style={{ borderColor: "#5A5249" }}>
+        <div
+          className="max-h-[min(50vh,420px)] space-y-1 overflow-y-auto border-t px-3 py-2"
+          style={{ borderColor: "#5A5249" }}
+        >
+          {!hasMeta ? (
+            <p style={{ color: "#94908A" }}>
+              Waiting for turn metadata — send a message or pick a showcase journey.
+            </p>
+          ) : null}
           <Row k="dataSource" v={dataSource} />
           {turnTiming ? (
             <Row
@@ -121,30 +179,30 @@ export function DevOverlay({
               }
             />
           ) : null}
-          <Row k="stage" v={meta.turn_stage ?? "—"} />
-          <Row k="partial" v={meta.partial_stage ?? "—"} />
+          <Row k="stage" v={meta?.turn_stage ?? "—"} />
+          <Row k="partial" v={meta?.partial_stage ?? "—"} />
           <Row k="surface" v={d.primary_surface} />
           <Row k="canvas_action" v={d.canvas_action} />
           <Row k="composition" v={d.composition_mode} />
-          <Row k="route" v={`${meta.route ?? "—"} (${meta.route_source ?? "—"})`} />
-          <Row k="lane" v={`${meta.lane_mode ?? "—"} skip=${String(meta.external_skipped)} peer=${meta.lane_mode === "dual" ? "yes" : "no"}`} />
-          <Row k="keys" v={`${meta.keyed_keys?.length ?? 0} available`} />
-          {meta.web_keys_absent_reason ? (
+          <Row k="route" v={`${meta?.route ?? "—"} (${meta?.route_source ?? "—"})`} />
+          <Row k="lane" v={`${meta?.lane_mode ?? "—"} skip=${String(meta?.external_skipped)} peer=${meta?.lane_mode === "dual" ? "yes" : "no"}`} />
+          <Row k="keys" v={`${meta?.keyed_keys?.length ?? 0} available`} />
+          {meta?.web_keys_absent_reason ? (
             <Row k="web.*" v="absent (corpus-only)" />
           ) : null}
-          {meta.research_keys_absent_reason ? (
+          {meta?.research_keys_absent_reason ? (
             <Row k="research.*" v="off (ATLAS_V5_RESEARCH_LANE=0)" />
-          ) : meta.validation_summary?.research_figures ? (
+          ) : meta?.validation_summary?.research_figures ? (
             <Row k="research.*" v={`${String(meta.validation_summary.research_figures)} figures`} />
           ) : null}
-          <Row k="gate" v={meta.gate_status ?? "—"} />
-          <Row k="fallback" v={meta.fallback_rung ?? "—"} />
-          {meta.gate_errors?.length ? (
-            <div style={{ color: "#E8A87C" }}>{meta.gate_errors.join("; ")}</div>
+          <Row k="gate" v={meta?.gate_status ?? "—"} />
+          <Row k="fallback" v={meta?.fallback_rung ?? "—"} />
+          {meta?.gate_errors?.length ? (
+            <div style={{ color: "#E8A87C" }}>{meta?.gate_errors?.join("; ")}</div>
           ) : null}
-          {meta.zod_error ? (
+          {meta?.zod_error ? (
             <div className="pt-1" style={{ color: "#E8A87C", whiteSpace: "pre-wrap" }}>
-              Zod: {meta.zod_error.slice(0, 200)}
+              Zod: {meta?.zod_error.slice(0, 200)}
             </div>
           ) : null}
           {d.reasoning ? (
@@ -152,7 +210,7 @@ export function DevOverlay({
               {d.reasoning.slice(0, 120)}
             </div>
           ) : null}
-          {meta.stage_ms && Object.keys(meta.stage_ms).length > 0 ? (
+          {meta?.stage_ms && Object.keys(meta.stage_ms).length > 0 ? (
             <div className="space-y-0.5 border-t pt-2" style={{ borderColor: "#5A5249" }}>
               <div style={{ color: "#94908A" }}>stage_ms</div>
               {Object.entries(meta.stage_ms).map(([k, v]) => (
@@ -160,26 +218,26 @@ export function DevOverlay({
               ))}
             </div>
           ) : null}
-          {meta.visual_intent || meta.charts_attached !== undefined ? (
+          {meta?.visual_intent || meta?.charts_attached !== undefined ? (
             <div className="space-y-0.5 border-t pt-2" style={{ borderColor: "#5A5249" }}>
               <div style={{ color: "#94908A" }}>visuals</div>
-              <Row k="intent" v={meta.visual_intent ?? "—"} />
-              <Row k="lead_lane" v={meta.lead_lane ?? "—"} />
-              {meta.trust_conflicts?.length ? (
+              <Row k="intent" v={meta?.visual_intent ?? "—"} />
+              <Row k="lead_lane" v={meta?.lead_lane ?? "—"} />
+              {meta?.trust_conflicts?.length ? (
                 <Row k="conflicts" v={meta.trust_conflicts.join("; ")} />
               ) : null}
-              <Row k="strength" v={meta.visual_strength ?? "—"} />
+              <Row k="strength" v={meta?.visual_strength ?? "—"} />
               <Row
                 k="attached"
-                v={`${meta.charts_attached ?? 0}${meta.chart_kinds?.length ? ` (${meta.chart_kinds.join(", ")})` : ""}`}
+                v={`${meta?.charts_attached ?? 0}${meta?.chart_kinds?.length ? ` (${meta.chart_kinds.join(", ")})` : ""}`}
               />
-              {meta.visual_suppressed ? (
+              {meta?.visual_suppressed ? (
                 <Row
                   k="suppressed"
-                  v={meta.visual_suppression_reason ?? meta.visual_suppression?.join("; ") ?? "yes"}
+                  v={meta?.visual_suppression_reason ?? meta?.visual_suppression?.join("; ") ?? "yes"}
                 />
               ) : null}
-              {meta.visual_rejected?.slice(0, 3).map((r, i) => (
+              {meta?.visual_rejected?.slice(0, 3).map((r, i) => (
                 <div key={i} style={{ color: "#94908A" }}>
                   ↳ {r.kind}: {r.reason.slice(0, 60)}
                 </div>

@@ -152,7 +152,10 @@ Produce a DeepPassOutput JSON object. **Resolve in this order:**
 2. **Judgement** — nested judgement object with verdict, soWhat, tier, blindspot, instrument_recipe, claims, chat_complement
    - Write plain English only — never use {{key}} holes in judgement fields (those are for canvas_markup only)
    - instrument_recipe names the fallback recipe if compose fails — not the primary surface when free_compose
-   - **SWOT requests** (user says SWOT / strengths weaknesses opportunities threats): populate judgement.swot with
+   - **SWOT on case file** (user asks SWOT on *my* claims / case file / stated situation): map quadrants
+     from SESSION_CASE_FILE claims (declared lane); corpus bullets only where they support or challenge
+     a stated claim — label declared vs corpus in quadrant bullets
+   - **SWOT requests** (general SWOT on an org/topic): populate judgement.swot with
      four quadrant bullet lists AND emit a 2×2 grid in canvas_markup with data-testid="swot-quadrant"
 
 3. **canvas_markup** — REQUIRED when composition_mode is free_compose AND canvas_action is replace

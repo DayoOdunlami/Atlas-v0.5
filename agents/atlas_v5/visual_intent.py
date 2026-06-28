@@ -18,6 +18,15 @@ _SWOT_RE = re.compile(
     re.I,
 )
 
+_CASE_SWOT_RE = re.compile(
+    r"("
+    r"\b(my|our)\s+(case(\s+file)?|claims?|situation|stated)\b.*\b(swot|strengths?)\b|"
+    r"\b(swot|strengths?).*\b(my|our)\s+(case(\s+file)?|claims?|situation|stated)\b|"
+    r"\bstated\s+claims?\b.*\b(swot|strengths?)\b"
+    r")",
+    re.I,
+)
+
 _JOURNEY_ORIENT_RE = re.compile(
     r"\b("
     r"state of play|decarbon|two.?tier|national programme|funding floor|"
@@ -49,6 +58,10 @@ def detect_visual_form(query: str, *, outcome: str = "orient") -> VisualForm:
 
 def is_swot_query(query: str) -> bool:
     return detect_visual_form(query) == "swot"
+
+
+def is_case_file_swot_query(query: str) -> bool:
+    return bool(_CASE_SWOT_RE.search(query.strip()))
 
 
 def is_journey_orient_query(query: str, *, outcome: str = "orient") -> bool:

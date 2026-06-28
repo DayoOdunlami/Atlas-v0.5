@@ -45,11 +45,14 @@ export function readAtlasV5ThreadId(): string {
   return readOrCreateThreadId(ATLAS_V5_THREAD_KEY);
 }
 
-/** Set v5 thread id — remounts CopilotKit via provider key. */
+/** Set v5 thread id — remounts CopilotKit only when the id actually changes. */
 export function setAtlasV5ThreadId(id: string): void {
   if (typeof sessionStorage === "undefined") return;
+  const prev = sessionStorage.getItem(ATLAS_V5_THREAD_KEY);
   sessionStorage.setItem(ATLAS_V5_THREAD_KEY, id);
-  window.dispatchEvent(new Event("atlas5:new-atlas-v5-thread"));
+  if (prev !== id) {
+    window.dispatchEvent(new Event("atlas5:new-atlas-v5-thread"));
+  }
 }
 
 /** Rotate /atlas v5 CopilotKit thread. */

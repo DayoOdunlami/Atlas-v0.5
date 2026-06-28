@@ -40,8 +40,9 @@ export function SurfaceSplitPanels({
   className?: string;
 }) {
   const isLarge = useIsLargeScreen();
-  const { autoSaveId, registerChatPanel, mobileChatOpen, setMobileChatOpen } =
+  const { autoSaveId, registerChatPanel, markPanelGroupReady, mobileChatOpen, setMobileChatOpen, viewMode } =
     useSurfaceSplit();
+
   const chatPanelRef = React.useCallback(
     (node: ImperativePanelHandle | null) => {
       registerChatPanel(node);
@@ -74,11 +75,12 @@ export function SurfaceSplitPanels({
     <ResizablePanelGroup
       direction="horizontal"
       autoSaveId={autoSaveId}
+      onLayout={markPanelGroupReady}
       className={cn("h-full min-h-0 flex-1", className)}
     >
       <ResizablePanel
         ref={chatPanelRef}
-        defaultSize={defaultChatSize}
+        defaultSize={SURFACE_VIEW_MODE_SIZES[viewMode] ?? defaultChatSize}
         minSize={minChatSize}
         maxSize={maxChatSize}
         collapsible

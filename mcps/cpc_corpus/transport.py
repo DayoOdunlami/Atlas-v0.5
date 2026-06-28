@@ -2,8 +2,8 @@
 Corpus DB transport tier — Postgres (TCP) with HTTPS REST fallback.
 
 Tier 1: postgres + pgvector
-Tier 2: rest_vector (Supabase RPC over 443)
-Tier 3: rest_keyword (Supabase PostgREST ILIKE over 443)
+Tier 2: rest_vector (Supabase semantic RPC over 443)
+Tier 3: rest_keyword (legacy ILIKE — live_calls/hive only, not project search)
 Tier 4: unavailable (explicit — no silent empty results)
 """
 from __future__ import annotations
@@ -63,8 +63,7 @@ def human_transport_note(tier: Optional[CorpusTransport] = None) -> str:
         )
     if t == "rest_keyword":
         return (
-            "Corpus search used keyword mode over HTTPS (Postgres pooler unreachable). "
-            "Similarity scores may be absent — try broader terms if results look thin."
+            "Legacy keyword lookup over HTTPS (not used for atlas.projects semantic search)."
         )
     return "Corpus database unreachable on all transport tiers."
 

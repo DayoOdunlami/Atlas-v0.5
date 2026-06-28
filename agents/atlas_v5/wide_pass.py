@@ -42,7 +42,7 @@ def _reconcile_corpus_unavailable(
     if bag.corpus_raw:
         return False
     tier = transport.get_last_transport()
-    if tier in ("rest_vector", "rest_keyword", "postgres"):
+    if tier in ("rest_vector", "postgres"):
         return False
     return True
 
@@ -93,8 +93,9 @@ async def run_wide_pass(
     *,
     online_only: bool = False,
     thread_id: str | None = None,
+    case_entity_id: str | None = None,
 ) -> WidePassResult:
-    session_claims = load_case_file(thread_id)
+    session_claims = load_case_file(thread_id, case_entity_id)
     if not session_claims and has_declared_uncertainty_cue(query):
         from agents.atlas_v5.case_file import bootstrap_declared_claims_heuristic
 
@@ -291,10 +292,16 @@ def assemble_spec_from_wide_pass(wide: WidePassResult, *, online_only: bool = Fa
             if wide.object_label != "Rail decarbonisation":
                 updates["object"] = wide.object_label
             spec = spec.model_copy(update=updates)
-    elif wide.stats is None:
+    elif wide.stats is None and has_hits:
         from agents.atlas_v5.rest_fallback_assembler import assemble_rest_fallback_spec
 
         spec = assemble_rest_fallback_spec(wide)
+    else:
+        from agents.atlas_v5.corpus_gate import CorpusEvidenceRequired
+
+        raise CorpusEvidenceRequired(
+            "Substantive canvas requires SQL stats or verified corpus project hits"
+        )
 
     if wide.evidence_bag is not None:
         spec = reconcile_answer_spec(

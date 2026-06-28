@@ -1,15 +1,18 @@
-"""REST fallback assembler when Postgres stats blocked but HTTPS search works."""
+"""REST fallback assembler when Postgres stats blocked but semantic search works."""
 
 from __future__ import annotations
 
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from agents.atlas_v5.corpus_gate import CorpusEvidenceRequired, substantive_blocked_offer
 from agents.atlas_v5.rest_fallback_assembler import assemble_rest_fallback_spec
 from agents.atlas_v5.trust.validate_web import build_web_figures
+from agents.atlas_v5.turn_classifier import TurnDecision
 from agents.atlas_v5.wide_pass import WidePassResult, assemble_spec_from_wide_pass
 from agents.orchestrator.retrieval_fabric import EvidenceBag
 
@@ -37,10 +40,10 @@ def test_assemble_rest_fallback_from_hits():
     )
     spec = assemble_rest_fallback_spec(wide)
     assert len(spec.corpus_citations) == 1
-    assert "HTTPS" in spec.scope
+    assert "SEMANTIC" in spec.scope
 
 
-def test_assemble_spec_zero_hits_rest_tier_no_crash():
+def test_zero_hits_returns_blocked_offer_not_canvas():
     wide = WidePassResult(
         outcome="act",
         query="What kind of funding might fit an SME innovator like that?",
@@ -48,32 +51,19 @@ def test_assemble_spec_zero_hits_rest_tier_no_crash():
         corpus_hits=[],
         retrieval_meta={"corpus_status": "rest_or_search", "corpus_stats_skipped": True},
     )
-    spec = assemble_spec_from_wide_pass(wide)
-    assert spec.mode == "Act"
-    assert "ONLINE ONLY" not in spec.scope
-
-
-def test_needs_online_only_consent_false_when_rest_tier():
-    from agents.atlas_v5.wide_pass import needs_online_only_consent
-    from mcps.cpc_corpus import transport
-
-    wide = WidePassResult(
-        outcome="orient",
-        query="rail funding",
-        stats=None,
-        retrieval_meta={"corpus_unavailable": True},
-    )
-    transport.set_transport("rest_keyword")
-    assert needs_online_only_consent(wide) is False
-    transport.set_transport("unavailable")
-    assert needs_online_only_consent(wide) is True
+    decision = TurnDecision(route="substantive", source="heuristic", outcome_hint="act")
+    offer = substantive_blocked_offer(wide, wide.query, decision)
+    assert offer is not None
+    assert offer["update_canvas"] is False
+    with pytest.raises(CorpusEvidenceRequired):
+        assemble_spec_from_wide_pass(wide)
 
 
 def test_assemble_spec_uses_rest_fallback_not_online_only():
     bag = EvidenceBag(
         corpus_raw=[
             {
-                "id": "uuid-1",
+                "id": "bb918318-0000-4000-8000-000000000002",
                 "title": "Project A",
                 "organisation": "CPC",
                 "similarity": 0.8,

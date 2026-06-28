@@ -25,6 +25,7 @@ from agents.atlas_v5.graph_nodes import (
     finalize_turn,
     gather_evidence,
     prepare_turn,
+    route_after_gather,
     route_after_route,
     route_turn,
     stream_spine,
@@ -56,6 +57,9 @@ class AtlasV5State(TypedDict, total=False):
     turn_active: bool
     turn_pipeline: dict[str, Any]
     ux_prefs: dict[str, bool]
+    session_history: list[dict[str, Any]]
+    thread_id: str | None
+    case_entity_id: str | None
 
 
 def build_atlas_v5_graph():
@@ -74,7 +78,11 @@ def build_atlas_v5_graph():
         route_after_route,
         {"gather": "gather", "finalize": "finalize"},
     )
-    g.add_edge("gather", "stream_spine")
+    g.add_conditional_edges(
+        "gather",
+        route_after_gather,
+        {"stream_spine": "stream_spine", "finalize": "finalize"},
+    )
     g.add_edge("stream_spine", "synthesise")
     g.add_edge("synthesise", END)
     g.add_edge("finalize", END)

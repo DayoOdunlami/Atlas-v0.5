@@ -7,7 +7,7 @@ import re
 
 from agents.atlas_v5.judgement_models import JudgementFieldsOutput, SwotQuadrants
 from agents.atlas_v5.keyed_figures import KeyedFigureIndex
-from agents.atlas_v5.visual_intent import VisualForm, detect_visual_form, is_journey_orient_query
+from agents.atlas_v5.visual_intent import VisualForm, detect_visual_form, is_case_file_swot_query, is_journey_orient_query
 
 
 def _esc(text: str) -> str:
@@ -39,13 +39,49 @@ def _default_swot_from_judgement(j: JudgementFieldsOutput) -> SwotQuadrants:
     )
 
 
+def _swot_from_declared_claims(claims: list) -> SwotQuadrants | None:
+    if not claims:
+        return None
+    by_kind: dict[str, list[str]] = {}
+    for c in claims:
+        kind = getattr(c, "kind", None) or "fact"
+        text = getattr(c, "text", None)
+        if text:
+            by_kind.setdefault(str(kind), []).append(str(text))
+    return SwotQuadrants(
+        strengths=by_kind.get("fact", [])[:3] or by_kind.get("domain", [])[:3] or [claims[0].text],
+        weaknesses=by_kind.get("constraint", [])[:3]
+        or by_kind.get("uncertainty", [])[:2]
+        or ["Constraints or gaps in the stated case"],
+        opportunities=by_kind.get("hypothesis", [])[:3]
+        or ["Clarify goals with corpus-backed analogues"],
+        threats=by_kind.get("uncertainty", [])[:3]
+        or ["Unstated assumptions may block fit"],
+    )
+
+
 def build_swot_markup(
     judgement: JudgementFieldsOutput,
     index: KeyedFigureIndex,
+    *,
+    declared_mode: bool = False,
+    declared_claims: list | None = None,
 ) -> str:
-    swot = judgement.swot or _default_swot_from_judgement(judgement)
+    if declared_mode and declared_claims:
+        swot = (
+            judgement.swot
+            or _swot_from_declared_claims(declared_claims)
+            or _default_swot_from_judgement(judgement)
+        )
+    else:
+        swot = judgement.swot or _default_swot_from_judgement(judgement)
+    header = (
+        "SWOT · declared case file · corpus supports only"
+        if declared_mode
+        else "SWOT · analyst synthesis · corpus stats owned"
+    )
     stats_row = ""
-    if index.get("stats.project_count"):
+    if not declared_mode and index.get("stats.project_count"):
         stats_row = f"""
         <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px">
           <span data-material="owned" data-key="stats.project_count" style="font-family:Georgia,serif;font-size:22px;color:#3F7A52">{{{{stats.project_count}}}}</span>
@@ -57,7 +93,7 @@ def build_swot_markup(
     return f"""
 <section data-testid="swot-quadrant" class="swot-grid" style="max-width:720px">
   <div style="font-family:ui-monospace,monospace;font-size:10px;letter-spacing:0.12em;color:#56524C;text-transform:uppercase;margin-bottom:10px">
-    SWOT · analyst synthesis · corpus stats owned
+    {header}
   </div>
           {stats_row}
           <p style="font-family:ui-monospace,monospace;font-size:9px;color:#94908A;margin:0 0 14px">
@@ -138,10 +174,16 @@ def build_template_markup(
     *,
     object_label: str = "Rail decarbonisation",
     outcome: str = "orient",
+    session_claims: list | None = None,
 ) -> str | None:
     form: VisualForm = detect_visual_form(query, outcome=outcome)
     if form == "swot":
-        return build_swot_markup(judgement, index)
+        return build_swot_markup(
+            judgement,
+            index,
+            declared_mode=is_case_file_swot_query(query),
+            declared_claims=session_claims,
+        )
     if form == "journey_orient":
         return build_journey_orient_markup(
             judgement, index, object_label=object_label

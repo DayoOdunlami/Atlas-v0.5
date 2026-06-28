@@ -11,11 +11,8 @@ import { NetworkMap } from "@/components/atlas/recipes/network-map";
 import { OpportunityList } from "@/components/atlas/recipes/opportunity-list";
 import { CanvasThinking, latestReasoningProgress, type AtlasReasoningStep } from "@/components/atlas/shell/canvas-thinking";
 import { CarriedFromBanner } from "@/components/atlas/shell/carried-from-banner";
-import { AtlasSessionNav } from "@/components/atlas/shell/atlas-session-nav";
-import {
-  AtlasThreadSidebar,
-} from "@/components/atlas/shell/atlas-thread-sidebar";
-import { DevOverlay, type AtlasDevMeta } from "@/components/atlas/shell/dev-overlay";
+import { AtlasSessionWorkspace } from "@/components/atlas/shell/atlas-session-workspace";
+import { DeclaredClaimsBlock } from "@/components/atlas/shell/declared-claims-block";
 import { EmptyCanvas } from "@/components/atlas/shell/empty-canvas";
 import {
   CanvasSectionSkeleton,
@@ -31,14 +28,16 @@ import { AnswerabilityCard } from "@/components/atlas/spine/answerability-card";
 import { ConfidenceCeilingBar } from "@/components/atlas/spine/confidence-ceiling-bar";
 import { ProvenanceTrace } from "@/components/atlas/spine/provenance-trace";
 import { atlasFont, atlasTokens as T } from "@/lib/atlas/tokens";
+import type { AtlasDevMeta } from "@/components/atlas/shell/dev-overlay";
+import type { ThreadSummary, PersistStatus } from "@/lib/atlas/thread-client";
+import { chartsForRender } from "@/lib/atlas/chart-visual-policy";
+
 import type { AtlasUxPrefs } from "@/lib/atlas/ux-preferences";
-import type { ThreadSummary } from "@/lib/atlas/thread-client";
-import { SurfaceSplitProvider } from "@/components/layout/surface-split-provider";
-import {
-  MobileChatTrigger,
-  SurfaceSplitPanels,
-} from "@/components/layout/surface-split-panels";
-import { SurfaceViewModeToggle } from "@/components/layout/surface-view-mode-toggle";
+
+const CANVAS_SHELL =
+  "flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-[#FBFAF7]";
+const CANVAS_BODY =
+  "relative min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-3 sm:px-6 lg:px-8";
 
 function renderInstrument(
   instrument: AnswerSpec["instrument"],
@@ -82,11 +81,16 @@ export type AtlasAnswerSurfaceProps = {
   activeThreadId?: string | null;
   threads?: ThreadSummary[];
   threadsLoading?: boolean;
-  historyOpen?: boolean;
-  onToggleHistory?: () => void;
   onSelectThread?: (threadId: string) => void;
   onNewThread?: () => void;
   historyDisabled?: boolean;
+  persistStatus?: PersistStatus;
+  persistConfigured?: boolean;
+  onDeleteThread?: (threadId: string) => void;
+  onRenameThread?: (threadId: string, title: string) => void | Promise<void>;
+  rehydrating?: boolean;
+  onCaseFileSwot?: (message: string) => void;
+  onCaseEntityAttached?: (entityId: string | null) => void;
 };
 
 export function AtlasAnswerSurface({
@@ -111,11 +115,16 @@ export function AtlasAnswerSurface({
   activeThreadId = null,
   threads = [],
   threadsLoading = false,
-  historyOpen = false,
-  onToggleHistory,
   onSelectThread,
   onNewThread,
   historyDisabled = false,
+  persistStatus = "idle",
+  persistConfigured = true,
+  onDeleteThread,
+  onRenameThread,
+  rehydrating = false,
+  onCaseFileSwot,
+  onCaseEntityAttached,
 }: AtlasAnswerSurfaceProps) {
   const [provId, setProvId] = useState<string | null>(null);
   const partialStage = devMeta?.partial_stage;
@@ -168,104 +177,66 @@ export function AtlasAnswerSurface({
       turn: "—",
     };
     return (
-      <SurfaceSplitProvider autoSaveId="atlas-session-split">
-        <div
-          data-testid="atlas-surface-root"
-          data-datasource={dataSource}
-          className="flex h-svh flex-col overflow-hidden"
-          style={{ background: T.page, fontFamily: atlasFont.sans }}
-        >
-          <AtlasSessionNav
-            devMeta={devMeta}
-            onNewSession={onNewSession}
+      <AtlasSessionWorkspace
+        dataSource={dataSource}
+        devMeta={devMeta}
+        uxPrefs={uxPrefs}
+        onUxPrefsChange={onUxPrefsChange}
+        turnTiming={turnTiming}
+        threads={threads}
+        activeThreadId={activeThreadId}
+        threadsLoading={threadsLoading}
+        onSelectThread={onSelectThread}
+        onNewThread={onNewThread}
+        onNewSession={onNewSession}
+        chatPending={chatPending}
+        historyDisabled={historyDisabled}
+        persistStatus={persistStatus}
+        persistConfigured={persistConfigured}
+        onDeleteThread={onDeleteThread}
+        onRenameThread={onRenameThread}
+        rehydrating={rehydrating}
+        canvasPanel={
+          <main className={CANVAS_SHELL} style={{ background: T.canvas }}>
+            <div className={CANVAS_BODY}>
+              {canvasThinking ? (
+                <CanvasThinking
+                  steps={reasoningTrace}
+                  active={canvasThinking}
+                  stage={devMeta?.turn_stage}
+                  partialCanvas={envelopePartial}
+                  defaultCollapsed={collapsibleCot}
+                />
+              ) : null}
+              <EmptyCanvas />
+            </div>
+          </main>
+        }
+        chatPanel={
+          <SoWhatRail
+            splitEmbedded
+            soWhat={emptySoWhat}
+            initialQuery={bootstrapQuery}
+            onFollowUp={handleFollowUp}
+            chatMessages={chatMessages}
             chatPending={chatPending}
-            toolbar={
-              <SurfaceViewModeToggle compact className="hidden lg:inline-flex" />
+            progressLine={progressLine}
+            showcaseOptions={devMeta?.showcase?.options}
+            onShowcaseSelect={
+              onFollowUpProp
+                ? (cmd) => {
+                    void handleFollowUp(cmd);
+                  }
+                : undefined
             }
           />
-
-          <div className="flex min-h-0 flex-1 w-full gap-4 overflow-hidden px-4 py-4 lg:px-6 lg:py-6">
-            {onToggleHistory && onSelectThread && onNewThread ? (
-              <AtlasThreadSidebar
-                threads={threads}
-                activeThreadId={activeThreadId}
-                loading={threadsLoading}
-                open={historyOpen}
-                onToggle={onToggleHistory}
-                onSelectThread={onSelectThread}
-                onNewThread={onNewThread}
-                disabled={historyDisabled}
-              />
-            ) : null}
-
-            <SurfaceSplitPanels
-              className="min-w-0 flex-1"
-              mobileChatTitle="Atlas chat"
-              canvasPanel={
-                <main
-                  className="flex min-h-0 min-w-0 h-full flex-col overflow-hidden rounded-sm shadow-lg"
-                  style={{ background: T.canvas }}
-                >
-                  <div className="relative min-h-0 flex-1 overflow-y-auto px-6 pb-10 pt-8 lg:px-10 xl:px-12">
-                    {canvasThinking ? (
-                      <CanvasThinking
-                        steps={reasoningTrace}
-                        active={canvasThinking}
-                        stage={devMeta?.turn_stage}
-                        partialCanvas={envelopePartial}
-                        defaultCollapsed={collapsibleCot}
-                      />
-                    ) : null}
-                    <EmptyCanvas />
-                  </div>
-                </main>
-              }
-              chatPanel={
-                <SoWhatRail
-                  splitEmbedded
-                  soWhat={emptySoWhat}
-                  initialQuery={bootstrapQuery}
-                  onFollowUp={handleFollowUp}
-                  chatMessages={chatMessages}
-                  chatPending={chatPending}
-                  progressLine={progressLine}
-                  showcaseOptions={devMeta?.showcase?.options}
-                  onShowcaseSelect={
-                    onFollowUpProp
-                      ? (cmd) => {
-                          void handleFollowUp(cmd);
-                        }
-                      : undefined
-                  }
-                />
-              }
-            />
-          </div>
-
-          <MobileChatTrigger label="Chat" />
-
-          <DevOverlay
-            meta={devMeta}
-            dataSource={dataSource}
-            uxPrefs={uxPrefs}
-            onUxPrefsChange={onUxPrefsChange}
-            turnTiming={turnTiming}
-          />
-        </div>
-      </SurfaceSplitProvider>
+        }
+      />
     );
   }
 
-  return (
-    <SurfaceSplitProvider autoSaveId="atlas-session-split">
-      <div
-        data-testid="atlas-surface-root"
-        data-datasource={dataSource}
-        data-mode={spec.mode}
-        data-recipe={spec.instrument?.recipe ?? "none"}
-        className="flex h-svh flex-col overflow-hidden"
-        style={{ background: T.page, fontFamily: atlasFont.sans }}
-      >
+  const banners = (
+    <>
       {devMeta?.zod_error ? (
         <div
           className="shrink-0 px-4 py-2 text-center"
@@ -296,42 +267,43 @@ export function AtlasAnswerSurface({
           {" "}(CopilotKit → atlas_v5)
         </div>
       ) : null}
+    </>
+  );
 
-      <AtlasSessionNav
-        devMeta={devMeta}
-        onNewSession={onNewSession}
-        chatPending={chatPending}
-        toolbar={
-          <SurfaceViewModeToggle compact className="hidden lg:inline-flex" />
-        }
-      />
+  return (
+    <AtlasSessionWorkspace
+      dataSource={dataSource}
+      dataTestAttrs={{
+        "data-mode": spec.mode,
+        "data-recipe": spec.instrument?.recipe ?? "none",
+      }}
+      banners={banners}
+      devMeta={devMeta}
+      uxPrefs={uxPrefs}
+      onUxPrefsChange={onUxPrefsChange}
+      turnTiming={turnTiming}
+      threads={threads}
+      activeThreadId={activeThreadId}
+      threadsLoading={threadsLoading}
+      onSelectThread={onSelectThread}
+      onNewThread={onNewThread}
+      onNewSession={onNewSession}
+      chatPending={chatPending}
+      historyDisabled={historyDisabled}
+      persistStatus={persistStatus}
+      persistConfigured={persistConfigured}
+      onDeleteThread={onDeleteThread}
+      onRenameThread={onRenameThread}
+      rehydrating={rehydrating}
+      caseFileSpec={spec}
+      onCaseFileSwot={onCaseFileSwot}
+      onCaseEntityAttached={onCaseEntityAttached}
+      canvasPanel={
+        <main className={CANVAS_SHELL} style={{ background: T.canvas }}>
+          <ScopeBar object={spec.object} scope={spec.scope} mode={spec.mode} tier={spec.tier} />
+          <ConfidenceCeilingBar tier={spec.tier} />
 
-      <div className="flex min-h-0 flex-1 w-full gap-4 overflow-hidden px-4 py-4 lg:px-6 lg:py-6">
-        {onToggleHistory && onSelectThread && onNewThread ? (
-          <AtlasThreadSidebar
-            threads={threads}
-            activeThreadId={activeThreadId}
-            loading={threadsLoading}
-            open={historyOpen}
-            onToggle={onToggleHistory}
-            onSelectThread={onSelectThread}
-            onNewThread={onNewThread}
-            disabled={historyDisabled}
-          />
-        ) : null}
-
-        <SurfaceSplitPanels
-          className="min-w-0 flex-1"
-          mobileChatTitle="Atlas chat"
-          canvasPanel={
-            <main
-              className="flex min-h-0 min-w-0 h-full flex-col overflow-hidden rounded-sm shadow-lg"
-              style={{ background: T.canvas }}
-            >
-              <ScopeBar object={spec.object} scope={spec.scope} mode={spec.mode} tier={spec.tier} />
-              <ConfidenceCeilingBar tier={spec.tier} />
-
-              <div className="relative min-h-0 flex-1 overflow-y-auto px-6 pb-10 pt-8 lg:px-10 xl:px-12">
+          <div className={CANVAS_BODY}>
             <ProvenanceTrace
               provId={provId}
               provenance={spec.provenance}
@@ -340,6 +312,7 @@ export function AtlasAnswerSurface({
             />
 
             {spec.carriedFrom ? <CarriedFromBanner carriedFrom={spec.carriedFrom} /> : null}
+            <DeclaredClaimsBlock spec={spec} />
             {canvasThinking ? (
               <CanvasThinking
                 steps={reasoningTrace}
@@ -410,12 +383,7 @@ export function AtlasAnswerSurface({
 
               {showVisual ? (
                 <>
-                  {(spec.charts?.length
-                    ? spec.charts
-                    : spec.chart?.option
-                      ? [spec.chart]
-                      : []
-                  ).map((chart, chartIdx) =>
+                  {chartsForRender(spec, devMeta).map((chart, chartIdx) =>
                     chart?.option ? (
                       <ProgressiveCanvasSection
                         key={`chart-${chartIdx}-${chart.kind ?? "bar"}`}
@@ -425,6 +393,7 @@ export function AtlasAnswerSurface({
                       >
                         <ChartCanvas
                           chart={chart}
+                          verdict={spec.verdict?.sentence}
                           provenance={spec.provenance}
                           onProv={setProvId}
                         />
@@ -448,7 +417,7 @@ export function AtlasAnswerSurface({
           </div>
 
           <div
-            className="flex shrink-0 gap-[18px] border-t px-10 py-3 lg:px-12"
+            className="flex shrink-0 gap-[18px] border-t px-4 py-2 sm:px-6 lg:px-8"
             style={{
               fontFamily: atlasFont.mono,
               fontSize: 10,
@@ -462,34 +431,21 @@ export function AtlasAnswerSurface({
             <span style={{ color: T.gap }}>⌁ gap / contested</span>
             <span style={{ color: T.inkFaint }}>validated · candidate · verified</span>
           </div>
-            </main>
-          }
-          chatPanel={
-            <SoWhatRail
-              splitEmbedded
-              soWhat={spec.soWhat}
-              initialQuery={spec.query}
-              onFollowUp={handleFollowUp}
-              chatMessages={chatMessages}
-              chatPending={chatPending}
-              progressLine={progressLine}
-              showcaseOptions={showcaseOptions}
-              onShowcaseSelect={onShowcaseSelect}
-            />
-          }
+        </main>
+      }
+      chatPanel={
+        <SoWhatRail
+          splitEmbedded
+          soWhat={spec.soWhat}
+          initialQuery={spec.query}
+          onFollowUp={handleFollowUp}
+          chatMessages={chatMessages}
+          chatPending={chatPending}
+          progressLine={progressLine}
+          showcaseOptions={showcaseOptions}
+          onShowcaseSelect={onShowcaseSelect}
         />
-      </div>
-
-      <MobileChatTrigger label="Chat" />
-
-      <DevOverlay
-        meta={devMeta}
-        dataSource={dataSource}
-        uxPrefs={uxPrefs}
-        onUxPrefsChange={onUxPrefsChange}
-        turnTiming={turnTiming}
-      />
-      </div>
-    </SurfaceSplitProvider>
+      }
+    />
   );
 }

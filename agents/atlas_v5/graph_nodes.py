@@ -176,7 +176,16 @@ def route_after_route(state: dict[str, Any]) -> str:
     return "finalize"
 
 
+def route_after_gather(state: dict[str, Any]) -> str:
+    route = (state.get("turn_pipeline") or {}).get("route", "substantive")
+    if route == "corpus_blocked":
+        return "finalize"
+    return "stream_spine"
+
+
 async def gather_evidence(state: dict[str, Any]) -> dict[str, Any]:
+    from agents.atlas_v5.corpus_gate import substantive_blocked_offer
+
     pipeline = dict(state.get("turn_pipeline") or {})
     revision = int(pipeline.get("revision") or 1)
     q = pipeline.get("query_for_turn") or state.get("query") or ""
@@ -184,7 +193,12 @@ async def gather_evidence(state: dict[str, Any]) -> dict[str, Any]:
     stage_ms = dict(pipeline.get("stage_ms") or {})
 
     t_gather = time.perf_counter()
-    wide = await run_wide_pass(q, outcome_hint=decision.outcome_hint)
+    wide = await run_wide_pass(
+        q,
+        outcome_hint=decision.outcome_hint,
+        thread_id=state.get("thread_id"),
+        case_entity_id=state.get("case_entity_id"),
+    )
     stage_ms["wide_ms"] = round((time.perf_counter() - t_gather) * 1000, 0)
     meta = wide.retrieval_meta or {}
     if meta.get("shopper_ms") is not None:
@@ -197,6 +211,23 @@ async def gather_evidence(state: dict[str, Any]) -> dict[str, Any]:
         stage_ms["external_fetch_ms"] = float(meta["external_ms"])
     if meta.get("research_ms") is not None:
         stage_ms["research_fetch_ms"] = float(meta["research_ms"])
+
+    blocked = substantive_blocked_offer(wide, q, decision)
+    if blocked:
+        pipeline["route"] = "corpus_blocked"
+        pipeline["blocked_payload"] = blocked
+        pipeline["stage_ms"] = stage_ms
+        return {
+            "turn_pipeline": pipeline,
+            "turn_active": False,
+            "answer_dev_meta": blocked.get("dev_meta"),
+            "reasoning_trace": [
+                trace_step(
+                    "gather",
+                    "Corpus evidence insufficient — canvas withheld; consent offer in chat",
+                ),
+            ],
+        }
 
     skeleton = assemble_spec_from_wide_pass(wide)
     pipeline["wide_outcome"] = wide.outcome
@@ -325,6 +356,8 @@ async def synthesize_turn(state: dict[str, Any]) -> dict[str, Any]:
         cached_wide=cached_wide,
         cached_skeleton=cached_skeleton,
         stage_ms=stage_ms,
+        thread_id=state.get("thread_id"),
+        case_entity_id=state.get("case_entity_id"),
     )
 
     reply = payload.get("reply") or ""
@@ -385,6 +418,24 @@ async def finalize_turn(state: dict[str, Any]) -> dict[str, Any]:
     current_spec = prior_spec(state)
     q = state.get("query") or ""
 
+    if route == "corpus_blocked":
+        payload = pipeline.get("blocked_payload") or {}
+        reply = payload.get("reply") or (
+            "Corpus evidence is insufficient for a canvas brief. "
+            'Reply "yes, continue online" to use web-only mode.'
+        )
+        return {
+            "turn_active": False,
+            "turn_pipeline": {},
+            "answer_dev_meta": {
+                **(payload.get("dev_meta") or {}),
+                "turn_stage": "complete",
+                "turn_active": False,
+            },
+            "reasoning_trace": [trace_step("complete", "Corpus gate — canvas withheld")],
+            "messages": [AIMessage(content=reply, id=str(uuid.uuid4()))],
+        }
+
     if route == "clear":
         payload = pipeline.get("final_payload") or await _clear_canvas_response(
             q, current_spec=current_spec
@@ -424,6 +475,7 @@ async def finalize_turn(state: dict[str, Any]) -> dict[str, Any]:
             q,
             current_spec=current_spec,
             clarify=route == "clarify",
+            session_history=state.get("session_history"),
         )
         decision = pipeline.get("decision") or {}
         return {

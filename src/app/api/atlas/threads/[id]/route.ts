@@ -78,3 +78,23 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: "Failed to update thread" }, { status: 500 });
   }
 }
+
+export async function DELETE(_req: NextRequest, { params }: RouteParams) {
+  if (!isAtlasPgConfigured()) {
+    return NextResponse.json({ error: "Database not configured" }, { status: 503 });
+  }
+
+  const ownerId = await resolveThreadOwnerId();
+  if (!ownerId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id: threadId } = await params;
+  try {
+    await archiveThread(threadId, ownerId);
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("[threads/[id]/DELETE]", err);
+    return NextResponse.json({ error: "Failed to delete thread" }, { status: 500 });
+  }
+}

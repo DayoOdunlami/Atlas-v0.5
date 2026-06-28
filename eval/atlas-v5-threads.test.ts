@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { chartsForRender, shouldRenderCharts } from "../src/lib/atlas/chart-visual-policy";
 import { extractLayoutSignals, titleFromQuery } from "../src/lib/atlas/layout-signals";
 import { nextTurnIndexFromRows } from "../src/lib/atlas/turn-index";
 
@@ -42,5 +43,16 @@ describe("nextTurnIndexFromRows", () => {
     expect(nextTurnIndexFromRows([])).toBe(0);
     const rows = [{ turn_index: 0 }, { turn_index: 2 }];
     expect(nextTurnIndexFromRows(rows)).toBe(3);
+  });
+});
+
+describe("chart-visual-policy", () => {
+  it("suppresses charts when visual_suppressed", () => {
+    const spec = {
+      chart: { option: { series: [] } },
+      charts: [],
+    } as never;
+    expect(shouldRenderCharts(spec, { visual_suppressed: true })).toBe(false);
+    expect(chartsForRender(spec, { visual_suppressed: true })).toEqual([]);
   });
 });

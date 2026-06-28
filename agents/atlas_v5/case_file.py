@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 CaseClaimKind = Literal["fact", "domain", "constraint", "hypothesis", "uncertainty"]
 
 ENTITY_TYPE = "user_situation"
+ENTITY_TYPE_CASE = "case_entity"
 SOURCE_DECLARED = "declared"
 
 _MEMORY: dict[str, list["CaseClaim"]] = {}
@@ -67,7 +68,7 @@ class CaseClaim:
     claim_role: str = "asserts"
     source: str = SOURCE_DECLARED
 
-    def to_db_row(self, thread_id: str) -> dict:
+    def to_db_row(self, entity_type: str, entity_id: str) -> dict:
         return {
             "id": self.id,
             "claim_text": self.text[:2000],
@@ -75,8 +76,8 @@ class CaseClaim:
             "claim_role": self.claim_role,
             "confidence_tier": self.confidence_tier,
             "confidence_reason": f"declared:{self.kind}",
-            "entity_type": ENTITY_TYPE,
-            "entity_id": thread_id,
+            "entity_type": entity_type,
+            "entity_id": entity_id,
             "source": SOURCE_DECLARED,
             "source_label": "user_situation",
             "review_status": "pending",
@@ -114,26 +115,48 @@ def _answer_tier_for_kind(kind: CaseClaimKind) -> ConfidenceTier:
     return "Indicative"
 
 
-def load_case_file(thread_id: str | None) -> list[CaseClaim]:
-    tid = default_thread_id(thread_id)
-    if tid in _MEMORY:
-        return list(_MEMORY[tid])
+def resolve_case_file_target(
+    thread_id: str | None,
+    case_entity_id: str | None = None,
+) -> tuple[str, str]:
+    if case_entity_id and str(case_entity_id).strip():
+        return ENTITY_TYPE_CASE, str(case_entity_id).strip()
+    return ENTITY_TYPE, default_thread_id(thread_id)
+
+
+def _memory_key(entity_type: str, entity_id: str) -> str:
+    return f"{entity_type}:{entity_id}"
+
+
+def load_case_file(
+    thread_id: str | None,
+    case_entity_id: str | None = None,
+) -> list[CaseClaim]:
+    entity_type, entity_id = resolve_case_file_target(thread_id, case_entity_id)
+    mem_key = _memory_key(entity_type, entity_id)
+    if mem_key in _MEMORY:
+        return list(_MEMORY[mem_key])
     if casefile_persist_enabled():
         try:
-            rows = _load_from_db(tid)
-            _MEMORY[tid] = rows
+            rows = _load_from_db(entity_type, entity_id)
+            _MEMORY[mem_key] = rows
             return list(rows)
         except Exception as exc:
             logger.warning("case file DB load failed: %s", exc)
     return []
 
 
-def save_case_file(thread_id: str | None, claims: list[CaseClaim]) -> None:
-    tid = default_thread_id(thread_id)
-    _MEMORY[tid] = list(claims)
+def save_case_file(
+    thread_id: str | None,
+    claims: list[CaseClaim],
+    case_entity_id: str | None = None,
+) -> None:
+    entity_type, entity_id = resolve_case_file_target(thread_id, case_entity_id)
+    mem_key = _memory_key(entity_type, entity_id)
+    _MEMORY[mem_key] = list(claims)
     if casefile_persist_enabled():
         try:
-            _save_to_db(tid, claims)
+            _save_to_db(entity_type, entity_id, claims)
         except Exception as exc:
             logger.warning("case file DB save failed: %s", exc)
 
@@ -261,7 +284,7 @@ def _esc(text: str) -> str:
     )
 
 
-def _load_from_db(thread_id: str) -> list[CaseClaim]:
+def _load_from_db(entity_type: str, entity_id: str) -> list[CaseClaim]:
     from mcps.cpc_corpus.queries import _pg_query
 
     rows = _pg_query(
@@ -272,12 +295,12 @@ def _load_from_db(thread_id: str) -> list[CaseClaim]:
         ORDER BY created_at ASC
         LIMIT 20
         """,
-        (ENTITY_TYPE, thread_id, SOURCE_DECLARED),
+        (entity_type, entity_id, SOURCE_DECLARED),
     )
     return [CaseClaim.from_db_row(r) for r in rows]
 
 
-def _save_to_db(thread_id: str, claims: list[CaseClaim]) -> None:
+def _save_to_db(entity_type: str, entity_id: str, claims: list[CaseClaim]) -> None:
     import psycopg2
 
     from mcps.cpc_corpus.queries import _conn
@@ -290,10 +313,10 @@ def _save_to_db(thread_id: str, claims: list[CaseClaim]) -> None:
                 DELETE FROM atlas.claims
                 WHERE entity_type = %s AND entity_id = %s AND source = %s
                 """,
-                (ENTITY_TYPE, thread_id, SOURCE_DECLARED),
+                (entity_type, entity_id, SOURCE_DECLARED),
             )
             for claim in claims:
-                row = claim.to_db_row(thread_id)
+                row = claim.to_db_row(entity_type, entity_id)
                 cur.execute(
                     """
                     INSERT INTO atlas.claims (

@@ -4,6 +4,7 @@ import { lazy, Suspense, useCallback, useMemo } from "react";
 
 import type { AnswerSpec } from "@/lib/atlas/contracts/answer-spec.schema";
 import { provIdForChartKey } from "@/lib/atlas/chart-provenance";
+import { chartSupportsVerdictLabel } from "@/lib/atlas/chart-visual-policy";
 import { atlasFont, atlasTokens as T } from "@/lib/atlas/tokens";
 
 const ReactECharts = lazy(() => import("echarts-for-react"));
@@ -16,10 +17,13 @@ const LANE_COLOR: Record<string, string> = {
 
 export function ChartCanvas({
   chart,
+  verdict,
   provenance,
   onProv,
 }: {
   chart: NonNullable<AnswerSpec["chart"]>;
+  /** Headline sentence — used when chart.story is absent. */
+  verdict?: string | null;
   provenance?: AnswerSpec["provenance"];
   onProv?: (id: string) => void;
 }) {
@@ -62,6 +66,8 @@ export function ChartCanvas({
       ? [chart.lead_lane]
       : [];
 
+  const supportsLabel = chartSupportsVerdictLabel(chart);
+
   return (
     <div
       data-testid="chart-canvas"
@@ -70,6 +76,54 @@ export function ChartCanvas({
       className="mb-6 overflow-hidden rounded-lg border"
       style={{ borderColor: T.rule, background: "#FFFFFF" }}
     >
+      {supportsLabel ? (
+        <div
+          className="border-b px-3 py-2"
+          style={{ borderColor: T.ruleSoft, background: T.corpusWash }}
+        >
+          <div
+            className="mb-0.5 uppercase"
+            style={{
+              fontFamily: atlasFont.mono,
+              fontSize: 9,
+              letterSpacing: "0.1em",
+              color: T.inkFaint,
+            }}
+          >
+            Supports verdict
+          </div>
+          <p
+            className="m-0 text-[12px] leading-snug"
+            style={{ color: T.ink, fontFamily: atlasFont.sans }}
+          >
+            {supportsLabel}
+          </p>
+        </div>
+      ) : verdict ? (
+        <div
+          className="border-b px-3 py-2"
+          style={{ borderColor: T.ruleSoft, background: "#FBF9F4" }}
+        >
+          <div
+            className="mb-0.5 uppercase"
+            style={{
+              fontFamily: atlasFont.mono,
+              fontSize: 9,
+              letterSpacing: "0.1em",
+              color: T.inkFaint,
+            }}
+          >
+            Related to verdict
+          </div>
+          <p
+            className="m-0 text-[12px] leading-snug"
+            style={{ color: T.inkSoft, fontFamily: atlasFont.sans }}
+          >
+            {verdict.slice(0, 160)}
+            {verdict.length > 160 ? "…" : ""}
+          </p>
+        </div>
+      ) : null}
       <Suspense
         fallback={
           <div
@@ -87,7 +141,7 @@ export function ChartCanvas({
           onEvents={onEvents}
         />
       </Suspense>
-      {chart.story ? (
+      {chart.story && supportsLabel !== chart.story.trim() ? (
         <p
           className="border-t px-3 py-1.5"
           style={{

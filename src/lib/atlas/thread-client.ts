@@ -26,11 +26,34 @@ export type ThreadDetail = ThreadSummary & {
   turns: TurnPayload[];
 };
 
-export async function fetchThreadList(): Promise<ThreadSummary[]> {
+export type ThreadListResponse = {
+  threads: ThreadSummary[];
+  configured: boolean;
+  authorized: boolean;
+};
+
+export type SessionHistoryMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+export type PersistStatus = "idle" | "saving" | "saved" | "error" | "unavailable";
+
+export async function fetchThreadList(): Promise<ThreadListResponse> {
   const res = await fetch("/api/atlas/threads", { cache: "no-store" });
-  if (!res.ok) return [];
-  const data = (await res.json()) as { threads?: ThreadSummary[] };
-  return data.threads ?? [];
+  if (!res.ok) {
+    return {
+      threads: [],
+      configured: res.status !== 401,
+      authorized: res.status !== 401,
+    };
+  }
+  const data = (await res.json()) as ThreadListResponse;
+  return {
+    threads: data.threads ?? [],
+    configured: data.configured ?? true,
+    authorized: data.authorized ?? true,
+  };
 }
 
 export async function fetchThreadDetail(threadId: string): Promise<ThreadDetail | null> {
@@ -82,4 +105,28 @@ export async function patchThreadTitle(
     body: JSON.stringify({ title }),
   });
   return res.ok;
+}
+
+export async function archiveThread(threadId: string): Promise<boolean> {
+  const res = await fetch(`/api/atlas/threads/${threadId}`, {
+    method: "DELETE",
+  });
+  return res.ok;
+}
+
+export function turnsToSessionHistory(turns: TurnPayload[]): SessionHistoryMessage[] {
+  const history: SessionHistoryMessage[] = [];
+  for (const turn of turns) {
+    if (turn.user_message?.trim()) {
+      history.push({ role: "user", content: turn.user_message });
+    }
+    if (turn.assistant_reply?.trim()) {
+      history.push({ role: "assistant", content: turn.assistant_reply });
+    }
+  }
+  return history;
+}
+
+export function turnsToChatMessages(turns: TurnPayload[]): SessionHistoryMessage[] {
+  return turnsToSessionHistory(turns);
 }

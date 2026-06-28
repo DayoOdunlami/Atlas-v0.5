@@ -64,7 +64,7 @@ test.describe("Atlas v5 session E2E", () => {
     await input.fill(entryQuery);
     await input.press("Enter");
 
-    await page.waitForURL(/\/atlas\/session/, { timeout: 30_000 });
+    await page.waitForURL(/\/atlas\?/, { timeout: 30_000 });
     await waitForSessionReady(page);
 
     await askFollowUp(page, followUp);
@@ -91,7 +91,7 @@ test.describe("Atlas v5 session E2E", () => {
     );
     const followUp = "Which funders dominate?";
 
-    await page.goto(`${BASE}/atlas/session?q=${entryQuery}`);
+    await page.goto(`${BASE}/atlas?q=${entryQuery}`);
     await waitForSessionReady(page);
 
     await askFollowUp(page, followUp);

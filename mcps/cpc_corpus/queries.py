@@ -85,21 +85,28 @@ def _rest_fallback_projects(
     limit: int,
     embedding: Optional[str],
 ) -> list[dict[str, Any]]:
+    """HTTPS semantic search only — no ILIKE keyword fallback."""
     if not transport.rest_configured():
         transport.set_transport("unavailable")
         return []
-    if embedding:
-        try:
-            vec = queries_rest.parse_embedding_string(embedding)
-            rows = queries_rest.search_projects_vector(vec, limit)
-            if rows:
-                transport.set_transport("rest_vector")
-                return rows
-        except Exception:
-            pass
-    rows = queries_rest.search_projects_keyword(query, limit)
-    transport.set_transport("rest_keyword")
-    return rows
+    vec_source = embedding or embed_query(query)
+    if not vec_source:
+        transport.set_transport(
+            "unavailable",
+            error="OPENAI_API_KEY required for semantic corpus search over HTTPS",
+        )
+        return []
+    try:
+        vec = queries_rest.parse_embedding_string(vec_source)
+        rows = queries_rest.search_projects_vector(vec, limit)
+        if rows:
+            transport.set_transport("rest_vector")
+            return rows
+    except Exception as exc:
+        transport.set_transport("unavailable", error=str(exc)[:120])
+        return []
+    transport.set_transport("unavailable", error="semantic search returned no projects")
+    return []
 
 
 def _rest_fallback_live_calls(query: str, limit: int, open_only: bool) -> list[dict[str, Any]]:
@@ -151,52 +158,31 @@ def embed_query(text: str) -> Optional[str]:
 
 def search_projects(query: str, limit: int = 10) -> list[dict[str, Any]]:
     """
-    Semantic search over atlas.projects. Falls back to ILIKE when no embedding.
-    On Postgres timeout, falls back to Supabase REST (443).
+    Semantic search over atlas.projects (pgvector / HTTPS RPC only).
+    Requires OPENAI_API_KEY for embeddings. No ILIKE keyword fallback.
+    On Postgres timeout, falls back to Supabase REST semantic search (443).
     """
     transport.set_operation("search_projects")
     limit = min(int(limit), 50)
     embedding = embed_query(query)
+    if not embedding:
+        transport.set_transport(
+            "unavailable",
+            error="OPENAI_API_KEY not set — semantic corpus search unavailable",
+        )
+        return _rest_fallback_projects(query, limit, None)
 
     try:
-        if embedding:
-            rows = _pg_query(
-                """
-                SELECT id, title, lead_org_name, abstract, transport_relevance_score,
-                       (1 - (embedding <=> %s::vector))::float AS similarity
-                FROM   atlas.projects
-                WHERE  embedding IS NOT NULL
-                ORDER  BY embedding <=> %s::vector
-                LIMIT  %s
-                """,
-                (embedding, embedding, limit),
-            )
-            transport.set_transport("postgres")
-            return [
-                {
-                    "id": str(r["id"]),
-                    "title": r.get("title") or "",
-                    "organisation": r.get("lead_org_name") or "",
-                    "abstract": (r.get("abstract") or "")[:300],
-                    "transport_relevance_score": (
-                        float(r["transport_relevance_score"])
-                        if r.get("transport_relevance_score") is not None else None
-                    ),
-                    "similarity": round(float(r.get("similarity") or 0), 4),
-                    "source_type": "project",
-                }
-                for r in rows
-            ]
-        term = f"%{query}%"
         rows = _pg_query(
             """
-            SELECT id, title, lead_org_name, abstract, transport_relevance_score
+            SELECT id, title, lead_org_name, abstract, transport_relevance_score,
+                   (1 - (embedding <=> %s::vector))::float AS similarity
             FROM   atlas.projects
-            WHERE  title ILIKE %s OR abstract ILIKE %s
-            ORDER  BY transport_relevance_score DESC NULLS LAST
+            WHERE  embedding IS NOT NULL
+            ORDER  BY embedding <=> %s::vector
             LIMIT  %s
             """,
-            (term, term, limit),
+            (embedding, embedding, limit),
         )
         transport.set_transport("postgres")
         return [
@@ -209,7 +195,7 @@ def search_projects(query: str, limit: int = 10) -> list[dict[str, Any]]:
                     float(r["transport_relevance_score"])
                     if r.get("transport_relevance_score") is not None else None
                 ),
-                "similarity": None,
+                "similarity": round(float(r.get("similarity") or 0), 4),
                 "source_type": "project",
             }
             for r in rows

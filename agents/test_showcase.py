@@ -21,6 +21,9 @@ def test_parse_domain():
     assert parse_domain_selection("demo rail") == "rail"
     assert parse_domain_selection("demo aviation") == "aviation"
     assert parse_domain_selection("demo flex") == "flex"
+    assert parse_domain_selection("2") == "aviation"
+    assert parse_domain_selection("number 2") == "aviation"
+    assert parse_domain_selection("#3") == "flex"
 
 
 def test_resolve_menu():

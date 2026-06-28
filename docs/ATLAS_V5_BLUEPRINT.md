@@ -18,6 +18,7 @@
 | Add/remove a recipe, chart, or template | [§10 Element inventory](#10-element-inventory) |
 | Navigate by metaphor | [§11 Analogy map](#11-analogy-map-standardized) |
 | Product north star & decision surfaces | [§16 Product north star](#16-product-north-star) |
+| **Case File programme (current priority)** | [§18 Product direction](#18-product-direction--case-file-centre-june-2026) · [CASE_FILE_PLAN.md](./ATLAS_V5_CASE_FILE_PLAN.md) |
 | Change code | [§14 File map](#14-file-map) |
 
 **Blueprint term is always source of truth.** Metaphors (Restaurant, Body) are translation layers — same row in every column.
@@ -566,7 +567,7 @@ Same blueprint row in every column. **Restaurant** = where to put changes. **Bod
 - Migrate `passport_claims` + `brief_claims` onto unified `atlas.claims` spine; retire forks
 - Packager agent (bid / transferability pack) and Underwriter agent (truth verification) — parked
 
-**Shipped since last blueprint rev (no longer gaps):** `declared` third trust material + case-file spine (Increment 0); source shopper + corpus document surfacing + fit-weighted reconcile with honest tier rules (Increment 1A).
+**Shipped since last blueprint rev (no longer gaps):** `declared` third trust material + case-file spine (Increment 0); source shopper + corpus document surfacing + fit-weighted reconcile with honest tier rules (Increment 1A); **Case File mouth Phase 0–1** (panel, canvas block, entity promote, SWOT-on-claims); session persist (`atlas.threads` / `atlas.turns`).
 
 ---
 
@@ -581,7 +582,9 @@ Same blueprint row in every column. **Restaurant** = where to put changes. **Bod
 | New chart type | `chart_spec.py`, `chart_router.py`, `viz_guardrail.py` |
 | New HTML template | `visual_templates.py`, `visual_intent.py` |
 | LLM voice / evidence | `deep_pass_prompt.py`, `skills/*.md` |
-| Canvas UI | `src/components/atlas/atlas-answer-surface.tsx` |
+| Case File UI + API | `case-file-panel.tsx`, `declared-claims-block.tsx`, `src/app/api/atlas/case-file/` |
+| Case entities (Phase 1) | `case-entity-store.ts`, `20260626_atlas_case_entities.sql` |
+| Session persist | `thread-store.ts`, `ATLAS_V5_MEMORY_AND_LEARNING.md` |
 | Streaming stages | `graph_nodes.py`, `progressive_stream.py` |
 | Eval cases | `agents/atlas_v5/genui_eval.py` |
 | Tool-loop experiment | `agents/orchestrator/graph.py` |
@@ -592,15 +595,19 @@ Same blueprint row in every column. **Restaurant** = where to put changes. **Bod
 
 ```bash
 npm run eval:genui
-python -m pytest agents/test_atlas_v5_abc_features.py -q
+python -m pytest agents/test_atlas_v5_abc_features.py agents/test_case_file.py -q
+python -m agents.atlas_v5.calibration_eval --case cal_03_lost_rail
 ```
 
 | Query | Expect |
 |-------|--------|
-| State of play rail decarbonisation | `lane=dual`, journey template or two-tier, web_evidence when fetch OK |
-| SWOT on CPC | T1 four-quadrant grid |
+| State of play rail decarbonisation | `lane=dual`, journey template or two-tier; **no declared claims** in case file |
+| SWOT on CPC | T1 four-quadrant grid (corpus-led header) |
+| **SWOT on my stated claims** | T1 grid; header **declared case file**; quadrants from case file |
+| **I've got a rail idea, not sure what I'm asking** | Case file panel + declared canvas block; find-my-path surface |
 | Funding by funder breakdown | C1 ChartSpec bar |
 | Map hydrogen supply chain | R2 NetworkMap |
+| **Show me what you can do** → `demo rail` → `next` | Showcase journey — rich canvas reel (not pre-filled case file) |
 
 Dev overlay: `lane=dual skip=false peer=yes`, `partial=stats→spine→complete`.
 
@@ -631,7 +638,7 @@ Gate for trust.
 | **Evidence** | `wide_pass` runs deterministically; corpus, SQL, web are **code-planned**, parallel, not LLM-selected | Same factory model + academic / user-file lanes (planned, not live) |
 | **Render contract** | `AnswerSpec` / envelope | Same contract — decision surfaces compile into AnswerSpec fields |
 | **Charts** | Visual Opportunity Engine — multi-chart, corpus-only data | Lane-aware charts + dual-series reconcile ([§17](#17-trust-v2--visual-rollout)) |
-| **Product framing** | Render fork asks chart / compose / recipe / prose | **Decision surfaces first** — implementation second |
+| **Product framing** | **Case File centre** on `/atlas` — declared claims + sessions + AnswerSpec canvas | Matcher-first UX deprioritised; Diagnose hook Phase 3 |
 | **“Compiler”** | **Distributed** — assemblers → reconcile → deep_pass → chart attach → merge → gate | May be named as one concept; no requirement for a single module yet |
 
 **Planned evidence bays (not live today):** academic / paper-search lane; user-uploaded files. Listed in [§13 Gaps](#13-not-wired-yet-gaps).
@@ -684,9 +691,135 @@ Product should ask **“what decision shape?”** before **“chart or recipe?�
 | **Partner / Actor Map** | Who connects to whom | Force / network graph | R2 NetworkMap + connect graph fetch | **Today** — connect outcome |
 | **Defensible Recommendation** | Defend a move under scrutiny | Claim + evidence + counterclaim pack | Spine + reconciliation notes + compose | **Target** — tier + citations today; pack layout aspirational |
 | **Action Plan / Next Moves** | What to do next | Ranked opportunities list | R4 OpportunityList + act assembler | **Today** — act outcome |
-| **SWOT / strategic frame** | Strengths, weaknesses, options, threats | 2×2 grid | T1 SWOT template + compose | **Today** — SWOT queries |
+| **SWOT / strategic frame** | Strengths, weaknesses, options, threats | 2×2 grid | T1 SWOT template + compose | **Today** — org/topic SWOT; **Case File SWOT** maps declared claims (Jun 2026) |
+| **Case File (declared claims)** | User-owned situation, constraints, goals | Rail panel + canvas declared block | `case_file.py` + AnswerSpec `claims[]` | **Today** — Phase 0–1 UI shipped (Jun 2026) |
 
 **Implementation rule:** Pick surface from this table → map to inventory IDs in [§10](#10-element-inventory) (R/T/C) → add eval case in [§15](#15-quick-validation).
+
+> **June 2026 sequencing:** Product implementation priority is [§18 Case File centre](#18-product-direction--case-file-centre-june-2026), not closing every row in this table to matcher-first UX. Decision surfaces still apply to **AnswerSpec rendering**; Case File supplies the durable **declared** input layer.
+
+---
+
+## 18. Product direction — Case File centre (June 2026)
+
+> **Status:** Phase 0–1 **shipped in repo** (Jun 2026). Phase 2–3 per plan.  
+> **Full plan:** [ATLAS_V5_CASE_FILE_PLAN.md](./ATLAS_V5_CASE_FILE_PLAN.md)  
+> **Session memory:** [ATLAS_V5_MEMORY_AND_LEARNING.md](./ATLAS_V5_MEMORY_AND_LEARNING.md)
+
+### Canonical surface
+
+**Only `/atlas` + `atlas_v5` is the product horse.** `/workbench`, `/passport`, orchestrator, and Brief v2 are **legacy experiments** — extract modules (matcher, claim extract, CPC passport loader), do not extend routes.
+
+### Revised product sentence
+
+**Atlas is an evidence-controlled analyst workstation:** users maintain a **Case File** (structured declared claims), run **Sessions** (chat + AnswerSpec canvas), and every substantive turn reconciles **corpus + web + declared** lanes under gate and tier rules.
+
+This preserves the blueprint mantra:
+
+```
+Pipeline for evidence.  Hub for judgement.  Contract for rendering.  Gate for trust.
+```
+
+It reframes the Notion North Star spine:
+
+| North Star (2026-05) | `/atlas` interpretation (2026-06) |
+|----------------------|-----------------------------------|
+| Entity Passport | **Case Entity** — promoted case file with claims + optional uploads |
+| Requirement Spec | **On-demand extract** for Diagnose mode (Phase 3), not global corpus |
+| Atlas Match | **Optional** `diagnose` outcome — matcher called inside `atlas_v5` |
+| Strategic Artefact | **AnswerSpec** canvas (unchanged) |
+| Defend | Quality bar on spine + citations + declared honesty (not separate app) |
+
+### Three-layer model
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Case File / Case Entity  — durable declared claims          │
+│ (user_situation → case_entity; atlas.claims spine)          │
+└───────────────────────────┬─────────────────────────────────┘
+                            │ loaded each wide_pass
+┌───────────────────────────▼─────────────────────────────────┐
+│ Session — threads / turns / chat / AnswerSpec snapshots       │
+└───────────────────────────┬─────────────────────────────────┘
+                            │ evidence factory
+┌───────────────────────────▼─────────────────────────────────┐
+│ Corpus + web lanes — owned/borrowed figures, gate, tier     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### What we pursue vs deprioritise
+
+| Pursue | Deprioritise |
+|--------|--------------|
+| Case File UI on `/atlas` | Workbench as primary surface |
+| Session persist + entity promote | Full Requirement Spec library |
+| Trust pipeline + AnswerSpec modes | 3-second literal SLA |
+| Upload → extract → confirm claims | Voice / LiveKit |
+| Visual accountability (chart supports verdict) | Canvas hover-expand motion |
+| Diagnose matcher hook (Phase 3) | Orchestrator cutover |
+| CPC corpus reliability | Recipe promotion ML |
+
+### Brain modules (Case File)
+
+| Module | Role |
+|--------|------|
+| `case_file.py` | Load/save/merge declared claims |
+| `deep_synthesis.py` | Model write-back `case_claims` |
+| `wide_pass.py` | Inject session claims into skeleton |
+| `find_path_assembler.py` | Uncertainty → structured surface |
+| `reconcile_spec.py` | Mirror to AnswerSpec `claims[]` |
+
+**Persist:** `ATLAS_V5_CASEFILE_PERSIST=1` → `atlas.claims` (`entity_type`, `entity_id`).
+
+### Build status (Jun 2026)
+
+| Phase | Deliverable | Status | Key paths |
+|-------|-------------|--------|-----------|
+| **0** | Case File panel (session rail) | ✅ Shipped | `case-file-panel.tsx`, `atlas-session-rail.tsx` |
+| **0** | Declared block on canvas | ✅ Shipped | `declared-claims-block.tsx`, `data-testid="declared-situation"` |
+| **0** | Read / patch API | ✅ Shipped | `GET/PATCH /api/atlas/case-file/[threadId]` |
+| **0** | Brain ↔ mouth wired | ✅ Shipped | `AnswerSpec.claims` + co-agent `thread_id` / `case_entity_id` |
+| **0** | SWOT on stated claims | ✅ Shipped | Panel **SWOT** button; `is_case_file_swot_query()`; declared SWOT header |
+| **1** | `atlas.case_entities` + thread FK | ✅ Migration | `20260626_atlas_case_entities.sql` |
+| **1** | Promote / attach entity | ✅ Shipped | `/api/atlas/case-entities`, panel promote + attach list |
+| **1** | Entity-aware brain load | ✅ Shipped | `load_case_file(thread_id, case_entity_id)` |
+| **2** | Upload + extract + review queue | ⏳ Planned | Adapt `claim-extractor.ts` patterns |
+| **3** | Diagnose / matcher hook | ⏳ Planned | `agents/matcher/*` inside `atlas_v5` only |
+
+**Enable durable case file edits:** `ATLAS_V5_CASEFILE_PERSIST=1` + Postgres + `atlas.claims` rows. Without persist, claims still appear from live turns via `AnswerSpec.claims`.
+
+### Mouth modules (remaining)
+
+| Module | Phase |
+|--------|-------|
+| Upload + review queue | 2 |
+| Diagnose trigger copy | 3 |
+| Pre-built Case File showcase fixture | Eval stretch (not live) |
+
+### CPC Innovation Passport relationship
+
+CPC Data & Digital **Innovation Passport** = ecosystem trust infrastructure (validated solutions reusable across places).  
+Atlas **Case Entity** = **operational tooling** to build, refine, and test claims against CPC corpus — complementary, not duplicate. Demo narrative: *“We give analysts and innovators the workstation; CPC programme defines what trusted adoption means at scale.”*
+
+### SWOT on Case File (Jun 2026)
+
+Two SWOT modes — same T1 template, different **provenance contract**:
+
+| Mode | Trigger | Quadrant source | Canvas header |
+|------|---------|-----------------|---------------|
+| **Analyst SWOT** | e.g. "SWOT on CPC" | Corpus + judgement synthesis | `SWOT · analyst synthesis · corpus stats owned` |
+| **Case File SWOT** | Panel button or "SWOT my stated claims" | Declared claims first; corpus only supports/challenges | `SWOT · declared case file · corpus supports only` |
+
+Declared claims never exceed **Indicative** tier regardless of SWOT framing.
+
+### Eval gates (programme)
+
+See [CASE_FILE_PLAN §5](./ATLAS_V5_CASE_FILE_PLAN.md#5-stress-tests--gono-go-is-this-the-right-approach):
+
+1. **A** — No manufactured declared on analyst queries (automated)  
+2. **B** — User preference vs chat-only projects (qualitative)  
+3. **C** — Matcher-on-demand value (before Phase 3)  
+4. **D** — CPC stakeholder alignment ( narrative )
 
 ---
 
@@ -731,4 +864,4 @@ Product should ask **“what decision shape?”** before **“chart or recipe?�
 
 ---
 
-*Last updated: §17 trust v2 rollout + Visual Opportunity Engine inventory; TRUST_MODEL_V2.md.*
+*Last updated: §18 Case File Phase 0–1 shipped (Jun 2026); §17 trust v2 rollout; SWOT-on-claims; session persist. Repo: `docs/ATLAS_V5_BLUEPRINT.md`.*

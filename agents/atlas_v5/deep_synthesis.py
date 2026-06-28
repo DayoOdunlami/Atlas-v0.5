@@ -24,6 +24,7 @@ from agents.atlas_v5.composition_pipeline import apply_composition_to_spec
 from agents.atlas_v5.composition_skill import load_visual_composition_skill
 from agents.atlas_v5.deep_pass_models import DeepPassOutput
 from agents.atlas_v5.chart_spec import attach_charts_with_meta
+from agents.atlas_v5.session_context import format_session_history
 from agents.atlas_v5.visual_templates import build_template_markup
 from agents.atlas_v5.deep_pass_prompt import (
     CHAT_ONLY_TASK_PROMPT,
@@ -128,9 +129,14 @@ def _resolve_session_claims(
     wide: WidePassResult,
     *,
     thread_id: str | None,
+    case_entity_id: str | None = None,
     deep: DeepPassOutput | None,
 ) -> list[CaseClaim]:
-    prior = list(wide.session_claims) if wide.session_claims else load_case_file(thread_id)
+    prior = (
+        list(wide.session_claims)
+        if wide.session_claims
+        else load_case_file(thread_id, case_entity_id)
+    )
     if deep and deep.case_claims:
         updates = case_claims_from_model_items(
             [c.model_dump(mode="json") for c in deep.case_claims]
@@ -229,6 +235,7 @@ def synthesize_chat_only_sync(
     *,
     current_spec: dict[str, Any] | None = None,
     clarify: bool = False,
+    session_history: list[dict[str, Any]] | None = None,
 ) -> str | None:
     if not _has_api_key():
         return None
@@ -236,7 +243,8 @@ def synthesize_chat_only_sync(
     task = CHAT_ONLY_TASK_PROMPT
     if clarify:
         task += "\nAsk ONE focused clarifying question — no canvas update."
-    user = f"{task}\n\nUser message:\n{query}{_format_canvas_context(current_spec)}"
+    history_block = format_session_history(session_history)
+    user = f"{task}\n\n{history_block}\n\nUser message:\n{query}{_format_canvas_context(current_spec)}".strip()
     result = _invoke_structured(system, user, ChatOnlyOutput)
     if isinstance(result, ChatOnlyOutput) and result.reply.strip():
         return result.reply.strip()
@@ -326,6 +334,7 @@ async def apply_deep_pass(
     current_spec: dict[str, Any] | None = None,
     substantive: bool = True,
     thread_id: str | None = None,
+    case_entity_id: str | None = None,
 ) -> tuple[AnswerSpec | None, str, dict[str, Any], bool]:
     """
     Returns (spec_or_none, reply, dev_meta, update_canvas).
@@ -346,10 +355,10 @@ async def apply_deep_pass(
     )
 
     session_claims = _resolve_session_claims(
-        query, wide, thread_id=thread_id, deep=deep
+        query, wide, thread_id=thread_id, case_entity_id=case_entity_id, deep=deep
     )
     if session_claims:
-        save_case_file(thread_id, session_claims)
+        save_case_file(thread_id, session_claims, case_entity_id)
 
     def _finish(spec: AnswerSpec) -> AnswerSpec:
         return apply_declared_claims_to_spec(spec, session_claims)
@@ -382,6 +391,7 @@ async def apply_deep_pass(
                 chat_complement="",
             ),
             index,
+            session_claims=session_claims,
             **_template_kwargs(wide),
         )
         if template_markup:
@@ -452,7 +462,11 @@ async def apply_deep_pass(
             return _finish(merged), reply, meta, True
 
         template_markup = build_template_markup(
-            query, deep.judgement, index, **_template_kwargs(wide)
+            query,
+            deep.judgement,
+            index,
+            session_claims=session_claims,
+            **_template_kwargs(wide),
         )
         if template_markup:
             merged, gate_status, gate_errors, fallback_rung = apply_composition_to_spec(
@@ -508,6 +522,7 @@ async def synthesize_chat_reply(
     *,
     current_spec: dict[str, Any] | None = None,
     clarify: bool = False,
+    session_history: list[dict[str, Any]] | None = None,
 ) -> str:
     import asyncio
 
@@ -516,6 +531,7 @@ async def synthesize_chat_reply(
         query,
         current_spec=current_spec,
         clarify=clarify,
+        session_history=session_history,
     )
     if reply:
         return reply

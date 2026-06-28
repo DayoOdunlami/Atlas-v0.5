@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import type { AtlasDevMeta } from "@/components/atlas/shell/dev-overlay";
 import { atlasFont, atlasTokens as T } from "@/lib/atlas/tokens";
+import { cn } from "@/lib/utils";
 
 type TierProbe = {
   configured?: boolean;
@@ -76,9 +77,12 @@ const DOT: Record<StatusLevel, string> = {
 export function ConnectionStatus({
   devMeta,
   className,
+  compact = false,
 }: {
   devMeta?: AtlasDevMeta | null;
   className?: string;
+  /** Icon-only status dot for narrow rails. */
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [health, setHealth] = useState<HealthPayload | null>(null);
@@ -110,6 +114,7 @@ export function ConnectionStatus({
     devMeta?.lane_mode === "online_only_pending" ||
     devMeta?.online_only?.active ||
     devMeta?.online_only?.pending;
+  const insufficient = sessionCorpus === "insufficient_evidence";
 
   const pgTier = health?.corpus?.postgres;
   const restTier = health?.corpus?.rest;
@@ -117,20 +122,24 @@ export function ConnectionStatus({
   const worst: StatusLevel =
     agentOk === false
       ? "err"
-      : onlineOnly || sessionCorpus === "unavailable" || corpusOk === false
+      : onlineOnly || sessionCorpus === "unavailable" || insufficient
         ? "warn"
-        : agentOk && corpusOk
-          ? "ok"
-          : "unknown";
+        : corpusOk === false
+          ? "warn"
+          : agentOk && corpusOk
+            ? "ok"
+            : "unknown";
 
   const summary =
     worst === "ok"
       ? "Connected"
       : worst === "err"
         ? "Agent offline"
-        : onlineOnly || sessionCorpus === "unavailable"
-          ? "Online-only"
-          : "Corpus limited";
+        : insufficient
+          ? "No corpus matches"
+          : onlineOnly || sessionCorpus === "unavailable"
+            ? "Online-only"
+            : "Corpus limited";
 
   return (
     <div
@@ -141,7 +150,10 @@ export function ConnectionStatus({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex cursor-pointer items-center gap-2 rounded-full border px-2.5 py-1"
+        className={cn(
+          "flex cursor-pointer items-center gap-2 rounded-full border",
+          compact ? "size-8 justify-center p-0" : "px-2.5 py-1",
+        )}
         style={{
           borderColor: T.rule,
           background: open ? T.page : "transparent",
@@ -149,13 +161,18 @@ export function ConnectionStatus({
         }}
         aria-expanded={open}
         aria-label="Connection status"
+        title={loading ? "Checking connection" : summary}
       >
         <span
-          className="inline-block h-1.5 w-1.5 rounded-full"
+          className="inline-block h-1.5 w-1.5 rounded-full shrink-0"
           style={{ background: DOT[worst] }}
         />
-        <span>{loading ? "Checking…" : summary}</span>
-        <span style={{ color: T.inkFaint }}>{open ? "▾" : "▸"}</span>
+        {!compact ? (
+          <>
+            <span>{loading ? "Checking…" : summary}</span>
+            <span style={{ color: T.inkFaint }}>{open ? "▾" : "▸"}</span>
+          </>
+        ) : null}
       </button>
 
       {open ? (
@@ -172,9 +189,11 @@ export function ConnectionStatus({
             label="Corpus (active)"
             ok={corpusOk}
             detail={
-              sessionCorpus === "unavailable"
-                ? "Session: unavailable (online-only offered)"
-                : health?.corpus?.note ?? health?.corpus?.transport
+              sessionCorpus === "insufficient_evidence"
+                ? "Session: no verified project matches — canvas withheld"
+                : sessionCorpus === "unavailable"
+                  ? "Session: unavailable (online-only offered)"
+                  : health?.corpus?.note ?? health?.corpus?.transport
             }
           />
           <StatusRow
