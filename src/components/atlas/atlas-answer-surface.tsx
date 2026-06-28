@@ -80,14 +80,16 @@ export type AtlasAnswerSurfaceProps = {
   turnTiming?: { elapsedMs: number | null; running: boolean };
   activeThreadId?: string | null;
   threads?: ThreadSummary[];
-  threadsLoading?: boolean;
+  threadsSyncing?: boolean;
   onSelectThread?: (threadId: string) => void;
   onNewThread?: () => void;
+  onClearAllSessions?: () => void;
   historyDisabled?: boolean;
   persistStatus?: PersistStatus;
   persistConfigured?: boolean;
   onDeleteThread?: (threadId: string) => void;
   onRenameThread?: (threadId: string, title: string) => void | Promise<void>;
+  onClearAllSessions?: () => void;
   rehydrating?: boolean;
   onCaseFileSwot?: (message: string) => void;
   onCaseEntityAttached?: (entityId: string | null) => void;
@@ -114,9 +116,10 @@ export function AtlasAnswerSurface({
   turnTiming,
   activeThreadId = null,
   threads = [],
-  threadsLoading = false,
+  threadsSyncing = false,
   onSelectThread,
   onNewThread,
+  onClearAllSessions,
   historyDisabled = false,
   persistStatus = "idle",
   persistConfigured = true,
@@ -185,9 +188,10 @@ export function AtlasAnswerSurface({
         turnTiming={turnTiming}
         threads={threads}
         activeThreadId={activeThreadId}
-        threadsLoading={threadsLoading}
+        threadsSyncing={threadsSyncing}
         onSelectThread={onSelectThread}
         onNewThread={onNewThread}
+        onClearAllSessions={onClearAllSessions}
         onNewSession={onNewSession}
         chatPending={chatPending}
         historyDisabled={historyDisabled}
@@ -284,9 +288,10 @@ export function AtlasAnswerSurface({
       turnTiming={turnTiming}
       threads={threads}
       activeThreadId={activeThreadId}
-      threadsLoading={threadsLoading}
+      threadsSyncing={threadsSyncing}
       onSelectThread={onSelectThread}
       onNewThread={onNewThread}
+      onClearAllSessions={onClearAllSessions}
       onNewSession={onNewSession}
       chatPending={chatPending}
       historyDisabled={historyDisabled}

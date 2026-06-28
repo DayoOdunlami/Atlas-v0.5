@@ -26,10 +26,11 @@ type AtlasSessionWorkspaceProps = {
   turnTiming?: { elapsedMs: number | null; running: boolean };
   threads: ThreadSummary[];
   activeThreadId: string | null;
-  threadsLoading?: boolean;
+  threadsSyncing?: boolean;
   onSelectThread?: (threadId: string) => void;
   onNewThread?: () => void;
   onNewSession?: () => void;
+  onClearAllSessions?: () => void;
   chatPending?: boolean;
   historyDisabled?: boolean;
   persistStatus?: PersistStatus;
@@ -55,10 +56,11 @@ export function AtlasSessionWorkspace({
   turnTiming,
   threads,
   activeThreadId,
-  threadsLoading,
+  threadsSyncing,
   onSelectThread,
   onNewThread,
   onNewSession,
+  onClearAllSessions,
   chatPending,
   historyDisabled,
   persistStatus,
@@ -88,10 +90,11 @@ export function AtlasSessionWorkspace({
             <AtlasSessionRail
               threads={threads}
               activeThreadId={activeThreadId}
-              loading={threadsLoading}
+              syncing={threadsSyncing}
               onSelectThread={onSelectThread!}
               onNewThread={onNewThread!}
               onNewSession={onNewSession}
+              onClearAllSessions={onClearAllSessions}
               chatPending={chatPending}
               disabled={historyDisabled}
               devMeta={devMeta}

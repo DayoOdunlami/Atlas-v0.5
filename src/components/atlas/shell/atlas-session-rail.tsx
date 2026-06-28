@@ -33,10 +33,11 @@ function persistStatusLabel(status: PersistStatus, configured: boolean): string 
 export function AtlasSessionRail({
   threads,
   activeThreadId,
-  loading,
+  syncing = false,
   onSelectThread,
   onNewThread,
   onNewSession,
+  onClearAllSessions,
   chatPending,
   disabled,
   devMeta,
@@ -51,10 +52,11 @@ export function AtlasSessionRail({
 }: {
   threads: ThreadSummary[];
   activeThreadId: string | null;
-  loading?: boolean;
+  syncing?: boolean;
   onSelectThread: (threadId: string) => void;
   onNewThread: () => void;
   onNewSession?: () => void;
+  onClearAllSessions?: () => void;
   chatPending?: boolean;
   disabled?: boolean;
   devMeta?: AtlasDevMeta | null;
@@ -68,8 +70,10 @@ export function AtlasSessionRail({
   onCaseEntityAttached?: (entityId: string | null) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [pinned, setPinned] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
+  const isOpen = expanded || pinned;
   const showDevControls =
     process.env.NODE_ENV === "development" ||
     process.env.NEXT_PUBLIC_ATLAS_DEV_OVERLAY === "1";
@@ -85,12 +89,14 @@ export function AtlasSessionRail({
   return (
     <aside
       data-testid="atlas-session-rail"
-      data-expanded={expanded ? "true" : "false"}
+      data-expanded={isOpen ? "true" : "false"}
       onMouseEnter={() => setExpanded(true)}
-      onMouseLeave={() => setExpanded(false)}
+      onMouseLeave={() => {
+        if (!pinned) setExpanded(false);
+      }}
       className={cn(
         "relative z-20 hidden h-full shrink-0 flex-col overflow-hidden border-r transition-all duration-500 ease-out lg:flex",
-        expanded ? "w-64" : "w-14",
+        isOpen ? "w-64" : "w-14",
       )}
       style={{
         borderColor: T.rule,
@@ -101,7 +107,7 @@ export function AtlasSessionRail({
       <div
         className={cn(
           "flex shrink-0 items-center gap-2 border-b px-2 py-3",
-          !expanded && "justify-center",
+          !isOpen && "justify-center",
         )}
         style={{ borderColor: T.ruleSoft }}
       >
@@ -116,7 +122,7 @@ export function AtlasSessionRail({
         <span
           className={cn(
             "truncate text-sm font-semibold transition-all duration-500",
-            expanded ? "opacity-100 w-auto" : "w-0 overflow-hidden opacity-0",
+            isOpen ? "opacity-100 w-auto" : "w-0 overflow-hidden opacity-0",
           )}
           style={{ color: T.ink }}
         >
@@ -134,7 +140,7 @@ export function AtlasSessionRail({
           title="New question"
           className={cn(
             "flex w-full items-center gap-2 rounded-md border px-2 py-2 text-left transition-colors disabled:opacity-50",
-            !expanded && "justify-center px-0",
+            !isOpen && "justify-center px-0",
           )}
           style={{
             fontFamily: atlasFont.mono,
@@ -148,7 +154,7 @@ export function AtlasSessionRail({
           <span
             className={cn(
               "transition-all duration-500",
-              expanded ? "opacity-100 w-auto" : "w-0 overflow-hidden opacity-0",
+              isOpen ? "opacity-100 w-auto" : "w-0 overflow-hidden opacity-0",
             )}
           >
             New question
@@ -161,7 +167,7 @@ export function AtlasSessionRail({
         <div
           className={cn(
             "flex shrink-0 items-center gap-2 px-3 py-1.5 uppercase",
-            !expanded && "justify-center px-0",
+            !isOpen && "justify-center px-0",
           )}
           style={{
             fontFamily: atlasFont.mono,
@@ -174,22 +180,31 @@ export function AtlasSessionRail({
           <span
             className={cn(
               "transition-all duration-500",
-              expanded ? "opacity-100 w-auto" : "w-0 overflow-hidden opacity-0",
+              isOpen ? "opacity-100 w-auto" : "w-0 overflow-hidden opacity-0",
             )}
           >
             Sessions
           </span>
+          {isOpen ? (
+            <button
+              type="button"
+              title={pinned ? "Unpin sidebar" : "Pin sidebar open"}
+              onClick={() => setPinned((v) => !v)}
+              className="ml-auto rounded px-1 py-0.5"
+              style={{ color: pinned ? T.corpus : T.inkFaint, fontSize: 9 }}
+            >
+              {pinned ? "Pinned" : "Pin"}
+            </button>
+          ) : null}
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
-          {loading && threads.length === 0 ? (
-            expanded ? (
-              <p style={{ fontFamily: atlasFont.mono, fontSize: 10, color: T.inkFaint }}>
-                Loading…
-              </p>
-            ) : null
+          {threads.length === 0 && syncing && isOpen ? (
+            <p style={{ fontFamily: atlasFont.mono, fontSize: 10, color: T.inkFaint }}>
+              Loading…
+            </p>
           ) : threads.length === 0 ? (
-            expanded ? (
+            isOpen ? (
               <p style={{ fontFamily: atlasFont.mono, fontSize: 10, color: T.inkFaint }}>
                 {persistConfigured
                   ? "No saved sessions yet — complete a turn to save."
@@ -198,7 +213,15 @@ export function AtlasSessionRail({
             ) : null
           ) : (
             <>
-              {rehydrating && expanded ? (
+              {syncing && isOpen ? (
+                <p
+                  className="mb-2 px-1"
+                  style={{ fontFamily: atlasFont.mono, fontSize: 9, color: T.inkFaint }}
+                >
+                  Syncing…
+                </p>
+              ) : null}
+              {rehydrating && isOpen ? (
                 <p
                   className="mb-2 px-1"
                   style={{ fontFamily: atlasFont.mono, fontSize: 10, color: T.inkFaint }}
@@ -214,21 +237,21 @@ export function AtlasSessionRail({
                     <li
                       key={t.id}
                       className={cn(
-                        expanded && "animate-in slide-in-from-left-2 duration-300 fill-mode-backwards",
+                        isOpen && "animate-in slide-in-from-left-2 duration-300 fill-mode-backwards",
                       )}
-                      style={expanded ? { animationDelay: `${index * 40}ms` } : undefined}
+                      style={isOpen ? { animationDelay: `${index * 40}ms` } : undefined}
                     >
                       <div
                         className={cn(
                           "group flex w-full items-start rounded-md transition-colors",
-                          expanded ? "gap-0" : "justify-center p-2",
+                          isOpen ? "gap-0" : "justify-center p-2",
                         )}
                         style={{
                           background: active ? T.corpusWash : "transparent",
                           border: active ? `1px solid ${T.rule}` : "1px solid transparent",
                         }}
                       >
-                        {renaming && expanded ? (
+                        {renaming && isOpen ? (
                           <input
                             type="text"
                             autoFocus
@@ -255,7 +278,7 @@ export function AtlasSessionRail({
                             onClick={() => onSelectThread(t.id)}
                             className={cn(
                               "min-w-0 flex-1 rounded-md text-left transition-colors",
-                              expanded ? "px-2 py-2" : "flex justify-center p-0",
+                              isOpen ? "px-2 py-2" : "flex justify-center p-0",
                             )}
                             style={{
                               fontFamily: atlasFont.sans,
@@ -266,7 +289,7 @@ export function AtlasSessionRail({
                               border: "none",
                             }}
                           >
-                            {expanded ? (
+                            {isOpen ? (
                               <>
                                 <div className="truncate font-medium">
                                   {t.title || "Untitled session"}
@@ -290,7 +313,7 @@ export function AtlasSessionRail({
                             )}
                           </button>
                         )}
-                        {expanded && onRenameThread && !renaming ? (
+                        {isOpen && onRenameThread && !renaming ? (
                           <button
                             type="button"
                             data-testid={`atlas-thread-rename-${t.id}`}
@@ -306,7 +329,7 @@ export function AtlasSessionRail({
                             <Pencil className="size-3.5" />
                           </button>
                         ) : null}
-                        {expanded && onDeleteThread ? (
+                        {isOpen && onDeleteThread ? (
                           <button
                             type="button"
                             data-testid={`atlas-thread-delete-${t.id}`}
@@ -324,6 +347,24 @@ export function AtlasSessionRail({
                   );
                 })}
               </ul>
+              {isOpen && onClearAllSessions && threads.length > 1 ? (
+                <button
+                  type="button"
+                  data-testid="atlas-clear-all-sessions"
+                  disabled={disabled || chatPending}
+                  onClick={() => void onClearAllSessions()}
+                  className="mt-2 w-full rounded-md border px-2 py-1.5 text-left disabled:opacity-50"
+                  style={{
+                    fontFamily: atlasFont.mono,
+                    fontSize: 9,
+                    color: "#9A3412",
+                    borderColor: T.rule,
+                    background: "transparent",
+                  }}
+                >
+                  Clear all sessions
+                </button>
+              ) : null}
             </>
           )}
         </div>
@@ -332,7 +373,7 @@ export function AtlasSessionRail({
       <CaseFilePanel
         threadId={activeThreadId}
         spec={caseFileSpec ?? null}
-        expanded={expanded}
+        expanded={isOpen}
         disabled={disabled || chatPending}
         onSwotRequest={onCaseFileSwot}
         onEntityAttached={onCaseEntityAttached}
@@ -343,7 +384,7 @@ export function AtlasSessionRail({
         className="shrink-0 space-y-2 border-t p-2"
         style={{ borderColor: T.ruleSoft }}
       >
-        {showDevControls && expanded ? (
+        {showDevControls && isOpen ? (
           <button
             type="button"
             data-testid="atlas-dev-overlay-toggle"
@@ -361,7 +402,7 @@ export function AtlasSessionRail({
             Dev timing & routing
           </button>
         ) : null}
-        {expanded ? (
+        {isOpen ? (
           <p
             data-testid="atlas-persist-status"
             className="px-1"
@@ -379,12 +420,12 @@ export function AtlasSessionRail({
             {persistStatusLabel(persistStatus, persistConfigured)}
           </p>
         ) : null}
-        <div className={cn(!expanded && "flex flex-col items-center gap-2")}>
-          <ConnectionStatus devMeta={devMeta} compact={!expanded} className="relative w-full" />
+        <div className={cn(!isOpen && "flex flex-col items-center gap-2")}>
+          <ConnectionStatus devMeta={devMeta} compact={!isOpen} className="relative w-full" />
           <SurfaceViewModeToggle
-            compact={!expanded}
+            compact={!isOpen}
             className={cn(
-              expanded ? "w-full justify-center" : "flex-col border-0 bg-transparent p-0",
+              isOpen ? "w-full justify-center" : "flex-col border-0 bg-transparent p-0",
             )}
           />
         </div>
@@ -397,7 +438,7 @@ export function AtlasSessionRail({
             title="Clear and start fresh"
             className={cn(
               "flex w-full items-center gap-2 rounded-md border px-2 py-1.5 transition-opacity disabled:cursor-not-allowed disabled:opacity-50",
-              !expanded && "justify-center",
+              !isOpen && "justify-center",
             )}
             style={{
               fontFamily: atlasFont.mono,
@@ -411,7 +452,7 @@ export function AtlasSessionRail({
             <span
               className={cn(
                 "transition-all duration-500",
-                expanded ? "opacity-100 w-auto" : "w-0 overflow-hidden opacity-0",
+                isOpen ? "opacity-100 w-auto" : "w-0 overflow-hidden opacity-0",
               )}
             >
               Back to entry
@@ -420,7 +461,7 @@ export function AtlasSessionRail({
         ) : null}
       </div>
 
-      {!expanded ? (
+      {!isOpen ? (
         <div
           aria-hidden
           className="pointer-events-none absolute right-0 top-1/2 h-16 w-1 -translate-y-1/2 rounded-l-full bg-gradient-to-b from-transparent via-[#3F7A52]/40 to-transparent"

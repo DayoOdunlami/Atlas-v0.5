@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useCoAgent } from "@copilotkit/react-core";
@@ -47,6 +47,13 @@ import {
   type AtlasUxPrefs,
 } from "@/lib/atlas/ux-preferences";
 import { startNewAtlasV5Thread, readAtlasV5ThreadId, setAtlasV5ThreadId } from "@/components/copilotkit-provider";
+import {
+  clearCachedThreadList,
+  readCachedThreadList,
+  removeCachedThread,
+  upsertCachedThread,
+  writeCachedThreadList,
+} from "@/lib/atlas/thread-list-cache";
 
 type AtlasV5CoState = {
   answer_spec_envelope?: AnswerSpecEnvelope;
@@ -183,7 +190,9 @@ export function AtlasCopilotShell({
     initialThreadId ?? null,
   );
   const [threads, setThreads] = useState<ThreadSummary[]>([]);
-  const [threadsLoading, setThreadsLoading] = useState(false);
+  const [threadsSyncing, setThreadsSyncing] = useState(false);
+  const threadsHydratedRef = useRef(false);
+  const refreshInFlightRef = useRef<Promise<void> | null>(null);
   const [persistStatus, setPersistStatus] = useState<PersistStatus>("idle");
   const [persistConfigured, setPersistConfigured] = useState(true);
   const [restoredMessages, setRestoredMessages] = useState<ChatMessage[]>([]);
@@ -345,25 +354,33 @@ export function AtlasCopilotShell({
     }
   }, [chatPending, turnActive, envelopeStatus]);
 
-  const refreshThreadList = useCallback(async (opts?: { silent?: boolean }) => {
-    const silent = opts?.silent === true;
-    if (!silent) {
-      setThreadsLoading(true);
+  const refreshThreadList = useCallback(async () => {
+    if (refreshInFlightRef.current) {
+      await refreshInFlightRef.current;
+      return;
     }
-    try {
-      const result = await fetchThreadList();
-      setThreads(result.threads);
-      setPersistConfigured(result.configured);
-      if (!result.configured) {
-        setPersistStatus("unavailable");
-      } else if (!result.authorized) {
-        setPersistStatus("error");
+
+    const run = (async () => {
+      setThreadsSyncing(true);
+      try {
+        const result = await fetchThreadList();
+        setThreads(result.threads);
+        writeCachedThreadList(result.threads);
+        setPersistConfigured(result.configured);
+        if (!result.configured) {
+          setPersistStatus("unavailable");
+        } else if (!result.authorized) {
+          setPersistStatus("error");
+        }
+      } finally {
+        setThreadsSyncing(false);
       }
-    } finally {
-      if (!silent) {
-        setThreadsLoading(false);
-      }
-    }
+    })();
+
+    refreshInFlightRef.current = run.finally(() => {
+      refreshInFlightRef.current = null;
+    });
+    await refreshInFlightRef.current;
   }, []);
 
   const rehydrateThread = useCallback(
@@ -535,7 +552,14 @@ export function AtlasCopilotShell({
       if (ok) {
         lastPersistedKeyRef.current = persistKey;
         setPersistStatus("saved");
-        void refreshThreadList({ silent: true });
+        void refreshThreadList();
+        upsertCachedThread({
+          id: threadId,
+          title: titleFromQuery(userText),
+          lens: "CPC",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
       } else {
         setPersistStatus("error");
       }
@@ -644,8 +668,16 @@ export function AtlasCopilotShell({
     [activeThreadId, sendMessage],
   );
 
-  const handleNewSession = useCallback(() => {
-    if (chatPending) return;
+  useLayoutEffect(() => {
+    if (threadsHydratedRef.current) return;
+    threadsHydratedRef.current = true;
+    const cached = readCachedThreadList();
+    if (cached.length > 0) {
+      setThreads(cached);
+    }
+  }, []);
+
+  const resetWorkbenchState = useCallback(() => {
     writeAtlasSessionQuery("");
     clearBootstrapSent();
     bootstrapBootRef.current = false;
@@ -666,19 +698,44 @@ export function AtlasCopilotShell({
       turn_active: false,
       session_history: [],
     });
+  }, []);
+
+  const handleBackToEntry = useCallback(() => {
+    if (chatPending) return;
+    resetWorkbenchState();
+    router.push("/atlas");
+  }, [chatPending, resetWorkbenchState, router]);
+
+  const handleNewQuestion = useCallback(() => {
+    if (chatPending) return;
+    resetWorkbenchState();
     const tid = startNewAtlasV5Thread();
+    const now = new Date().toISOString();
+    const optimistic: ThreadSummary = {
+      id: tid,
+      title: "New session",
+      lens: "CPC",
+      created_at: now,
+      updated_at: now,
+    };
     setActiveThreadId(tid);
     syncAgentThreadContext(tid, null);
+    setThreads((prev) => {
+      const next = [optimistic, ...prev.filter((t) => t.id !== tid)];
+      writeCachedThreadList(next);
+      return next;
+    });
     void ensureThread(tid, "New session");
     void refreshThreadList();
     router.push(`/atlas?thread=${tid}`);
-  }, [chatPending, refreshThreadList, router, syncAgentThreadContext]);
+  }, [chatPending, refreshThreadList, resetWorkbenchState, router, syncAgentThreadContext]);
 
   const handleSelectThread = useCallback(
     (threadId: string) => {
       if (chatPending || rehydrating) return;
       setAtlasV5ThreadId(threadId);
       setActiveThreadId(threadId);
+      setCopilotBoundThreadId(null);
       setReasoningTrace([]);
       lastPersistedKeyRef.current = "";
       router.push(`/atlas?thread=${threadId}`);
@@ -693,31 +750,48 @@ export function AtlasCopilotShell({
       if (!trimmed) return;
       const ok = await patchThreadTitle(threadId, trimmed);
       if (ok) {
-        setThreads((prev) =>
-          prev.map((t) => (t.id === threadId ? { ...t, title: trimmed } : t)),
-        );
-        void refreshThreadList({ silent: true });
+        setThreads((prev) => {
+          const next = prev.map((t) => (t.id === threadId ? { ...t, title: trimmed } : t));
+          writeCachedThreadList(next);
+          return next;
+        });
+        void refreshThreadList();
       }
     },
     [refreshThreadList],
   );
 
-  const handleNewThreadFromSidebar = useCallback(() => {
-    handleNewSession();
-  }, [handleNewSession]);
-
   const handleDeleteThread = useCallback(
     async (threadId: string) => {
       if (chatPending) return;
+      setThreads((prev) => {
+        const next = prev.filter((t) => t.id !== threadId);
+        writeCachedThreadList(next);
+        return next;
+      });
+      removeCachedThread(threadId);
       const ok = await archiveThread(threadId);
-      if (!ok) return;
+      if (!ok) {
+        void refreshThreadList();
+        return;
+      }
       void refreshThreadList();
       if (threadId === activeThreadId) {
-        handleNewSession();
+        handleNewQuestion();
       }
     },
-    [activeThreadId, chatPending, handleNewSession, refreshThreadList],
+    [activeThreadId, chatPending, handleNewQuestion, refreshThreadList],
   );
+
+  const handleClearAllSessions = useCallback(async () => {
+    if (chatPending || threads.length === 0) return;
+    const ids = threads.map((t) => t.id);
+    setThreads([]);
+    clearCachedThreadList();
+    await Promise.all(ids.map((id) => archiveThread(id)));
+    void refreshThreadList();
+    handleBackToEntry();
+  }, [chatPending, handleBackToEntry, refreshThreadList, threads]);
 
   const handleUxPrefsChange = useCallback(
     (patch: Partial<AtlasUxPrefs>) => {
@@ -762,7 +836,9 @@ export function AtlasCopilotShell({
       showcaseOptions={showcaseOptions}
       onShowcaseSelect={handleShowcaseSelect}
       bootstrapQuery={bootstrapQuery}
-      onNewSession={handleNewSession}
+      onNewSession={handleBackToEntry}
+      onNewThread={handleNewQuestion}
+      onClearAllSessions={handleClearAllSessions}
       collapsibleCot={uxPrefs.collapsibleCot}
       progressLine={progressLine}
       uxPrefs={uxPrefs}
@@ -770,9 +846,8 @@ export function AtlasCopilotShell({
       turnTiming={turnTiming}
       activeThreadId={activeThreadId}
       threads={threads}
-      threadsLoading={threadsLoading}
+      threadsSyncing={threadsSyncing}
       onSelectThread={handleSelectThread}
-      onNewThread={handleNewThreadFromSidebar}
       historyDisabled={chatPending}
       persistStatus={persistStatus}
       persistConfigured={persistConfigured}
