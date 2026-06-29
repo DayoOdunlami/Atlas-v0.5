@@ -512,6 +512,21 @@ export function AtlasCopilotShell({
     turnTimingRef.current = turnTiming;
   }, [turnTiming]);
 
+  const beginUserTurn = useCallback(() => {
+    setSpec(null);
+    setDevMeta(null);
+    setEnvelopeStatus("final");
+    lastRevisionRef.current = 0;
+    setStateRef.current?.({
+      answer_spec_envelope: { revision: 0, status: "final" },
+      canvas_cleared: true,
+      turn_active: true,
+      reasoning_trace: [],
+    });
+    turnStartedAtRef.current = Date.now();
+    setTurnTiming({ running: true, elapsedMs: 0 });
+  }, []);
+
   useEffect(() => {
     if (rehydrating) return;
     if (chatPending || turnActive || envelopeStatus === "partial") return;
@@ -704,21 +719,6 @@ export function AtlasCopilotShell({
       turn_active: false,
       session_history: [],
     });
-  }, []);
-
-  const beginUserTurn = useCallback(() => {
-    setSpec(null);
-    setDevMeta(null);
-    setEnvelopeStatus("final");
-    lastRevisionRef.current = 0;
-    setStateRef.current?.({
-      answer_spec_envelope: { revision: 0, status: "final" },
-      canvas_cleared: true,
-      turn_active: true,
-      reasoning_trace: [],
-    });
-    turnStartedAtRef.current = Date.now();
-    setTurnTiming({ running: true, elapsedMs: 0 });
   }, []);
 
   const handleBackToEntry = useCallback(() => {
