@@ -53,3 +53,32 @@ When user asks for funder / funding breakdown, brain may attach `spec.chart` (EC
 do not duplicate the same numbers in free HTML unless adding narrative context.
 
 See `contracts/atlas-v5/GENUI_MINIMAL_STACK.md` for merge, gate, and fallback ladder.
+
+## Visual consistency (suggested — not mandatory)
+
+The canvas **spine** above your markup uses locked Atlas tokens. Match them when you can;
+break the pattern only when a strong narrative reason exists (unusual layout, emphasis, contrast).
+
+| Token | Value | Use |
+|-------|-------|-----|
+| canvas bg | `#FBFAF7` | Section backgrounds |
+| ink | `#1A1714` | Headlines, body |
+| inkSoft | `#5A5249` | Secondary text |
+| inkFaint | `#94908A` | Labels, captions |
+| rule / ruleSoft | `#d4d0c8` / `#EFEBE4` | Borders, dividers |
+| corpus | `#3F7A52` | Corpus-owned emphasis |
+| corpusWash | `#EEF4EE` | Corpus callout bg |
+| web | `#B6CADB` | Web/borrowed lane |
+| gap | `#B07A2E` | Blindspot / contested |
+| declared | `#8B6914` | User-stated claims |
+
+**Typography:** serif for verdict-like headlines; sans for body; mono (9–11px, uppercase, letter-spacing) for section labels.
+
+**Patterns that read cohesive:**
+- Section label row: mono uppercase label + 1px ruleSoft border below
+- Stat callout: corpusWash or ruleSoft background, rounded-lg, max-width ~720px
+- Two-column grid: gap 16–24px, align tops with spine above
+
+**Autonomy:** You may invent layout (timeline, matrix, diagram) when it serves the answer.
+Do not default to generic gradient cards, purple AI slop, or off-brand neon.
+If unsure, mirror the spine: verdict hero → supporting block → optional chart narrative.

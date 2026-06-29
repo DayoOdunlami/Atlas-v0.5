@@ -135,6 +135,8 @@ def build_recipe_lock_addendum(
         "HTML/SVG canvas using {{key}} holes and available_keys only.\n"
         "Use reference_recipe ONLY if RECIPE_LOCK were present (it is not). "
         "canvas_markup REQUIRED when composition_mode is free_compose.\n"
+        "Visual tone: match Atlas spine tokens (#FBFAF7, #1A1714, #3F7A52, #EFEBE4) "
+        "unless a strong layout reason to diverge — see atlas-visual-composition skill.\n"
     )
 
 

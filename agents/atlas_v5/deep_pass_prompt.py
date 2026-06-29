@@ -162,6 +162,8 @@ Produce a DeepPassOutput JSON object. **Resolve in this order:**
    - MUST be null when composition_mode is reference_recipe
    - Use {{key}} and {{scale(key, policy=...)}} holes only; never type figures or scale pixels
    - If web.* keys absent (corpus-only), degrade honestly — do not fabricate web holes
+   - **Visual consistency (soft):** prefer Atlas palette (#FBFAF7 canvas, #1A1714 ink, #3F7A52 corpus,
+     #EFEBE4 borders) and spine-like section labels — break only for a strong compositional reason
 
 4. **case_claims** — extract or update declared user_situation claims from the user's words
    - kind: fact | domain | constraint | hypothesis | uncertainty

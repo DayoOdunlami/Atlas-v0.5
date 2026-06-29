@@ -147,6 +147,11 @@ npm run eval:mot               # Playwright — needs dev up
 
 ## Merge & deploy checklist
 
+**One line of truth:** GitHub `main` → Vercel **production** (`atlas-v0-5.vercel.app`).  
+Feature branches → **preview URLs** only. Local `npm run dev` → your machine (:3005).
+
+There is no separate “production codebase” — production is whatever is on `main` after merge.
+
 1. `npm run eval:mot` green locally.
 2. PR `feat/atlas5-stage1` → `main` (production Vercel tracks `main`).
 3. Vercel env: `PYTHON_AGENTS_URL`, `POSTGRES_URL`, `ANTHROPIC_API_KEY`, Supabase keys — see `CLAUDE.md`.
