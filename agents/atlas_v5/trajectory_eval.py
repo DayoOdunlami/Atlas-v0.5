@@ -38,6 +38,8 @@ class TurnResult:
     latency_ms: float = 0.0
     reply_preview: str = ""
     lane_mode: str | None = None
+    spec_recipe: str | None = None
+    spec_mode: str | None = None
 
 
 @dataclass
@@ -200,8 +202,10 @@ async def run_trajectory(
                 route=str(payload.get("route") or ""),
                 update_canvas=payload.get("update_canvas"),
                 latency_ms=latency_ms,
-                reply_preview=reply[:160].replace("\n", " "),
+                reply_preview=reply[:280].replace("\n", " "),
                 lane_mode=dev_meta.get("lane_mode"),
+                spec_recipe=((payload.get("spec") or {}).get("instrument") or {}).get("recipe"),
+                spec_mode=(payload.get("spec") or {}).get("mode"),
             )
         )
         all_failures.extend([f"turn {i}: {f}" for f in failures])
@@ -266,10 +270,55 @@ def _result_to_dict(result: TrajectoryResult) -> dict[str, Any]:
                 "latency_ms": t.latency_ms,
                 "lane_mode": t.lane_mode,
                 "reply_preview": t.reply_preview,
+                "spec_recipe": t.spec_recipe,
+                "spec_mode": t.spec_mode,
             }
             for t in result.turns
         ],
     }
+
+
+def write_markdown_report(report: dict[str, Any], path: Path) -> None:
+    """Human-readable MOT — queries, routes, canvas, reply previews for review."""
+    lines = [
+        "# Atlas v5 MOT — trajectory report",
+        "",
+        f"Generated: {report.get('generated_at', '')}",
+        f"Pass rate: **{report.get('scenarios_passed', 0)}/{report.get('scenarios_executed', 0)}** "
+        f"({report.get('scenarios_skipped', 0)} skipped)",
+        "",
+        "Use this to review answer quality without clicking through the UI.",
+        "",
+    ]
+    for raw in report.get("results") or []:
+        r = raw if isinstance(raw, dict) else _result_to_dict(raw)
+        if r.get("skipped"):
+            lines.append(f"## SKIP — {r['id']}")
+            lines.append(f"{r.get('skip_reason', '')}\n")
+            continue
+        status = "PASS" if r.get("passed") else "FAIL"
+        lines.append(f"## [{status}] {r['id']} — {r.get('name', '')}")
+        if r.get("failures"):
+            lines.append("**Failures:**")
+            for f in r["failures"]:
+                lines.append(f"- {f}")
+        lines.append("")
+        for t in r.get("turns") or []:
+            mark = "ok" if t.get("passed") else "FAIL"
+            canvas = "canvas updated" if t.get("update_canvas") else "chat only"
+            recipe = t.get("spec_recipe") or "—"
+            mode = t.get("spec_mode") or "—"
+            lines.append(f"### Turn {t['turn']} [{mark}]")
+            lines.append(f"**Query:** {t.get('query', '')}")
+            lines.append(
+                f"**Route:** `{t.get('route')}` · **{canvas}** · "
+                f"**{t.get('latency_ms')}ms** · mode `{mode}` · recipe `{recipe}`"
+            )
+            lines.append(f"**Reply preview:** {t.get('reply_preview', '')}")
+            lines.append("")
+        lines.append("---\n")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines), encoding="utf-8")
 
 
 def print_report(report: dict[str, Any]) -> None:
@@ -340,6 +389,11 @@ async def _cli_async(args: argparse.Namespace) -> int:
         out_path.write_text(json.dumps(serializable, indent=2), encoding="utf-8")
         print(f"\nWrote {out_path}")
 
+    if args.markdown:
+        md_path = Path(args.markdown)
+        write_markdown_report(serializable, md_path)
+        print(f"Wrote {md_path}")
+
     executed = report["scenarios_executed"]
     passed = report["scenarios_passed"]
     return 0 if executed == passed else 1
@@ -351,6 +405,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--id", action="append", help="Run single scenario id (repeatable)")
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--out", help="Write JSON report path")
+    parser.add_argument("--markdown", help="Write human-readable MOT markdown path")
     args = parser.parse_args(argv)
     return asyncio.run(_cli_async(args))
 

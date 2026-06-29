@@ -153,3 +153,18 @@ trajectories:
           reply_not_contains:
             - "paste your question"
             - "lost the thread"
+
+  - id: V09_persona_analogy
+    name: CPC persona / analogy stays chat-first (no orient graphs)
+    turns:
+      - query: >-
+          if CPC was a persona what/ who would they be? what's the best analogy
+          to help understand who CPC are and who they should grow into?
+        expect:
+          route: chat
+          update_canvas: false
+          min_reply_chars: 40
+          reply_not_contains:
+            - "Corpus scan complete"
+            - "711 projects"
+            - "IncommensurableMagnitudes"

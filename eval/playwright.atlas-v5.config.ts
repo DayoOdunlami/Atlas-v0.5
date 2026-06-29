@@ -11,7 +11,7 @@ import { defineConfig, devices } from "@playwright/test";
  */
 export default defineConfig({
   testDir: "./playwright",
-  testMatch: ["atlas-v5-session.spec.ts", "atlas-v5-workbench.spec.ts"],
+  testMatch: ["atlas-v5-session.spec.ts", "atlas-v5-workbench.spec.ts", "atlas-v5-mot.spec.ts"],
   fullyParallel: false,
   workers: 1,
   timeout: 360_000,
