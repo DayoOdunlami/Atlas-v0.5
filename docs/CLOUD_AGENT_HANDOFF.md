@@ -1,11 +1,67 @@
 # Cloud agent handoff — Atlas v5 demo-ready baseline
 
 > **For:** Cursor Cloud / autonomous agents with several hours of runway  
-> **Branch:** merge `feat/atlas5-stage1` → `main` after MOT green (see below)  
+> **Branch:** `main` only (canonical; production = Vercel deploy of `main`)  
 > **North star:** [`docs/ATLAS_V5_BLUEPRINT.md`](ATLAS_V5_BLUEPRINT.md) — do not swap stack (LangGraph + CopilotKit + AnswerSpec)
 
 ---
 
+## Dayo decisions (2026-06-29) — binding for autonomous run
+
+**Mode:** **B — Single agent, full sequence 1 → 2 → 3** (one PR train on `main`).
+
+**Go-ahead:** Start now. Pre-flight confirmed — env and brain are working.
+
+### Approved ROI (agent + product owner)
+
+| # | Item | Approved | Notes |
+|---|------|----------|-------|
+| 1 | **Flexible recipe ladder** (not hard recipe lock) | ✅ Yes | See [Recipe policy](#recipe-policy-flexible-not-constraining) below |
+| 2 | **Golden-chain MOT gate G1–G5** + thread URL leadership | ✅ Yes | Include MOT-4/MOT-5; fix hello test assertion |
+| 3 | **Chat rail verdict prepend + chart `story` in UI** | ✅ Yes | Substantive turns only |
+| 4 | **Corpus proof moment** (click citation → real project) | ✅ Yes | POC moat — add if time in Agent 1/2 |
+| 5 | **Playwright `npx playwright install chromium` in install path** | ✅ Yes | Document in handoff / postinstall |
+| 6 | **Case file (Agent 3)** | ✅ Yes | Same sequential pass; smoke test required, not optional Phase 2 |
+
+**Rejected / modified:**
+
+- ❌ **`ATLAS_V5_RECIPE_LOCK=1` globally on prod** — do not disable free compose by default.
+- ❌ **`ATLAS_V5_FREE_COMPOSE=0`** — creative tail must remain available when no recipe fits.
+- ✅ **Demo env only:** optional `ATLAS_V5_DEMO_STRICT=1` for golden-chain recording — still uses ladder below, not blind lock.
+
+### Pre-flight fixes (do first, ~30 min)
+
+1. Fix `test_run_turn_response_hello_skips_canvas` — assert `update_canvas is False` + `route in ("chat","clarify")`, not substring `"Hi"`/`"Atlas"`.
+2. Run full `npm run eval:mot` + `eval:baseline-v06` — target all green before feature work.
+3. Add `npx playwright install chromium` to docs or `postinstall` if appropriate.
+
+---
+
+## Recipe policy (flexible, not constraining)
+
+**Intent:** Visual consistency without killing AI autonomy when recipes don’t fit.
+
+**Ladder (implement / refine in Agent 2):**
+
+1. **`recommend_worthy_recipe()`** — only wins when data + outcome + query clearly match (existing logic in `composition_policy.py`).
+2. **`visual_templates.py`** — deterministic fallback when model omits markup (already exists).
+3. **`free_compose`** — default when no recipe scores above threshold; use soft Atlas tokens (`skills/atlas-visual-composition.md` + scoped CSS in `CompositionCanvas`).
+4. **Explicit skip** — if disposition reasoning says recipe poor fit → `composition_mode: free_compose` even on orient/connect routes.
+
+**Expand recipe library (10–20 use cases):**
+
+Seed from: showcase catalog (rail/aviation/flex journeys), current MOT trajectories (V01–V10), and strategist modes (orient / connect / diagnose / act / defend / find_path). For each:
+
+- Trigger phrases + outcome_hint
+- Recipe or template name
+- Minimum data gates (e.g. graph edges ≥ 2 for NetworkMap)
+- Chart roles from `visual/opportunity.py`
+
+Store as `agents/atlas_v5/recipe_catalog.yaml` (or extend `showcase_catalog.py`) — agent to propose schema.
+
+**Golden demo recording:** prefer recipes/templates for G2–G4 **when gates pass**; fall back to free compose + token defaults when they don’t — never show wrong recipe (e.g. rail orient on CPC meta question).
+
+---
 ## What the human is asking for
 
 1. **A demo that works end-to-end** — entry → session → multi-turn → threads persist — recordable on video without surprise crashes.
@@ -35,21 +91,30 @@ The canvas is **not one unified layout**. It is **stacked layers** from one `Ans
 
 **So the human’s observation is correct:** spine = product design; tail = generative HTML unless recipe lock wins. This is intentional in code but **not** intentional in product — fix direction below.
 
-**Recommended fix (agent task A1):**
+**Recommended fix (agent task — Agent 2):**
 
-1. Set `ATLAS_V5_RECIPE_LOCK=1` on preview/prod for demo period **OR** disable free compose (`ATLAS_V5_FREE_COMPOSE=0`) so tail always uses recipes/templates.
-2. Extend `visual_templates.py` / recipes for **defend** and **find_path** modes — don’t rely on free HTML for demo golden chains.
-3. Gate `CompositionCanvas`: if markup fails design lint (fonts/colors not from token allowlist), fall back to recipe skeleton.
-4. Optional: one “narrative scaffold” — every canvas ends with `soWhat` rendered in locked UI (`StatStrip`-style blocks), not only in chat rail.
+1. Implement **flexible recipe ladder** (see Dayo decisions) — not global `RECIPE_LOCK`.
+2. Extend `visual_templates.py` / recipe catalog for **defend**, **find_path**, and top 10–20 use cases.
+3. Scoped token defaults in `CompositionCanvas` (done on `main`) + chart `story` in UI.
+4. Optional: `soWhat` blocks in locked UI at canvas foot — same typography as spine.
 
 **Does the canvas tell a cohesive story today?**  
 Spine yes (stats → verdict → gap). Tail often no — it’s a second author. Charts are gated by `visual/opportunity.py` (story + rejection metadata) — good logic, weak integration with free-compose tail.
 
 ---
 
-## Agent roles (can run as 3 cloud jobs)
+## Execution mode: single agent 1 → 2 → 3
 
-### Agent 1 — Atlas demo & infrastructure (“bring it home”)
+Run sequentially in one session (Dayo chose **B**):
+
+1. **Phase 1 — Demo & MOT** (formerly Agent 1)
+2. **Phase 2 — Quality & canvas cohesion** (formerly Agent 2)
+3. **Phase 3 — Case file SME smoke** (formerly Agent 3)
+
+One branch (`main`), incremental commits, final state = recordable demo + MOT green.
+
+---
+### Phase 1 — Atlas demo & infrastructure (“bring it home”)
 
 **Goal:** Green MOT + 5‑minute screen recording script with zero console errors.
 
@@ -94,7 +159,7 @@ npm run eval:mot               # Playwright — needs dev up
 
 ---
 
-### Agent 2 — Answer quality & canvas cohesion
+### Phase 2 — Answer quality & canvas cohesion
 
 **Goal:** Golden chains read well; canvas tail matches spine.
 
@@ -107,10 +172,10 @@ npm run eval:mot               # Playwright — needs dev up
 
 **Tasks:**
 
-1. For each golden chain, run brain eval and score with behavioral grader; tune prompts/disposition until ≥60% on rubric (honesty, citations, cohesion).
-2. Implement **recipe-first demo mode** (env flag or per-route) for G2–G4.
-3. Ensure chart `story` fields appear in UI near each chart (already in spec — wire in `ChartCanvas` if missing).
-4. Chat rail on substantive turns: prepend one-line verdict from spec (reduce “generic essay” feel).
+1. For each golden chain, run brain eval; tune prompts/disposition until ≥60% on behavioral grader.
+2. Implement **flexible recipe ladder** + seed **recipe_catalog** (10–20 use cases) — see Dayo decisions.
+3. Wire chart `story` in `ChartCanvas`.
+4. Chat rail: prepend one-line verdict from AnswerSpec on substantive turns.
 
 **Deliverables:**
 
@@ -119,7 +184,7 @@ npm run eval:mot               # Playwright — needs dev up
 
 ---
 
-### Agent 3 — Passport / case file SME
+### Phase 3 — Passport / case file SME
 
 **Goal:** Demonstrate claims lifecycle on `/atlas` case file panel (not legacy `/passport` route).
 
@@ -145,20 +210,16 @@ npm run eval:mot               # Playwright — needs dev up
 
 ---
 
-## Merge & deploy checklist
+## Deploy checklist
 
-**One line of truth:** GitHub `main` → Vercel **production** (`atlas-v0-5.vercel.app`).  
-Feature branches → **preview URLs** only. Local `npm run dev` → your machine (:3005).
+**One line of truth:** GitHub `main` → Vercel **production** (`atlas-v0-5.vercel.app`).
 
-There is no separate “production codebase” — production is whatever is on `main` after merge.
+1. `npm run eval:mot` green before declaring done.
+2. Vercel env: `PYTHON_AGENTS_URL`, `POSTGRES_URL`, `ANTHROPIC_API_KEY`, Supabase keys — see `CLAUDE.md`.
+3. Migrations applied: `npm run db:migrate:atlas`.
+4. Optional demo flag: `ATLAS_V5_DEMO_STRICT=1` on preview only (not required on prod).
 
-1. `npm run eval:mot` green locally.
-2. PR `feat/atlas5-stage1` → `main` (production Vercel tracks `main`).
-3. Vercel env: `PYTHON_AGENTS_URL`, `POSTGRES_URL`, `ANTHROPIC_API_KEY`, Supabase keys — see `CLAUDE.md`.
-4. Run migrations on production DB if not done.
-5. Preview smoke 10 min, then merge.
-
-**Current branch tip:** `6a1014b` (defend canvas for meta questions, MOT-0, thread fixes).
+**Branch tip:** `main` @ `e5c1614`+ (merged 2026-06-29).
 
 ---
 
@@ -180,8 +241,8 @@ Research task: document “borrow patterns from X” (e.g. shadcn dashboard shel
 
 - Follow `CLAUDE.md` stack locks.
 - Every bug fix → test (pytest or Playwright or trajectory).
-- Prefer recipe/template over free HTML for demo paths.
-- Small PRs per agent role; one merge train to `main`.
+- Prefer **recipe/template when gates pass**; free compose when they don’t — never force wrong recipe.
+- Small commits on `main` or one PR — human already merged feature branch.
 - If blocked on env/secrets, document exact variable — don’t stub fake data in prod paths.
 
 ---
