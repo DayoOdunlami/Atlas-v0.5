@@ -168,3 +168,19 @@ trajectories:
             - "Corpus scan complete"
             - "711 projects"
             - "IncommensurableMagnitudes"
+
+  - id: V10_atlas_existence
+    name: Atlas self-reflection stays chat-first (no rail orient graphs)
+    turns:
+      - query: >-
+          Justify your existence or actually undermine your existence. Should CPC be
+          putting money into developing you? What makes you different? Where is your value?
+        expect:
+          route: chat
+          update_canvas: false
+          min_reply_chars: 40
+          reply_not_contains:
+            - "Corpus scan complete"
+            - "Rail decarbonisation"
+            - "IncommensurableMagnitudes"
+            - "null funding rows"

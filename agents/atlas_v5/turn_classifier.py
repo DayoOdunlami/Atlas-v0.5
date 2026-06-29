@@ -19,7 +19,7 @@ from agents.atlas_v5.chat_router import classify_follow_up
 from agents.atlas_v5.intent import (
     has_declared_uncertainty_cue,
     is_connect_network_query,
-    is_identity_analogy_query,
+    is_meta_chat_query,
     is_j1t1_orient_query,
     is_substantive_canvas_query,
 )
@@ -151,10 +151,10 @@ def classify_turn_heuristic(
     if has_declared_uncertainty_cue(q):
         return _find_path_decision("C1: declared uncertainty → find_path", source="heuristic")
 
-    if is_identity_analogy_query(q):
+    if is_meta_chat_query(q):
         return TurnDecision(
             route="chat",
-            reasoning="Identity/persona/analogy — chat-first, no corpus orient",
+            reasoning="Meta chat (persona or Atlas self-reflection) — no corpus orient",
             source="heuristic",
         )
 
@@ -188,10 +188,10 @@ def classify_turn(
     if has_declared_uncertainty_cue(q):
         return _find_path_decision("C1: declared uncertainty → find_path", source="heuristic")
 
-    if is_identity_analogy_query(q):
+    if is_meta_chat_query(q):
         return TurnDecision(
             route="chat",
-            reasoning="Identity/persona/analogy — chat-first",
+            reasoning="Meta chat (persona or Atlas self-reflection) — chat-first",
             source="heuristic",
         )
 

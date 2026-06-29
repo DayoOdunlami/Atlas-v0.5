@@ -15,6 +15,7 @@ from agents.atlas_v5.chat_router import (
 from agents.atlas_v5.connect_assembler import assemble_connect_spec
 from agents.atlas_v5.graph import _extract_query, atlas_v5_graph
 from agents.atlas_v5.intent import (
+    is_atlas_self_reflection_query,
     is_connect_network_query,
     is_identity_analogy_query,
     is_j1t1_orient_query,
@@ -147,6 +148,24 @@ def test_persona_analogy_routes_chat_not_orient():
     d = classify_turn_heuristic(q, MOCK_SPEC)
     assert d.route == "chat"
     assert classify_follow_up(q, MOCK_SPEC) == "chat_only"
+
+
+EXISTENCE_QUERY = (
+    "Justify your existence or actually undermine your existence. Should CPC be putting "
+    "money into developing you or pivoting what you offer? Or put their money into better "
+    "sources. The marketers got plenty of AI elements in there. What makes you different? "
+    "Where is your value? are you currently a weak offering that could be made better, "
+    "or just a weak offering that's better to be avoided? What is the honest assessment "
+    "on your value proposition and opportunities that you present?"
+)
+
+
+def test_atlas_self_reflection_routes_chat_not_orient():
+    assert is_atlas_self_reflection_query(EXISTENCE_QUERY)
+    assert not is_substantive_canvas_query(EXISTENCE_QUERY)
+    d = classify_turn_heuristic(EXISTENCE_QUERY, MOCK_SPEC)
+    assert d.route == "chat"
+    assert classify_follow_up(EXISTENCE_QUERY, MOCK_SPEC) == "chat_only"
 
 
 def test_chat_router_in_domain_follow_up_updates_canvas():

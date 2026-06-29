@@ -31,6 +31,22 @@ test.describe("Atlas v5 MOT — infrastructure", () => {
     test.skip(!ok, "Agent service offline — run npm run dev first");
   });
 
+  test("MOT-0 ?q= bootstrap mounts without client crash", async ({ page }) => {
+    test.setTimeout(60_000);
+    const entryQuery = "What is the state of play on hydrogen in our corpus?";
+    const q = encodeURIComponent(entryQuery);
+
+    const pageErrors: string[] = [];
+    page.on("pageerror", (err) => pageErrors.push(err.message));
+
+    await page.goto(`${BASE}/atlas?q=${q}`);
+    await expect(page.getByText("Application error")).not.toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('[data-testid="atlas-surface-root"]')).toBeVisible({
+      timeout: 30_000,
+    });
+    expect(pageErrors).toEqual([]);
+  });
+
   test("MOT-1 entry question auto-sends without retype", async ({ page }) => {
     test.setTimeout(360_000);
     const entryQuery = "What is the state of play on hydrogen in our corpus?";

@@ -67,6 +67,33 @@ def is_identity_analogy_query(query: str) -> bool:
     return bool(_IDENTITY_ANALOGY_RE.search(q))
 
 
+_ATLAS_SELF_REFLECTION_RE = re.compile(
+    r"\b("
+    r"justify your existence|undermine your existence|"
+    r"developing you\b|put(?:ting)? money into (?:developing )?you|"
+    r"what makes you different|where is your value|your value proposition|"
+    r"weak offering|better to be avoided|"
+    r"honest assessment.*(?:your|you|atlas)|"
+    r"should cpc be putting|pivoting what you offer|"
+    r"marketers got plenty of ai"
+    r")\b",
+    re.I,
+)
+
+
+def is_atlas_self_reflection_query(query: str) -> bool:
+    """Meta questions about Atlas as a product — chat-first, no corpus orient."""
+    q = query.strip()
+    if not q:
+        return False
+    return bool(_ATLAS_SELF_REFLECTION_RE.search(q))
+
+
+def is_meta_chat_query(query: str) -> bool:
+    """Chat-only meta turns — persona/analogy or Atlas self-assessment."""
+    return is_identity_analogy_query(query) or is_atlas_self_reflection_query(query)
+
+
 def has_declared_uncertainty_cue(query: str) -> bool:
     """C1 route signal — declared uncertainty about the question itself (not advisor elicit)."""
     q = query.strip()
@@ -80,7 +107,7 @@ def is_substantive_canvas_query(query: str) -> bool:
     q = query.strip()
     if not q or _OFF_TOPIC_RE.search(q):
         return False
-    if is_identity_analogy_query(q):
+    if is_meta_chat_query(q):
         return False
     if is_connect_network_query(q) or is_j1t1_orient_query(q):
         return True
