@@ -17,6 +17,7 @@ from agents.atlas_v5.graph import _extract_query, atlas_v5_graph
 from agents.atlas_v5.intent import (
     is_atlas_self_reflection_query,
     is_connect_network_query,
+    is_explicit_canvas_request,
     is_identity_analogy_query,
     is_j1t1_orient_query,
     is_substantive_canvas_query,
@@ -160,12 +161,21 @@ EXISTENCE_QUERY = (
 )
 
 
-def test_atlas_self_reflection_routes_chat_not_orient():
+def test_atlas_self_reflection_routes_defend_canvas():
     assert is_atlas_self_reflection_query(EXISTENCE_QUERY)
-    assert not is_substantive_canvas_query(EXISTENCE_QUERY)
+    assert is_substantive_canvas_query(EXISTENCE_QUERY)
     d = classify_turn_heuristic(EXISTENCE_QUERY, MOCK_SPEC)
-    assert d.route == "chat"
-    assert classify_follow_up(EXISTENCE_QUERY, MOCK_SPEC) == "chat_only"
+    assert d.route == "substantive"
+    assert d.outcome_hint == "defend"
+    assert classify_follow_up(EXISTENCE_QUERY, MOCK_SPEC) == "canvas_update"
+
+
+def test_explicit_canvas_request_overrides_chat():
+    q = "answer in canvas — show me hydrogen state of play"
+    assert is_explicit_canvas_request(q)
+    d = classify_turn_heuristic(q, MOCK_SPEC)
+    assert d.route == "substantive"
+    assert classify_follow_up(q, MOCK_SPEC) == "canvas_update"
 
 
 def test_chat_router_in_domain_follow_up_updates_canvas():

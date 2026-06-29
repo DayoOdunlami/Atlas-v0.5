@@ -82,16 +82,37 @@ _ATLAS_SELF_REFLECTION_RE = re.compile(
 
 
 def is_atlas_self_reflection_query(query: str) -> bool:
-    """Meta questions about Atlas as a product — chat-first, no corpus orient."""
+    """Meta questions about Atlas as a product — defend canvas, CPC-wide scope."""
     q = query.strip()
     if not q:
         return False
     return bool(_ATLAS_SELF_REFLECTION_RE.search(q))
 
 
+_EXPLICIT_CANVAS_RE = re.compile(
+    r"\b("
+    r"answer in (?:the )?canvas|"
+    r"put (?:it )?(?:on|in) (?:the )?canvas|"
+    r"show (?:it )?(?:on|in) (?:the )?canvas|"
+    r"render (?:on )?(?:the )?canvas|"
+    r"update (?:the )?canvas|"
+    r"(?:give|get) (?:me )?(?:an? )?answer (?:on|in) (?:the )?canvas"
+    r")\b",
+    re.I,
+)
+
+
+def is_explicit_canvas_request(query: str) -> bool:
+    """User explicitly wants a structured canvas turn (overrides chat-only meta)."""
+    q = query.strip()
+    if not q:
+        return False
+    return bool(_EXPLICIT_CANVAS_RE.search(q))
+
+
 def is_meta_chat_query(query: str) -> bool:
-    """Chat-only meta turns — persona/analogy or Atlas self-assessment."""
-    return is_identity_analogy_query(query) or is_atlas_self_reflection_query(query)
+    """Chat-only meta turns — persona/analogy only (not Atlas self-assessment)."""
+    return is_identity_analogy_query(query)
 
 
 def has_declared_uncertainty_cue(query: str) -> bool:

@@ -18,7 +18,9 @@ from pydantic import BaseModel, Field
 from agents.atlas_v5.chat_router import classify_follow_up
 from agents.atlas_v5.intent import (
     has_declared_uncertainty_cue,
+    is_atlas_self_reflection_query,
     is_connect_network_query,
+    is_explicit_canvas_request,
     is_meta_chat_query,
     is_j1t1_orient_query,
     is_substantive_canvas_query,
@@ -124,7 +126,7 @@ def _infer_outcome_hint(query: str) -> OutcomeHint:
     ql = query.lower()
     if re.search(r"\bgap|blindspot|missing|thin evidence|diagnos", ql):
         return "diagnose"
-    if re.search(r"\bdefend|scrutin|objection|challenge", ql):
+    if re.search(r"\bdefend|scrutin|objection|challenge|justify|existence|value proposition", ql):
         return "defend"
     if re.search(r"\bact|next step|pursue|recommend|scale|partner|funding fit", ql):
         return "act"
@@ -151,10 +153,26 @@ def classify_turn_heuristic(
     if has_declared_uncertainty_cue(q):
         return _find_path_decision("C1: declared uncertainty → find_path", source="heuristic")
 
+    if is_explicit_canvas_request(q):
+        return TurnDecision(
+            route="substantive",
+            outcome_hint=_infer_outcome_hint(q),
+            reasoning="Explicit canvas request",
+            source="heuristic",
+        )
+
+    if is_atlas_self_reflection_query(q):
+        return TurnDecision(
+            route="substantive",
+            outcome_hint="defend",
+            reasoning="Atlas self-reflection — defend canvas with CPC-wide corpus",
+            source="heuristic",
+        )
+
     if is_meta_chat_query(q):
         return TurnDecision(
             route="chat",
-            reasoning="Meta chat (persona or Atlas self-reflection) — no corpus orient",
+            reasoning="Persona/analogy — chat-first, no corpus orient",
             source="heuristic",
         )
 
@@ -188,10 +206,26 @@ def classify_turn(
     if has_declared_uncertainty_cue(q):
         return _find_path_decision("C1: declared uncertainty → find_path", source="heuristic")
 
+    if is_explicit_canvas_request(q):
+        return TurnDecision(
+            route="substantive",
+            outcome_hint=_infer_outcome_hint(q),
+            reasoning="Explicit canvas request",
+            source="heuristic",
+        )
+
+    if is_atlas_self_reflection_query(q):
+        return TurnDecision(
+            route="substantive",
+            outcome_hint="defend",
+            reasoning="Atlas self-reflection — defend canvas",
+            source="heuristic",
+        )
+
     if is_meta_chat_query(q):
         return TurnDecision(
             route="chat",
-            reasoning="Meta chat (persona or Atlas self-reflection) — chat-first",
+            reasoning="Persona/analogy — chat-first",
             source="heuristic",
         )
 
@@ -214,6 +248,13 @@ def classify_turn(
         if has_declared_uncertainty_cue(q):
             return _find_path_decision(
                 f"C1 override: uncertainty cue (Haiku said {parsed.route})",
+                source="heuristic",
+            )
+        if is_atlas_self_reflection_query(q) or is_explicit_canvas_request(q):
+            return TurnDecision(
+                route="substantive",
+                outcome_hint="defend" if is_atlas_self_reflection_query(q) else _infer_outcome_hint(q),
+                reasoning=f"Heuristic override: canvas warranted (Haiku said {parsed.route})",
                 source="heuristic",
             )
         if is_substantive_canvas_query(q):

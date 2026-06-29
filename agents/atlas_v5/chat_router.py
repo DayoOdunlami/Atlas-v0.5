@@ -12,6 +12,7 @@ from typing import Any, Literal
 from agents.atlas_v5.j1t1_corpus import J1T1_QUERY_PHRASE
 from agents.atlas_v5.intent import (
     is_connect_network_query,
+    is_explicit_canvas_request,
     is_meta_chat_query,
     is_j1t1_orient_query,
     is_substantive_canvas_query,
@@ -114,6 +115,9 @@ def classify_follow_up(
 
     if is_showcase_menu_trigger(q) or parse_domain_selection(q) or is_showcase_advance(q):
         return "chat_only"
+
+    if is_explicit_canvas_request(q):
+        return "canvas_update"
 
     if is_meta_chat_query(q):
         return "chat_only"

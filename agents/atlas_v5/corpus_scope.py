@@ -27,6 +27,12 @@ def corpus_scope_for_query(query: str) -> Scope:
         r"\brail\b", ql
     ):
         return ("TRUE", "Connected Places Catapult", "cpc")
+    if re.search(
+        r"\bjustify your existence|your value proposition|what makes you different|"
+        r"developing you\b|weak offering",
+        ql,
+    ):
+        return ("TRUE", "CPC innovation corpus", "atlas_meta")
     if re.search(r"\baviation|aircraft|airport|sustainable aviation fuel|saf\b", ql):
         return (
             "'aviation' = ANY(cpc_modes) AND 'decarbonisation' = ANY(cpc_themes)",
