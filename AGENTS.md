@@ -16,6 +16,7 @@
 - `npm start` — serve the built app.
 - `npm run lint` — lint the frontend with Next/ESLint.
 - First-time setup installs the agent via `postinstall` (creates `.venv` and installs Python deps).
+- Playwright (MOT / demo): `npm run prepare:playwright` — installs Chromium for headless E2E.
 
 ## Coding Style & Naming Conventions
 

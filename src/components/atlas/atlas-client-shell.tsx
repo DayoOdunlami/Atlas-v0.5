@@ -756,6 +756,8 @@ export function AtlasCopilotShell({
       if (chatPending || rehydrating) return;
       if (threadId === activeThreadId) return;
       writeAtlasSessionQuery("");
+      setCopilotBoundThreadId(null);
+      syncedUrlThreadRef.current = "";
       router.push(buildAtlasThreadUrl(threadId));
     },
     [activeThreadId, chatPending, rehydrating, router],

@@ -301,6 +301,23 @@ def reconcile_answer_spec(
     )
 
 
+def attach_corpus_proof_to_provenance(spec: AnswerSpec) -> AnswerSpec:
+    """Link first corpus citation to stat-corpus provenance for click-through proof."""
+    if not spec.corpus_citations:
+        return spec
+    cid = spec.corpus_citations[0].id
+    prov = dict(spec.provenance)
+    for key in ("stat-corpus", "funder"):
+        entry = prov.get(key)
+        if entry is None or entry.trust != "corpus":
+            continue
+        if entry.corpus_id:
+            break
+        prov[key] = entry.model_copy(update={"corpus_id": cid})
+        break
+    return spec.model_copy(update={"provenance": prov})
+
+
 def apply_declared_claims_to_spec(
     spec: AnswerSpec,
     declared: list,

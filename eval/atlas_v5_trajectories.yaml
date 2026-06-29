@@ -182,3 +182,51 @@ trajectories:
           reply_not_contains:
             - "paste your question"
             - "lost the thread"
+
+  # Golden chains (G1–G5) — demo MOT brain path
+  - id: G1_entry_bootstrap
+    name: G1 — entry bootstrap chat-only
+    turns:
+      - query: "hello"
+        expect:
+          route: [chat, clarify]
+          update_canvas: false
+          min_reply_chars: 8
+
+  - id: G2_rail_orient
+    name: G2 — rail orient golden chain
+    turns:
+      - query: "State of play on rail decarbonisation"
+        expect:
+          route: substantive
+          update_canvas: true
+          max_latency_ms: 120000
+          min_reply_chars: 40
+          spec:
+            has_verdict: true
+
+  - id: G3_connect_hydrogen
+    name: G3 — hydrogen supply chain connect
+    turns:
+      - query: "Map the hydrogen supply chain ecosystem"
+        expect:
+          route: substantive
+          update_canvas: true
+          outcome_hint: [connect, orient]
+          max_latency_ms: 120000
+          min_reply_chars: 30
+
+  - id: G4_meta_defend
+    name: G4 — CPC meta defend (not rail default)
+    turns:
+      - query: >-
+          Justify your existence. Should CPC be putting money into developing you?
+          What makes you different?
+        expect:
+          route: substantive
+          update_canvas: true
+          min_reply_chars: 40
+          reply_not_contains:
+            - "IncommensurableMagnitudes"
+            - "711 projects"
+

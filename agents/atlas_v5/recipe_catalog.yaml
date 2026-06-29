@@ -1,0 +1,97 @@
+# Atlas v5 recipe catalog — trigger phrases, outcome hints, data gates.
+# Used by composition_policy.recommend_worthy_recipe() (flexible ladder, not global lock).
+
+version: "1.0"
+
+entries:
+  - id: rail_orient_j1t1
+    recipe: IncommensurableMagnitudes
+    outcome: orient
+    trigger_patterns:
+      - "state of play.*rail"
+      - "rail decarb"
+    min_project_count: 10
+    exclude_patterns:
+      - "justify your existence"
+      - "what makes you different"
+
+  - id: hydrogen_orient
+    recipe: IncommensurableMagnitudes
+    outcome: orient
+    trigger_patterns:
+      - "hydrogen.*corpus"
+      - "state of play.*hydrogen"
+    min_project_count: 5
+
+  - id: connect_network
+    recipe: NetworkMap
+    outcome: connect
+    trigger_patterns:
+      - "map.*ecosystem"
+      - "supply chain"
+      - "network"
+      - "who collaborat"
+    min_graph_edges: 2
+
+  - id: connect_sparse
+    recipe: NetworkMap
+    outcome: connect
+    trigger_patterns:
+      - "map.*hydrogen"
+      - "connect.*hydrogen"
+    min_graph_nodes: 1
+
+  - id: diagnose_gaps
+    recipe: EvidenceGapMatrix
+    outcome: diagnose
+    trigger_patterns:
+      - "evidence gap"
+      - "what.*missing"
+      - "diagnose"
+    min_gap_dimensions: 3
+
+  - id: act_opportunity
+    recipe: OpportunityList
+    outcome: act
+    trigger_patterns:
+      - "biggest opportunity"
+      - "where should cpc"
+      - "pursue next"
+    min_opportunity_items: 2
+
+  - id: defend_board
+    recipe: null
+    outcome: defend
+    composition_fallback: swot_template
+    trigger_patterns:
+      - "defend.*board"
+      - "sceptical board"
+      - "justify.*portfolio"
+
+  - id: meta_atlas_defend
+    recipe: null
+    outcome: defend
+    composition_fallback: free_compose
+    trigger_patterns:
+      - "justify your existence"
+      - "what makes you different"
+      - "putting money into developing you"
+    exclude_patterns:
+      - "rail decarb"
+
+  - id: find_path_uncertainty
+    recipe: null
+    outcome: find_path
+    composition_fallback: journey_template
+    trigger_patterns:
+      - "not sure what i'm asking"
+      - "help me figure out"
+      - "half.?formed"
+
+  - id: swot_cpc
+    recipe: null
+    outcome: defend
+    composition_fallback: swot_template
+    trigger_patterns:
+      - "swot.*cpc"
+      - "swot analysis"

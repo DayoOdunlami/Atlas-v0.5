@@ -52,7 +52,7 @@ from agents.atlas_v5.case_file import (
     prepend_declared_markup,
     save_case_file,
 )
-from agents.atlas_v5.reconcile_spec import apply_declared_claims_to_spec
+from agents.atlas_v5.reconcile_spec import apply_declared_claims_to_spec, attach_corpus_proof_to_provenance
 from agents.atlas_v5.wide_pass import WidePassResult
 from agents.contracts.answer_spec import AnswerSpec
 
@@ -361,6 +361,7 @@ async def apply_deep_pass(
         save_case_file(thread_id, session_claims, case_entity_id)
 
     def _finish(spec: AnswerSpec) -> AnswerSpec:
+        spec = attach_corpus_proof_to_provenance(spec)
         return apply_declared_claims_to_spec(spec, session_claims)
 
     def _markup(markup: str | None) -> str | None:

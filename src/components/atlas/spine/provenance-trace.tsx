@@ -1,11 +1,20 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
+
 import type { AnswerSpec } from "@/lib/atlas/contracts/answer-spec.schema";
 import { TrustBadge } from "@/components/atlas/spine/trust-badge";
 import { atlasFont, atlasTokens as T } from "@/lib/atlas/tokens";
 
 type ProvenanceMap = AnswerSpec["provenance"];
 type Entry = ProvenanceMap[string];
+
+type CorpusProject = {
+  id: string;
+  title: string;
+  organisation?: string;
+  abstract?: string;
+};
 
 export function ProvenanceTrace({
   provId,
@@ -18,9 +27,30 @@ export function ProvenanceTrace({
   onClose: () => void;
   className?: string;
 }) {
-  if (!provId) return null;
-  const entry: Entry | undefined = provenance[provId];
-  if (!entry) return null;
+  const entry: Entry | undefined = provId ? provenance[provId] : undefined;
+  const corpusId = entry?.corpus_id ?? null;
+
+  const [project, setProject] = useState<CorpusProject | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const fetchProject = useCallback(async (id: string) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/atlas/projects/${id}`);
+      if (!res.ok) return;
+      const body = (await res.json()) as { project?: CorpusProject };
+      if (body.project) setProject(body.project);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    setProject(null);
+    if (corpusId) void fetchProject(corpusId);
+  }, [corpusId, fetchProject]);
+
+  if (!provId || !entry) return null;
 
   const trust =
     entry.trust === "synthesized"
@@ -86,6 +116,60 @@ export function ProvenanceTrace({
           {entry.trustNote}
         </div>
       </div>
+      {corpusId ? (
+        <div
+          className="mt-3 border-t pt-3"
+          data-testid="corpus-proof-panel"
+          style={{ borderColor: T.ruleSoft }}
+        >
+          <div
+            className="mb-1 uppercase"
+            style={{
+              fontFamily: atlasFont.mono,
+              fontSize: 9,
+              letterSpacing: "0.1em",
+              color: T.corpus,
+            }}
+          >
+            Corpus proof
+          </div>
+          {loading ? (
+            <p style={{ fontFamily: atlasFont.mono, fontSize: 10, color: T.inkFaint, margin: 0 }}>
+              Loading project…
+            </p>
+          ) : project ? (
+            <>
+              <p
+                className="m-0 text-[12px] font-medium leading-snug"
+                style={{ color: T.ink, fontFamily: atlasFont.sans }}
+              >
+                {project.title}
+              </p>
+              {project.organisation ? (
+                <p
+                  className="m-0 mt-1 text-[11px]"
+                  style={{ color: T.inkSoft, fontFamily: atlasFont.mono }}
+                >
+                  {project.organisation}
+                </p>
+              ) : null}
+              {project.abstract ? (
+                <p
+                  className="m-0 mt-2 text-[11px] leading-snug"
+                  style={{ color: T.inkSoft, fontFamily: atlasFont.sans }}
+                >
+                  {project.abstract.slice(0, 200)}
+                  {project.abstract.length > 200 ? "…" : ""}
+                </p>
+              ) : null}
+            </>
+          ) : (
+            <p style={{ fontFamily: atlasFont.mono, fontSize: 10, color: T.gap, margin: 0 }}>
+              Project id {corpusId.slice(0, 8)}… not found in corpus
+            </p>
+          )}
+        </div>
+      ) : null}
       <div style={{ fontFamily: atlasFont.mono, fontSize: 10, color: T.inkFaint, marginTop: 10 }}>
         {entry.row} ↗
       </div>

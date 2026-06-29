@@ -38,6 +38,15 @@ function agentsUp() {
   }
 }
 
+function ensurePlaywrightBrowser() {
+  const r = spawnSync("npx", ["playwright", "install", "chromium"], {
+    cwd: root,
+    stdio: "inherit",
+    shell: true,
+  });
+  return r.status ?? 1;
+}
+
 fs.mkdirSync(outDir, { recursive: true });
 
 let code = 0;
@@ -45,6 +54,10 @@ let code = 0;
 code |= run("npm", ["run", "eval:baseline-v06"], "Layer 1 — unit + core trajectories");
 
 const trajIds = [
+  "G1_entry_bootstrap",
+  "G2_rail_orient",
+  "G3_connect_hydrogen",
+  "G4_meta_defend",
   "V01_hello",
   "V02_rail_orient_followup",
   "V09_persona_analogy",
@@ -72,6 +85,7 @@ if (process.argv.includes("--brain-only") || process.env.MOT_BRAIN_ONLY === "1")
 } else if (!agentsUp()) {
   console.warn("\nDev server/agents offline — skipping Playwright MOT (run npm run dev)");
 } else {
+  ensurePlaywrightBrowser();
   code |= run(
     "npx",
     [
@@ -82,6 +96,17 @@ if (process.argv.includes("--brain-only") || process.env.MOT_BRAIN_ONLY === "1")
       "eval/playwright/atlas-v5-mot.spec.ts",
     ],
     "Layer 3 — Playwright infrastructure MOT",
+  );
+  code |= run(
+    "npx",
+    [
+      "playwright",
+      "test",
+      "--config",
+      "eval/playwright.atlas-v5.config.ts",
+      "eval/playwright/atlas-case-file.spec.ts",
+    ],
+    "Layer 4 — Case file smoke",
   );
 }
 
