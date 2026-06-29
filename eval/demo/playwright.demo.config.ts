@@ -5,7 +5,7 @@ const recordingsDir = path.join(__dirname, "recordings");
 
 export default defineConfig({
   testDir: __dirname,
-  testMatch: "record-surface-demo.spec.ts",
+  testMatch: ["record-surface-demo.spec.ts", "record-three-sessions.spec.ts"],
   timeout: 600_000,
   expect: { timeout: 120_000 },
   fullyParallel: false,

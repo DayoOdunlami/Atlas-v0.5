@@ -46,6 +46,7 @@
     "eval:mvp-gate": "playwright test --config eval/playwright.orchestrator.config.ts",
     "demo:check": "node eval/demo/check-prereqs.mjs",
     "demo:record": "node eval/demo/check-prereqs.mjs && playwright test --config eval/demo/playwright.demo.config.ts",
+    "demo:record-three": "node eval/demo/check-prereqs.mjs && playwright test --config eval/demo/playwright.demo.config.ts record-three-sessions.spec.ts",
     "eval:tier2": "python eval/tier2_generator.py",
     "eval:golden": "python eval/tier2_generator.py --golden",
     "check-types": "tsc --noEmit",
