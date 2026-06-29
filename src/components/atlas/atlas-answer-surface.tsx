@@ -449,6 +449,13 @@ export function AtlasAnswerSurface({
           progressLine={progressLine}
           showcaseOptions={showcaseOptions}
           onShowcaseSelect={onShowcaseSelect}
+          verdictLead={
+            spec.verdict?.sentence &&
+            devMeta?.route !== "chat" &&
+            devMeta?.route !== "clarify"
+              ? spec.verdict.sentence
+              : null
+          }
         />
       }
     />

@@ -99,6 +99,30 @@ export function ChartCanvas({
             {supportsLabel}
           </p>
         </div>
+      ) : chart.story?.trim() ? (
+        <div
+          className="border-b px-3 py-2"
+          style={{ borderColor: T.ruleSoft, background: "#FBF9F4" }}
+        >
+          <div
+            className="mb-0.5 uppercase"
+            style={{
+              fontFamily: atlasFont.mono,
+              fontSize: 9,
+              letterSpacing: "0.1em",
+              color: T.inkFaint,
+            }}
+          >
+            Chart story
+          </div>
+          <p
+            className="m-0 text-[12px] leading-snug"
+            data-testid="chart-story"
+            style={{ color: T.inkSoft, fontFamily: atlasFont.sans }}
+          >
+            {chart.story.trim()}
+          </p>
+        </div>
       ) : verdict ? (
         <div
           className="border-b px-3 py-2"

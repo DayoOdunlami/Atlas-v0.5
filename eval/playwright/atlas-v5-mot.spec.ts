@@ -142,4 +142,46 @@ test.describe("Atlas v5 MOT — infrastructure", () => {
     const body = (await res.json()) as { configured?: boolean; authorized?: boolean };
     expect(body.configured).toBe(true);
   });
+
+  test("MOT-4 thread list shows session after first turn saves", async ({ page }) => {
+    test.setTimeout(360_000);
+    const entryQuery = `MOT-4 thread persist ${Date.now()}`;
+
+    await page.goto(`${BASE}/atlas`);
+    const input = page.locator('[data-testid="atlas-follow-up-input"]');
+    await input.fill(entryQuery);
+    await input.press("Enter");
+
+    await page.waitForURL(/\/atlas\?.*thread=/, { timeout: 30_000 });
+    await openSessionRail(page);
+
+    await expect
+      .poll(
+        async () => {
+          const items = page.locator('[data-testid^="atlas-thread-"]');
+          return items.count();
+        },
+        { timeout: 180_000, intervals: [2000, 3000, 5000] },
+      )
+      .toBeGreaterThan(0);
+  });
+
+  test("MOT-5 bootstrap has single user bubble (no duplicate)", async ({ page }) => {
+    test.setTimeout(120_000);
+    const entryQuery = `MOT-5 bootstrap ${Date.now()}`;
+
+    await page.goto(`${BASE}/atlas`);
+    const input = page.locator('[data-testid="atlas-follow-up-input"]');
+    await input.fill(entryQuery);
+    await input.press("Enter");
+
+    await page.waitForURL(/\/atlas\?.*thread=/, { timeout: 30_000 });
+
+    await expect
+      .poll(
+        async () => page.getByText(entryQuery, { exact: true }).count(),
+        { timeout: 60_000, intervals: [500, 1000, 2000] },
+      )
+      .toBe(1);
+  });
 });

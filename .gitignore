@@ -64,3 +64,4 @@ mcps/**/__pycache__/
 
 .git-commit-msg.txt
 
+test-results/

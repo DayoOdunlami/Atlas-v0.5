@@ -24,6 +24,8 @@ export function SoWhatRail({
   onShowcaseSelect,
   progressLine,
   splitEmbedded = false,
+  /** One-line verdict from AnswerSpec — prepended on substantive assistant turns. */
+  verdictLead,
 }: {
   soWhat: SoWhat;
   initialQuery?: string;
@@ -38,6 +40,7 @@ export function SoWhatRail({
   progressLine?: string | null;
   /** Fill parent when rendered inside SurfaceSplitPanels. */
   splitEmbedded?: boolean;
+  verdictLead?: string | null;
 }) {
   const [draft, setDraft] = useState("");
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>(() =>
@@ -50,6 +53,12 @@ export function SoWhatRail({
   const messages = copilotMode ? externalMessages : localMessages;
   const pending =
     externalPending !== undefined ? Boolean(externalPending) : localPending;
+
+  const lastAssistantIdx = messages.reduce(
+    (acc, m, i) => (m.role === "assistant" ? i : acc),
+    -1,
+  );
+  const lead = verdictLead?.trim() || null;
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -165,6 +174,19 @@ export function SoWhatRail({
                 className="max-w-[316px] self-start text-[13px] leading-relaxed"
                 style={{ color: "#46423C" }}
               >
+                {lead && i === lastAssistantIdx ? (
+                  <p
+                    className="mb-2 rounded-md border px-2.5 py-2 text-[12.5px] font-medium leading-snug"
+                    data-testid="rail-verdict-lead"
+                    style={{
+                      borderColor: "#D4E8DA",
+                      background: "#F3FAF5",
+                      color: "#1A1714",
+                    }}
+                  >
+                    {lead}
+                  </p>
+                ) : null}
                 <AtlasChatMarkdown content={msg.content} />
               </div>
             ),

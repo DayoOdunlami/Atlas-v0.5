@@ -94,6 +94,8 @@ export const ProvenanceEntrySchema = z.object({
   trustNote: z.string().min(1),
   row: z.string().min(1),
   url: z.string().optional().nullable(),
+  /** atlas.projects.id when this provenance row maps to a corpus project */
+  corpus_id: z.string().uuid().optional(),
 });
 
 // ---------------------------------------------------------------------------

@@ -73,6 +73,7 @@ class ProvenanceEntry(BaseModel):
     trustNote: str
     row: str
     url: str | None = None
+    corpus_id: str | None = None
 
 
 class RetrievalMeta(BaseModel):
