@@ -44,6 +44,28 @@ _UNCERTAINTY_CUE_RE = re.compile(
     re.I,
 )
 
+_IDENTITY_ANALOGY_RE = re.compile(
+    r"\b("
+    r"persona|analogy|analogous|metaphor|"
+    r"who would (they|it|cpc) be|"
+    r"what would (they|it|cpc) be|"
+    r"who is cpc|what is cpc|"
+    r"help me understand who cpc|"
+    r"understand who cpc (are|is)|"
+    r"like as a (person|character)|"
+    r"best analogy"
+    r")\b",
+    re.I,
+)
+
+
+def is_identity_analogy_query(query: str) -> bool:
+    """Persona / analogy / identity framing — chat-first, not corpus orient."""
+    q = query.strip()
+    if not q:
+        return False
+    return bool(_IDENTITY_ANALOGY_RE.search(q))
+
 
 def has_declared_uncertainty_cue(query: str) -> bool:
     """C1 route signal — declared uncertainty about the question itself (not advisor elicit)."""
@@ -57,6 +79,8 @@ def is_substantive_canvas_query(query: str) -> bool:
     """True when the message should refresh the canvas (in-domain strategic ask)."""
     q = query.strip()
     if not q or _OFF_TOPIC_RE.search(q):
+        return False
+    if is_identity_analogy_query(q):
         return False
     if is_connect_network_query(q) or is_j1t1_orient_query(q):
         return True

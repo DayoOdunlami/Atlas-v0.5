@@ -16,6 +16,7 @@ from agents.atlas_v5.connect_assembler import assemble_connect_spec
 from agents.atlas_v5.graph import _extract_query, atlas_v5_graph
 from agents.atlas_v5.intent import (
     is_connect_network_query,
+    is_identity_analogy_query,
     is_j1t1_orient_query,
     is_substantive_canvas_query,
 )
@@ -134,6 +135,18 @@ def test_substantive_canvas_query_in_domain():
         "WeWalk rail landscape — what value transfers to UK innovation?"
     )
     assert not is_substantive_canvas_query("whats the weather today?")
+
+
+def test_persona_analogy_routes_chat_not_orient():
+    q = (
+        "if CPC was a persona what/ who would they be? "
+        "wats the best analogy to help understand who cpc are"
+    )
+    assert is_identity_analogy_query(q)
+    assert not is_substantive_canvas_query(q)
+    d = classify_turn_heuristic(q, MOCK_SPEC)
+    assert d.route == "chat"
+    assert classify_follow_up(q, MOCK_SPEC) == "chat_only"
 
 
 def test_chat_router_in_domain_follow_up_updates_canvas():

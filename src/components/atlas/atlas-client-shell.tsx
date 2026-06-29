@@ -608,19 +608,21 @@ export function AtlasCopilotShell({
     }
 
     bootstrapBootRef.current = true;
-    markBootstrapSent(q);
     void ensureThread(urlThread, titleFromQuery(q));
 
-    const delayMs = fromEntry ? 450 : 150;
+    const delayMs = fromEntry ? 700 : 400;
     const timer = window.setTimeout(() => {
       setCopilotBoundThreadId(urlThread);
+      beginUserTurn();
       sendMessageRef.current({
         role: "user",
         parts: [{ type: "text", text: q }],
       });
+      markBootstrapSent(q);
+      router.replace(buildAtlasThreadUrl(urlThread), { scroll: false });
     }, delayMs);
     return () => window.clearTimeout(timer);
-  }, [bootstrapQuery, initialThreadId]);
+  }, [beginUserTurn, bootstrapQuery, initialThreadId, router]);
 
   const chatMessages: ChatMessage[] = useMemo(() => {
     const useCopilotMessages =
@@ -648,14 +650,13 @@ export function AtlasCopilotShell({
       if (activeThreadId) {
         setCopilotBoundThreadId(activeThreadId);
       }
-      turnStartedAtRef.current = Date.now();
-      setTurnTiming({ running: true, elapsedMs: 0 });
+      beginUserTurn();
       sendMessage({
         role: "user",
         parts: [{ type: "text", text: message }],
       });
     },
-    [activeThreadId, sendMessage],
+    [activeThreadId, beginUserTurn, sendMessage],
   );
 
   const showcaseOptions = devMeta?.showcase?.options;
@@ -703,6 +704,21 @@ export function AtlasCopilotShell({
       turn_active: false,
       session_history: [],
     });
+  }, []);
+
+  const beginUserTurn = useCallback(() => {
+    setSpec(null);
+    setDevMeta(null);
+    setEnvelopeStatus("final");
+    lastRevisionRef.current = 0;
+    setStateRef.current?.({
+      answer_spec_envelope: { revision: 0, status: "final" },
+      canvas_cleared: true,
+      turn_active: true,
+      reasoning_trace: [],
+    });
+    turnStartedAtRef.current = Date.now();
+    setTurnTiming({ running: true, elapsedMs: 0 });
   }, []);
 
   const handleBackToEntry = useCallback(() => {

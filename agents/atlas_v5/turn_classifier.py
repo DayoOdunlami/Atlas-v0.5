@@ -19,6 +19,7 @@ from agents.atlas_v5.chat_router import classify_follow_up
 from agents.atlas_v5.intent import (
     has_declared_uncertainty_cue,
     is_connect_network_query,
+    is_identity_analogy_query,
     is_j1t1_orient_query,
     is_substantive_canvas_query,
 )
@@ -150,6 +151,13 @@ def classify_turn_heuristic(
     if has_declared_uncertainty_cue(q):
         return _find_path_decision("C1: declared uncertainty → find_path", source="heuristic")
 
+    if is_identity_analogy_query(q):
+        return TurnDecision(
+            route="chat",
+            reasoning="Identity/persona/analogy — chat-first, no corpus orient",
+            source="heuristic",
+        )
+
     if is_connect_network_query(q) or is_j1t1_orient_query(q):
         return TurnDecision(
             route="substantive",
@@ -179,6 +187,13 @@ def classify_turn(
     # C1 precedence — declared uncertainty beats domain keyword and Haiku chat misroutes.
     if has_declared_uncertainty_cue(q):
         return _find_path_decision("C1: declared uncertainty → find_path", source="heuristic")
+
+    if is_identity_analogy_query(q):
+        return TurnDecision(
+            route="chat",
+            reasoning="Identity/persona/analogy — chat-first",
+            source="heuristic",
+        )
 
     if re.match(r"^\s*(hi|hello|hey)[\s,—-]+", q, re.I) and len(q.split()) > 4:
         substantive = re.sub(r"^\s*(hi|hello|hey)[\s,—-]+", "", q, flags=re.I).strip()

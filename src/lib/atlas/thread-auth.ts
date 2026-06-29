@@ -9,6 +9,10 @@ function devThreadsEnabled(): boolean {
   const flag = process.env.ATLAS_V5_THREADS_DEV_OPEN?.trim().toLowerCase();
   if (flag === "0" || flag === "false") return false;
   if (flag === "1" || flag === "true") return true;
+  // Vercel preview URLs: persist without login when Postgres is configured.
+  if (process.env.VERCEL_ENV === "preview" && isAtlasPgConfigured()) {
+    return true;
+  }
   // Local dev: persist when Postgres is configured unless explicitly disabled.
   return process.env.NODE_ENV === "development" && isAtlasPgConfigured();
 }
