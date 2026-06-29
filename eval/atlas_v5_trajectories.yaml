@@ -43,8 +43,8 @@ trajectories:
           and service offering and potential opportunities / value transition, especially
           in a rail-focused application.
         expect:
-          update_canvas: false
-          route: [chat, clarify, substantive]
+          update_canvas: true
+          route: [substantive, chat, clarify]
           min_reply_chars: 20
       - query: "WeWalk is the company — smart cane for visually impaired people."
         expect:
