@@ -57,3 +57,43 @@
 ## Architecture Overview
 
 - Next.js app hosts CopilotKit UI and API route; Python agent performs ADK/Gemini orchestration. `npm run dev` runs both together.
+
+## Cursor Cloud specific instructions
+
+> **Note:** Root `README.md` and parts of this file still describe the legacy `agent/` ADK layout. For Atlas 5, use `agents/` + `pnpm` (see `CLAUDE.md` and `package.json`).
+
+### Services and ports
+
+| Service | Port | Start command |
+|---------|------|---------------|
+| Next.js UI | **3005** | `pnpm run dev:ui` or `pnpm run dev` |
+| FastAPI agents | **8000** | `pnpm run dev:agents` or `pnpm run dev` |
+| LangGraph dev (homepage `/` only) | **2024** | `cd agents && .venv/bin/langgraph dev` |
+
+`pnpm run dev` starts UI + FastAPI only. CopilotKit lab routes (`/lab/copilotkit`, `/atlas5-test`) work with those two. The main shell at `/` also needs LangGraph on 2024 (`LANGGRAPH_API_URL`).
+
+### First-time / dependency setup
+
+- Node: `pnpm install` (lockfile is `pnpm-lock.yaml`).
+- Python: venv at `agents/.venv` — `python3 -m venv agents/.venv && agents/.venv/bin/pip install -r agents/requirements.txt` (requires `python3.12-venv` on Debian/Ubuntu).
+- Env: copy `.env.example` → `.env.local`. Live corpus search and LLM turns need `POSTGRES_URL`, `ANTHROPIC_API_KEY`, and optionally `OPENAI_API_KEY` for pgvector embeddings.
+
+### Verify without secrets
+
+```bash
+pnpm run dev          # UI :3005 + agents :8000
+curl -s localhost:8000/health
+curl -s "localhost:3005/api/atlas5/fixture?recipe=brief_five_case" | jq '{ok,can_render,recipe_detected}'
+pnpm run build
+node scripts/python-bin.mjs agents/test_atlas5_battery.py   # Tier 1 unit; 6+/8 without DB keys
+```
+
+### Lint and tests
+
+- `pnpm run lint` may open an interactive Next.js ESLint wizard if no `eslint.config.*` exists; use `pnpm run build` for compile checks instead.
+- `pnpm run eval:tier1` runs Vitest mechanical checks; many D2+ cases need Supabase credentials. Duplicate `eval/eval/tier1.test.ts` inflates failure counts.
+- `pnpm run check-types` may report pre-existing errors in passport/auth modules; production build skips type validation.
+
+### Live agent demo
+
+With `ANTHROPIC_API_KEY` + `POSTGRES_URL` in `.env.local`, open `/lab/copilotkit` on port 3005 and send a domain query to ATLAS.
