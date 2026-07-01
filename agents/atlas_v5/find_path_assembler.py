@@ -20,6 +20,46 @@ from agents.contracts.answer_spec import (
 )
 
 
+def build_find_path_markup(claims: list[CaseClaim], query: str) -> str:
+    """Public wrapper — T3 canvas seed with find-my-path testid."""
+    return _find_path_markup(claims, query)
+
+
+def _t3_markup_valid(markup: str) -> bool:
+    """T3 requires find-my-path wrapper before any orphan declared panel."""
+    if 'data-testid="find-my-path"' not in markup:
+        return False
+    fp = markup.find('data-testid="find-my-path"')
+    dec = markup.find('data-testid="declared-situation"')
+    if dec >= 0 and dec < fp:
+        return False
+    return fp < 800
+
+
+def enforce_find_path_surface(
+    spec: AnswerSpec,
+    wide: WidePassResult,
+    session_claims: list[CaseClaim],
+) -> AnswerSpec:
+    """Kill R4 recipe leakage; guarantee T3 testid when wide pass routed find_path."""
+    markup = (spec.canvas.merged_markup if spec.canvas else "") or ""
+    object_label = wide.object_label or "your situation"
+    scope = f"PRACTITIONER · FIND PATH · {object_label[:48]}"
+    if not _t3_markup_valid(markup):
+        markup = build_find_path_markup(session_claims, wide.query)
+    gate_status = spec.canvas.gate_status if spec.canvas else "pass"
+    return spec.model_copy(
+        update={
+            "mode": "FindPath",
+            "object": object_label,
+            "scope": scope,
+            "instrument": None,
+            "chart": None,
+            "canvas": CanvasBlock(merged_markup=markup, gate_status=gate_status),
+        }
+    )
+
+
 def _find_path_markup(claims: list[CaseClaim], query: str) -> str:
     declared = declared_markup_block(claims)
     reflected = (
@@ -90,7 +130,7 @@ def assemble_find_path_spec(wide: WidePassResult) -> AnswerSpec:
                 "question beneath your question, then match 1–3 realistic paths."
             )
 
-    markup = _find_path_markup(session_claims, wide.query)
+    markup = build_find_path_markup(session_claims, wide.query)
 
     return AnswerSpec(
         object=object_label,

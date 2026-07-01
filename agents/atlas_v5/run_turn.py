@@ -7,6 +7,8 @@ classify (Haiku) → wide pass → keyed index → deep pass (disposition → co
 from __future__ import annotations
 
 import json
+import time
+from dataclasses import asdict
 from typing import Any, AsyncIterator
 
 from agents.atlas_v5.chat_router import is_clear_canvas_query
@@ -23,9 +25,12 @@ from agents.atlas_v5.online_only import (
     probe_corpus_available,
     user_accepts_online_only,
 )
+from agents.atlas_v5.reasoning_trace import trace_step
 from agents.atlas_v5.showcase import resolve_showcase_turn
-from agents.atlas_v5.turn_classifier import OutcomeHint, TurnDecision, classify_turn
+from agents.atlas_v5.turn_classifier import OutcomeHint, TurnDecision, classify_turn, infer_outcome_hint
 from agents.atlas_v5.turn_memory import apply_turn_accretion
+from agents.atlas_v5.turn_timing import merge_stage_ms
+from agents.atlas_v5.wide_pass_snapshot import snapshot_wide_pass
 from agents.atlas_v5.wide_pass import (
     assemble_spec_from_wide_pass,
     needs_online_only_consent as _needs_online_only_consent,
@@ -44,10 +49,17 @@ __all__ = [
     "run_turn_response",
     "run_turn_stream",
     "is_clear_canvas_query",
+    "substantive_resume_decision",
+    "plan_turn_pipeline",
+    "gather_substantive_evidence",
+    "finalize_turn_payload",
+    "execute_substantive_turn",
 ]
 
 
 def _apply_tier_guard(spec: AnswerSpec) -> AnswerSpec:
+    from agents.atlas_v5.intent import cap_strategy_alignment_tier
+
     headline = spec.verdict.sentence
     guard = apply_citation_guard(
         confidence_tier=spec.tier,
@@ -55,8 +67,8 @@ def _apply_tier_guard(spec: AnswerSpec) -> AnswerSpec:
         headline=headline,
     )
     if guard["confidence_tier"] != spec.tier:
-        return spec.model_copy(update={"tier": guard["confidence_tier"]})
-    return spec
+        spec = spec.model_copy(update={"tier": guard["confidence_tier"]})
+    return cap_strategy_alignment_tier(spec)
 
 
 async def run_turn(
@@ -144,6 +156,266 @@ async def _clear_canvas_response(
         "route_source": "heuristic",
         "dev_meta": _route_dev_meta("clear", "heuristic", update_canvas=True),
     }
+
+
+def substantive_resume_decision(
+    query: str,
+    prior_dev_meta: dict[str, Any] | None,
+) -> tuple[TurnDecision, str] | None:
+    """Hand off to substantive pipeline when user accepts online-only consent."""
+    if not user_accepts_online_only(query, prior_dev_meta):
+        return None
+    work_q = pending_substantive_query(prior_dev_meta) or query.strip()
+    hint = pending_outcome_hint(prior_dev_meta) or infer_outcome_hint(work_q, None)
+    decision = TurnDecision(
+        route="substantive",
+        outcome_hint=hint,
+        reasoning="User accepted online-only — resuming substantive pipeline",
+        source="heuristic",
+    )
+    return decision, work_q
+
+
+async def plan_turn_pipeline(
+    query: str,
+    *,
+    current_spec: dict[str, Any] | None = None,
+    prior_dev_meta: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Route a turn — single source of truth for graph and REST paths."""
+    q = query.strip()
+    pipeline: dict[str, Any] = {"stage_ms": {}}
+
+    if not q:
+        pipeline["route"] = "chat"
+        pipeline["reply"] = "Send a message when you're ready."
+        return pipeline
+
+    if is_clear_canvas_query(q):
+        payload = await _clear_canvas_response(q, current_spec=current_spec)
+        pipeline["route"] = "clear"
+        pipeline["final_payload"] = payload
+        return pipeline
+
+    sub_q, showcase_meta, showcase_reply = resolve_showcase_turn(q, prior_dev_meta)
+    if showcase_reply is not None and not sub_q:
+        pipeline["route"] = "showcase"
+        pipeline["reply"] = showcase_reply
+        pipeline["showcase_meta"] = showcase_meta
+        return pipeline
+
+    query_for_turn = sub_q or q
+
+    resume = substantive_resume_decision(q, prior_dev_meta)
+    if resume and not sub_q:
+        resume_decision, work_q = resume
+        pipeline["route"] = "substantive"
+        pipeline["query_for_turn"] = work_q
+        pipeline["decision"] = asdict(resume_decision)
+        pipeline["online_only_resume"] = True
+        return pipeline
+
+    t_route = time.perf_counter()
+    decision = classify_turn(query_for_turn, current_spec)
+    route_ms = round((time.perf_counter() - t_route) * 1000, 0)
+    pipeline["route_ms"] = route_ms
+    pipeline["stage_ms"] = merge_stage_ms(pipeline, {"route_ms": route_ms})
+    pipeline["route"] = "substantive" if sub_q else decision.route
+    pipeline["decision"] = asdict(decision)
+    pipeline["query_for_turn"] = query_for_turn
+    if sub_q:
+        pipeline["showcase_meta"] = showcase_meta
+        pipeline["showcase_intro"] = showcase_reply
+
+    return pipeline
+
+
+async def gather_substantive_evidence(
+    pipeline: dict[str, Any],
+    *,
+    prior_dev_meta: dict[str, Any] | None = None,
+    thread_id: str | None = None,
+    case_entity_id: str | None = None,
+) -> dict[str, Any]:
+    """Wide pass + corpus gate for substantive graph path. Mutates pipeline in place."""
+    q = pipeline.get("query_for_turn") or ""
+    decision = TurnDecision(**pipeline["decision"])
+    stage_ms = dict(pipeline.get("stage_ms") or {})
+
+    online_only = is_online_only_active(prior_dev_meta) or bool(
+        pipeline.get("online_only_resume")
+    )
+
+    t_gather = time.perf_counter()
+    wide = await run_wide_pass(
+        q,
+        outcome_hint=decision.outcome_hint,
+        online_only=online_only,
+        thread_id=thread_id,
+        case_entity_id=case_entity_id,
+    )
+    stage_ms["wide_ms"] = round((time.perf_counter() - t_gather) * 1000, 0)
+    meta = wide.retrieval_meta or {}
+    if meta.get("shopper_ms") is not None:
+        stage_ms["shopper_ms"] = float(meta["shopper_ms"])
+    if meta.get("corpus_stats_ms") is not None:
+        stage_ms["corpus_stats_ms"] = float(meta["corpus_stats_ms"])
+    if meta.get("corpus_ms") is not None:
+        stage_ms["corpus_fetch_ms"] = float(meta["corpus_ms"])
+    if meta.get("external_ms") is not None:
+        stage_ms["external_fetch_ms"] = float(meta["external_ms"])
+    if meta.get("research_ms") is not None:
+        stage_ms["research_fetch_ms"] = float(meta["research_ms"])
+
+    blocked = substantive_blocked_offer(wide, q, decision, online_only=online_only)
+    if blocked:
+        pipeline["route"] = "corpus_blocked"
+        pipeline["blocked_payload"] = blocked
+        pipeline["stage_ms"] = stage_ms
+        return {"blocked": True, "wide": wide}
+
+    skeleton = assemble_spec_from_wide_pass(wide, online_only=online_only)
+    pipeline["wide_outcome"] = wide.outcome
+    pipeline["skeleton"] = skeleton.model_dump(mode="json")
+    pipeline["wide_snapshot"] = snapshot_wide_pass(wide)
+    pipeline["stage_ms"] = stage_ms
+    return {"blocked": False, "wide": wide, "skeleton": skeleton}
+
+
+async def finalize_turn_payload(
+    query: str,
+    pipeline: dict[str, Any],
+    *,
+    current_spec: dict[str, Any] | None = None,
+    prior_dev_meta: dict[str, Any] | None = None,
+    session_history: list[dict[str, Any]] | None = None,
+    thread_id: str | None = None,
+    case_entity_id: str | None = None,
+) -> dict[str, Any]:
+    """Non-streaming finalize — chat, showcase, clear, corpus_blocked, empty."""
+    route = pipeline.get("route", "chat")
+    q = query.strip()
+
+    if route == "corpus_blocked":
+        return dict(
+            pipeline.get("blocked_payload")
+            or {
+                "reply": (
+                    "Corpus evidence is insufficient for a canvas brief. "
+                    'Reply "yes, continue online" to use web-only mode.'
+                ),
+                "update_canvas": False,
+                "route": "clarify",
+                "route_source": "heuristic",
+                "dev_meta": {},
+            }
+        )
+
+    if route == "clear":
+        return dict(
+            pipeline.get("final_payload")
+            or await _clear_canvas_response(q, current_spec=current_spec)
+        )
+
+    if route == "showcase":
+        return {
+            "reply": pipeline.get("reply") or "",
+            "update_canvas": False,
+            "route": "showcase",
+            "route_source": "heuristic",
+            "dev_meta": _route_dev_meta(
+                "showcase",
+                "heuristic",
+                extra=pipeline.get("showcase_meta") or {},
+            ),
+        }
+
+    if not q:
+        return {
+            "reply": pipeline.get("reply") or "Send a message when you're ready.",
+            "update_canvas": False,
+            "route": "chat",
+            "route_source": "heuristic",
+            "dev_meta": _route_dev_meta("chat", "heuristic"),
+        }
+
+    if route in ("chat", "clarify"):
+        resume = substantive_resume_decision(q, prior_dev_meta)
+        if resume:
+            resume_decision, work_q = resume
+            return await _execute_substantive_turn(
+                work_q,
+                resume_decision,
+                current_spec=current_spec,
+                prior_dev_meta=prior_dev_meta,
+                thread_id=thread_id,
+                case_entity_id=case_entity_id,
+            )
+
+        decision = pipeline.get("decision") or {}
+        reply = await synthesize_chat_reply(
+            q,
+            current_spec=current_spec,
+            clarify=route == "clarify",
+            session_history=session_history,
+        )
+        return {
+            "reply": reply,
+            "update_canvas": False,
+            "route": route,
+            "route_source": decision.get("source", "heuristic"),
+            "dev_meta": _route_dev_meta(
+                route,
+                decision.get("source", "heuristic"),
+                extra={"disposition": {"reasoning": decision.get("reasoning") or ""}},
+            ),
+        }
+
+    return {
+        "reply": pipeline.get("reply") or "Send a message when you're ready.",
+        "update_canvas": False,
+        "route": "chat",
+        "route_source": "heuristic",
+        "dev_meta": _route_dev_meta("chat", "heuristic"),
+    }
+
+
+async def execute_substantive_turn(
+    pipeline: dict[str, Any],
+    *,
+    current_spec: dict[str, Any] | None = None,
+    prior_dev_meta: dict[str, Any] | None = None,
+    thread_id: str | None = None,
+    case_entity_id: str | None = None,
+) -> dict[str, Any]:
+    """Deep pass for substantive graph path (after gather + optional stream_spine)."""
+    from agents.atlas_v5.wide_pass_snapshot import restore_wide_pass
+
+    q = pipeline.get("query_for_turn") or ""
+    decision = TurnDecision(**pipeline["decision"])
+    stage_ms = dict(pipeline.get("stage_ms") or {})
+
+    cached_wide = None
+    cached_skeleton = None
+    if pipeline.get("wide_snapshot") and pipeline.get("skeleton"):
+        cached_wide = restore_wide_pass(pipeline["wide_snapshot"])
+        cached_skeleton = AnswerSpec.model_validate(pipeline["skeleton"])
+
+    payload = await _execute_substantive_turn(
+        q,
+        decision,
+        current_spec=current_spec,
+        showcase_meta=pipeline.get("showcase_meta"),
+        prior_dev_meta=prior_dev_meta,
+        cached_wide=cached_wide,
+        cached_skeleton=cached_skeleton,
+        stage_ms=stage_ms,
+        thread_id=thread_id,
+        case_entity_id=case_entity_id,
+    )
+    if pipeline.get("showcase_intro"):
+        payload["reply"] = f"{pipeline['showcase_intro']}\n\n---\n\n{payload.get('reply', '')}"
+    return payload
 
 
 async def _execute_substantive_turn(
@@ -267,68 +539,39 @@ async def run_turn_response(
     prior_dev_meta: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     q = query.strip()
-    if not q:
-        return {
-            "reply": "Send a message when you're ready.",
-            "update_canvas": False,
-            "route": "chat",
-            "route_source": "heuristic",
-            "dev_meta": _route_dev_meta("chat", "heuristic"),
-        }
+    pipeline = await plan_turn_pipeline(
+        q, current_spec=current_spec, prior_dev_meta=prior_dev_meta
+    )
+    route = pipeline.get("route", "chat")
 
-    if is_clear_canvas_query(q):
-        return await _clear_canvas_response(q, current_spec=current_spec)
-
-    sub_q, showcase_meta, showcase_reply = resolve_showcase_turn(q, prior_dev_meta)
-    if showcase_reply is not None:
-        if sub_q:
-            decision = classify_turn(sub_q, current_spec)
+    if route == "substantive":
+        sub_q = pipeline.get("query_for_turn") or q
+        if pipeline.get("showcase_meta") and pipeline.get("showcase_intro"):
+            decision = TurnDecision(**pipeline["decision"])
             payload = await _execute_substantive_turn(
                 sub_q,
                 decision,
                 current_spec=current_spec,
-                showcase_meta=showcase_meta,
+                showcase_meta=pipeline.get("showcase_meta"),
                 prior_dev_meta=prior_dev_meta,
                 thread_id=thread_id,
             )
-            intro = showcase_reply
-            payload["reply"] = f"{intro}\n\n---\n\n{payload.get('reply', '')}"
+            payload["reply"] = (
+                f"{pipeline['showcase_intro']}\n\n---\n\n{payload.get('reply', '')}"
+            )
             return payload
-        return {
-            "reply": showcase_reply,
-            "update_canvas": False,
-            "route": "showcase",
-            "route_source": "heuristic",
-            "dev_meta": _route_dev_meta(
-                "showcase",
-                "heuristic",
-                extra=showcase_meta or {},
-            ),
-        }
-
-    decision: TurnDecision = classify_turn(q, current_spec)
-
-    if decision.route in ("chat", "clarify"):
-        reply = await synthesize_chat_reply(
-            q,
+        decision = TurnDecision(**pipeline["decision"])
+        return await _execute_substantive_turn(
+            sub_q,
+            decision,
             current_spec=current_spec,
-            clarify=decision.route == "clarify",
+            prior_dev_meta=prior_dev_meta,
+            thread_id=thread_id,
         )
-        return {
-            "reply": reply,
-            "update_canvas": False,
-            "route": decision.route,
-            "route_source": decision.source,
-            "dev_meta": _route_dev_meta(
-                decision.route,
-                decision.source,
-                extra={"disposition": {"reasoning": decision.reasoning or ""}},
-            ),
-        }
 
-    return await _execute_substantive_turn(
+    return await finalize_turn_payload(
         q,
-        decision,
+        pipeline,
         current_spec=current_spec,
         prior_dev_meta=prior_dev_meta,
         thread_id=thread_id,

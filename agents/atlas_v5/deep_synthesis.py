@@ -36,6 +36,7 @@ from agents.atlas_v5.deep_pass_prompt import (
 )
 from agents.atlas_v5.disposition_heuristic import infer_disposition_heuristic
 from agents.atlas_v5.disposition_models import TurnDispositionOutput
+from agents.atlas_v5.find_path_assembler import enforce_find_path_surface
 from agents.atlas_v5.judgement_merge import (
     merge_chat_complement,
     merge_judgement_onto_skeleton,
@@ -362,9 +363,14 @@ async def apply_deep_pass(
 
     def _finish(spec: AnswerSpec) -> AnswerSpec:
         spec = attach_corpus_proof_to_provenance(spec)
-        return apply_declared_claims_to_spec(spec, session_claims)
+        spec = apply_declared_claims_to_spec(spec, session_claims)
+        if wide.outcome == "find_path":
+            spec = enforce_find_path_surface(spec, wide, session_claims)
+        return spec
 
     def _markup(markup: str | None) -> str | None:
+        if wide.outcome == "find_path":
+            return markup
         return prepend_declared_markup(markup, session_claims)
 
     if deep is None:

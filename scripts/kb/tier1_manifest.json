@@ -1,0 +1,22 @@
+[
+  {
+    "id": "fec9a293-4032-4f68-a719-58996316f061",
+    "title": "Better Connected: a strategy for integrated transport",
+    "publication_url": "https://www.gov.uk/government/publications/better-connected-a-strategy-for-integrated-transport",
+    "pdf_url": "https://assets.publishing.service.gov.uk/media/69de12cb961ff0ba6bff8de9/dft-better-connected-a-strategy-for-integrated-transport.pdf",
+    "publisher": "Department for Transport",
+    "published_on": "2026-04-02",
+    "themes": ["strategy", "integrated transport", "policy"],
+    "modes": ["multi-modal"]
+  },
+  {
+    "id": "70965b6f-38db-4fde-bded-d518288b06f3",
+    "title": "Innovate UK strategic delivery plan 2022 to 2025",
+    "publication_url": "https://www.ukri.org/publications/innovate-uk-strategic-delivery-plan/",
+    "pdf_url": "https://www.ukri.org/wp-content/uploads/2022/09/IUK-080922-InnovateUKStrategivDeliveryPlan.pdf",
+    "publisher": "Innovate UK / UKRI",
+    "published_on": "2022-09-02",
+    "themes": ["strategy", "innovation funding", "delivery plan"],
+    "modes": ["multi-modal"]
+  }
+]

@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from mcps.cpc_corpus.queries import _pg_query
+from mcps.cpc_corpus import transport
 
 from agents.atlas_v5.j1t1_corpus import J1T1_WHERE
 
@@ -30,6 +31,14 @@ def _normalise_mode_label(raw: str) -> str:
 
 def fetch_rail_mode_bridge_graph() -> NetworkGraphData:
     """Mode↔mode edges where Rail appears in dominant_pair (casing-safe)."""
+    if transport.rest_configured() and transport.corpus_rest_first():
+        try:
+            from mcps.cpc_corpus import queries_rest
+
+            rows = queries_rest.fetch_rail_bridge_agg_rows()
+            return _build_mode_bridge_graph(rows)
+        except Exception:
+            pass
     rows = _pg_query(
         """
         SELECT
@@ -49,15 +58,18 @@ def fetch_rail_mode_bridge_graph() -> NetworkGraphData:
         LIMIT 24
         """
     )
+    return _build_mode_bridge_graph(rows)
 
+
+def _build_mode_bridge_graph(rows: list[dict[str, Any]]) -> NetworkGraphData:
     nodes: dict[str, dict[str, Any]] = {}
     edges: list[dict[str, Any]] = []
 
     for row in rows:
         a = _normalise_mode_label(str(row["mode_a"]))
         b = _normalise_mode_label(str(row["mode_b"]))
-        weight = float(row["avg_score"] or 0)
-        count = int(row["bridge_count"] or 0)
+        weight = float(row.get("avg_score") or row.get("bridge_score") or 0)
+        count = int(row.get("bridge_count") or 1)
         for mode in (a, b):
             if mode not in nodes:
                 nodes[mode] = {
@@ -81,6 +93,14 @@ def fetch_rail_mode_bridge_graph() -> NetworkGraphData:
 
 def fetch_j1t1_org_funder_graph() -> NetworkGraphData:
     """Org ↔ funder bipartite for rail decarb slice."""
+    if transport.rest_configured() and transport.corpus_rest_first():
+        try:
+            from mcps.cpc_corpus import queries_rest
+
+            rows = queries_rest.fetch_org_funder_agg_rows()
+            return _build_org_funder_graph(rows)
+        except Exception:
+            pass
     rows = _pg_query(
         f"""
         SELECT
@@ -94,7 +114,10 @@ def fetch_j1t1_org_funder_graph() -> NetworkGraphData:
         LIMIT 40
         """
     )
+    return _build_org_funder_graph(rows)
 
+
+def _build_org_funder_graph(rows: list[dict[str, Any]]) -> NetworkGraphData:
     nodes: dict[str, dict[str, Any]] = {}
     edges: list[dict[str, Any]] = []
 

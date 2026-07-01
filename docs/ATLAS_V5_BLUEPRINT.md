@@ -20,6 +20,7 @@
 | Product north star & decision surfaces | [§16 Product north star](#16-product-north-star) |
 | **Case File programme (current priority)** | [§18 Product direction](#18-product-direction--case-file-centre-june-2026) · [CASE_FILE_PLAN.md](./ATLAS_V5_CASE_FILE_PLAN.md) |
 | Change code | [§14 File map](#14-file-map) |
+| **Turn routing architecture (review)** | [ATLAS_V5_TURN_ARCHITECTURE.md](./ATLAS_V5_TURN_ARCHITECTURE.md) |
 
 **Blueprint term is always source of truth.** Metaphors (Restaurant, Body) are translation layers — same row in every column.
 

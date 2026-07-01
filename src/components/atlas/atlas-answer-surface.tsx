@@ -225,7 +225,7 @@ export function AtlasAnswerSurface({
             chatMessages={chatMessages}
             chatPending={chatPending}
             progressLine={progressLine}
-            showcaseOptions={devMeta?.showcase?.options}
+            showcaseOptions={devMeta?.showcase?.options ?? devMeta?.quick_replies}
             onShowcaseSelect={
               onFollowUpProp
                 ? (cmd) => {

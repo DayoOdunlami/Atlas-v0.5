@@ -164,3 +164,90 @@ def search_hive_keyword(query: str, limit: int = 10) -> list[dict[str, Any]]:
 def parse_embedding_string(embedding: str) -> list[float]:
     inner = embedding.strip("[]")
     return [float(x) for x in inner.split(",") if x.strip()]
+
+
+def fetch_rail_bridge_agg_rows() -> list[dict[str, Any]]:
+    """Aggregate cross_modal_bridges over REST — rail-containing pairs only."""
+    from collections import defaultdict
+
+    sb = _client()
+    raw: list[dict[str, Any]] = []
+    offset = 0
+    page_size = 500
+    while True:
+        batch = (
+            sb.schema("atlas")
+            .from_("cross_modal_bridges")
+            .select("dominant_pair, bridge_score")
+            .range(offset, offset + page_size - 1)
+            .execute()
+            .data
+            or []
+        )
+        if not batch:
+            break
+        raw.extend(batch)
+        if len(batch) < page_size:
+            break
+        offset += page_size
+
+    agg: dict[tuple[str, str], list[float]] = defaultdict(list)
+    for row in raw:
+        pair = row.get("dominant_pair") or []
+        if not isinstance(pair, list) or len(pair) < 2:
+            continue
+        if not any(str(m).strip().lower() == "rail" for m in pair):
+            continue
+        key = (str(pair[0]).strip(), str(pair[1]).strip())
+        score = float(row.get("bridge_score") or 0)
+        agg[key].append(score)
+
+    out: list[dict[str, Any]] = []
+    for (mode_a, mode_b), scores in sorted(
+        agg.items(), key=lambda kv: len(kv[1]), reverse=True
+    )[:24]:
+        out.append(
+            {
+                "mode_a": mode_a,
+                "mode_b": mode_b,
+                "bridge_count": len(scores),
+                "avg_score": sum(scores) / max(len(scores), 1),
+            }
+        )
+    return out
+
+
+def fetch_org_funder_agg_rows() -> list[dict[str, Any]]:
+    """Org↔funder counts for rail decarb slice over REST."""
+    from collections import Counter
+
+    sb = _client()
+    q = (
+        sb.schema("atlas")
+        .from_("projects")
+        .select("lead_org_name, lead_funder")
+        .contains("cpc_modes", ["rail"])
+        .contains("cpc_themes", ["decarbonisation"])
+    )
+    rows: list[dict[str, Any]] = []
+    offset = 0
+    page_size = 500
+    while True:
+        batch = q.range(offset, offset + page_size - 1).execute().data or []
+        if not batch:
+            break
+        rows.extend(batch)
+        if len(batch) < page_size:
+            break
+        offset += page_size
+
+    counter: Counter[tuple[str, str]] = Counter()
+    for row in rows:
+        org = (row.get("lead_org_name") or "").strip() or "Unknown org"
+        funder = (row.get("lead_funder") or "").strip() or "Unknown funder"
+        counter[(org, funder)] += 1
+
+    return [
+        {"org": org, "funder": funder, "project_count": count}
+        for (org, funder), count in counter.most_common(40)
+    ]

@@ -143,13 +143,34 @@ app.add_middleware(
 # Global health check (service-level)
 # ---------------------------------------------------------------------------
 
+@app.get("/health/live")
+async def health_live() -> dict[str, str]:
+    """Fast liveness — no corpus probe (use when /health times out on wedged pooler)."""
+    return {"status": "ok", "service": "Atlas 5 agent service"}
+
+
 @app.get("/health")
 async def health() -> dict:
     """Service-level health check with corpus transport probe."""
+    import asyncio
+
     from mcps.cpc_corpus import transport
     from mcps.cpc_corpus.connectivity import probe_corpus_connectivity
 
-    conn = probe_corpus_connectivity()
+    loop = asyncio.get_event_loop()
+    try:
+        conn = await asyncio.wait_for(
+            loop.run_in_executor(None, probe_corpus_connectivity),
+            timeout=8.0,
+        )
+    except TimeoutError:
+        conn = {
+            "postgres": {"configured": True, "status": "fail", "error": "probe timeout"},
+            "rest": {"configured": transport.rest_configured(), "status": "skip"},
+            "any_reachable": False,
+            "preferred_transport": "unavailable",
+            "note": "Corpus probe timed out — service alive; use /health/live for liveness",
+        }
     corpus_transport = conn["preferred_transport"]
     corpus_ok = conn["any_reachable"]
     corpus_detail = conn["note"]

@@ -195,6 +195,119 @@ CALIBRATION_CASES: list[CalibrationCase] = [
         ],
         notes="Tangled practitioner — reasoning + persistence",
     ),
+    CalibrationCase(
+        id="cal_06_connect",
+        label="#6 connect ecosystem",
+        query="Map the rail decarbonisation ecosystem — who connects to whom in our corpus",
+        rubric=[
+            RubricCriterion(
+                id="cal_06_substantive_connect",
+                layer="routing",
+                description=(
+                    "Routes substantive connect — canvas updates with network/ecosystem surface, "
+                    "not chat-only deferral"
+                ),
+                load_bearing=True,
+            ),
+            RubricCriterion(
+                id="cal_06_graph_nodes",
+                layer="render",
+                description=(
+                    "Returns real graph nodes/edges from corpus over REST — "
+                    "node_count >= 2, not empty canvas"
+                ),
+                load_bearing=True,
+            ),
+        ],
+        notes="Connect graph over 443 — REST-first network_corpus",
+    ),
+    CalibrationCase(
+        id="cal_07_lane_relevance",
+        label="#7 academic lane relevance",
+        query="What does academic research say about effective climate measures for transport?",
+        rubric=[
+            RubricCriterion(
+                id="cal_07_research_lead",
+                layer="retrieval",
+                description=(
+                    "Leads from research/academic lane (OpenAlex) or web — NOT punished because "
+                    "corpus is thin; reconcile_lead research or web, not corpus-empty degradation"
+                ),
+                load_bearing=True,
+            ),
+            RubricCriterion(
+                id="cal_07_not_speculative_on_corpus",
+                layer="disposition",
+                description=(
+                    "Does NOT cap to Speculative solely because corpus_count=0 when corpus was "
+                    "not the expected source — tier reflects leading lane honestly (Indicative+ "
+                    "when research/web substantive)"
+                ),
+                load_bearing=True,
+            ),
+            RubricCriterion(
+                id="cal_07_direct_answer",
+                layer="disposition",
+                description=(
+                    "Answers the academic question directly with research-backed synthesis — "
+                    "not a brick wall or corpus gate offer"
+                ),
+            ),
+        ],
+        notes="Lane-relevance — de-corpus-centred tier honesty",
+    ),
+    CalibrationCase(
+        id="cal_08_strategy",
+        label="#8 strategy alignment",
+        query="UK transport strategy alignment",
+        prior_queries=[
+            "How does CPC align with DfT Better Connected and Innovate UK strategic delivery plan?",
+        ],
+        rubric=[
+            RubricCriterion(
+                id="cal_08_routing_diagnose",
+                layer="routing",
+                description=(
+                    "Routes diagnose (not orient/connect) — strategy alignment is a policy "
+                    "concordance question, not a landscape orient"
+                ),
+                load_bearing=True,
+            ),
+            RubricCriterion(
+                id="cal_08_no_portfolio_charts",
+                layer="render",
+                description=(
+                    "No generic portfolio charts (funding by funder, evidence flow, sankey) — "
+                    "strategy turns are prose + alignment gap matrix only"
+                ),
+                load_bearing=True,
+            ),
+            RubricCriterion(
+                id="cal_08_alignment_gaps",
+                layer="render",
+                description=(
+                    "Gap matrix speaks to concordance / pillar tags / T1 strategy documents — "
+                    "not EPSRC null-funding hygiene rows"
+                ),
+            ),
+            RubricCriterion(
+                id="cal_08_indicative_ceiling",
+                layer="disposition",
+                description=(
+                    "Honest Indicative tier — no Robust claims without published concordance"
+                ),
+            ),
+            RubricCriterion(
+                id="cal_08_followup_stays_diagnose",
+                layer="routing",
+                description=(
+                    "Follow-up turn stays on diagnose/strategy thread — does not drift to "
+                    "Orient with generic stat-strip charts"
+                ),
+            ),
+        ],
+        notes="Strategy alignment — suppress portfolio charts; alignment-specific gap matrix",
+    ),
 ]
 
 

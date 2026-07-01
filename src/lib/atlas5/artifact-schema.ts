@@ -89,6 +89,7 @@ export const CorpusCitationSchema = z.object({
   claim_state: ClaimStateSchema.optional(),
   /** Rationale for inferred/contested states — shown in tooltip */
   claim_rationale: z.string().optional(),
+  validation_tier: z.string().optional(),
 });
 
 export const HiveCitationSchema = z.object({

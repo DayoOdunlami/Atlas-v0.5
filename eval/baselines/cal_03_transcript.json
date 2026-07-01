@@ -1,0 +1,78 @@
+{
+  "case_id": "cal_03_lost_rail",
+  "label": "#3 lost + rail",
+  "turns": [
+    {
+      "query": "I've got a rail idea, not sure what I'm asking",
+      "reply": "Rail is a big space — let's find the right corner of it. Tell me a sentence about the idea and what a useful outcome from this conversation looks like, and we'll go from there.",
+      "route": "substantive",
+      "route_source": "heuristic",
+      "outcome_hint": "find_path",
+      "update_canvas": true,
+      "disposition": {
+        "primary_surface": "hybrid",
+        "canvas_action": "replace",
+        "composition_mode": "free_compose",
+        "patch_fields": [],
+        "reasoning": "User has signalled explicit uncertainty about their own question (\"not sure what I'm asking\") — this is a textbook find_path / uncertainty cue. Disposition: T3 find-my-path surface. Hybrid: short warm chat_complement + canvas with declared situation visible and a small set of orienting questions to help them land the real ask. No OpportunityList — they haven't asked for ranked options. No SQL stat strip as primary surface — the corpus context is backdrop, not the answer. Canvas should feel like a thinking partner, not a database dump."
+      },
+      "lane_mode": "dual",
+      "gate_status": "pass",
+      "spec_excerpt": {
+        "tier": "Speculative",
+        "verdict": "You've got a rail idea and you're not yet sure what you need — that's a perfectly good place to start, and the right move is to find the question underneath before we dig into evidence.",
+        "recipe": null,
+        "composition_mode": null,
+        "declared_in_markup": true,
+        "markup_preview": "<section data-testid=\"find-my-path\" data-material=\"declared\" style=\"background:#FBFAF7;font-family:system-ui,sans-serif;color:#1A1714;max-width:760px;margin:0 auto;padding:32px 28px;border-radius:12px;border:1px solid #EFEBE4;\">\n\n  <!-- Section label -->\n  <div style=\"font-family:monospace;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#94908A;border-bottom:1px solid #EFEBE4;padding-bottom:8px;margin-bottom:24px;\">\n    Find my path · Rail idea · Early stage\n  </div>\n\n  <!-- Headline -->\n  <h2 style=\"font-family:Georgia,serif;font-size:22px;font-weight:600;color:#1A1714;margin:0 0 8px 0;line-height:1.3;\">\n    You've got a rail idea — let's find the right question first\n  </h2>\n  <p style=\"font-size:14px;color:#5A5249;margin:0 0 28px 0;line-height:1.6;\">\n    \"Not sure what I'm asking\" is a signal worth taking seriously. The shape of your idea determines everything: what evidence is useful, which funding routes apply, and who the right people are. Before we pull from the corpus, let's locate you in the landscape.\n  </p>\n\n  <!-- Declared situation callout -->\n  <div style=\"background:#FDF8EE;border-left:3px solid #B6CADB;border-radius:6px;padding:14px 18px;margin-b",
+        "corpus_citation_count": 0,
+        "retrieval_meta": {
+          "lane_mode": "dual",
+          "corpus_count": 3,
+          "external_count": 1,
+          "dual_peer": true,
+          "corpus_substantive": true,
+          "web_substantive": false,
+          "tier_reason": "corpus substantive, web thin — no corroboration boost; corpus-led tier cap (5 corpus citations)",
+          "reconcile_lead": "web"
+        }
+      }
+    },
+    {
+      "query": "What kind of funding might fit an SME innovator like that?",
+      "reply": "Three archetypes dominate for rail SMEs: Innovate UK grants (matched, milestone-driven), SBRI challenges (no match needed, buyer-led), and accelerator/testbed routes (funding + operator access bundled). Stage of your idea is the key gate — I've mapped these on the canvas.",
+      "route": "substantive",
+      "route_source": "heuristic",
+      "outcome_hint": "find_path",
+      "update_canvas": true,
+      "disposition": {
+        "primary_surface": "canvas_primary",
+        "canvas_action": "replace",
+        "composition_mode": "free_compose",
+        "patch_fields": [],
+        "reasoning": "User is a practitioner (SME innovator in rail) asking a find-my-path question about funding fit. The case file shows they have a rail idea and are still orienting. This is a T3 find-my-path surface: compose a funding landscape guide tailored to an SME rail innovator, using dual-lane evidence (corpus stats + web programme context). Canvas replace with find-my-path markup. No OpportunityList — narrative pathfinding with 2–3 anchored funding routes."
+      },
+      "lane_mode": "dual",
+      "gate_status": "pass",
+      "spec_excerpt": {
+        "tier": "Speculative",
+        "verdict": "For a rail SME at the idea stage, three funding archetypes tend to fit: innovation challenge grants (low dilution, stage-gated), Innovate UK smart/sector grants (matched funding, milestone-driven), and accelerator/testbed programmes that bundle funding with access to rail operators.",
+        "recipe": null,
+        "composition_mode": null,
+        "declared_in_markup": true,
+        "markup_preview": "<section data-testid=\"find-my-path\" data-material=\"declared\" style=\"font-family: system-ui, sans-serif; background: #FBFAF7; padding: 32px; max-width: 780px; margin: 0 auto; color: #1A1714; border-radius: 12px;\">\n\n  <!-- Header -->\n  <div style=\"border-bottom: 1px solid #EFEBE4; padding-bottom: 16px; margin-bottom: 28px;\">\n    <p style=\"font-family: monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: #94908A; margin: 0 0 6px;\">Find My Path · Rail SME Innovator</p>\n    <h1 style=\"font-size: 22px; font-weight: 700; margin: 0 0 8px; font-family: Georgia, serif;\">What funding fits a rail SME at the idea stage?</h1>\n    <p style=\"font-size: 14px; color: #5A5249; margin: 0;\">Three archetypes — matched by your idea's development stage and whether you have an operator in view.</p>\n  </div>\n\n  <!-- Stat strip -->\n  <div style=\"display: flex; gap: 16px; margin-bottom: 28px; flex-wrap: wrap;\">\n    <div style=\"background: #EEF4EE; border-radius: 8px; padding: 14px 20px; flex: 1; min-width: 160px;\">\n      <p style=\"font-family: monospace; font-size: 10px; text-transform: uppercase; color: #3F7A52; margin: 0 0 4px; letter-spacing: 0.08em;\">Corpus projects</p>\n   ",
+        "corpus_citation_count": 0,
+        "retrieval_meta": {
+          "lane_mode": "dual",
+          "corpus_count": 3,
+          "external_count": 8,
+          "dual_peer": true,
+          "corpus_substantive": true,
+          "web_substantive": true,
+          "tier_reason": "both lanes substantive — corroboration boost applied; web-led tier cap (0 verified web refs)",
+          "reconcile_lead": "web"
+        }
+      }
+    }
+  ]
+}

@@ -65,7 +65,13 @@ def resolve_lead_lane(
         return "corpus"
     if web_substantive and corpus_substantive:
         return "balanced"
-    return "corpus" if corpus_substantive else ("web" if web_substantive else "balanced")
+    if research_substantive and shopping and shopping.reconcile_lead == "research":
+        return "research"
+    if web_substantive and not corpus_substantive:
+        return "web"
+    if research_substantive and not corpus_substantive and not web_substantive:
+        return "research"
+    return "balanced"
 
 
 def detect_conflicts(index: KeyedFigureIndex) -> list[str]:

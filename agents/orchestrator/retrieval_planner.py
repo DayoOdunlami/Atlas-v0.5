@@ -28,7 +28,7 @@ class RetrievalPlan:
     lane_mode: LaneMode
     corpus_k: int = 8
     external_enabled: bool = True
-    external_timeout_s: float = 8.0
+    external_timeout_s: float = 25.0
     govuk_query: str = ""
     exa_queries: list[str] = field(default_factory=list)
     rationale: str = ""
@@ -82,7 +82,7 @@ def plan_retrieval(
         lane = "dual"
 
     external_enabled = lane != "corpus_only"
-    timeout = 8.0 if effort != "deep" else 12.0
+    timeout = 25.0 if effort != "deep" else 30.0
 
     return RetrievalPlan(
         lane_mode=lane,

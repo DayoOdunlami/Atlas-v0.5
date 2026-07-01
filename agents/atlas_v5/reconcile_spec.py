@@ -7,7 +7,8 @@ from typing import Any
 from agents.spine.citation_guard import TIER_ORDER, _cap_tier
 from agents.atlas_v5.keyed_figures import KeyedFigureIndex
 from agents.atlas_v5.source_shopper import ReconcileLead, ShoppingList
-from agents.atlas_v5.trust.reconcile_v2 import resolve_lead_lane
+from agents.atlas_v5.trust.lane_relevance import corpus_expected_to_lead
+from agents.atlas_v5.trust.reconcile_v2 import resolve_lead_lane, _research_substantive
 from agents.atlas_v5.trust.tier_from_evidence import tier_from_multi_lane_evidence
 from agents.atlas_v5.trust.validate_web import _validation_for_item
 from agents.contracts.answer_spec import (
@@ -79,6 +80,8 @@ def apply_peer_tier_rules(
     *,
     corpus_substantive: bool,
     web_substantive: bool,
+    research_substantive: bool = False,
+    corpus_expected_lead: bool = True,
 ) -> tuple[str, bool, str]:
     """
     Honest tier adjustment for dual-lane turns.
@@ -99,11 +102,25 @@ def apply_peer_tier_rules(
         )
 
     if web_substantive and not corpus_substantive:
+        if not corpus_expected_lead:
+            return (
+                _cap_tier(_boost_tier(tier, 1), "Supported"),
+                False,
+                "web substantive, corpus not expected lead — web-led cap",
+            )
         return (
             _cap_tier(_boost_tier(tier, 1), "Supported"),
             False,
             "web substantive, corpus thin — web-led cap, no dual-peer boost",
         )
+
+    if research_substantive and not corpus_substantive and not web_substantive:
+        if not corpus_expected_lead:
+            return (
+                _cap_tier(_boost_tier(tier, 1), "Supported"),
+                False,
+                "research substantive, corpus not expected lead — research-led cap",
+            )
 
     if corpus_substantive and not web_substantive:
         return (
@@ -150,6 +167,8 @@ def reconcile_answer_spec(
 
     corpus_sub = lane_corpus_substantive(bag, has_sql_stats=has_sql_stats)
     web_sub = lane_web_substantive(bag)
+    research_sub = _research_substantive(bag)
+    corpus_lead = corpus_expected_to_lead(shopping, query)
     lead: ReconcileLead = shopping.reconcile_lead if shopping else "balanced"
 
     lead_lane = resolve_lead_lane(
@@ -158,6 +177,7 @@ def reconcile_answer_spec(
         corpus_substantive=corpus_sub,
         web_substantive=web_sub,
         index=KeyedFigureIndex(),
+        research_substantive=research_sub,
     )
     web_verified = sum(
         1 for item in bag.external if _validation_for_item(item)[0] == "verified"
@@ -181,7 +201,10 @@ def reconcile_answer_spec(
         tier,
         corpus_substantive=corpus_sub,
         web_substantive=web_sub,
+        research_substantive=research_sub,
+        corpus_expected_lead=corpus_lead,
     )
+    research_count = int((bag.research_snapshot or {}).get("sample_size") or 0)
     tier, tier_cap_reason = tier_from_multi_lane_evidence(
         tier,
         corpus_citation_count=corpus_depth,
@@ -189,6 +212,9 @@ def reconcile_answer_spec(
         corpus_substantive=corpus_sub,
         web_substantive=web_sub,
         lead_lane=lead_lane,
+        research_substantive=research_sub,
+        research_work_count=research_count,
+        corpus_expected_lead=corpus_lead,
     )
     meta["corroboration_boost"] = boost_applied
     meta["tier_reason"] = f"{tier_reason}; {tier_cap_reason}"
@@ -228,13 +254,18 @@ def reconcile_answer_spec(
             )
         )
     elif web_sub and not corpus_sub:
+        msg = (
+            f"Web lane substantive ({web_n} source(s)); corpus search thin"
+            if corpus_lead
+            else (
+                f"Web lane substantive ({web_n} source(s)); corpus was not the "
+                "expected source for this question — leading from web at honest tier."
+            )
+        )
         notes.append(
             ReconciliationNote(
                 type="discover",
-                message=(
-                    f"Web lane substantive ({web_n} source(s)); corpus search thin — "
-                    "tier capped for web-led signal, not dual-peer corroboration."
-                ),
+                message=msg,
                 external_signal=str(web_n),
             )
         )

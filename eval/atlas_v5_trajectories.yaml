@@ -230,3 +230,35 @@ trajectories:
             - "IncommensurableMagnitudes"
             - "711 projects"
 
+  - id: V11_strategy_alignment
+    name: Strategy alignment — no portfolio charts, stays diagnose on follow-up
+    turns:
+      - query: >-
+          How does CPC align with DfT Better Connected and Innovate UK strategic
+          delivery plan?
+        expect:
+          route: substantive
+          update_canvas: true
+          outcome_hint: diagnose
+          max_latency_ms: 180000
+          min_reply_chars: 40
+          spec:
+            mode: Diagnose
+            scope_contains: STRATEGY ALIGNMENT
+            max_charts: 0
+            max_tier: Indicative
+      - query: "UK transport strategy alignment"
+        expect:
+          route: substantive
+          outcome_hint: diagnose
+          max_latency_ms: 180000
+          min_reply_chars: 30
+          spec:
+            mode: Diagnose
+            scope_contains: STRATEGY ALIGNMENT
+            max_charts: 0
+            max_tier: Indicative
+          reply_not_contains:
+            - "Funding by lead funder"
+            - "Evidence flow"
+

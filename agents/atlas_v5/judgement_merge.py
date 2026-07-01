@@ -137,7 +137,11 @@ def merge_judgement_onto_skeleton(
     judgement: JudgementFieldsOutput,
 ) -> AnswerSpec:
     """Facts from skeleton; prose fields from model."""
-    instrument = skeleton.instrument
+    is_find_path = skeleton.mode == "FindPath" or (
+        skeleton.instrument is None and "FIND PATH" in (skeleton.scope or "").upper()
+    )
+
+    instrument = None if is_find_path else skeleton.instrument
     if instrument is not None:
         honesty = instrument.honesty or InstrumentHonesty(toScale=False)
         if judgement.instrument_honesty_label:
@@ -145,8 +149,11 @@ def merge_judgement_onto_skeleton(
                 toScale=honesty.toScale,
                 label=judgement.instrument_honesty_label,
             )
+        recipe = judgement.instrument_recipe
+        if recipe == "OpportunityList" and is_find_path:
+            recipe = skeleton.instrument.recipe if skeleton.instrument else "IncommensurableMagnitudes"
         instrument = Instrument(
-            recipe=judgement.instrument_recipe,
+            recipe=recipe,
             data=instrument.data,
             honesty=honesty,
         )
@@ -157,8 +164,10 @@ def merge_judgement_onto_skeleton(
             update={"structure": skeleton.blindspot.structure},
         )
 
+    mode = "FindPath" if is_find_path else judgement.mode
+
     update: dict = {
-        "mode": judgement.mode,
+        "mode": mode,
         "tier": judgement.tier,
         "tierCapReason": judgement.tierCapReason or skeleton.tierCapReason,
         "verdict": judgement.verdict,

@@ -33,3 +33,14 @@ def test_diagnose_spec_shape():
     dims = spec.instrument.data.get("dimensions") or []
     assert len(dims) >= 4
     assert any(d["verdict"] == "GAP" for d in dims)
+
+
+def test_strategy_diagnose_uses_alignment_gaps():
+    spec = assemble_diagnose_spec(
+        MOCK_STATS,
+        query="UK transport strategy alignment",
+        object_label="UK transport strategy alignment",
+    )
+    labels = [d["label"] for d in spec.instrument.data.get("dimensions") or []]
+    assert "Published concordance" in labels
+    assert "Funding completeness" not in labels

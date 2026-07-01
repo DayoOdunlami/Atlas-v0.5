@@ -25,6 +25,10 @@ import {
 import { ArtifactQAPanel } from "@/components/atlas5/artifact-qa-panel";
 import { RunProgress } from "@/components/atlas5/run-progress";
 import { cn } from "@/lib/utils";
+import {
+  kbValidationTierLabel,
+  kbValidationTierStyle,
+} from "@/lib/atlas5/kb-validation-tier";
 import type {
   ConfidenceTier,
   CorpusCitation,
@@ -239,25 +243,55 @@ function CorpusCitationsList({
 }) {
   if (!citations.length) return null;
 
+  const SOURCE_LABEL: Record<string, string> = {
+    project: "Project",
+    live_call: "Call",
+    knowledge_doc: "Policy doc",
+    knowledge_chunk: "Policy",
+  };
+
   return (
     <div data-testid="corpus-citations-list" className="mt-4">
       <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
         Corpus Citations ({citations.length})
       </h3>
       <ol className="space-y-2">
-        {citations.map((c, i) => (
+        {citations.map((c, i) => {
+          const st = c.source_type ?? "project";
+          const tierLabel = kbValidationTierLabel(c.validation_tier);
+          return (
           <li
-            key={c.id}
+            key={`${c.id}-${i}`}
             className="flex gap-2 text-xs bg-muted/30 rounded-lg px-3 py-2 border border-border"
           >
             <span className="text-muted-foreground shrink-0 font-mono">
               [{i + 1}]
             </span>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
+                <span className="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded border bg-background text-muted-foreground">
+                  {SOURCE_LABEL[st] ?? st}
+                </span>
+                {tierLabel && (
+                  <span
+                    className={cn(
+                      "text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded border",
+                      kbValidationTierStyle(c.validation_tier),
+                    )}
+                  >
+                    {tierLabel}
+                  </span>
+                )}
+                {c.score != null && (
+                  <span className="text-[9px] text-muted-foreground">
+                    {(c.score * 100).toFixed(0)}%
+                  </span>
+                )}
+              </div>
               <p className="font-medium text-foreground truncate">{c.title}</p>
-              {c.organisation && (
+              {(c.organisation || c.publisher) && (
                 <p className="text-muted-foreground text-[10px]">
-                  {c.organisation}
+                  {c.organisation || c.publisher}
                 </p>
               )}
               {c.relevance_note && (
@@ -267,7 +301,8 @@ function CorpusCitationsList({
               )}
             </div>
           </li>
-        ))}
+          );
+        })}
       </ol>
     </div>
   );

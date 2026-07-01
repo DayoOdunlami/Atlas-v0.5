@@ -12,8 +12,14 @@ import os
 from dataclasses import dataclass, field
 from typing import Any
 
+from agents.atlas_v5.corpus_evidence import merge_corpus_hits
 from agents.atlas_v5.corpus_scope import corpus_scope_for_query
-from agents.atlas_v5.intent import has_declared_uncertainty_cue, is_connect_network_query
+from agents.atlas_v5.intent import (
+    has_declared_uncertainty_cue,
+    is_connect_network_query,
+    is_strategy_alignment_query,
+    should_continue_find_path,
+)
 from agents.atlas_v5.j1t1_corpus import fetch_corpus_stats
 from agents.atlas_v5.j1t1_types import J1T1CorpusStats
 from agents.atlas_v5.network_corpus import NetworkGraphData, fetch_connect_network_graph
@@ -101,13 +107,20 @@ async def run_wide_pass(
 
         session_claims = bootstrap_declared_claims_heuristic(query)
     where_sql, object_label, scope_mode = corpus_scope_for_query(query)
-    hint: OutcomeHint = outcome_hint or (
-        "find_path"
-        if has_declared_uncertainty_cue(query)
-        else "connect"
-        if is_connect_network_query(query)
-        else "orient"
-    )
+    if should_continue_find_path(query, session_claims):
+        hint: OutcomeHint = "find_path"
+    elif is_strategy_alignment_query(query):
+        hint = "diagnose"
+    elif outcome_hint:
+        hint = outcome_hint
+        if hint == "connect":
+            hint = "diagnose" if is_strategy_alignment_query(query) else hint
+    elif has_declared_uncertainty_cue(query):
+        hint = "find_path"
+    elif is_connect_network_query(query):
+        hint = "connect"
+    else:
+        hint = "orient"
     outcome = hint if hint in ("orient", "connect", "act", "diagnose", "defend", "find_path") else "orient"
 
     loop = asyncio.get_running_loop()
@@ -183,7 +196,7 @@ async def run_wide_pass(
             query=query,
             stats=stats,
             graph=graph,
-            corpus_hits=bag.corpus_raw,
+            corpus_hits=merge_corpus_hits(bag),
             candidates=bag.candidates,
             evidence_bag=bag,
             retrieval_meta=meta,
@@ -213,7 +226,7 @@ async def run_wide_pass(
         outcome=resolved_outcome,
         query=query,
         stats=stats,
-        corpus_hits=bag.corpus_raw,
+        corpus_hits=merge_corpus_hits(bag),
         candidates=bag.candidates,
         evidence_bag=bag,
         retrieval_meta=meta,
@@ -266,6 +279,7 @@ def assemble_spec_from_wide_pass(wide: WidePassResult, *, online_only: bool = Fa
             wide.graph,
             query=wide.query,
             carried_summary=summary,
+            object_label=wide.object_label,
         )
     elif wide.outcome == "diagnose" and wide.stats:
         from agents.atlas_v5.diagnose_assembler import assemble_diagnose_spec
@@ -288,10 +302,12 @@ def assemble_spec_from_wide_pass(wide: WidePassResult, *, online_only: bool = Fa
 
         spec = assemble_j1t1_spec(wide.stats)
         if wide.query:
-            updates: dict = {"query": wide.query}
-            if wide.object_label != "Rail decarbonisation":
-                updates["object"] = wide.object_label
-            spec = spec.model_copy(update=updates)
+            spec = spec.model_copy(
+                update={
+                    "query": wide.query,
+                    "object": wide.object_label,
+                }
+            )
     elif wide.stats is None and has_hits:
         from agents.atlas_v5.rest_fallback_assembler import assemble_rest_fallback_spec
 
@@ -312,4 +328,6 @@ def assemble_spec_from_wide_pass(wide: WidePassResult, *, online_only: bool = Fa
             has_sql_stats=wide.stats is not None,
         )
         spec = patch_orient_web_tier(spec, wide.evidence_bag, wide.stats)
-    return spec
+    from agents.atlas_v5.corpus_evidence import merge_document_citations_into_spec
+
+    return merge_document_citations_into_spec(spec, wide)

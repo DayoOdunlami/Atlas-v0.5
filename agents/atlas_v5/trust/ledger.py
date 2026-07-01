@@ -27,10 +27,10 @@ def _corpus_only_lane(wide: WidePassResult) -> bool:
 
 
 def _corpus_substantive(bag: EvidenceBag | None, *, has_stats: bool) -> bool:
-    if has_stats:
-        return True
     if bag is None:
         return False
+    if has_stats and bag.project_hit_count >= 1:
+        return True
     if bag.project_hit_count >= 2:
         return True
     if bag.document_hit_count >= 2:

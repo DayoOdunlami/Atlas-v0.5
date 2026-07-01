@@ -1,0 +1,320 @@
+[
+  {
+    "case_id": "cal_01_hello",
+    "label": "#1 hello",
+    "query": "hello",
+    "follow_up_query": null,
+    "turns": [
+      {
+        "query": "hello",
+        "reply": "Hello! Bring me whatever you're working through — a funding question, a landscape you're trying to map, a half-formed idea about a project or partnership. I'm here to help you think it through.",
+        "route": "chat",
+        "route_source": "haiku",
+        "outcome_hint": null,
+        "update_canvas": false,
+        "disposition": {
+          "reasoning": "Haiku route"
+        },
+        "lane_mode": null,
+        "gate_status": null,
+        "spec_excerpt": {
+          "tier": null,
+          "verdict": null,
+          "recipe": null,
+          "composition_mode": null,
+          "declared_in_markup": false,
+          "markup_preview": null,
+          "corpus_citation_count": 0,
+          "retrieval_meta": {}
+        }
+      }
+    ]
+  },
+  {
+    "case_id": "cal_02_haribo",
+    "label": "#2 Haribo joke",
+    "query": "What are the latest Haribo innovations?",
+    "follow_up_query": null,
+    "turns": [
+      {
+        "query": "What are the latest Haribo innovations?",
+        "reply": "That's a bit outside my lane — I'm built specifically for the UK transport and cities innovation ecosystem, so Haribo's confectionery R&D isn't something I can usefully speak to. If you've got questions about mobility, urban tech, place-based innovation, or funding in that space, I'm all yours.",
+        "route": "chat",
+        "route_source": "haiku",
+        "outcome_hint": null,
+        "update_canvas": false,
+        "disposition": {
+          "reasoning": "Off-topic trivia question about Haribo product innovations. Not in scope for Atlas landscape/network/evidence/strategy work. Canvas does not update."
+        },
+        "lane_mode": null,
+        "gate_status": null,
+        "spec_excerpt": {
+          "tier": null,
+          "verdict": null,
+          "recipe": null,
+          "composition_mode": null,
+          "declared_in_markup": false,
+          "markup_preview": null,
+          "corpus_citation_count": 0,
+          "retrieval_meta": {}
+        }
+      }
+    ]
+  },
+  {
+    "case_id": "cal_03_lost_rail",
+    "label": "#3 lost + rail",
+    "query": "I've got a rail idea, not sure what I'm asking",
+    "follow_up_query": "What kind of funding might fit an SME innovator like that?",
+    "turns": [
+      {
+        "query": "I've got a rail idea, not sure what I'm asking",
+        "reply": "Tell me a sentence about the idea — or just which of the three paths on the canvas feels closest. That's all I need to give you something useful.",
+        "route": "substantive",
+        "route_source": "heuristic",
+        "outcome_hint": "find_path",
+        "update_canvas": true,
+        "disposition": {
+          "primary_surface": "hybrid",
+          "canvas_action": "replace",
+          "composition_mode": "free_compose",
+          "patch_fields": [],
+          "reasoning": "User has signalled explicit uncertainty about their own question (\"not sure what I'm asking\") — this is a textbook find_path cue. Disposition: T3 find-my-path surface. They have a rail idea but haven't named it. The right move is to reflect the uncertainty, surface the question beneath the question, and give them a small set of paths to orient around — not a ranked list, not a deep dive. Hybrid surface: short chat complement to open the conversation, canvas to hold the structured path-finding frame. Canvas action: replace (new canvas)."
+        },
+        "lane_mode": "dual",
+        "gate_status": "pass",
+        "spec_excerpt": {
+          "tier": "Speculative",
+          "verdict": "You've got something in rail — let's find the right question before we find the answer.",
+          "recipe": null,
+          "composition_mode": null,
+          "declared_in_markup": true,
+          "markup_preview": "<section data-testid=\"declared-situation\" data-material=\"declared\" style=\"margin-bottom:16px;padding:12px;border:1px dashed #B8860B;border-radius:8px;background:#FBF8F0\"><div style=\"font-family:ui-monospace,monospace;font-size:10px;letter-spacing:0.08em;color:#8B6914;margin-bottom:8px\">STATED BY USER · DECLARED · MAX INDICATIVE</div><ul style=\"margin:0;padding-left:16px;font-size:12.5px;line-height:1.45;color:#2E2A24\"><li data-material=\"declared\" data-claim-id=\"dfd65de4-baca-4baa-8c2f-cea4ffb02d1d\" data-claim-kind=\"uncertainty\">I've got a rail idea, not sure what I'm asking</li><li data-material=\"declared\" data-claim-id=\"c2f8b4bd-c47b-4ab4-8b2b-e10059f4f609\" data-claim-kind=\"uncertainty\">User has a rail idea but is uncertain what they are asking — no specifics about technology, stage, geography, commercial model, or target outcome have been declared.</li></ul></section><section data-testid=\"find-my-path\" data-material=\"declared\" style=\"background:#FBFAF7;font-family:'Georgia',serif;max-width:760px;margin:0 auto;padding:32px 28px 40px;border:1px solid #EFEBE4;border-radius:12px;\">\n\n  <!-- Header -->\n  <div style=\"border-bottom:1px solid #d4d0c8;padding-bottom:14px;margin-bottom:24px",
+          "corpus_citation_count": 0,
+          "retrieval_meta": {
+            "lane_mode": "dual",
+            "corpus_count": 3,
+            "external_count": 1,
+            "dual_peer": true,
+            "corpus_substantive": true,
+            "web_substantive": false,
+            "tier_reason": "corpus substantive, web thin — no corroboration boost; corpus-led tier cap (5 corpus citations)",
+            "reconcile_lead": "web"
+          }
+        }
+      },
+      {
+        "query": "What kind of funding might fit an SME innovator like that?",
+        "reply": "Here's the funding landscape mapped by stage and problem type — the canvas shows the main routes with what's known from the corpus and web. The single most useful next step is telling me what stage you're at and what the idea actually solves.",
+        "route": "substantive",
+        "route_source": "heuristic",
+        "outcome_hint": "orient",
+        "update_canvas": true,
+        "disposition": {
+          "primary_surface": "canvas_primary",
+          "canvas_action": "replace",
+          "composition_mode": "free_compose",
+          "patch_fields": [],
+          "reasoning": "User is asking a practitioner \"find my path\" question — what funding fits an SME innovator in rail. The session case file shows declared uncertainty (rail idea, no specifics). This is a T3 find-my-path surface: the user needs a funding landscape oriented to their situation, not a ranked OpportunityList. Canvas should be replaced with a find-my-path canvas showing funding routes, with declared situation visible and corpus/web evidence marking which routes have activity. Dual lane is available with web.programme_total_gbp in keys."
+        },
+        "lane_mode": "dual",
+        "gate_status": "pass",
+        "spec_excerpt": {
+          "tier": "Indicative",
+          "verdict": "Several well-funded routes exist for rail SMEs in the UK — the right one depends on your stage and what the idea actually does.",
+          "recipe": "OpportunityList",
+          "composition_mode": null,
+          "declared_in_markup": true,
+          "markup_preview": "<section data-testid=\"declared-situation\" data-material=\"declared\" style=\"margin-bottom:16px;padding:12px;border:1px dashed #B8860B;border-radius:8px;background:#FBF8F0\"><div style=\"font-family:ui-monospace,monospace;font-size:10px;letter-spacing:0.08em;color:#8B6914;margin-bottom:8px\">STATED BY USER · DECLARED · MAX INDICATIVE</div><ul style=\"margin:0;padding-left:16px;font-size:12.5px;line-height:1.45;color:#2E2A24\"><li data-material=\"declared\" data-claim-id=\"dfd65de4-baca-4baa-8c2f-cea4ffb02d1d\" data-claim-kind=\"uncertainty\">I've got a rail idea, not sure what I'm asking</li><li data-material=\"declared\" data-claim-id=\"c2f8b4bd-c47b-4ab4-8b2b-e10059f4f609\" data-claim-kind=\"uncertainty\">User has a rail idea but is uncertain what they are asking — no specifics about technology, stage, geography, commercial model, or target outcome have been declared.</li><li data-material=\"declared\" data-claim-id=\"claim-rail-sme-funding\" data-claim-kind=\"hypothesis\">User is an SME innovator seeking funding for a rail idea — funding route and stage not yet specified</li><li data-material=\"declared\" data-claim-id=\"claim-rail-uncertainty\" data-claim-kind=\"uncertainty\">Stage of the rail idea (concept /",
+          "corpus_citation_count": 5,
+          "retrieval_meta": {
+            "lane_mode": "dual",
+            "corpus_count": 8,
+            "external_count": 3,
+            "dual_peer": true,
+            "corpus_substantive": true,
+            "web_substantive": true,
+            "tier_reason": "both lanes substantive — corroboration boost applied; corpus-led tier cap (8 corpus citations)",
+            "reconcile_lead": "corpus"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "case_id": "cal_04_clean_rail",
+    "label": "#4 clean rail",
+    "query": "State of play on rail decarbonisation in our corpus",
+    "follow_up_query": null,
+    "turns": [
+      {
+        "query": "State of play on rail decarbonisation in our corpus",
+        "reply": "55 projects · £8.17m floor · 27 live since 2024 · 30 lead orgs. Half the portfolio is post-2024, so this is an active, not archival, slice. The corpus floor is dwarfed by national programme spend — that gap is the key context to hold.",
+        "route": "substantive",
+        "route_source": "haiku",
+        "outcome_hint": "orient",
+        "update_canvas": true,
+        "disposition": {
+          "primary_surface": "canvas_primary",
+          "canvas_action": "replace",
+          "composition_mode": "reference_recipe",
+          "patch_fields": [],
+          "reasoning": "Orient query with SQL-locked corpus stats and dual-lane evidence. User wants a state-of-play briefing on rail decarbonisation in the corpus. Block F applies: answer directly, lead with stat strip, no deferral. Canvas primary with free_compose journey-orient template. Both corpus lane (55 projects, £8.17m floor, 27 live since 2024, 30 orgs) and web lane (programme_upper_gbp available) are in scope — synthesise both, name the tension between corpus floor and national programme scale.; RECIPE_LOCK: IncommensurableMagnitudes — two-tier funding field (locked geometry)"
+        },
+        "lane_mode": "dual",
+        "gate_status": null,
+        "spec_excerpt": {
+          "tier": "Supported",
+          "verdict": "Rail decarbonisation is an active, growing slice of the corpus — 55 projects, £8.17m in known funding (a floor), and half the portfolio live since 2024 — but the corpus captures only a fraction of the national programme spend, which runs into the billions.",
+          "recipe": "IncommensurableMagnitudes",
+          "composition_mode": null,
+          "declared_in_markup": false,
+          "markup_preview": null,
+          "corpus_citation_count": 5,
+          "retrieval_meta": {
+            "lane_mode": "dual",
+            "corpus_count": 8,
+            "external_count": 3,
+            "dual_peer": true,
+            "corpus_substantive": true,
+            "web_substantive": true,
+            "tier_reason": "both lanes substantive — corroboration boost applied; corpus-led tier cap (8 corpus citations)",
+            "reconcile_lead": "corpus"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "case_id": "cal_05_tangled",
+    "label": "#5 tangled SME",
+    "query": "We're an SME pursuing ISO certification for rail components but have no trial partner yet — my bonus depends on hitting Q3 milestones and I'm not sure which funding path is realistic",
+    "follow_up_query": null,
+    "turns": [
+      {
+        "query": "We're an SME pursuing ISO certification for rail components but have no trial partner yet — my bonus depends on hitting Q3 milestones and I'm not sure which funding path is realistic",
+        "reply": "Two tensions are doing the work here: no trial partner vs. Q3 deadline, and ISO need vs. unclear funding route. The good news is they resolve in sequence — partner first, then funding. I've mapped the path on the canvas with the key gates and the 1–2 funding routes most likely to move at your timescale.",
+        "route": "substantive",
+        "route_source": "haiku",
+        "outcome_hint": "find_path",
+        "update_canvas": true,
+        "disposition": {
+          "primary_surface": "hybrid",
+          "canvas_action": "replace",
+          "composition_mode": "free_compose",
+          "patch_fields": [],
+          "reasoning": "User is a practitioner with a concrete situation: SME, ISO certification for rail components, no trial partner, bonus pressure tied to Q3 milestones, uncertain on funding path. This is a classic find_path / uncertainty cue — the real question beneath \"which funding path is realistic\" is \"what do I do first given my constraints?\" Two load-bearing tensions: (1) no trial partner yet vs. Q3 deadline pressure, (2) ISO certification need vs. unclear funding route. Compose T3 find-my-path canvas with declared situation visible, reflect the question beneath the question, add 1–3 corpus/web matches. No OpportunityList — user didn't ask for ranked list. Hybrid surface: chat_complement carries the key move, canvas carries the structured path."
+        },
+        "lane_mode": "dual",
+        "gate_status": "pass",
+        "spec_excerpt": {
+          "tier": "Speculative",
+          "verdict": "Your Q3 pressure makes the trial partner the critical path item — funding follows partnership, not the other way around.",
+          "recipe": null,
+          "composition_mode": null,
+          "declared_in_markup": true,
+          "markup_preview": "<section data-testid=\"declared-situation\" data-material=\"declared\" style=\"margin-bottom:16px;padding:12px;border:1px dashed #B8860B;border-radius:8px;background:#FBF8F0\"><div style=\"font-family:ui-monospace,monospace;font-size:10px;letter-spacing:0.08em;color:#8B6914;margin-bottom:8px\">STATED BY USER · DECLARED · MAX INDICATIVE</div><ul style=\"margin:0;padding-left:16px;font-size:12.5px;line-height:1.45;color:#2E2A24\"><li data-material=\"declared\" data-claim-id=\"sc1\" data-claim-kind=\"fact\">SME pursuing ISO certification for rail components</li><li data-material=\"declared\" data-claim-id=\"sc2\" data-claim-kind=\"fact\">No trial partner secured yet</li><li data-material=\"declared\" data-claim-id=\"sc3\" data-claim-kind=\"constraint\">Personal bonus depends on hitting Q3 milestones</li><li data-material=\"declared\" data-claim-id=\"sc4\" data-claim-kind=\"uncertainty\">Unclear which funding path is realistic given current situation</li><li data-material=\"declared\" data-claim-id=\"sc5\" data-claim-kind=\"uncertainty\">Q3 milestone definition not yet specified (application, partner signed, or certification achieved)</li><li data-material=\"declared\" data-claim-id=\"sc6\" data-claim-kind=\"uncertainty\">Specific",
+          "corpus_citation_count": 0,
+          "retrieval_meta": {
+            "lane_mode": "dual",
+            "corpus_count": 3,
+            "external_count": 1,
+            "dual_peer": true,
+            "corpus_substantive": true,
+            "web_substantive": false,
+            "tier_reason": "corpus substantive, web thin — no corroboration boost; corpus-led tier cap (5 corpus citations)",
+            "reconcile_lead": "web"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "case_id": "cal_06_connect",
+    "label": "#6 connect ecosystem",
+    "query": "Map the rail decarbonisation ecosystem — who connects to whom in our corpus",
+    "follow_up_query": null,
+    "turns": [
+      {
+        "query": "Map the rail decarbonisation ecosystem — who connects to whom in our corpus",
+        "reply": "**55 projects · £8.17m floor · 30 lead orgs · 27 live since 2024 · 5 nodes / 7 edges in the graph layer.** The NetworkMap recipe is rendering the ecosystem topology — highest-degree nodes are your ecosystem anchors. The corpus is a validated slice; the national programme runs much larger (web lane). Want me to drill into a specific cluster or pull project-level detail for any node?",
+        "route": "substantive",
+        "route_source": "haiku",
+        "outcome_hint": "connect",
+        "update_canvas": true,
+        "disposition": {
+          "primary_surface": "canvas_primary",
+          "canvas_action": "replace",
+          "composition_mode": "reference_recipe",
+          "patch_fields": [],
+          "reasoning": "User asks to \"map the ecosystem — who connects to whom\" — this is a classic connect/network query. The Composition policy section declares WORTHY_RECIPE: NetworkMap with 5 nodes / 7 edges corpus-grounded, which triggers RECIPE_LOCK → composition_mode must be reference_recipe and canvas_markup must be null. The NetworkMap recipe is higher value than free HTML for this topology query. Judgement leads with the stat strip and network summary in chat_complement per Block F (orient + locked SQL stats), then the network recipe renders the graph.; RECIPE_LOCK: NetworkMap — 5 nodes / 7 edges corpus-grounded"
+        },
+        "lane_mode": "dual",
+        "gate_status": null,
+        "spec_excerpt": {
+          "tier": "Supported",
+          "verdict": "The corpus surfaces a 5-node, 7-edge rail decarbonisation network anchored by 55 projects and at least £8.17m in known funding across 30 lead organisations — with 27 projects live since 2024, signalling an ecosystem still forming rather than consolidating.",
+          "recipe": "NetworkMap",
+          "composition_mode": null,
+          "declared_in_markup": false,
+          "markup_preview": null,
+          "corpus_citation_count": 5,
+          "retrieval_meta": {
+            "lane_mode": "dual",
+            "corpus_count": 6,
+            "external_count": 1,
+            "dual_peer": true,
+            "corpus_substantive": true,
+            "web_substantive": false,
+            "tier_reason": "corpus substantive, web thin — no corroboration boost; corpus-led tier cap (6 corpus citations)",
+            "reconcile_lead": "balanced"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "case_id": "cal_07_lane_relevance",
+    "label": "#7 academic lane relevance",
+    "query": "What does academic research say about effective climate measures for transport?",
+    "follow_up_query": null,
+    "turns": [
+      {
+        "query": "What does academic research say about effective climate measures for transport?",
+        "reply": "The research evidence is clearest on electrification and modal shift, murkier on system integration and behaviour change. CPC's 38 active projects (£46.83m+ known funding, 19 live since 2024) sit at the practitioner frontier — where the academic evidence is thinnest is often where the portfolio is most active. Canvas shows the full HAVE / GAP / MOVE breakdown.",
+        "route": "substantive",
+        "route_source": "haiku",
+        "outcome_hint": "diagnose",
+        "update_canvas": true,
+        "disposition": {
+          "primary_surface": "canvas_primary",
+          "canvas_action": "replace",
+          "composition_mode": "reference_recipe",
+          "patch_fields": [],
+          "reasoning": "Substantive research synthesis question with diagnose outcome hint and dual lane evidence. User wants to understand what academic research says about effective climate measures for transport — this is a landscape/diagnostic question that benefits from a rich canvas treatment. Corpus has 38 projects and funding floor; web lane has external sources. Free compose with an evidence gap matrix style layout showing what research supports, what's contested, and where gaps lie. No find_path cue, no SWOT request — diagnose mode with structured HTML canvas.; RECIPE_LOCK: Diagnose gap matrix — structured HAVE/GAP/MOVE beats ad-hoc HTML"
+        },
+        "lane_mode": "dual",
+        "gate_status": null,
+        "spec_excerpt": {
+          "tier": "Indicative",
+          "verdict": "Academic and policy research converges on a short list of high-confidence levers — electrification, modal shift, and demand management — but effectiveness is highly context-dependent, and the evidence base for system-level integration remains thinner than for individual measures.",
+          "recipe": "EvidenceGapMatrix",
+          "composition_mode": null,
+          "declared_in_markup": false,
+          "markup_preview": null,
+          "corpus_citation_count": 5,
+          "retrieval_meta": {
+            "lane_mode": "dual",
+            "corpus_count": 4,
+            "external_count": 2,
+            "dual_peer": true,
+            "corpus_substantive": true,
+            "web_substantive": true,
+            "tier_reason": "both lanes substantive — corroboration boost applied; research-led tier cap (5 OpenAlex works)",
+            "reconcile_lead": "research"
+          }
+        }
+      }
+    ]
+  }
+]

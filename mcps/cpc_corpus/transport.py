@@ -31,6 +31,26 @@ def rest_configured() -> bool:
     )
 
 
+def corpus_rest_first() -> bool:
+    """Primary corpus transport is HTTPS REST (443) unless explicitly disabled."""
+    return os.getenv("ATLAS_V5_CORPUS_REST_FIRST", "1").strip().lower() not in (
+        "0",
+        "false",
+        "off",
+        "no",
+    )
+
+
+def postgres_secondary_enabled() -> bool:
+    """Optional direct Postgres after REST when pooler is reachable."""
+    return os.getenv("ATLAS_V5_CORPUS_PG_SECONDARY", "0").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+
+
 def set_transport(tier: CorpusTransport, *, error: Optional[str] = None) -> None:
     _current.set(tier)
     if error is not None:

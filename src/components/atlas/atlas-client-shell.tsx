@@ -69,17 +69,53 @@ type AtlasV5CoState = {
   case_entity_id?: string | null;
 };
 
+function specFingerprint(spec: AnswerSpec | null | undefined): string {
+  if (!spec) return "";
+  return [
+    spec.object,
+    spec.scope,
+    spec.mode,
+    spec.instrument?.recipe ?? "",
+    spec.verdict.sentence.slice(0, 40),
+  ].join("|");
+}
+
+function seedSpecFromPartial(partial: Partial<AnswerSpec>): AnswerSpec | null {
+  const seed = {
+    specVersion: "0.2.1" as const,
+    object: partial.object ?? "Composing…",
+    scope: partial.scope ?? "COMPOSING",
+    mode: partial.mode ?? "Orient",
+    tier: partial.tier ?? "Indicative",
+    verdict: partial.verdict ?? { sentence: "Composing verdict and canvas…" },
+    soWhat: partial.soWhat ?? {
+      lookingAt: "Composing",
+      oneDecision: "—",
+      gate: "—",
+      primaryAction: "—",
+      turn: "1 / 4",
+    },
+    ...partial,
+  };
+  const validated = validateFinalAnswerSpec(seed);
+  return validated.success ? validated.data : null;
+}
+
 function mergePartialIntoSpec(
   base: AnswerSpec | null,
   partial: Partial<AnswerSpec>,
 ): AnswerSpec | null {
   if (!base) {
-    const full = validateFinalAnswerSpec(partial);
-    return full.success ? full.data : null;
+    return seedSpecFromPartial(partial);
   }
   const merged = {
     ...base,
     ...partial,
+    object: partial.object ?? base.object,
+    scope: partial.scope ?? base.scope,
+    mode: partial.mode ?? base.mode,
+    tier: partial.tier ?? base.tier,
+    stats: partial.stats ?? base.stats,
     verdict: partial.verdict ? { ...base.verdict, ...partial.verdict } : base.verdict,
     instrument: partial.instrument ?? base.instrument,
     chart: partial.chart ?? base.chart,
@@ -296,12 +332,11 @@ export function AtlasCopilotShell({
     );
 
     if (next) {
-      const fp = `${next.mode}|${next.instrument?.recipe}|${next.verdict.sentence.slice(0, 40)}`;
-      const prevFp = specRef.current
-        ? `${specRef.current.mode}|${specRef.current.instrument?.recipe}|${specRef.current.verdict.sentence.slice(0, 40)}`
-        : "";
+      const fp = specFingerprint(next);
+      const prevFp = specFingerprint(specRef.current);
       if (fp !== prevFp || revision > lastRevisionRef.current || isPartial) {
         setSpec(next);
+        specRef.current = next;
         setDataSource("brain");
         setDevMeta((prev) => ({ ...prev, zod_error: undefined }));
       }
@@ -617,7 +652,8 @@ export function AtlasCopilotShell({
     if (bootstrapBootRef.current) return;
 
     const fromEntry = consumePendingBootstrap(q);
-    if (!fromEntry && wasBootstrapSent(q)) {
+    const alreadySent = wasBootstrapSent(q);
+    if (!fromEntry && alreadySent && messages.length > 0) {
       bootstrapBootRef.current = true;
       return;
     }
@@ -637,7 +673,7 @@ export function AtlasCopilotShell({
       router.replace(buildAtlasThreadUrl(urlThread), { scroll: false });
     }, delayMs);
     return () => window.clearTimeout(timer);
-  }, [beginUserTurn, bootstrapQuery, initialThreadId, router]);
+  }, [beginUserTurn, bootstrapQuery, initialThreadId, messages.length, router]);
 
   const chatMessages: ChatMessage[] = useMemo(() => {
     const useCopilotMessages =
@@ -674,7 +710,7 @@ export function AtlasCopilotShell({
     [activeThreadId, beginUserTurn, sendMessage],
   );
 
-  const showcaseOptions = devMeta?.showcase?.options;
+  const showcaseOptions = devMeta?.showcase?.options ?? devMeta?.quick_replies;
 
   const handleShowcaseSelect = useCallback(
     (command: string) => {

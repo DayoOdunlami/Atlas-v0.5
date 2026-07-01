@@ -6,7 +6,7 @@ from agents.atlas_v5.j1t1_assembler import assemble_j1t1_spec
 from agents.atlas_v5.j1t1_types import FunderBreakdownRow, J1T1CorpusStats
 from agents.atlas_v5.keyed_figures import build_keyed_index
 from agents.atlas_v5.visual.attach import attach_visuals
-from agents.atlas_v5.visual.data_profile import build_data_profile
+from agents.atlas_v5.visual.data_profile import DataProfile, build_data_profile
 from agents.atlas_v5.visual.opportunity import select_opportunities
 from agents.atlas_v5.visual.suppress import assess_data_strength
 from agents.atlas_v5.wide_pass import WidePassResult
@@ -71,14 +71,117 @@ def test_rich_stats_attach_multiple_charts():
     assert result.spec.charts[0].story
 
 
-def test_no_keyword_gate_swot_query_still_gets_charts():
+def test_swot_query_suppresses_unrequested_corpus_charts():
     stats = _rich_stats()
     skeleton = assemble_j1t1_spec(stats)
     wide = _wide(stats)
     wide.query = "SWOT analysis for rail decarbonisation"
     index = build_keyed_index(wide, skeleton)
     result = attach_visuals(skeleton, wide, index, wide.query)
-    assert result.meta["charts_attached"] >= 1
+    assert result.meta.get("charts_attached", 0) == 0
+    assert result.meta.get("visual_suppressed") is True
+
+
+def test_strategy_alignment_suppresses_funding_charts():
+    stats = _rich_stats()
+    skeleton = assemble_j1t1_spec(stats)
+    wide = _wide(stats)
+    wide.query = (
+        "How does CPC's transport innovation work align with DfT's future transport strategy?"
+    )
+    wide.outcome = "diagnose"
+    index = build_keyed_index(wide, skeleton)
+    result = attach_visuals(skeleton, wide, index, wide.query)
+    roles = {c.role for c in (result.spec.charts or [])}
+    assert not roles & {"ranking", "distribution", "composition", "compare", "temporal"}
+    assert result.meta.get("charts_attached", 0) == 0
+
+
+def test_uk_transport_strategy_alignment_no_charts():
+    stats = _rich_stats()
+    skeleton = assemble_j1t1_spec(stats)
+    wide = _wide(stats)
+    wide.query = "UK transport strategy alignment"
+    wide.outcome = "diagnose"
+    index = build_keyed_index(wide, skeleton)
+    result = attach_visuals(skeleton, wide, index, wide.query)
+    assert result.meta.get("charts_attached", 0) == 0
+
+
+def test_network_query_falls_back_to_heatmap_when_flow_thin():
+    profile = DataProfile(
+        project_count=20,
+        funder_count=3,
+        funded_funder_count=2,
+        has_funder_breakdown=True,
+        has_evidence_matrix=True,
+        citation_count=6,
+        has_flow_data=False,
+        flow_link_count=2,
+        outcome="diagnose",
+        query="who connects to whom in rural transport network",
+        tier="Supported",
+        is_sparse=False,
+    )
+    plan = select_opportunities(profile)
+    roles = [o.role for o in plan.opportunities]
+    assert "flow" not in roles
+    assert "coverage" in roles
+    coverage = next(o for o in plan.opportunities if o.role == "coverage")
+    assert coverage.pairing_mode in ("question-led", "aligned", "discovery-led")
+
+
+def test_decision_query_can_surface_temporal_from_discovery():
+    from agents.atlas_v5.j1t1_types import StartYearRow
+
+    stats = _rich_stats()
+    stats = stats.__class__(
+        project_count=stats.project_count,
+        funding_sum=stats.funding_sum,
+        null_funding_count=stats.null_funding_count,
+        funded_row_count=stats.funded_row_count,
+        org_count=stats.org_count,
+        live_since_2024=stats.live_since_2024,
+        funders=stats.funders,
+        start_years=[
+            StartYearRow(2018, 8),
+            StartYearRow(2019, 10),
+            StartYearRow(2020, 12),
+            StartYearRow(2021, 9),
+            StartYearRow(2022, 7),
+        ],
+    )
+    skeleton = assemble_j1t1_spec(stats)
+    wide = _wide(stats)
+    wide.query = "What are the best ways to fix rural transport issues?"
+    index = build_keyed_index(wide, skeleton)
+    result = attach_visuals(skeleton, wide, index, wide.query)
+    roles = [c.role for c in result.spec.charts]
+    assert "temporal" in roles
+    attached = next(
+        o for o in result.meta["visual_opportunities"] if o["role"] == "temporal"
+    )
+    assert attached["pairing_mode"] in ("discovery-led", "aligned")
+    assert attached["discovery_strength"] >= 0.68
+
+
+def test_funding_ask_without_data_suppresses_charts():
+    stats = J1T1CorpusStats(
+        project_count=1,
+        funding_sum=50_000,
+        null_funding_count=0,
+        funded_row_count=1,
+        org_count=1,
+        live_since_2024=0,
+        funders=[FunderBreakdownRow("Innovate UK", 1, 0, 50_000)],
+    )
+    skeleton = assemble_j1t1_spec(stats)
+    wide = _wide(stats)
+    wide.query = "funding breakdown by funder for maritime decarbonisation"
+    index = build_keyed_index(wide, skeleton)
+    result = attach_visuals(skeleton, wide, index, wide.query)
+    assert result.meta.get("charts_attached", 0) == 0
+    assert result.meta.get("visual_suppressed") is True
 
 
 def test_heatmap_when_citations_rich():

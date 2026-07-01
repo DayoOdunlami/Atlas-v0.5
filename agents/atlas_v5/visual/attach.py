@@ -54,7 +54,16 @@ def attach_visuals(
         "trust_conflicts": index.conflict_keys,
         "validation_summary": index.validation_summary,
         "visual_opportunities": [
-            {"kind": o.kind, "role": o.role, "story": o.story, "priority": o.priority}
+            {
+                "kind": o.kind,
+                "role": o.role,
+                "story": o.story,
+                "priority": o.priority,
+                "query_affinity": o.query_affinity,
+                "discovery_strength": o.discovery_strength,
+                "pairing_score": o.pairing_score,
+                "pairing_mode": o.pairing_mode,
+            }
             for o in plan.opportunities
         ],
         "visual_rejected": plan.rejected + build_rejected,

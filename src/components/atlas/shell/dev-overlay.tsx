@@ -72,6 +72,7 @@ export type AtlasDevMeta = {
     title?: string;
     options?: Array<{ id: string; label: string; command: string }>;
   };
+  quick_replies?: Array<{ id: string; label: string; command: string }>;
 };
 
 export function DevOverlay({

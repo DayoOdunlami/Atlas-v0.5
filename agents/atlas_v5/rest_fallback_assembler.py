@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from agents.atlas_v5.corpus_evidence import citations_from_hits, corpus_hits_from_wide
 from agents.atlas_v5.wide_pass import WidePassResult
 from agents.contracts.answer_spec import (
     AnswerSpec,
@@ -17,12 +18,7 @@ from agents.orchestrator.retrieval_fabric import EvidenceBag
 
 
 def _corpus_hits(wide: WidePassResult) -> list[dict[str, Any]]:
-    if wide.corpus_hits:
-        return list(wide.corpus_hits)
-    bag = wide.evidence_bag
-    if bag and bag.corpus_raw:
-        return list(bag.corpus_raw)
-    return []
+    return corpus_hits_from_wide(wide)
 
 
 def _web_rows(bag: EvidenceBag | None) -> list[WebEvidence]:
@@ -43,28 +39,6 @@ def _web_rows(bag: EvidenceBag | None) -> list[WebEvidence]:
     return out
 
 
-def _citations_from_hits(hits: list[dict[str, Any]]) -> list[CorpusCitation]:
-    out: list[CorpusCitation] = []
-    for h in hits[:12]:
-        pid = str(h.get("id") or "").strip()
-        if not pid:
-            continue
-        score = h.get("similarity") or h.get("score")
-        try:
-            score_f = float(score) if score is not None else 0.0
-        except (TypeError, ValueError):
-            score_f = 0.0
-        out.append(
-            CorpusCitation(
-                id=pid,
-                title=str(h.get("title") or "Corpus project")[:240],
-                organisation=str(h.get("organisation") or h.get("lead_org_name") or "")[:120],
-                score=round(score_f, 4),
-            )
-        )
-    return out
-
-
 def _mode_for_outcome(outcome: str) -> str:
     return {
         "connect": "Connect",
@@ -80,7 +54,7 @@ def assemble_rest_fallback_spec(wide: WidePassResult) -> AnswerSpec:
     hits = _corpus_hits(wide)
     bag = wide.evidence_bag
     web = _web_rows(bag)
-    citations = _citations_from_hits(hits)
+    citations = citations_from_hits(hits)
     n_proj = len(citations)
     label = wide.object_label or "Your question"
     query = wide.query or label

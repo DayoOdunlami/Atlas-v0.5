@@ -23,6 +23,8 @@ from agents.atlas_v5.intent import (
     is_explicit_canvas_request,
     is_meta_chat_query,
     is_j1t1_orient_query,
+    is_strategy_alignment_query,
+    is_strategy_thread_continuation,
     is_substantive_canvas_query,
 )
 from agents.atlas_v5.j1t1_corpus import J1T1_QUERY_PHRASE
@@ -116,9 +118,16 @@ def _haiku_classify(
         return None
 
 
-def _infer_outcome_hint(query: str) -> OutcomeHint:
+def infer_outcome_hint(
+    query: str,
+    current_spec: dict[str, Any] | None = None,
+) -> OutcomeHint:
+    if current_spec and is_strategy_thread_continuation(query, current_spec):
+        return "diagnose"
     if has_declared_uncertainty_cue(query):
         return "find_path"
+    if is_strategy_alignment_query(query):
+        return "diagnose"
     if is_connect_network_query(query):
         return "connect"
     if is_j1t1_orient_query(query) or query.lower() == J1T1_QUERY_PHRASE.lower():
@@ -156,7 +165,7 @@ def classify_turn_heuristic(
     if is_explicit_canvas_request(q):
         return TurnDecision(
             route="substantive",
-            outcome_hint=_infer_outcome_hint(q),
+            outcome_hint=infer_outcome_hint(q, current_spec),
             reasoning="Explicit canvas request",
             source="heuristic",
         )
@@ -179,7 +188,7 @@ def classify_turn_heuristic(
     if is_connect_network_query(q) or is_j1t1_orient_query(q):
         return TurnDecision(
             route="substantive",
-            outcome_hint=_infer_outcome_hint(q),
+            outcome_hint=infer_outcome_hint(q, current_spec),
             reasoning="Heuristic: orient/connect pattern",
             source="heuristic",
         )
@@ -189,7 +198,7 @@ def classify_turn_heuristic(
 
     return TurnDecision(
         route="substantive",
-        outcome_hint=_infer_outcome_hint(q),
+        outcome_hint=infer_outcome_hint(q, current_spec),
         source="heuristic",
     )
 
@@ -209,7 +218,7 @@ def classify_turn(
     if is_explicit_canvas_request(q):
         return TurnDecision(
             route="substantive",
-            outcome_hint=_infer_outcome_hint(q),
+            outcome_hint=infer_outcome_hint(q, current_spec),
             reasoning="Explicit canvas request",
             source="heuristic",
         )
@@ -232,7 +241,7 @@ def classify_turn(
     if re.match(r"^\s*(hi|hello|hey)[\s,—-]+", q, re.I) and len(q.split()) > 4:
         substantive = re.sub(r"^\s*(hi|hello|hey)[\s,—-]+", "", q, flags=re.I).strip()
         if substantive and classify_follow_up(substantive, current_spec) == "canvas_update":
-            hint = _infer_outcome_hint(substantive)
+            hint = infer_outcome_hint(substantive, current_spec)
             return TurnDecision(
                 route="substantive",
                 outcome_hint=hint,
@@ -253,14 +262,14 @@ def classify_turn(
         if is_atlas_self_reflection_query(q) or is_explicit_canvas_request(q):
             return TurnDecision(
                 route="substantive",
-                outcome_hint="defend" if is_atlas_self_reflection_query(q) else _infer_outcome_hint(q),
+                outcome_hint="defend" if is_atlas_self_reflection_query(q) else infer_outcome_hint(q, current_spec),
                 reasoning=f"Heuristic override: canvas warranted (Haiku said {parsed.route})",
                 source="heuristic",
             )
         if is_substantive_canvas_query(q):
             return TurnDecision(
                 route="substantive",
-                outcome_hint=_infer_outcome_hint(q),
+                outcome_hint=infer_outcome_hint(q, current_spec),
                 reasoning=(
                     f"Heuristic override: in-domain canvas query "
                     f"(Haiku said {parsed.route})"
@@ -273,9 +282,11 @@ def classify_turn(
             source="haiku",
         )
 
-    hint = parsed.outcome_hint or _infer_outcome_hint(q)
+    hint = parsed.outcome_hint or infer_outcome_hint(q, current_spec)
     if has_declared_uncertainty_cue(q):
         hint = "find_path"
+    elif is_strategy_alignment_query(q) and hint == "connect":
+        hint = "diagnose"
     return TurnDecision(
         route="substantive",
         outcome_hint=hint,

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, field_validator
 
 ConfidenceTier = Literal["Speculative", "Indicative", "Supported", "Robust"]
 OutcomeMode = Literal["Orient", "Connect", "Diagnose", "Act", "Defend", "FindPath"]
@@ -29,11 +29,15 @@ TIER_CEILING_FRACTION: dict[str, float] = {
 
 
 class CorpusCitation(BaseModel):
-    id: str  # atlas.projects.id UUID
+    id: str  # atlas.projects.id or knowledge_documents.id UUID
     title: str
     score: float | None = None
     organisation: str | None = None
     source_type: str | None = None
+    validation_tier: str | None = None
+    document_id: str | None = None
+    chunk_id: str | None = None
+    publisher: str | None = None
 
 
 class HiveCitation(BaseModel):
@@ -64,6 +68,13 @@ class Claim(BaseModel):
     provId: str | None = None
     corpus_id: str | None = None
     web_id: str | None = None
+
+    @field_validator("source", mode="before")
+    @classmethod
+    def normalize_source(cls, value: str) -> str:
+        if value == "synthesised":
+            return "synthesized"
+        return value
 
 
 class ProvenanceEntry(BaseModel):

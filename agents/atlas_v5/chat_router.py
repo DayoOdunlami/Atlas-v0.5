@@ -79,10 +79,10 @@ _CONFUSION_RE = re.compile(
 def _spec_summary(ctx: dict[str, Any] | None) -> dict[str, str]:
     if not ctx:
         return {
-            "mode": "Orient",
-            "tier": "Supported",
-            "recipe": "IncommensurableMagnitudes",
-            "verdict": "Rail decarbonisation orient loaded from corpus.",
+            "mode": "At rest",
+            "tier": "—",
+            "recipe": "none",
+            "verdict": "",
             "stats": "",
         }
     verdict = (ctx.get("verdict") or {}).get("sentence") or ""
@@ -168,6 +168,15 @@ def build_chat_only_reply(
         )
 
     if _GREETING_RE.match(q) or (is_conversational(q) and len(ql.split()) <= 6):
+        if not current_spec:
+            return (
+                "Hi — Atlas v5 here. The canvas is **at rest** until you ask a strategic question.\n\n"
+                "Try:\n"
+                "• *Show me what you can do* — demo menu (rail · aviation · flex)\n"
+                "• *State of play on rail decarbonisation* (orient)\n"
+                "• *Map the ecosystem* (connect)\n"
+                "• *What am I looking at?* (summarise the canvas)"
+            )
         on_screen = summary["mode"]
         return (
             f"Hi — Atlas v5 here. The canvas currently shows **{on_screen}** "

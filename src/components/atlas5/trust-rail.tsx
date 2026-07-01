@@ -13,6 +13,10 @@ import type {
   SourceType,
 } from "@/lib/atlas5/types";
 import { cn } from "@/lib/utils";
+import {
+  kbValidationTierLabel,
+  kbValidationTierStyle,
+} from "@/lib/atlas5/kb-validation-tier";
 
 const TIER_BAR: Record<ConfidenceTier, { width: string; color: string }> = {
   Speculative: { width: "w-1/4", color: "bg-red-400" },
@@ -57,6 +61,16 @@ function CitationRow({ c }: { c: CorpusCitation }) {
             <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded shrink-0">
               <span className={cn("w-1.5 h-1.5 rounded-full", dot)} />
               <span className="text-muted-foreground">{label}</span>
+            </span>
+          )}
+          {c.validation_tier && kbValidationTierLabel(c.validation_tier) && (
+            <span
+              className={cn(
+                "text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded border shrink-0",
+                kbValidationTierStyle(c.validation_tier),
+              )}
+            >
+              {kbValidationTierLabel(c.validation_tier)}
             </span>
           )}
           <span className="text-xs text-muted-foreground truncate">

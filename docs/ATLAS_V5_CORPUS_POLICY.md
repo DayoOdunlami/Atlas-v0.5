@@ -25,6 +25,22 @@
 - Verdict copy that sounds like orient when `project_count = 0`.
 - Tests that only check Python `run_turn_response` without CopilotKit deploy path (see eval gap — deploy smoke planned separately).
 
+## Knowledge document validation tiers
+
+Documents in `atlas.knowledge_documents` carry a `validation_tier` so you can later judge what to keep or retire:
+
+| Tier | Meaning | Searchable? |
+|------|---------|-------------|
+| `T1_anchor` | Tier-1 manifest (curated strategy PDFs) | Yes — boosted in ranking |
+| `T2_embedded` | Full PDF ingested (6+ chunks, embedded) | Yes |
+| `T3_thin` | Thin ingest (1–5 chunks) or auto-promoted GovUK candidate | Yes — review candidate |
+| `T4_candidate` | Proposed, not promoted | No |
+| `T0_retired` | Duplicate or deprecated sibling | No |
+
+Maintenance: `python scripts/kb_maintain.py` (manifest sync → promote → dedupe → backfill → embed → re-assign tiers). Manifest: `scripts/kb/tier1_manifest.json`.
+
+Citations surface `validation_tier` on `knowledge_doc` hits so UI badges show T1/T2/T3 during calibration.
+
 ## Environment
 
 - **Railway agent:** `ANTHROPIC_API_KEY`, `SUPABASE_SERVICE_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `OPENAI_API_KEY` (embeddings), `EXA_API_KEY` (web).

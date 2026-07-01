@@ -112,12 +112,12 @@ def _fetch_corpus_shaped(query: str, shopping: ShoppingList) -> tuple[list[dict]
         pf = pool.submit(_fetch_projects, query, proj_k)
         df = pool.submit(_fetch_documents, query, doc_k, sub_q)
         try:
-            projects = pf.result(timeout=12.0)
+            projects = pf.result(timeout=25.0)
         except Exception as exc:
             errors.append(f"projects: {exc}")
             projects = []
         try:
-            documents = df.result(timeout=12.0)
+            documents = df.result(timeout=25.0)
         except Exception as exc:
             errors.append(f"documents: {exc}")
             documents = []

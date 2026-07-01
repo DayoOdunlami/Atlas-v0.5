@@ -15,13 +15,15 @@ def assemble_connect_spec(
     *,
     query: str,
     carried_summary: str | None = None,
+    object_label: str = "Rail decarbonisation",
 ) -> AnswerSpec:
     orient = assemble_j1t1_spec(stats)
     node_count = len(graph.nodes)
     edge_count = len(graph.edges)
+    label = object_label or "Corpus slice"
 
     verdict_sentence = (
-        f"The rail decarb slice connects across {node_count} entities "
+        f"{label} connects across {node_count} entities "
         f"and {edge_count} relationships — density selects the honest map shape."
     )
     if graph.ladder_rung == "typed-inventory":
@@ -32,6 +34,7 @@ def assemble_connect_spec(
 
     spec = orient.model_copy(
         update={
+            "object": label,
             "mode": "Connect",
             "scope": f"CORPUS · {node_count} NODES · {edge_count} EDGES · CONNECT",
             "tier": "Indicative" if edge_count < 4 else "Supported",
@@ -71,7 +74,7 @@ def assemble_connect_spec(
             },
             "soWhat": {
                 "lookingAt": (
-                    f"A {graph.ladder_rung} view of how rail decarb connects — "
+                    f"A {graph.ladder_rung} view of how {label.lower()} connects — "
                     f"{edge_count} edges across {node_count} nodes."
                 ),
                 "oneDecision": (

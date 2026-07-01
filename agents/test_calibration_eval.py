@@ -21,11 +21,12 @@ from agents.eval.behavioral_grader import (
 )
 
 
-def test_five_calibration_cases_defined():
-    assert len(CALIBRATION_CASES) == 5
+def test_calibration_cases_include_strategy():
+    assert len(CALIBRATION_CASES) >= 8
     ids = {c.id for c in CALIBRATION_CASES}
     assert "cal_03_lost_rail" in ids
     assert "cal_04_clean_rail" in ids
+    assert "cal_08_strategy" in ids
 
 
 def test_cal_03_has_routing_and_persistence_layers():

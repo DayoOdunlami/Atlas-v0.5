@@ -16,6 +16,10 @@ import { ClaimStateBadge } from "@/components/atlas5/claim-state-badge";
 import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { CorpusCitation } from "@/lib/atlas5/types";
+import {
+  kbValidationTierLabel,
+  kbValidationTierStyle,
+} from "@/lib/atlas5/kb-validation-tier";
 
 // ---------------------------------------------------------------------------
 // Tier visual config
@@ -163,6 +167,7 @@ export function SurfaceSection({
 // ---------------------------------------------------------------------------
 
 export function CitationRow({ citation }: { citation: CorpusCitation }) {
+  const tierLabel = kbValidationTierLabel(citation.validation_tier);
   return (
     <div className="flex items-start gap-2.5 py-2 border-b border-border/60 last:border-0">
       {citation.score != null && (
@@ -174,9 +179,26 @@ export function CitationRow({ citation }: { citation: CorpusCitation }) {
         <p className="text-xs text-foreground font-medium line-clamp-2 leading-snug">
           {citation.title}
         </p>
-        <p className="text-[10px] text-muted-foreground mt-0.5">
-          {citation.organisation ?? citation.publisher ?? citation.funder ?? ""}
-        </p>
+        <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+          <p className="text-[10px] text-muted-foreground">
+            {citation.organisation ?? citation.publisher ?? citation.funder ?? ""}
+          </p>
+          {citation.source_type === "knowledge_doc" && (
+            <span className="text-[9px] uppercase tracking-wide text-muted-foreground border border-border rounded px-1">
+              Doc
+            </span>
+          )}
+          {tierLabel && (
+            <span
+              className={cn(
+                "text-[9px] font-medium border rounded px-1",
+                kbValidationTierStyle(citation.validation_tier),
+              )}
+            >
+              {tierLabel}
+            </span>
+          )}
+        </div>
       </div>
       {citation.claim_state && (
         <ClaimStateBadge

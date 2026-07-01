@@ -124,6 +124,33 @@ def _check_expect(payload: dict[str, Any], expect: dict[str, Any], latency_ms: f
         elif tier_order.index(got) < tier_order.index(str(min_tier)):
             failures.append(f"spec tier {got} below min {min_tier}")
 
+    max_tier = spec_expect.get("max_tier")
+    if max_tier:
+        tier_order = ["Speculative", "Indicative", "Supported", "Robust"]
+        got = spec.get("tier")
+        if got not in tier_order:
+            failures.append(f"spec tier missing or invalid: {got!r}")
+        elif tier_order.index(got) > tier_order.index(str(max_tier)):
+            failures.append(f"spec tier {got} above max {max_tier}")
+
+    max_charts = spec_expect.get("max_charts")
+    if max_charts is not None:
+        chart_count = len(spec.get("charts") or [])
+        if spec.get("chart") is not None and chart_count == 0:
+            chart_count = 1
+        if chart_count > int(max_charts):
+            failures.append(f"spec charts {chart_count} > max {max_charts}")
+
+    scope_contains = spec_expect.get("scope_contains")
+    if scope_contains:
+        scope = str(spec.get("scope") or "")
+        if str(scope_contains).upper() not in scope.upper():
+            failures.append(f"spec.scope must contain {scope_contains!r}, got {scope!r}")
+
+    mode_expect = spec_expect.get("mode")
+    if mode_expect and str(spec.get("mode")) != str(mode_expect):
+        failures.append(f"spec.mode expected {mode_expect!r}, got {spec.get('mode')!r}")
+
     return failures
 
 

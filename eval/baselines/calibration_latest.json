@@ -1,0 +1,504 @@
+{
+  "agent_id": "atlas_v5_practitioner",
+  "results": [
+    {
+      "agent_id": "atlas_v5_practitioner",
+      "case_id": "cal_01_hello",
+      "method": "llm",
+      "model": "claude-sonnet-4-6",
+      "verdict": "ship",
+      "grader_verdict": "ship",
+      "diagnosis": "No bottleneck \u2014 both load-bearing criteria met at practitioner grade; disposition layer is clean on this turn.",
+      "criteria": [
+        {
+          "id": "cal_01_warm_greeting",
+          "layer": "disposition",
+          "score": 3,
+          "reason": "The reply is a single warm sentence with no ceremony or preamble, immediately inviting the user to share their problem. It names concrete domains (funding, landscape, idea, partnership) that feel practitioner-relevant without being a product tour. Tone is collegial and direct \u2014 exactly what a real advisor would say when someone walks into the room and says 'hello'."
+        },
+        {
+          "id": "cal_01_no_canvas",
+          "layer": "disposition",
+          "score": 3,
+          "reason": "update_canvas=false and canvas_action=null in the structural signals; the reply contains no landscape content, no structured output, no section headers or bullet lists. Canvas is cleanly untouched. Routing correctly stayed on the chat path."
+        }
+      ],
+      "turn_swot": {
+        "strengths": [
+          "One-liner format respected \u2014 no padding or filler sentences added after the core welcome",
+          "Concrete domain cues (funding, landscape, half-formed idea, partnership) signal domain awareness without overwhelming a simple greeting",
+          "Route correctly held at chat; no canvas write triggered",
+          "Closing clause 'I'm here to help you think it through' lands the practitioner register without sounding like a chatbot disclaimer"
+        ],
+        "weaknesses": [
+          "Minor: the em-dash list of examples ('a funding question, a landscape\u2026') edges toward a light enumeration; could be read as a micro product-tour, though it stays below the threshold"
+        ],
+        "opportunities": [
+          "Could personalise slightly if thread context were available (e.g. returning user), but absent prior context this is the correct shape",
+          "Second sentence could be trimmed to a single short invitation for even crisper delivery"
+        ],
+        "threats": [
+          "If the domain cue list grows in future variants, it risks drifting into a capability bullet list \u2014 monitor for scope creep on greeting templates"
+        ]
+      },
+      "structural_signals": {
+        "case_id": "cal_01_hello",
+        "thread_id": "cal-cal_01_hello-427bf332",
+        "route": "chat",
+        "route_source": "haiku",
+        "outcome_hint": null,
+        "update_canvas": false,
+        "recipe": null,
+        "declared_in_markup": false,
+        "lane_mode": null,
+        "corpus_count": null,
+        "external_count": null,
+        "case_file_count": 0,
+        "case_file_kinds": [],
+        "follow_up_ran": false,
+        "canvas_action": null,
+        "primary_surface": null
+      },
+      "note": null,
+      "llm_error": null
+    },
+    {
+      "agent_id": "atlas_v5_practitioner",
+      "case_id": "cal_02_haribo",
+      "method": "llm",
+      "model": "claude-sonnet-4-6",
+      "verdict": "tune",
+      "grader_verdict": "broken",
+      "diagnosis": "disposition bottleneck: agent defaults to clean-but-closed redirect and never checks for the real question under the surface query",
+      "criteria": [
+        {
+          "id": "cal_02_warm_redirect",
+          "layer": "disposition",
+          "score": 2,
+          "reason": "The agent does redirect off-topic cleanly and ends with a clear in-scope invitation ('I'm your analyst'). The tone is collegial rather than scolding. However, 'That's a bit outside my lane' is slightly mechanical/template-feeling rather than a genuinely warm acknowledgement \u2014 it doesn't briefly play along with the lightness of the query before pivoting. A practitioner-grade response might briefly smile at the absurdity before redirecting, making the invitation feel more human. Functional but slightly stiff."
+        },
+        {
+          "id": "cal_02_seeks_real_question",
+          "layer": "disposition",
+          "score": 1,
+          "reason": "The agent does not probe whether there is a real strategic question underneath the Haribo query. It treats the input as pure off-topic noise and closes out. A thinking-partner response would at minimum flag the possibility \u2014 e.g., 'Unless you're testing the edges of what I cover \u2014 happy to dig in if there's something in transport or urban innovation on your mind.' The rubric requires checking for a real question under the joke; this is absent. The criterion is load-bearing, so this is a significant gap."
+        },
+        {
+          "id": "cal_02_no_brick_wall",
+          "layer": "disposition",
+          "score": 2,
+          "reason": "The agent avoids an explicit 'I cannot help with that' dead end and does offer a genuine forward path. It is not a hard brick wall. However, the response still functions as a soft dead end for this particular query \u2014 no follow-up hook, no curiosity about the user's intent. It narrowly avoids the worst form of brick-walling but doesn't fully open a door. Score 2 rather than 0 because the invitation at the end is real and the tone is not scolding."
+        }
+      ],
+      "turn_swot": {
+        "strengths": [
+          "Scope declaration is crisp and accurate \u2014 'UK transport and cities innovation space' is informative, not vague.",
+          "Ends with a positive, actionable invitation listing concrete topic areas the agent can help with.",
+          "Tone avoids any scolding or condescension, which preserves user goodwill."
+        ],
+        "weaknesses": [
+          "Completely ignores the possibility that the query is a probe or contains a latent real question \u2014 no curiosity shown.",
+          "Opening phrase 'That's a bit outside my lane' is slightly formulaic and does not lean into the lightness or playfulness of the original query.",
+          "No check-back or micro-question to invite the user to surface their real intent \u2014 the redirect is one-directional."
+        ],
+        "opportunities": [
+          "A single light-touch sentence acknowledging the joke ('Bold opening \u2014 if only I covered gummy bears') before pivoting would score the warm redirect to a 3.",
+          "Adding a speculative bridge ('...unless this is about supply-chain innovation, in which case tell me more') would satisfy the seek-real-question criterion without feeling forced."
+        ],
+        "threats": [
+          "Repeated soft dead-ends like this risk training users to see Atlas as a narrow tool rather than a thinking partner, reducing engagement depth over time.",
+          "The missing seek-real-question behaviour is a load-bearing criterion failure \u2014 if this pattern persists it will systematically miss users who open with oblique or playful framing."
+        ]
+      },
+      "structural_signals": {
+        "case_id": "cal_02_haribo",
+        "thread_id": "cal-cal_02_haribo-e90b62eb",
+        "route": "chat",
+        "route_source": "haiku",
+        "outcome_hint": null,
+        "update_canvas": false,
+        "recipe": null,
+        "declared_in_markup": false,
+        "lane_mode": null,
+        "corpus_count": null,
+        "external_count": null,
+        "case_file_count": 0,
+        "case_file_kinds": [],
+        "follow_up_ran": false,
+        "canvas_action": null,
+        "primary_surface": null
+      },
+      "note": null,
+      "llm_error": null
+    },
+    {
+      "agent_id": "atlas_v5_practitioner",
+      "case_id": "cal_03_lost_rail",
+      "method": "llm",
+      "model": "claude-sonnet-4-6",
+      "verdict": "ship",
+      "grader_verdict": "tune",
+      "diagnosis": "Render layer is the marginal bottleneck: recipe=OpportunityList on T2 conflicts with the T3 find-my-path surface spec, creating a seam that disposition and free_compose currently paper over but that could break in a render cycle.",
+      "criteria": [
+        {
+          "id": "cal_03_routing_find_path",
+          "layer": "routing",
+          "score": 2,
+          "reason": "Turn 1 is correctly routed as find_path / substantive \u2014 the agent resists the dead-end chat-only temptation and opens a path-finding dialogue. Turn 2 routes as 'orient' (outcome_hint) but the reply is substantive and actionable, so the net behaviour is closer to find_path than pure orientation. The structural signal shows outcome_hint='orient' on T2 against the rubric expectation of find_path; the agent's own disposition reasoning on T2 also calls it 'find-my-path'. Routing is mostly right but the outcome_hint mismatch on T2 is a small seam \u2014 content saves it from a 1, but the classifier disagreement means it doesn't fully earn a 3."
+        },
+        {
+          "id": "cal_03_thinking_partner",
+          "layer": "disposition",
+          "score": 3,
+          "reason": "Turn 1 is exemplary: agent spots 'not sure what I'm asking' as the canonical uncertainty cue, reflects it back cleanly, and asks the two sharpest clarifying questions (one-sentence idea + what are you stuck on). No landscape dump, no premature list. Turn 2 similarly surfaces the real gating question (trial partner / TRL) rather than flooding with every programme. Both turns stay in thinking-partner mode \u2014 concise, diagnostic, forward-leaning. Practitioner-grade."
+        },
+        {
+          "id": "cal_03_declared_persisted",
+          "layer": "persistence",
+          "score": 3,
+          "reason": "Case file after the thread shows four entries: two uncertainty claims from T1 (verbatim quote + paraphrase), one domain claim from T2 (SME / funding seeking), one uncertainty claim from T2 (unknown gates). All four are correctly typed (uncertainty / domain) and sourced as declared. The declared_in_markup flag is true on both turns. Persistence seam is clean."
+        },
+        {
+          "id": "cal_03_t3_surface",
+          "layer": "render",
+          "score": 2,
+          "reason": "Turn 1 correctly uses T3 find-my-path surface with declared panel + reflected question + no list. Turn 2 is where the rubric is tested: spec recipe is OpportunityList but the disposition reasoning explicitly calls for T3 find-my-path style, and the actual reply text is a three-tier summary (not a ranked R4 list) with a follow-up diagnostic question. The declared panel is present in markup on T2. However, the spec_excerpt recipe='OpportunityList' means the system internally selected the wrong recipe even if the rendered reply avoids a full ranked list \u2014 there is ambiguity about whether the canvas surface fully complied with T3 constraints or partially drifted toward an opportunity landscape. The reply is acceptable but the recipe signal leakage means it doesn't fully earn a 3."
+        },
+        {
+          "id": "cal_03_followup_reference",
+          "layer": "persistence",
+          "score": 3,
+          "reason": "Follow-up turn (T2) explicitly references prior declared context: 'an SME innovator like that' is resolved against the stored rail-idea claim, and the declared panel in T2 markup includes all four case file entries including T1 claims. followup_references_prior_declared=true confirmed in structural signals. The context\u2192storage\u2192N+1 seam is intact \u2014 no re-interrogation of already-declared facts."
+        }
+      ],
+      "turn_swot": {
+        "strengths": [
+          "Thinking-partner mode is genuinely practitioner-grade across both turns \u2014 the agent never dumps a landscape, always surfaces the gating question.",
+          "Persistence is exemplary: four well-typed case file entries, declared panel visible in both turns, no context amnesia on the follow-up.",
+          "Turn 1 routing and disposition are perfectly aligned \u2014 uncertainty cue detected, T3 surface applied, no premature answers.",
+          "Follow-up reply closes with a diagnostic question (TRL + trial partner) that directly unlocks the next path \u2014 this is the right adviser move."
+        ],
+        "weaknesses": [
+          "T2 outcome_hint is 'orient' while the rubric expects find_path \u2014 classifier and disposition are slightly out of sync, even if the rendered content is acceptable.",
+          "T2 spec recipe is OpportunityList, creating a seam risk: if the canvas renderer honours the recipe signal over the free_compose instruction, the surface could drift to a ranked list in a real render cycle.",
+          "The three-tier funding summary in T2, while concise, could be read as the start of a landscape dump \u2014 the saving grace is the closing diagnostic question, but the balance is fine rather than exemplary."
+        ],
+        "opportunities": [
+          "Align outcome_hint on T2 to find_path to remove the routing/disposition seam entirely.",
+          "Override or null the OpportunityList recipe signal when composition_mode=free_compose and disposition calls for T3 \u2014 this prevents future render drift.",
+          "T2 could more explicitly echo one specific T1 declared claim ('you said you had a rail idea but weren't sure what you needed \u2014 this is the map for that') to make the continuity even more visible to the user."
+        ],
+        "threats": [
+          "If the OpportunityList recipe signal propagates to the canvas renderer in production, the T3 surface could be silently replaced by a ranked list, breaking the rubric for this case type.",
+          "The outcome_hint mismatch (orient vs find_path) could cause downstream turn classifiers to misroute T3 if the thread continues \u2014 the case file is sound but the routing label could mislead."
+        ]
+      },
+      "structural_signals": {
+        "case_id": "cal_03_lost_rail",
+        "thread_id": "cal-cal_03_lost_rail-0b7d0553",
+        "route": "substantive",
+        "route_source": "heuristic",
+        "outcome_hint": "orient",
+        "update_canvas": true,
+        "recipe": "OpportunityList",
+        "declared_in_markup": true,
+        "lane_mode": "dual",
+        "corpus_count": 8,
+        "external_count": 3,
+        "case_file_count": 4,
+        "case_file_kinds": [
+          "uncertainty",
+          "uncertainty",
+          "domain",
+          "uncertainty"
+        ],
+        "follow_up_ran": true,
+        "followup_references_prior_declared": true,
+        "canvas_action": "replace",
+        "primary_surface": "canvas_primary"
+      },
+      "note": null,
+      "llm_error": null
+    },
+    {
+      "agent_id": "atlas_v5_practitioner",
+      "case_id": "cal_04_clean_rail",
+      "method": "llm",
+      "model": "claude-sonnet-4-6",
+      "verdict": "ship",
+      "grader_verdict": "ship",
+      "diagnosis": "No layer failure this turn; minor retrieval expressiveness gap (funding uncertainty not bracketed, no sub-theme signal in inline) is the only tune-able residual.",
+      "criteria": [
+        {
+          "id": "cal_04_direct_answer",
+          "layer": "disposition",
+          "score": 3,
+          "reason": "The reply opens immediately with hard numbers \u2014 '55 projects \u00b7 \u00a38.17m known funding floor \u00b7 27 live since 2024 \u00b7 30 lead orgs' \u2014 then qualifies scope without pre-empting or reframing the question. There is no 'before we answer\u2026' or 'what you really mean\u2026' hedging. The stat strip lands first, exactly as Block F demands for an orient query. Practitioner-grade direct answer."
+        },
+        {
+          "id": "cal_04_retrieval_balance",
+          "layer": "retrieval",
+          "score": 3,
+          "reason": "The spec confirms corpus_count=8 (substantive) and external_count=10 (substantive), dual_peer=true, reconcile_lead='corpus'. The reply correctly anchors on corpus-derived statistics (project count, funding floor, live-since date, lead-org count) and uses the web lane only to add scale context ('national programme spend is materially larger') without letting external data override or crowd out the corpus finding. The IncommensurableMagnitudes recipe logic \u2014 two-tier funding callout distinguishing corpus floor from national programme scale \u2014 is reflected accurately. Balance is well-calibrated."
+        }
+      ],
+      "turn_swot": {
+        "strengths": [
+          "Stat strip placed first with no throat-clearing \u2014 textbook Block F execution for an orient query.",
+          "Scope caveat ('growing but partial slice') is honest and proportionate; it informs without undermining the corpus answer.",
+          "IncommensurableMagnitudes recipe correctly operationalised: corpus floor vs national programme dwarfing \u2014 two tiers, one sentence.",
+          "Canvas deferral ('Canvas has the full state-of-play') keeps the inline reply tight while signalling where depth lives."
+        ],
+        "weaknesses": [
+          "The inline reply does not surface even a single named sub-theme or technology cluster (e.g. hydrogen, battery, overhead electrification), which would lift an orient answer from a stat strip to an actual landscape sketch.",
+          "No uncertainty bracket on the funding floor figure \u2014 '\u00a38.17m' reads as precise when the spec explicitly flags it as a floor and materially incomplete."
+        ],
+        "opportunities": [
+          "A one-line top-3 technology split (e.g. '28 electrification / 14 hydrogen / 13 hybrid') would make the stat strip genuinely orienting rather than purely quantitative.",
+          "Adding a parenthetical uncertainty marker \u2014 e.g. '\u00a38.17m+ known floor' \u2014 would match the spec's own language and signal appropriate epistemic humility without verbosity."
+        ],
+        "threats": [
+          "If the analyst follows up asking 'what are the main themes?', the current reply gives them no scaffolding \u2014 risking a second turn that should have been pre-empted by the orient canvas.",
+          "Relying on the canvas to carry all thematic depth means any canvas rendering failure leaves the inline reply informationally thin."
+        ]
+      },
+      "structural_signals": {
+        "case_id": "cal_04_clean_rail",
+        "thread_id": "cal-cal_04_clean_rail-55cf5315",
+        "route": "substantive",
+        "route_source": "haiku",
+        "outcome_hint": "orient",
+        "update_canvas": true,
+        "recipe": "IncommensurableMagnitudes",
+        "declared_in_markup": false,
+        "lane_mode": "dual",
+        "corpus_count": 8,
+        "external_count": 10,
+        "case_file_count": 0,
+        "case_file_kinds": [],
+        "follow_up_ran": false,
+        "canvas_action": "replace",
+        "primary_surface": "canvas_primary"
+      },
+      "note": null,
+      "llm_error": null
+    },
+    {
+      "agent_id": "atlas_v5_practitioner",
+      "case_id": "cal_05_tangled",
+      "method": "llm",
+      "model": "claude-sonnet-4-6",
+      "verdict": "ship",
+      "grader_verdict": "tune",
+      "diagnosis": "reasoning layer is strong; the bottleneck is a thin advisor-not-underwriter surface \u2014 the speculative caveat stays internal and never reaches the user",
+      "criteria": [
+        {
+          "id": "cal_05_tension",
+          "layer": "reasoning",
+          "score": 3,
+          "reason": "The reply immediately names the two load-bearing tensions explicitly ('no trial partner blocks certification evidence AND most funding applications'; 'Q3 timing rules out slow open calls') and then synthesises them into a single actionable question: can a letter of intent arrive fast enough to make Q3 real. This is not a flat list of user claims \u2014 it shows genuine causal reasoning about how the tensions interact (partner gap \u2192 blocks funding \u2192 undermines milestone). Practitioner-grade."
+        },
+        {
+          "id": "cal_05_adaptive_disposition",
+          "layer": "disposition",
+          "score": 3,
+          "reason": "Zero interrogation, zero form-filling. The agent reads the tangle, names the hidden sub-question ('the question beneath your question'), and orients the user toward a decision fork \u2014 all in advisor voice. The structural signals (hybrid surface, canvas carries the map, chat carries the direct read) are executed correctly. The tone is a peer thinking aloud, not an intake clerk collecting fields."
+        },
+        {
+          "id": "cal_05_writeback",
+          "layer": "persistence",
+          "score": 3,
+          "reason": "Case file after the turn contains exactly four entries: cs1 (fact), cs2 (constraint), cs3 (constraint), cs4 (uncertainty). The kinds are correctly differentiated \u2014 'bonus depends on hitting Q3' is correctly filed as a constraint, not a fact or wish. The markup preview confirms the same claim taxonomy was surfaced on the canvas. Writeback is clean and well-typed."
+        },
+        {
+          "id": "cal_05_advisor_not_underwriter",
+          "layer": "reasoning",
+          "score": 2,
+          "reason": "The spec_excerpt verdict ('without one, most rail innovation funding routes won't open') appropriately hedges rather than certifying specific funding. However, the chat reply itself contains no explicit verification flag \u2014 it does not signal that the user should independently confirm which specific funding programmes are open, whether the ISO route assumed is correct, or that the Q3 feasibility read is speculative. The disposition reasoning and spec tier ('Speculative') carry the right caveat internally, but this did not surface to the user. A practitioner reply would include at least one brief marker (e.g. 'you'll want to verify which calls are live') to complete the advisor-not-underwriter posture visibly."
+        }
+      ],
+      "turn_swot": {
+        "strengths": [
+          "Tension identification is surgical \u2014 the agent isolates the causal chain (no partner \u2192 blocks evidence \u2192 blocks funding \u2192 jeopardises milestone) rather than re-listing user claims",
+          "The 'question beneath your question' move is genuinely practitioner-grade: it reframes the user's ask toward the decision that actually matters",
+          "Case-file writeback correctly differentiates fact/constraint/uncertainty taxonomy with no over-claiming",
+          "Hybrid surface execution is clean: canvas carries structure, chat complement carries the advisory read \u2014 no mode confusion"
+        ],
+        "weaknesses": [
+          "Advisor-not-underwriter criterion is only partially satisfied: the speculative tier is flagged internally but no verification nudge reaches the user in the chat reply",
+          "The reply is compact to the point of thinness \u2014 the canvas presumably carries the path detail, but the chat complement alone would leave the user without a concrete next step if the canvas failed to render"
+        ],
+        "opportunities": [
+          "A single sentence flagging verification need ('worth confirming live calls and ISO route with your certifying body') would lift cal_05_advisor_not_underwriter to 3 at negligible length cost",
+          "Could add a time-gating signal ('letters of intent typically take X weeks') to make the Q3 fork more actionable"
+        ],
+        "threats": [
+          "If web retrieval was thin (as flagged in retrieval_meta) and corpus citations were zero in the final reply, the path recommendations in the canvas may be under-evidenced \u2014 user cannot distinguish agent reasoning from retrieved fact",
+          "Compactness in the chat complement may read as dismissive to a user who is under real personal bonus pressure"
+        ]
+      },
+      "structural_signals": {
+        "case_id": "cal_05_tangled",
+        "thread_id": "cal-cal_05_tangled-c60f5a7c",
+        "route": "substantive",
+        "route_source": "haiku",
+        "outcome_hint": "find_path",
+        "update_canvas": true,
+        "recipe": null,
+        "declared_in_markup": true,
+        "lane_mode": "dual",
+        "corpus_count": 3,
+        "external_count": 1,
+        "case_file_count": 4,
+        "case_file_kinds": [
+          "fact",
+          "constraint",
+          "constraint",
+          "uncertainty"
+        ],
+        "follow_up_ran": false,
+        "canvas_action": "replace",
+        "primary_surface": "hybrid"
+      },
+      "note": null,
+      "llm_error": null
+    },
+    {
+      "agent_id": "atlas_v5_practitioner",
+      "case_id": "cal_06_connect",
+      "method": "llm",
+      "model": "claude-sonnet-4-6",
+      "verdict": "ship",
+      "grader_verdict": "ship",
+      "diagnosis": "No layer bottleneck this turn \u2014 routing and render both performed at practitioner grade; minor render enrichment (named hub nodes, edge types) is the only incremental opportunity.",
+      "criteria": [
+        {
+          "id": "cal_06_substantive_connect",
+          "layer": "routing",
+          "score": 3,
+          "reason": "Route is correctly identified as 'substantive' via haiku classifier, outcome_hint is 'connect', and the disposition confirms canvas_action='replace' with primary_surface='canvas_primary'. The agent did not defer to chat-only; it explicitly triggered the NetworkMap recipe with canvas update. All structural signals align: update_canvas=true, recipe=NetworkMap, composition_mode=reference_recipe. This is practitioner-grade routing behaviour."
+        },
+        {
+          "id": "cal_06_graph_nodes",
+          "layer": "render",
+          "score": 3,
+          "reason": "The reply surfaces real corpus-grounded graph data: 5 nodes and 7 edges derived from 6 corpus documents (corpus_count=6, corpus_substantive=true). node_count=5 comfortably exceeds the minimum threshold of 2. The disposition log explicitly records RECIPE_LOCK: NetworkMap \u2014 5 nodes / 7 edges corpus-grounded, confirming retrieval drove the render rather than fabrication. The chat-side summary reinforces the graph with corroborating statistics (55 projects, 30 lead orgs, \u00a38.17m funding floor, 27 post-2024 projects) that are consistent with corpus_citation_count=5. Canvas is not empty."
+        }
+      ],
+      "turn_swot": {
+        "strengths": [
+          "Clean routing: haiku classifier correctly identified a connect/ecosystem query and locked to NetworkMap without any ambiguity or fallback to chat-only response.",
+          "Graph nodes are corpus-grounded and quantified (5 nodes, 7 edges) \u2014 the agent did not hallucinate a network or return an empty canvas.",
+          "The chat-side prose adds genuine analytical value ('concentrated core', 'minimum viable picture') without over-claiming \u2014 appropriate epistemic humility for an Indicative-tier verdict.",
+          "Funding floor (\u00a38.17m) and temporal signal (27 projects since 2024) give the practitioner immediate actionability beyond the raw topology."
+        ],
+        "weaknesses": [
+          "The chat reply names nodes/orgs in aggregate (30 lead orgs) but does not surface even the top 2\u20133 anchor organisations by name, which would sharpen the 'concentrated core' insight for a practitioner scanning the chat strip.",
+          "No explicit edge-type labelling visible in the reply (e.g., funder\u2192operator, operator\u2192supplier) \u2014 users cannot tell from the chat summary what relationships the edges represent."
+        ],
+        "opportunities": [
+          "Adding a one-line 'hub organisation' callout in the chat strip (e.g., 'Network Rail anchors 4 of 7 edges') would lift practitioner utility without bloating the canvas.",
+          "Edge-type legend in the NetworkMap render could distinguish funding vs. delivery vs. research relationships, increasing analytical depth for follow-on queries."
+        ],
+        "threats": [
+          "corpus_count=6 is a thin evidential base for a 55-project claim; if corpus grows, node/edge counts may shift materially, potentially undermining the 'minimum viable picture' framing retroactively.",
+          "declared_in_markup=false means the canvas recipe is reference_recipe with canvas_markup=null \u2014 if the rendering layer has a bug in the reference_recipe path, the canvas could silently fail while the chat strip looks correct."
+        ]
+      },
+      "structural_signals": {
+        "case_id": "cal_06_connect",
+        "thread_id": "cal-cal_06_connect-332eff33",
+        "route": "substantive",
+        "route_source": "haiku",
+        "outcome_hint": "connect",
+        "update_canvas": true,
+        "recipe": "NetworkMap",
+        "declared_in_markup": false,
+        "lane_mode": "dual",
+        "corpus_count": 6,
+        "external_count": 1,
+        "case_file_count": 0,
+        "case_file_kinds": [],
+        "follow_up_ran": false,
+        "canvas_action": "replace",
+        "primary_surface": "canvas_primary"
+      },
+      "note": null,
+      "llm_error": null
+    },
+    {
+      "agent_id": "atlas_v5_practitioner",
+      "case_id": "cal_07_lane_relevance",
+      "method": "llm",
+      "model": "claude-sonnet-4-6",
+      "verdict": "ship",
+      "grader_verdict": "tune",
+      "diagnosis": "render/disposition bottleneck: retrieval and tier logic are correct but the inline reply surface is too thin, failing to carry the research synthesis that the spec verdict and canvas are meant to ground",
+      "criteria": [
+        {
+          "id": "cal_07_research_lead",
+          "layer": "retrieval",
+          "score": 3,
+          "reason": "The spec_excerpt confirms reconcile_lead='research', corpus_count=4 with corpus_substantive=true, external_count=2 with web_substantive=true, and dual_peer=true. The reply synthesis ('clearest on electrification and weakest on behaviour change durability') directly reflects the research-lane finding articulated in the spec verdict. The agent did not fall back to a corpus-empty degradation path despite the thin corpus \u2014 it correctly used the research/OpenAlex lane as lead and web as corroboration. Tier_reason explicitly notes 'research-led tier cap (5 OpenAlex works)' confirming the lane was honoured."
+        },
+        {
+          "id": "cal_07_not_speculative_on_corpus",
+          "layer": "disposition",
+          "score": 3,
+          "reason": "Tier is set to 'Indicative' (per spec_excerpt), not Speculative, which is correct given both lanes returned substantive signal and a corroboration boost was applied. The agent did not cap to Speculative despite corpus_count being only 4 \u2014 it correctly assessed corpus_substantive=true and web_substantive=true together as sufficient to reach Indicative. No spurious downgrade to Speculative is observable in the reply or the disposition reasoning."
+        },
+        {
+          "id": "cal_07_direct_answer",
+          "layer": "disposition",
+          "score": 2,
+          "reason": "The reply does answer directly and avoids brick-walling, naming two concrete research-backed findings (electrification strong, behaviour change weak). However, the inline reply text is quite thin \u2014 one sentence pointing to the canvas without surfacing modal shift, demand management, or land-use integration that the spec verdict explicitly calls out. A practitioner-grade reply would include a brief synthesis of the main levers in the chat message itself, not just promise the canvas delivers them. The canvas action is correct (replace, EvidenceGapMatrix recipe, canvas_primary) but the conversational anchor undersells the synthesis quality that the underlying evidence supports."
+        }
+      ],
+      "turn_swot": {
+        "strengths": [
+          "Correctly applied dual-lane reconciliation with research as lead \u2014 no false corpus-empty degradation despite thin corpus.",
+          "Tier held at Indicative as the spec required, with corroboration boost logic visible in retrieval_meta.",
+          "Canvas routed to the correct surface (canvas_primary, replace action, EvidenceGapMatrix recipe) matching the outcome_hint=diagnose signal.",
+          "Reply avoids interrogating the user or gating on corpus count \u2014 it delivers a finding immediately."
+        ],
+        "weaknesses": [
+          "Inline reply is a single thin sentence; the spec verdict lists four named intervention types (modal shift, electrification, demand management, land-use integration) none of which appear in the chat surface text.",
+          "The conversational anchor delegates entirely to the canvas ('the canvas maps\u2026') without giving the user any navigable preview of what is actually inside \u2014 reducing standalone utility of the reply."
+        ],
+        "opportunities": [
+          "Inline reply could surface a 2\u20133 bullet micro-synthesis of the leading intervention types so the canvas feels earned, not just promised.",
+          "Explicitly naming the tier ('Indicative \u2014 two corroborating lanes') in the reply would reinforce epistemic honesty for an academic audience."
+        ],
+        "threats": [
+          "If the canvas fails to render or the user reads only the chat message, they get almost no research content \u2014 over-reliance on canvas delivery is a fragility.",
+          "A pattern of thin inline replies with canvas delegation risks users treating the agent as a loader rather than a synthesiser."
+        ]
+      },
+      "structural_signals": {
+        "case_id": "cal_07_lane_relevance",
+        "thread_id": "cal-cal_07_lane_relevance-70f80e54",
+        "route": "substantive",
+        "route_source": "haiku",
+        "outcome_hint": "diagnose",
+        "update_canvas": true,
+        "recipe": "EvidenceGapMatrix",
+        "declared_in_markup": false,
+        "lane_mode": "dual",
+        "corpus_count": 4,
+        "external_count": 2,
+        "case_file_count": 0,
+        "case_file_kinds": [],
+        "follow_up_ran": false,
+        "canvas_action": "replace",
+        "primary_surface": "canvas_primary"
+      },
+      "note": null,
+      "llm_error": null
+    }
+  ],
+  "summary": {
+    "ship": 6,
+    "tune": 1,
+    "broken": 0
+  }
+}

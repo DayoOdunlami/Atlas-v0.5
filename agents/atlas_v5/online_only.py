@@ -23,6 +23,11 @@ _SHORT_CONSENT_RE = re.compile(
     re.I,
 )
 
+_PENDING_CONSENT_PREFIX_RE = re.compile(
+    r"^\s*(yes|yeah|yep|ok|okay|sure|continue|proceed|go ahead)\b",
+    re.I,
+)
+
 
 def get_online_only_state(meta: dict[str, Any] | None) -> dict[str, Any]:
     if not meta:
@@ -57,7 +62,11 @@ def user_accepts_online_only(query: str, meta: dict[str, Any] | None) -> bool:
         return False
     if _CONSENT_RE.search(q):
         return True
-    return is_online_only_pending(meta) and bool(_SHORT_CONSENT_RE.match(q))
+    if not is_online_only_pending(meta):
+        return False
+    if _SHORT_CONSENT_RE.match(q):
+        return True
+    return bool(_PENDING_CONSENT_PREFIX_RE.match(q))
 
 
 def build_online_only_offer(
@@ -94,6 +103,18 @@ def build_online_only_offer(
                 "query": query,
                 "outcome_hint": decision.outcome_hint,
             },
+            "quick_replies": [
+                {
+                    "id": "yes_online",
+                    "label": "Yes, continue online",
+                    "command": "yes, continue online",
+                },
+                {
+                    "id": "rail_orient",
+                    "label": "Try rail orient (corpus)",
+                    "command": "State of play on rail decarbonisation",
+                },
+            ],
             "disposition": {
                 "primary_surface": "chat_only",
                 "canvas_action": "none",

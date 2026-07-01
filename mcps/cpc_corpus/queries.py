@@ -160,21 +160,21 @@ def search_projects(query: str, limit: int = 10) -> list[dict[str, Any]]:
     """
     Semantic search over atlas.projects (pgvector / HTTPS RPC only).
     Requires OPENAI_API_KEY for embeddings. No ILIKE keyword fallback.
-    On Postgres timeout, falls back to Supabase REST semantic search (443).
+    Default: REST/443 first (portable across firewalls); Postgres optional secondary.
     """
     transport.set_operation("search_projects")
     limit = min(int(limit), 50)
     embedding = embed_query(query)
-    if not embedding:
-        transport.set_transport(
-            "unavailable",
-            error="OPENAI_API_KEY not set — semantic corpus search unavailable",
-        )
-        return _rest_fallback_projects(query, limit, None)
 
-    try:
-        rows = _pg_query(
-            """
+    if transport.rest_configured() and transport.corpus_rest_first():
+        rows = _rest_fallback_projects(query, limit, embedding)
+        if rows:
+            return rows
+
+    if embedding and (transport.postgres_secondary_enabled() or not transport.corpus_rest_first()):
+        try:
+            rows = _pg_query(
+                """
             SELECT id, title, lead_org_name, abstract, transport_relevance_score,
                    (1 - (embedding <=> %s::vector))::float AS similarity
             FROM   atlas.projects
@@ -182,32 +182,44 @@ def search_projects(query: str, limit: int = 10) -> list[dict[str, Any]]:
             ORDER  BY embedding <=> %s::vector
             LIMIT  %s
             """,
-            (embedding, embedding, limit),
+                (embedding, embedding, limit),
+            )
+            transport.set_transport("postgres")
+            return [
+                {
+                    "id": str(r["id"]),
+                    "title": r.get("title") or "",
+                    "organisation": r.get("lead_org_name") or "",
+                    "abstract": (r.get("abstract") or "")[:300],
+                    "transport_relevance_score": (
+                        float(r["transport_relevance_score"])
+                        if r.get("transport_relevance_score") is not None
+                        else None
+                    ),
+                    "similarity": round(float(r.get("similarity") or 0), 4),
+                    "source_type": "project",
+                }
+                for r in rows
+            ]
+        except transport.PostgresUnavailable as exc:
+            transport.set_transport("unavailable", error=str(exc))
+
+    if not embedding:
+        transport.set_transport(
+            "unavailable",
+            error="OPENAI_API_KEY not set — semantic corpus search unavailable",
         )
-        transport.set_transport("postgres")
-        return [
-            {
-                "id": str(r["id"]),
-                "title": r.get("title") or "",
-                "organisation": r.get("lead_org_name") or "",
-                "abstract": (r.get("abstract") or "")[:300],
-                "transport_relevance_score": (
-                    float(r["transport_relevance_score"])
-                    if r.get("transport_relevance_score") is not None else None
-                ),
-                "similarity": round(float(r.get("similarity") or 0), 4),
-                "source_type": "project",
-            }
-            for r in rows
-        ]
-    except transport.PostgresUnavailable as exc:
-        transport.set_transport("unavailable", error=str(exc))
-        return _rest_fallback_projects(query, limit, embedding)
+    return _rest_fallback_projects(query, limit, embedding)
 
 
 def get_project(project_id: str) -> Optional[dict[str, Any]]:
     """Fetch a single atlas.projects record by UUID. Returns None if not found."""
     transport.set_operation("get_project")
+    if transport.rest_configured() and transport.corpus_rest_first():
+        row = queries_rest.get_project(project_id)
+        if row:
+            transport.set_transport("rest_keyword")
+            return row
     try:
         rows = _pg_query(
             """
@@ -340,7 +352,11 @@ def evidence_for_claim(
     embedding = embed_query(claim)
 
     if embedding:
-        filters = ["c.embedding IS NOT NULL", "d.status = 'approved'"]
+        filters = [
+            "c.embedding IS NOT NULL",
+            "d.status = 'approved'",
+            "(d.validation_tier IS NULL OR d.validation_tier IN ('T1_anchor', 'T2_embedded', 'T3_thin'))",
+        ]
         params: list[Any] = [embedding]
 
         if modes:
@@ -356,7 +372,8 @@ def evidence_for_claim(
         rows = _query(
             f"""
             SELECT c.id AS chunk_id, c.document_id, c.body,
-                   d.title, d.publisher, d.tier,
+                   d.title, d.publisher, d.tier, d.validation_tier,
+                   d.source_url,
                    d.source_type AS doc_source_type,
                    d.published_on::text AS published_on,
                    d.modes, d.themes,
@@ -364,7 +381,13 @@ def evidence_for_claim(
             FROM   atlas.knowledge_chunks c
             JOIN   atlas.knowledge_documents d ON d.id = c.document_id
             WHERE  {where}
-            ORDER  BY c.embedding <=> %s::vector
+            ORDER BY
+              CASE d.validation_tier
+                WHEN 'T1_anchor' THEN 0
+                WHEN 'T2_embedded' THEN 1
+                ELSE 2
+              END,
+              c.embedding <=> %s::vector
             LIMIT  %s
             """,
             tuple(params),
@@ -377,6 +400,8 @@ def evidence_for_claim(
                 "title": r.get("title") or "",
                 "publisher": r.get("publisher") or "",
                 "tier": r.get("tier") or "",
+                "validation_tier": r.get("validation_tier") or "",
+                "source_url": r.get("source_url") or "",
                 "doc_source_type": r.get("doc_source_type") or "",
                 "published_on": r.get("published_on"),
                 "modes": r.get("modes") or [],
@@ -394,13 +419,16 @@ def evidence_for_claim(
             rows = _query(
                 f"""
                 SELECT c.id AS chunk_id, c.document_id, c.body,
-                       d.title, d.publisher, d.tier,
+                       d.title, d.publisher, d.tier, d.validation_tier,
+                       d.source_url,
                        d.source_type AS doc_source_type,
                        d.published_on::text AS published_on,
                        d.modes, d.themes
                 FROM   atlas.knowledge_chunks c
                 JOIN   atlas.knowledge_documents d ON d.id = c.document_id
-                WHERE  d.status = 'approved' AND ({conditions})
+                WHERE  d.status = 'approved'
+                  AND (d.validation_tier IS NULL OR d.validation_tier IN ('T1_anchor', 'T2_embedded', 'T3_thin'))
+                  AND ({conditions})
                 LIMIT  %s
                 """,
                 kw_params + (limit,),
@@ -413,6 +441,8 @@ def evidence_for_claim(
                     "title": r.get("title") or "",
                     "publisher": r.get("publisher") or "",
                     "tier": r.get("tier") or "",
+                    "validation_tier": r.get("validation_tier") or "",
+                    "source_url": r.get("source_url") or "",
                     "doc_source_type": r.get("doc_source_type") or "",
                     "published_on": r.get("published_on"),
                     "modes": r.get("modes") or [],

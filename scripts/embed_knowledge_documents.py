@@ -42,6 +42,7 @@ import re
 import sys
 import time
 import uuid
+from pathlib import Path
 from typing import Generator
 
 import psycopg2
@@ -50,6 +51,10 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 load_dotenv()
+
+_ROOT = Path(__file__).resolve().parents[1]
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 
 DB_URL = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
@@ -292,7 +297,18 @@ def process_document(
             raw_text = download_from_storage(storage_key)
         elif source_url:
             print(f"    Source: URL ({source_url})", flush=True)
-            raw_text = fetch_text_from_url(source_url)
+            resolved = source_url
+            try:
+                from scripts.kb.govuk_pdf import is_govuk_publication_url, resolve_govuk_pdf_url
+
+                if is_govuk_publication_url(source_url):
+                    pdf_url = resolve_govuk_pdf_url(source_url)
+                    if pdf_url:
+                        print(f"    Resolved GovUK PDF: {pdf_url[:90]}...", flush=True)
+                        resolved = pdf_url
+            except Exception:
+                pass
+            raw_text = fetch_text_from_url(resolved)
         else:
             print("    SKIP: no source_url and no storage_key", flush=True)
             return
@@ -569,7 +585,7 @@ def main() -> None:
     for idx, doc in enumerate(docs, start=1):
         process_document(conn, client, dict(doc), dry_run=args.dry_run)
         if idx % 100 == 0 or idx == total:
-            print(f"\n  ── Progress: {idx}/{total} docs processed ──\n", flush=True)
+            print(f"\n  -- Progress: {idx}/{total} docs processed --\n", flush=True)
 
     with conn.cursor() as cur:
         cur.execute(

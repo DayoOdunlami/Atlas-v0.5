@@ -210,6 +210,8 @@ export interface CorpusCitation {
   claim_state?: ClaimState;
   /** Rationale for inferred/contested states, shown in tooltip */
   claim_rationale?: string;
+  /** KB validation tier (T1_anchor … T0_retired) for document review */
+  validation_tier?: string;
 }
 
 /** A verified citation from hive.articles */

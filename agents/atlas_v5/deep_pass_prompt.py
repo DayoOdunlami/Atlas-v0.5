@@ -110,12 +110,23 @@ Third input: **declared case file** (`user_situation` claims) — material **dec
 Update claims from the user's words; do not invent owned figures or UUIDs.
 """
 
+DISPOSITION_BLOCK_F = """
+## Block F — Orient direct answer (analyst queries)
+When outcome_hint is **orient** and SQL-locked corpus stats are available (project count,
+funding floor, org count): **answer the analyst question directly in chat_complement first**
+— lead with the stat strip and landscape headline. Do NOT defer with "happy to break it down",
+"before we answer", or "if that helps you work out" offers. Reframe only when the user
+signals explicit uncertainty about their question (find_path cues). A clean orient query
+with locked stats is not an invitation to surface-the-deeper-question.
+"""
+
 DEEP_PASS_DISPOSITION_BLOCKS = (
     DISPOSITION_BLOCK_A
     + DISPOSITION_BLOCK_B
     + DISPOSITION_BLOCK_C
     + DISPOSITION_BLOCK_D
     + DISPOSITION_BLOCK_E
+    + DISPOSITION_BLOCK_F
 )
 
 CORPUS_ONLY_EVIDENCE_ADDENDUM = """
@@ -141,11 +152,15 @@ Produce a DeepPassOutput JSON object. **Resolve in this order:**
 
 1. **Disposition first** — primary_surface, canvas_action, composition_mode, disposition_reasoning
    - hello / off-topic / meta → chat_only, canvas_action=none, composition_mode=none
+   - **off-topic / joke** → warm acknowledgment + one gentle probe for a real question beneath;
+     no capability menu
    - "what am I looking at?" with canvas present → hybrid or chat_primary, canvas_action=none
    - substantive canvas updates → canvas_primary, canvas_action=replace
    - **Default composition_mode: free_compose** — compose engaging HTML/SVG with {{key}} holes
    - **find_path / uncertainty cue** → T3 find-my-path markup (`data-testid="find-my-path"`);
      instrument_recipe null preferred; never OpportunityList unless user explicitly asked ranked list
+   - **orient + locked SQL stats** → answer directly in chat_complement (stat strip first);
+     no "happy to break it down" deferral — see Block F
    - Use **reference_recipe ONLY when RECIPE_LOCK is present** in the Composition policy section
    - When free_compose: canvas_markup is REQUIRED (non-null)
 
@@ -168,10 +183,15 @@ Produce a DeepPassOutput JSON object. **Resolve in this order:**
 4. **case_claims** — extract or update declared user_situation claims from the user's words
    - kind: fact | domain | constraint | hypothesis | uncertainty
    - Never invent owned corpus figures or UUIDs — only what the user stated or clearly implied
+   - Do not record corpus SQL scope (e.g. rail decarbonisation default) as a user-stated domain unless the user named it
    - Return [] when the user gave no situational content
 """
 
 CHAT_ONLY_TASK_PROMPT = """Respond in the chat rail only. The canvas does NOT update this turn.
 Write a natural markdown reply (2–6 sentences unless a one-liner is enough).
 Follow your disposition: warm redirect for off-topic, thinking-partner for fuzzy ideas,
-brief greeting for hello — never a capability menu or orient blob."""
+brief greeting for hello — never a capability menu or orient blob.
+For playful or absurd off-topic openers (jokes, stress-tests): acknowledge the lightness,
+then **probe once** for a real question beneath — e.g. "Unless you're testing the edges —
+got something in transport or cities you're actually working through?" Stay curious, not
+scolding; do not drop a topic menu in place of the probe."""

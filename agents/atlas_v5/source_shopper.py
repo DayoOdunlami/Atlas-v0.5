@@ -139,6 +139,8 @@ def _research_aisle(query: str, outcome: OutcomeMode, *, weight: float = 0.2) ->
 
 def floor_shopping_list(query: str, outcome: str) -> ShoppingList:
     """Deterministic per-mode floor — always available (no API key / shopper fail)."""
+    from agents.atlas_v5.trust.lane_relevance import is_research_led_query
+
     q = query.strip() or "transport innovation UK"
     mode: OutcomeMode = outcome if outcome in (
         "orient",
@@ -148,6 +150,71 @@ def floor_shopping_list(query: str, outcome: str) -> ShoppingList:
         "defend",
         "find_path",
     ) else "orient"
+
+    if is_research_led_query(q):
+        corpus = CorpusAisleShopModel(
+            projects_weight=0.15,
+            documents_weight=0.20,
+            sub_queries=[q[:160]],
+        )
+        web = WebAisleShopModel(
+            govuk_weight=0.35,
+            funders_weight=0.15,
+            partners_weight=0.15,
+            programmes_weight=0.25,
+            sub_queries=[q[:160], f"{q} UK transport policy evidence"],
+            exa_scopes=["{query} academic climate transport research UK"],
+        )
+        research = ResearchAisleShopModel(
+            openalex_weight=0.85,
+            sub_queries=[q[:160], f"{q} academic literature transport climate"],
+        )
+        return ShoppingList(
+            outcome=mode,
+            reconcile_lead="research",
+            corpus=corpus,
+            web=web,
+            research=research,
+            source="floor",
+            reasoning="research-led floor: OpenAlex primary; corpus consulted at low weight",
+        )
+
+    from agents.atlas_v5.intent import is_strategy_alignment_query
+
+    if is_strategy_alignment_query(q):
+        corpus = CorpusAisleShopModel(
+            projects_weight=0.25,
+            documents_weight=0.75,
+            sub_queries=[
+                q[:160],
+                "DfT Better Connected integrated transport strategy priorities",
+                "Innovate UK strategic delivery plan innovation ecosystem",
+            ],
+        )
+        web = WebAisleShopModel(
+            govuk_weight=0.45,
+            funders_weight=0.30,
+            partners_weight=0.15,
+            programmes_weight=0.35,
+            sub_queries=[
+                q[:160],
+                "Better Connected integrated transport strategy UK",
+                "Innovate UK strategic delivery plan 2022 2025",
+            ],
+            exa_scopes=[
+                "{query} UK government transport strategy alignment",
+                "{query} Innovate UK strategic delivery plan",
+            ],
+        )
+        return ShoppingList(
+            outcome=mode,
+            reconcile_lead="balanced",
+            corpus=corpus,
+            web=web,
+            research=_research_aisle(q, mode, weight=0.35),
+            source="floor",
+            reasoning="strategy alignment floor: KB documents + policy web weighted",
+        )
 
     if mode == "find_path":
         corpus = CorpusAisleShopModel(
