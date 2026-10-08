@@ -1,0 +1,23 @@
+﻿node : Corpus stats unavailable: connection to server at "aws-1-eu-west-1.pooler.supabase.com" (18.202.64.2), port 
+6543 failed: timeout expired
+At C:\Users\DayoOdunlami\AppData\Local\Temp\ps-script-2d756feb-c654-40ae-a7e9-508e310b6a33.ps1:86 char:68
++ ... NG='utf-8'; node scripts/python-bin.mjs eval/run_atlas_v5_trajectorie ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Corpus stats un...timeout expired:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+connection to server at "aws-1-eu-west-1.pooler.supabase.com" (54.229.189.117), port 6543 failed: timeout expired
+connection to server at "aws-1-eu-west-1.pooler.supabase.com" (54.247.26.119), port 6543 failed: timeout expired
+
+Corpus stats unavailable: connection to server at "aws-1-eu-west-1.pooler.supabase.com" (54.247.26.119), port 6543 
+failed: timeout expired
+connection to server at "aws-1-eu-west-1.pooler.supabase.com" (18.202.64.2), port 6543 failed: timeout expired
+connection to server at "aws-1-eu-west-1.pooler.supabase.com" (54.229.189.117), port 6543 failed: timeout expired
+
+Atlas v5 ÔÇö session trajectories (API / brain)
+  0/1 passed (0 skipped)
+
+  [FAIL] V06_find_path_funding: Declared uncertainty ÔåÆ find path ÔåÆ funding follow-up
+         turn 1 [ok] route=substantive 114245.7ms ÔÇö Tell me what the idea does in a sentence ÔÇö or just point to whichever question s
+         turn 2 [!!] route=None 0.0ms ÔÇö Wide pass produced no corpus stats (use online_only mode)
+         - turn 2: Wide pass produced no corpus stats (use online_only mode)

@@ -1,0 +1,234 @@
+{
+  "version": "1.0",
+  "generated_at": "2026-07-01T00:39:57Z",
+  "scenarios_total": 8,
+  "scenarios_executed": 8,
+  "scenarios_skipped": 0,
+  "scenarios_passed": 8,
+  "pass_rate": 1.0,
+  "results": [
+    {
+      "id": "V01_hello",
+      "name": "Greeting stays chat-only",
+      "passed": true,
+      "skipped": false,
+      "skip_reason": "",
+      "failures": [],
+      "turns": [
+        {
+          "turn": 1,
+          "query": "hello",
+          "passed": true,
+          "failures": [],
+          "route": "chat",
+          "update_canvas": false,
+          "latency_ms": 3492.4,
+          "lane_mode": null,
+          "reply_preview": "Hey, good to have you here. What are you working through?",
+          "spec_recipe": null,
+          "spec_mode": null
+        }
+      ]
+    },
+    {
+      "id": "V02_rail_orient_followup",
+      "name": "Rail landscape then TRIG follow-up",
+      "passed": true,
+      "skipped": false,
+      "skip_reason": "",
+      "failures": [],
+      "turns": [
+        {
+          "turn": 1,
+          "query": "State of play on rail decarbonisation in our corpus",
+          "passed": true,
+          "failures": [],
+          "route": "substantive",
+          "update_canvas": true,
+          "latency_ms": 85492.8,
+          "lane_mode": "dual",
+          "reply_preview": "55 projects \u00b7 \u00a38.17m funding floor \u00b7 27 live since 2024 \u00b7 30 lead orgs. The corpus is a strong activity map \u2014 but national programme spend runs far higher. Details on the canvas.",
+          "spec_recipe": "IncommensurableMagnitudes",
+          "spec_mode": "Orient"
+        },
+        {
+          "turn": 2,
+          "query": "What about TRIG grants?",
+          "passed": true,
+          "failures": [],
+          "route": "clarify",
+          "update_canvas": false,
+          "latency_ms": 6875.6,
+          "lane_mode": null,
+          "reply_preview": "TRIG \u2014 the Transport Research and Innovation Grants \u2014 is a DfT-administered programme specifically designed to fund early-stage transport R&D, and it's one of the more accessible routes for SMEs and academic consortia working on exactly the kind of rail decarbonisation tech the c",
+          "spec_recipe": null,
+          "spec_mode": null
+        }
+      ]
+    },
+    {
+      "id": "V03_wewalk_clarify",
+      "name": "WeWalk company clarify arc",
+      "passed": true,
+      "skipped": false,
+      "skip_reason": "",
+      "failures": [],
+      "turns": [
+        {
+          "turn": 1,
+          "query": "I'm working with a company called WeWalk. I'd like to understand their product and service offering and potential opportunities / value transition, especially in a rail-focused application.",
+          "passed": true,
+          "failures": [],
+          "route": "substantive",
+          "update_canvas": true,
+          "latency_ms": 116799.6,
+          "lane_mode": "dual",
+          "reply_preview": "Below is a structured brief on WeWalk's offering and the rail opportunity landscape. The TfL pilot is the strongest anchor point \u2014 but the B2B pivot question is the one that determines whether this is a product sale or a platform play.",
+          "spec_recipe": "OpportunityList",
+          "spec_mode": "Connect"
+        },
+        {
+          "turn": 2,
+          "query": "WeWalk is the company \u2014 smart cane for visually impaired people.",
+          "passed": true,
+          "failures": [],
+          "route": "substantive",
+          "update_canvas": true,
+          "latency_ms": 96457.7,
+          "lane_mode": "dual",
+          "reply_preview": "Canvas updated with WeWalk locked in. Three opportunity vectors mapped \u2014 station wayfinding, journey planner integration, and assisted travel digitisation \u2014 against the live corpus of 55 projects and \u00a38.17m in known funding. The gate question is whether WeWalk has a UK entity and",
+          "spec_recipe": "OpportunityList",
+          "spec_mode": "Connect"
+        },
+        {
+          "turn": 3,
+          "query": "I want to know how WeWalk can translate to grow in the UK innovation landscape, specifically rail stations and passenger assistance.",
+          "passed": true,
+          "failures": [],
+          "route": "substantive",
+          "update_canvas": true,
+          "latency_ms": 138341.0,
+          "lane_mode": "dual",
+          "reply_preview": "55 active corpus projects, \u00a38.17m funding floor, 30 lead orgs \u2014 WeWalk is adjacent to a live and well-funded network, not entering a cold market. The canvas maps three entry vectors and the gate sequence. The primary move is resolving UK entity status and finding one TOC anchor f",
+          "spec_recipe": "OpportunityList",
+          "spec_mode": "Connect"
+        }
+      ]
+    },
+    {
+      "id": "V09_persona_analogy",
+      "name": "CPC persona / analogy stays chat-first (no orient graphs)",
+      "passed": true,
+      "skipped": false,
+      "skip_reason": "",
+      "failures": [],
+      "turns": [
+        {
+          "turn": 1,
+          "query": "if CPC was a persona what/ who would they be? what's the best analogy to help understand who CPC are and who they should grow into?",
+          "passed": true,
+          "failures": [],
+          "route": "chat",
+          "update_canvas": false,
+          "latency_ms": 218143.4,
+          "lane_mode": null,
+          "reply_preview": "Great question to think with. Right now, CPC feels most like **the urban planner who became a broker** \u2014 someone with deep technical fluency in how cities and transport systems work, who realised the real leverage wasn't in designing the thing but in connecting the people who cou",
+          "spec_recipe": null,
+          "spec_mode": null
+        }
+      ]
+    },
+    {
+      "id": "G1_entry_bootstrap",
+      "name": "G1 \u2014 entry bootstrap chat-only",
+      "passed": true,
+      "skipped": false,
+      "skip_reason": "",
+      "failures": [],
+      "turns": [
+        {
+          "turn": 1,
+          "query": "hello",
+          "passed": true,
+          "failures": [],
+          "route": "chat",
+          "update_canvas": false,
+          "latency_ms": 2479.6,
+          "lane_mode": null,
+          "reply_preview": "Hey \u2014 good to have you here. What are you working through?",
+          "spec_recipe": null,
+          "spec_mode": null
+        }
+      ]
+    },
+    {
+      "id": "G2_rail_orient",
+      "name": "G2 \u2014 rail orient golden chain",
+      "passed": true,
+      "skipped": false,
+      "skip_reason": "",
+      "failures": [],
+      "turns": [
+        {
+          "turn": 1,
+          "query": "State of play on rail decarbonisation",
+          "passed": true,
+          "failures": [],
+          "route": "substantive",
+          "update_canvas": true,
+          "latency_ms": 80476.8,
+          "lane_mode": "dual",
+          "reply_preview": "55 projects \u00b7 \u00a38.17m known funding floor \u00b7 27 live since 2024 \u00b7 30 lead orgs. The corpus is a real slice of the innovation landscape, but national programme spend runs far higher \u2014 the gap is the story worth watching.",
+          "spec_recipe": "IncommensurableMagnitudes",
+          "spec_mode": "Orient"
+        }
+      ]
+    },
+    {
+      "id": "G3_connect_hydrogen",
+      "name": "G3 \u2014 hydrogen supply chain connect",
+      "passed": true,
+      "skipped": false,
+      "skip_reason": "",
+      "failures": [],
+      "turns": [
+        {
+          "turn": 1,
+          "query": "Map the hydrogen supply chain ecosystem",
+          "passed": true,
+          "failures": [],
+          "route": "substantive",
+          "update_canvas": true,
+          "latency_ms": 116700.9,
+          "lane_mode": "dual",
+          "reply_preview": "The map below is web-lane led \u2014 corpus returns no owned hydrogen projects, so this is borrowed signal. Five nodes, seven edges. The mid-chain gap (storage + distribution) is the structural weak point worth interrogating for your purposes.",
+          "spec_recipe": "NetworkMap",
+          "spec_mode": "Connect"
+        }
+      ]
+    },
+    {
+      "id": "G4_meta_defend",
+      "name": "G4 \u2014 CPC meta defend (not rail default)",
+      "passed": true,
+      "skipped": false,
+      "skip_reason": "",
+      "failures": [],
+      "turns": [
+        {
+          "turn": 1,
+          "query": "Justify your existence. Should CPC be putting money into developing you? What makes you different?",
+          "passed": true,
+          "failures": [],
+          "route": "substantive",
+          "update_canvas": true,
+          "latency_ms": 91377.4,
+          "lane_mode": "dual",
+          "reply_preview": "Here's the direct case \u2014 and the honest limits. The corpus stats are real and SQL-locked; the value argument is sound in principle but needs measured outcomes to be fully defensible.",
+          "spec_recipe": "OpportunityList",
+          "spec_mode": "Defend"
+        }
+      ]
+    }
+  ]
+}

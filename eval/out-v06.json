@@ -1,0 +1,47 @@
+{
+  "version": "1.0",
+  "generated_at": "2026-06-25T15:51:43Z",
+  "scenarios_total": 1,
+  "scenarios_executed": 1,
+  "scenarios_skipped": 0,
+  "scenarios_passed": 0,
+  "pass_rate": 0.0,
+  "results": [
+    {
+      "id": "V06_find_path_funding",
+      "name": "Declared uncertainty \u2192 find path \u2192 funding follow-up",
+      "passed": false,
+      "skipped": false,
+      "skip_reason": "",
+      "failures": [
+        "turn 2: reply must contain 'fund'"
+      ],
+      "turns": [
+        {
+          "turn": 1,
+          "query": "I've got a rail innovation idea but I'm not sure what I'm asking yet",
+          "passed": true,
+          "failures": [],
+          "route": "substantive",
+          "update_canvas": true,
+          "latency_ms": 112068.4,
+          "lane_mode": "dual",
+          "reply_preview": "Three journeys most people at this stage are actually on \u2014 pick the one that feels closest and we'll go from there."
+        },
+        {
+          "turn": 2,
+          "query": "What kind of funding might fit an SME innovator like that?",
+          "passed": false,
+          "failures": [
+            "reply must contain 'fund'"
+          ],
+          "route": "substantive",
+          "update_canvas": true,
+          "latency_ms": 139789.3,
+          "lane_mode": "dual",
+          "reply_preview": "Three tiers matter most for where you are right now \u2014 I've mapped them on the canvas. The fastest unlock is telling me a bit more about the idea so we can rule "
+        }
+      ]
+    }
+  ]
+}
